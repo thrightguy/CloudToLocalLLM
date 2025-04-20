@@ -5,10 +5,15 @@ import '../models/llm_model.dart';
 import '../models/message.dart';
 
 class OllamaService {
-  final String baseUrl;
-  
+  String baseUrl;
+
   OllamaService({String? baseUrl}) : baseUrl = baseUrl ?? AppConfig.ollamaBaseUrl;
-  
+
+  // Update the base URL
+  void updateBaseUrl(String newBaseUrl) {
+    baseUrl = newBaseUrl;
+  }
+
   // Check if Ollama is running
   Future<bool> isRunning() async {
     try {
@@ -16,13 +21,13 @@ class OllamaService {
         Uri.parse('$baseUrl/api/tags'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 5));
-      
+
       return response.statusCode == 200;
     } catch (e) {
       return false;
     }
   }
-  
+
   // Get available models
   Future<List<LlmModel>> getModels() async {
     try {
@@ -30,7 +35,7 @@ class OllamaService {
         Uri.parse('$baseUrl/api/tags'),
         headers: {'Content-Type': 'application/json'},
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final models = (data['models'] as List? ?? []).map((model) {
@@ -42,7 +47,7 @@ class OllamaService {
             isInstalled: true,
           );
         }).toList();
-        
+
         return models;
       } else {
         throw Exception('Failed to get models: ${response.statusCode}');
@@ -51,7 +56,7 @@ class OllamaService {
       return [];
     }
   }
-  
+
   // Generate a response
   Future<String> generateResponse(String prompt, String modelId) async {
     try {
@@ -64,7 +69,7 @@ class OllamaService {
           'stream': false,
         }),
       );
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['response'] ?? 'No response';
@@ -75,7 +80,7 @@ class OllamaService {
       throw Exception('Error generating response: $e');
     }
   }
-  
+
   // Generate a streaming response
   Stream<String> generateStreamingResponse(String prompt, String modelId) async* {
     try {
@@ -86,9 +91,9 @@ class OllamaService {
         'prompt': prompt,
         'stream': true,
       });
-      
+
       final streamedResponse = await http.Client().send(request);
-      
+
       await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
         // Ollama returns each chunk as a JSON object with a 'response' field
         try {
@@ -108,7 +113,7 @@ class OllamaService {
       yield '[Error: $e]';
     }
   }
-  
+
   // Pull (download) a model
   Future<void> pullModel(String modelId, {Function(double)? onProgress}) async {
     try {
@@ -118,9 +123,9 @@ class OllamaService {
         'name': modelId,
         'stream': true,
       });
-      
+
       final streamedResponse = await http.Client().send(request);
-      
+
       double progress = 0.0;
       await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
         try {
@@ -144,7 +149,7 @@ class OllamaService {
       throw Exception('Error pulling model: $e');
     }
   }
-  
+
   // Delete a model
   Future<void> deleteModel(String modelId) async {
     try {
@@ -155,7 +160,7 @@ class OllamaService {
           'name': modelId,
         }),
       );
-      
+
       if (response.statusCode != 200) {
         throw Exception('Failed to delete model: ${response.statusCode}');
       }

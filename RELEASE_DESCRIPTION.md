@@ -1,4 +1,4 @@
-# CloudToLocalLLM Windows App v1.0.0
+# CloudToLocalLLM Windows App v1.1.0
 
 ## Overview
 CloudToLocalLLM bridges the gap between cloud-based applications and local large language models. This Windows application provides a seamless interface to interact with locally installed LLMs while offering optional secure remote access.
@@ -13,11 +13,12 @@ CloudToLocalLLM bridges the gap between cloud-based applications and local large
 
 ## Requirements
 - Windows 10/11
+- Ollama or LM Studio installed locally
 
 ## Installation
 1. Download and extract the ZIP file
-2. Launch CloudToLocalLLM.exe
-3. Go to Settings and click "Setup Ollama" or "Setup LM Studio"
-4. The app will guide you through the installation and configuration process
+2. Ensure Ollama or LM Studio is installed
+3. Launch CloudToLocalLLM.exe
+4. Follow the initial setup guide
 
 Experience the power of local LLMs with the convenience of a modern, user-friendly interface. CloudToLocalLLM gives you complete control over your AI interactions while maintaining privacy and flexibility.

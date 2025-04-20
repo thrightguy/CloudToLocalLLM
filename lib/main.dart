@@ -10,7 +10,6 @@ import 'providers/llm_provider.dart';
 import 'providers/settings_provider.dart';
 import 'services/auth_service.dart';
 import 'services/cloud_service.dart';
-import 'services/installation_service.dart';
 import 'services/ollama_service.dart';
 import 'services/storage_service.dart';
 import 'services/tunnel_service.dart';
@@ -20,15 +19,25 @@ void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize services
+  // Initialize storage service
   final storageService = StorageService();
   await storageService.initialize();
 
-  final ollamaService = OllamaService();
+  // Initialize other services
   final authService = AuthService();
   final tunnelService = TunnelService(authService: authService);
   final cloudService = CloudService(authService: authService);
-  final installationService = InstallationService();
+
+  // Get the saved settings to determine the LLM provider
+  final prefs = await SharedPreferences.getInstance();
+  final settingsJson = prefs.getString(AppConfig.settingsStorageKey);
+  final settings = settingsJson != null ? Map<String, dynamic>.from(jsonDecode(settingsJson)) : <String, dynamic>{};
+  final llmProvider = settings['llmProvider'] as String? ?? AppConfig.defaultLlmProvider;
+
+  // Initialize OllamaService with the appropriate base URL based on the provider
+  final ollamaService = OllamaService(
+    baseUrl: llmProvider == 'lmstudio' ? AppConfig.lmStudioBaseUrl : AppConfig.ollamaBaseUrl
+  );
 
   // Run the app
   runApp(
@@ -40,7 +49,6 @@ void main() async {
         Provider<AuthService>.value(value: authService),
         Provider<TunnelService>.value(value: tunnelService),
         Provider<CloudService>.value(value: cloudService),
-        Provider<InstallationService>.value(value: installationService),
 
         // Providers
         ChangeNotifierProvider(
@@ -54,14 +62,30 @@ void main() async {
           create: (context) => SettingsProvider(
             storageService: storageService,
             tunnelService: tunnelService,
+            ollamaService: ollamaService,
           ),
         ),
-        ChangeNotifierProvider(
+        ChangeNotifierProxyProvider<SettingsProvider, LlmProvider>(
           create: (context) => LlmProvider(
             ollamaService: ollamaService,
             storageService: storageService,
-            installationService: installationService,
           ),
+          update: (context, settingsProvider, llmProvider) {
+            if (llmProvider != null) {
+              // Refresh models when the LLM provider changes
+              if (settingsProvider.llmProvider != llmProvider.currentProvider) {
+                // Set the current provider
+                llmProvider.setCurrentProvider(settingsProvider.llmProvider);
+                // Refresh models
+                llmProvider.refreshModels();
+              }
+              return llmProvider;
+            }
+            return LlmProvider(
+              ollamaService: ollamaService,
+              storageService: storageService,
+            );
+          },
         ),
       ],
       child: const CloudToLocalLlmApp(),
@@ -95,10 +119,6 @@ class _CloudToLocalLlmAppState extends State<CloudToLocalLlmApp> {
     // Initialize settings provider
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
     await settingsProvider.initialize();
-
-    // Initialize LLM provider
-    final llmProvider = Provider.of<LlmProvider>(context, listen: false);
-    await llmProvider.initialize();
   }
 
   @override

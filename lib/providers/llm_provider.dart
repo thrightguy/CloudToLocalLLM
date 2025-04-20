@@ -7,34 +7,30 @@ import '../models/llm_model.dart';
 import '../models/message.dart';
 import '../services/ollama_service.dart';
 import '../services/storage_service.dart';
-import '../services/installation_service.dart';
 
 class LlmProvider extends ChangeNotifier {
   final OllamaService ollamaService;
   final StorageService storageService;
-  final InstallationService installationService;
 
   List<LlmModel> _models = [];
   List<Conversation> _conversations = [];
   Conversation? _currentConversation;
   bool _isLoading = false;
   String _error = '';
-  bool _isOllamaInstalled = false;
-  bool _isOllamaRunning = false;
-  bool _isLmStudioInstalled = false;
-  bool _isLmStudioRunning = false;
+  String _currentProvider = AppConfig.defaultLlmProvider;
 
   LlmProvider({
     required this.ollamaService,
     required this.storageService,
-    InstallationService? installationService,
-  }) : installationService = installationService ?? InstallationService();
+  });
 
-  // Provider status getters
-  bool get isOllamaInstalled => _isOllamaInstalled;
-  bool get isOllamaRunning => _isOllamaRunning;
-  bool get isLmStudioInstalled => _isLmStudioInstalled;
-  bool get isLmStudioRunning => _isLmStudioRunning;
+  // Get the current provider
+  String get currentProvider => _currentProvider;
+
+  // Set the current provider
+  void setCurrentProvider(String provider) {
+    _currentProvider = provider;
+  }
 
   // Getters
   List<LlmModel> get models => _models;
@@ -48,9 +44,6 @@ class LlmProvider extends ChangeNotifier {
     _setLoading(true);
 
     try {
-      // Check provider installation status
-      await _checkProviderStatus();
-
       // Load models
       await _loadModels();
 
@@ -66,66 +59,41 @@ class LlmProvider extends ChangeNotifier {
     }
   }
 
-  // Check if providers are installed and running
-  Future<void> _checkProviderStatus() async {
-    try {
-      // Check Ollama status
-      _isOllamaInstalled = await installationService.isOllamaInstalled();
-      _isOllamaRunning = await installationService.isOllamaRunning();
-
-      // Check LM Studio status
-      _isLmStudioInstalled = await installationService.isLmStudioInstalled();
-      _isLmStudioRunning = await installationService.isLmStudioRunning();
-
-      notifyListeners();
-    } catch (e) {
-      print('Error checking provider status: $e');
-    }
-  }
-
-  // Load models from providers
+  // Load models from Ollama
   Future<void> _loadModels() async {
     try {
+      // Check if Ollama is running
+      final isRunning = await ollamaService.isRunning();
+      if (!isRunning) {
+        _models = [];
+        return;
+      }
+
+      // Get models from Ollama
+      final ollamaModels = await ollamaService.getModels();
+
       // Get locally stored model info
       final storedModels = await storageService.getAllLlmModels();
-      List<LlmModel> providerModels = [];
 
-      // Get models from Ollama if it's running
-      if (_isOllamaRunning) {
-        try {
-          final ollamaModels = await ollamaService.getModels();
+      // Merge the two lists, preferring Ollama data but keeping additional info from stored models
+      _models = ollamaModels.map((ollamaModel) {
+        final storedModel = storedModels.firstWhere(
+          (m) => m.id == ollamaModel.id && m.provider == 'ollama',
+          orElse: () => ollamaModel,
+        );
 
-          // Merge with stored models, preferring Ollama data but keeping additional info
-          providerModels.addAll(ollamaModels.map((ollamaModel) {
-            final storedModel = storedModels.firstWhere(
-              (m) => m.id == ollamaModel.id && m.provider == 'ollama',
-              orElse: () => ollamaModel,
-            );
+        return ollamaModel.copyWith(
+          description: storedModel.description ?? ollamaModel.description,
+          lastUsed: storedModel.lastUsed ?? ollamaModel.lastUsed,
+        );
+      }).toList();
 
-            return ollamaModel.copyWith(
-              description: storedModel.description ?? ollamaModel.description,
-              lastUsed: storedModel.lastUsed ?? ollamaModel.lastUsed,
-            );
-          }));
-        } catch (e) {
-          print('Error loading Ollama models: $e');
-        }
-      }
-
-      // TODO: Add LM Studio models when API is available
-      // For now, just add stored LM Studio models if LM Studio is running
-      if (_isLmStudioRunning) {
-        final lmStudioModels = storedModels.where((m) => m.provider == 'lmstudio').toList();
-        providerModels.addAll(lmStudioModels);
-      }
-
-      // Add any other stored models
-      final otherModels = storedModels.where(
-        (m) => !providerModels.any((pm) => pm.id == m.id && pm.provider == m.provider)
+      // Add any stored models that aren't in Ollama (e.g., LM Studio models)
+      final nonOllamaModels = storedModels.where(
+        (m) => m.provider != 'ollama' || !_models.any((om) => om.id == m.id)
       ).toList();
 
-      // Set final models list
-      _models = [...providerModels, ...otherModels];
+      _models.addAll(nonOllamaModels);
 
       // Sort models by last used, then by name
       _models.sort((a, b) {
@@ -222,38 +190,20 @@ class LlmProvider extends ChangeNotifier {
       _currentConversation = _currentConversation!.addMessage(pendingMessage);
       notifyListeners();
 
-      // Get model ID and determine provider
+      // Get model ID
       final modelId = _currentConversation!.modelId;
-      final modelIndex = _models.indexWhere((m) => m.id == modelId);
-      String provider = 'ollama'; // Default to ollama
 
+      // Update model last used time
+      final modelIndex = _models.indexWhere((m) => m.id == modelId);
       if (modelIndex >= 0) {
-        // Update model last used time
         _models[modelIndex] = _models[modelIndex].copyWith(
           lastUsed: DateTime.now(),
         );
         await storageService.saveLlmModel(_models[modelIndex]);
-
-        // Get provider from model
-        provider = _models[modelIndex].provider;
-      }
-
-      // Ensure provider is ready
-      final isProviderReady = await ensureCurrentProviderReady(provider);
-      if (!isProviderReady) {
-        throw Exception('LLM provider is not ready. ${_error}');
       }
 
       // Get response from LLM
-      String response;
-      if (provider == 'ollama') {
-        response = await ollamaService.generateResponse(content, modelId);
-      } else if (provider == 'lmstudio') {
-        // TODO: Implement LM Studio API integration
-        throw Exception('LM Studio API integration not implemented yet');
-      } else {
-        throw Exception('Unknown provider: $provider');
-      }
+      final response = await ollamaService.generateResponse(content, modelId);
 
       // Update assistant message
       final assistantMessage = Message(
@@ -315,96 +265,7 @@ class LlmProvider extends ChangeNotifier {
 
   // Refresh models
   Future<void> refreshModels() async {
-    await _checkProviderStatus();
     await _loadModels();
-  }
-
-  // Refresh provider status
-  Future<void> refreshProviderStatus() async {
-    await _checkProviderStatus();
-  }
-
-  // Start a provider if it's installed but not running
-  Future<bool> startProvider(String provider) async {
-    bool success = false;
-
-    _setLoading(true);
-    try {
-      if (provider == 'ollama') {
-        if (_isOllamaInstalled && !_isOllamaRunning) {
-          success = await installationService.startOllama();
-          if (success) {
-            _isOllamaRunning = true;
-            await _loadModels();
-          }
-        }
-      } else if (provider == 'lmstudio') {
-        if (_isLmStudioInstalled && !_isLmStudioRunning) {
-          success = await installationService.startLmStudio();
-          if (success) {
-            _isLmStudioRunning = true;
-            await _loadModels();
-          }
-        }
-      }
-    } catch (e) {
-      print('Error starting provider: $e');
-      success = false;
-    } finally {
-      _setLoading(false);
-      notifyListeners();
-    }
-
-    return success;
-  }
-
-  // Check if the current provider is installed and running
-  Future<bool> ensureCurrentProviderReady(String provider) async {
-    await refreshProviderStatus();
-
-    if (provider == 'ollama') {
-      if (!_isOllamaInstalled) {
-        _error = 'Ollama is not installed. Please install it from the Settings screen.';
-        notifyListeners();
-        return false;
-      }
-
-      if (!_isOllamaRunning) {
-        _error = 'Ollama is not running. Attempting to start...';
-        notifyListeners();
-
-        final started = await startProvider('ollama');
-        if (!started) {
-          _error = 'Failed to start Ollama. Please start it manually or check the installation.';
-          notifyListeners();
-          return false;
-        }
-      }
-
-      return true;
-    } else if (provider == 'lmstudio') {
-      if (!_isLmStudioInstalled) {
-        _error = 'LM Studio is not installed. Please install it from the Settings screen.';
-        notifyListeners();
-        return false;
-      }
-
-      if (!_isLmStudioRunning) {
-        _error = 'LM Studio is not running. Attempting to start...';
-        notifyListeners();
-
-        final started = await startProvider('lmstudio');
-        if (!started) {
-          _error = 'Failed to start LM Studio. Please start it manually and enable the local inference server.';
-          notifyListeners();
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    return false;
   }
 
   // Pull (download) a model
