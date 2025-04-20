@@ -1,0 +1,43 @@
+﻿services:
+  ollama:
+    image: ollama/ollama
+    networks:
+      - llm-network
+    volumes:
+      - ./check_ollama.sh:/check_ollama.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+  tunnel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - llm-network
+    volumes:
+      - ./lib:/app/lib
+      - ./setup_tunnel.sh:/app/setup_tunnel.sh
+    command: /bin/bash /app/setup_tunnel.sh
+  cloud:
+    image: node:20
+    working_dir: /app
+    depends_on:
+      tunnel:
+        condition: service_started
+    networks:
+      - llm-network
+    volumes:
+      - ./cloud:/app
+      - ./setup_cloud.sh:/app/setup_cloud.sh
+    command: /bin/bash /app/setup_cloud.sh
+    ports:
+      - "3000:3000"
+networks:
+  llm-network:
+    driver: bridge
