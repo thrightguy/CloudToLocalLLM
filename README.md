@@ -107,6 +107,62 @@ You can deploy the cloud component to various cloud platforms:
    - Easy deployment with automatic updates
    - Free tier available for testing
    - See [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for detailed instructions
+   - Follow the steps below to create a new app on Render
+
+   **Creating a Render App:**
+   1. **Log in to Render**:
+      - Go to [dashboard.render.com](https://dashboard.render.com)
+      - Log in with your Render account
+
+   2. **Create a New Web Service**:
+      - Click the "New +" button in the top right corner
+      - Select "Web Service" from the dropdown menu
+
+   3. **Connect Your Repository**:
+      - Choose "Connect a repository" to link your GitHub repository
+      - If you haven't connected GitHub to Render yet:
+        - Click "Connect GitHub"
+        - Follow the prompts to authorize Render to access your GitHub account
+        - Select the repository containing CloudToLocalLLM
+      - If you've already connected GitHub:
+        - Select the CloudToLocalLLM repository from the list
+
+   4. **Configure Your Web Service**:
+      - **Name**: Choose a name for your service (e.g., `cloudtolocalllm-cloud`)
+      - **Region**: Select the region closest to your users
+      - **Branch**: Select the branch you want to deploy (usually `main` or `master`)
+      - **Root Directory**: Enter `webapp` (this is where the cloud component code is located)
+      - **Runtime Environment**: Select "Node"
+      - **Build Command**: Enter `npm install`
+      - **Start Command**: Enter `npm start`
+      - **Plan**: Choose the Free plan for testing or a paid plan for production use
+
+   5. **Configure Environment Variables**:
+      - Scroll down to the "Environment Variables" section
+      - Add the following environment variables:
+        - `NODE_ENV`: `production`
+        - `PORT`: `3000`
+        - `SESSION_SECRET`: Generate a random string
+        - `JWT_SECRET`: Generate a random string
+        - `AUTH0_DOMAIN`: Your Auth0 domain (e.g., `your-tenant.auth0.com`)
+        - `AUTH0_CLIENT_ID`: Your Auth0 client ID
+        - `AUTH0_CLIENT_SECRET`: Your Auth0 client secret
+        - `AUTH0_CALLBACK_URL`: `https://your-render-app-name.onrender.com/callback`
+
+      Note: Replace `your-render-app-name` with the name you chose for your service.
+
+   6. **Create Web Service**:
+      - Click the "Create Web Service" button at the bottom of the page
+      - Render will start deploying your application
+
+   7. **Update Auth0 Configuration**:
+      - Go back to your Auth0 dashboard
+      - Open the CloudToLocalLLM application settings
+      - Update the "Allowed Callback URLs" to include your Render URL:
+        `https://your-render-app-name.onrender.com/callback`
+      - Save changes
+
+   For automated deployment, you can use the `deploy-cloudtolocalllm.ps1` script included in the repository.
 
 2. **Other Cloud Platforms**
    - The application can be deployed to any platform that supports Node.js
