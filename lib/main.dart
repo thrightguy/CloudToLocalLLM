@@ -1,46 +1,108 @@
-﻿import 'dart:convert';
-import 'dart:io';
-import 'package:shelf/shelf.dart';
-import 'package:shelf/shelf_io.dart' as io;
-import 'package:http/http.dart' as http;
+﻿import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'config/app_config.dart';
+import 'config/theme.dart';
+import 'providers/auth_provider.dart';
+import 'providers/llm_provider.dart';
+import 'providers/settings_provider.dart';
+import 'services/auth_service.dart';
+import 'services/cloud_service.dart';
+import 'services/ollama_service.dart';
+import 'services/storage_service.dart';
+import 'services/tunnel_service.dart';
+import 'screens/home_screen.dart';
+
 void main() async {
-  final handler = const Pipeline().addHandler(_handleRequest);
-  final server = await io.serve(handler, '0.0.0.0', 8080);
-  print('HTTP server started on port ');
-}
-Future<Response> _handleRequest(Request request) async {
-  if (request.method != 'POST' || request.url.path != '/api/llm') {
-    return Response(405, body: 'Method Not Allowed');
-  }
-  try {
-    final body = await request.readAsString();
-    final json = jsonDecode(body);
-    final prompt = json['prompt'] as String?;
-    final model = json['model'] as String? ?? 'tinyllama';
-    if (prompt == null || prompt.isEmpty) {
-      return Response(400, body: 'Missing or empty prompt');
-    }
-    final response = await _sendRequest(prompt, model);
-    return Response.ok(
-      jsonEncode({'response': response}),
-      headers: {'Content-Type': 'application/json'},
-    );
-  } catch (e) {
-    return Response(500, body: 'Error: ');
-  }
-}
-Future<String> _sendRequest(String prompt, String model) async {
-  final url = Uri.parse('http://ollama:11434/api/generate');
-  final body = jsonEncode({'model': model, 'prompt': prompt});
-  final response = await http.post(
-    url,
-    headers: {'Content-Type': 'application/json'},
-    body: body,
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize services
+  final storageService = StorageService();
+  await storageService.initialize();
+  
+  final ollamaService = OllamaService();
+  final authService = AuthService();
+  final tunnelService = TunnelService(authService: authService);
+  final cloudService = CloudService(authService: authService);
+  
+  // Run the app
+  runApp(
+    MultiProvider(
+      providers: [
+        // Services
+        Provider<StorageService>.value(value: storageService),
+        Provider<OllamaService>.value(value: ollamaService),
+        Provider<AuthService>.value(value: authService),
+        Provider<TunnelService>.value(value: tunnelService),
+        Provider<CloudService>.value(value: cloudService),
+        
+        // Providers
+        ChangeNotifierProvider(
+          create: (context) => AuthProvider(
+            authService: authService,
+            cloudService: cloudService,
+            storageService: storageService,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => SettingsProvider(
+            storageService: storageService,
+            tunnelService: tunnelService,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => LlmProvider(
+            ollamaService: ollamaService,
+            storageService: storageService,
+          ),
+        ),
+      ],
+      child: const CloudToLocalLlmApp(),
+    ),
   );
-  if (response.statusCode == 200) {
-    final json = jsonDecode(response.body);
-    return json['response'] as String? ?? 'No response';
-  } else {
-    throw Exception('Request failed: ');
+}
+
+class CloudToLocalLlmApp extends StatefulWidget {
+  const CloudToLocalLlmApp({Key? key}) : super(key: key);
+
+  @override
+  State<CloudToLocalLlmApp> createState() => _CloudToLocalLlmAppState();
+}
+
+class _CloudToLocalLlmAppState extends State<CloudToLocalLlmApp> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize providers
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeProviders();
+    });
+  }
+  
+  Future<void> _initializeProviders() async {
+    // Initialize auth provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.initialize();
+    
+    // Initialize settings provider
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    await settingsProvider.initialize();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+    
+    return MaterialApp(
+      title: 'CloudToLocalLLM',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: settingsProvider.themeMode,
+      home: const HomeScreen(),
+    );
   }
 }

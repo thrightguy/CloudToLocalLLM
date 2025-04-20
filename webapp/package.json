@@ -1,0 +1,28 @@
+{
+  "name": "cloudtolocalllm-cloud",
+  "version": "1.0.0",
+  "description": "Cloud component for CloudToLocalLLM",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "jsonwebtoken": "^9.0.0",
+    "passport": "^0.6.0",
+    "passport-auth0": "^1.4.3",
+    "uuid": "^9.0.0",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "private": true
+}

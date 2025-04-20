@@ -1,147 +1,271 @@
-CloudToLocalLLM
+# CloudToLocalLLM
 
-CloudToLocalLLM is a project that bridges the gap between cloud-based applications and local large language models (LLMs). It allows you to run a local LLM instance (using Ollama with the tinyllama model) and expose it to a cloud interface, making it accessible via a web browser. The project uses a combination of Docker containers, a Dart-based tunnel, and a Node.js-based cloud service to securely relay requests from the cloud to your local LLM.
+CloudToLocalLLM is a project that bridges the gap between cloud-based applications and local large language models (LLMs). It consists of a native Windows application built with Flutter that connects to locally installed LLMs (Ollama or LM Studio) and an optional cloud component that enables secure remote access.
 
-Project Overview
+## Project Overview
 
-The architecture consists of three main components, all managed with Docker Compose:
-- Ollama Container: Runs the Ollama server with the tinyllama model, serving as the local LLM backend.
-- Tunnel Container: A Dart-based service that acts as a relay between the local Ollama server and the cloud service.
-- Cloud Container: A Node.js-based web server that provides a user-friendly web interface to interact with the LLM.
+The architecture consists of two main components:
 
-This setup allows you to leverage the power of a local LLM while accessing it remotely through a cloud-like interface, ensuring privacy and control over your LLM instance.
+### Local Windows Application
+- **Native Flutter App**: A Windows desktop application that provides a user-friendly interface for interacting with local LLMs.
+- **LLM Integration**: Direct communication with locally installed LLM providers (Ollama or LM Studio).
+- **Secure Tunnel**: Optional component that allows remote access to your local LLM through the cloud.
 
-Features
+### Cloud Component (Optional)
+- **Web Server**: A Node.js-based web server that provides remote access to connected local LLMs.
+- **Authentication**: Secure login with Auth0 or other identity providers.
+- **API Gateway**: Secure relay of requests between web clients and local LLMs.
 
-- Local LLM Execution: Run the tinyllama model locally using Ollama, ensuring data privacy.
-- Cloud Accessibility: Access your local LLM through a web interface hosted in a Docker container.
-- Secure Tunneling: Use a Dart-based tunnel to securely relay requests between the cloud and local services.
-- Dockerized Setup: Easily deploy and manage the entire stack with Docker Compose.
-- Simple Web Interface: Interact with the LLM via a clean, browser-based UI.
+This architecture allows you to leverage the power of local LLMs while optionally accessing them remotely through a secure cloud interface, ensuring privacy and control over your LLM instances.
 
-Prerequisites
+## Features
 
-Before setting up the project, ensure you have the following installed on your system:
-- Docker: To run the containerized services. Install Docker: https://docs.docker.com/get-docker/
-- Docker Compose: To orchestrate the multi-container setup. Install Docker Compose: https://docs.docker.com/compose/install/
-- Git: To clone the repository and manage version control. Install Git: https://git-scm.com/downloads
+- **Native Windows Experience**: Run as a standard Windows application with system tray integration.
+- **Multiple LLM Support**: Connect to Ollama or LM Studio for local LLM execution.
+- **Model Management**: Download, manage, and use different LLM models.
+- **Chat Interface**: User-friendly chat interface for interacting with LLMs.
+- **Cloud Connectivity**: Optional secure connection to the cloud for remote access.
+- **User Authentication**: Secure login with Auth0 or other identity providers.
+- **Offline Mode**: Use the application without internet connectivity.
+- **Dark/Light Theme**: Choose between dark and light application themes.
 
-Setup Instructions
+## Prerequisites
 
-Follow these steps to set up and run the CloudToLocalLLM project on your local machine.
+### For the Windows Application
+- **Windows 10/11**: The application is designed for Windows operating systems.
+- **Ollama** or **LM Studio**: At least one of these LLM providers must be installed:
+  - [Ollama](https://ollama.ai/download) - Recommended for ease of use
+  - [LM Studio](https://lmstudio.ai/) - Alternative with additional model options
+- **Flutter**: Only required for development, not for running the application.
 
-1. Clone the Repository
+### For the Cloud Component (Optional)
+- **Node.js**: Version 14 or higher
+- **npm**: For package management
+- **Auth0 Account**: For setting up authentication (optional)
 
-Clone the repository to your local machine:
+## Setup Instructions
 
-git clone https://github.com/thrightguy/CloudToLocalLLM.git
-cd CloudToLocalLLM
+### Windows Application Setup
 
-2. Prepare the Environment
+1. **Download the Application**
+   - Download the latest release from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
+   - Extract the ZIP file to a location of your choice.
 
-The project is designed to run in D:\Dev\CloudToLocalLLM on Windows. If you're using a different directory or operating system, update the paths in the setup.ps1 script accordingly.
+2. **Install an LLM Provider**
+   - Install [Ollama](https://ollama.ai/download) or [LM Studio](https://lmstudio.ai/).
+   - For Ollama, run the following command to download a starter model:
+     ```
+     ollama pull tinyllama
+     ```
 
-3. Run the Setup Script
+3. **Run the Application**
+   - Launch `CloudToLocalLLM.exe` from the extracted folder.
+   - The application will start and appear in your system tray.
+   - Click the system tray icon to open the main interface.
 
-The project includes a PowerShell script (setup.ps1) to automate the setup process. This script will:
-- Create necessary files (e.g., docker-compose.yml, Dart and Node.js code).
-- Start the Ollama container and ensure the tinyllama model is installed.
-- Launch the tunnel and cloud containers using Docker Compose.
+4. **Configure the Application**
+   - On first run, the application will guide you through initial setup.
+   - Select your preferred LLM provider (Ollama or LM Studio).
+   - Choose whether to enable cloud connectivity.
 
-Run the script:
+### Cloud Component Setup (Optional)
 
-.\setup.ps1
+1. **Clone the Repository**
+   ```
+   git clone https://github.com/thrightguy/CloudToLocalLLM.git
+   cd CloudToLocalLLM/webapp
+   ```
 
-If you're on a Unix-like system (e.g., Linux or macOS), you can adapt the script to Bash or manually run the equivalent commands.
+2. **Install Dependencies**
+   ```
+   npm install
+   ```
 
-4. Monitor the Setup
+3. **Configure Environment Variables**
+   - Copy the `.env.example` file to `.env`
+   - Update the values in `.env` with your Auth0 credentials and other settings
 
-The script will log the progress of the Ollama container setup, including the server startup and model installation. You'll see output similar to:
+4. **Start the Server**
+   ```
+   npm start
+   ```
 
-2025-04-19 21:30:00 - Starting Ollama container...
-2025-04-19 21:30:00 - Monitoring Ollama setup progress...
-2025-04-19 21:30:00 - Tailing Ollama setup logs (this may take a few minutes)...
-2025-04-19 21:30:00 - Starting Ollama server...
-2025-04-19 21:30:05 - Waiting for Ollama server to start...
-2025-04-19 21:30:06 - Ollama server is running
-2025-04-19 21:30:06 - Installing tinyllama model...
-2025-04-19 21:30:31 - Verifying tinyllama model installation...
-2025-04-19 21:30:36 - tinyllama model installed successfully
-2025-04-19 21:30:36 - Ollama setup completed in 36 seconds
+5. **Access the Web Interface**
+   - Open your browser and navigate to `http://localhost:3000`
+   - Log in with your Auth0 credentials
 
-Once the setup is complete, the script will start the remaining services (tunnel and cloud containers).
+## Usage
 
-5. Access the Web Interface
+### Windows Application
 
-After the setup completes, you can access the web interface at:
+1. **Launch the Application**
+   - Start the application from the desktop shortcut or by running `CloudToLocalLLM.exe`.
+   - The application will appear in your system tray.
+   - Click the system tray icon to open the main interface.
 
-http://localhost:3000
+2. **Connect to an LLM Provider**
+   - The application will automatically detect installed LLM providers (Ollama or LM Studio).
+   - Select your preferred provider from the dropdown in the settings screen.
+   - Ensure the selected provider is running.
 
-The interface allows you to select a model (default is tinyllama) and enter prompts to interact with the LLM.
+3. **Manage Models**
+   - Navigate to the Models screen to see available models.
+   - Download new models by clicking the "Add Model" button.
+   - For Ollama, you can download models like `llama2`, `mistral`, or `tinyllama`.
+   - For LM Studio, you can select from your locally installed models.
 
-Usage
+4. **Chat with the LLM**
+   - Create a new conversation by clicking the "+" button.
+   - Select a model from the dropdown at the top of the screen.
+   - Type your prompt in the input field and press Enter or click Send.
+   - The LLM's response will appear in the chat interface.
 
-1. Open the Web Interface:
-    - Navigate to http://localhost:3000 in your browser.
-    - You'll see a simple UI with a dropdown to select the model and a text box to enter your prompt.
+5. **Enable Cloud Connectivity (Optional)**
+   - Navigate to Settings > Cloud Settings.
+   - Toggle "Enable Remote Access" to on.
+   - Log in with your cloud account credentials.
+   - The application will establish a secure tunnel to the cloud service.
 
-2. Interact with the LLM:
-    - Select tinyllama from the dropdown (other models like mistral are listed but may require additional setup).
-    - Enter a prompt (e.g., "Hello, world!") and click "Send."
-    - The response from the LLM will be displayed below the input field.
+### Cloud Interface (Optional)
 
-3. Stop the Services:
-    - To stop the containers, run:
-      docker-compose -f docker-compose.yml -p cloudtolocalllm_dev down
+1. **Access the Web Interface**
+   - Navigate to `http://localhost:3000` in your browser (or your deployed cloud URL).
+   - Log in with your credentials.
 
-Project Structure
+2. **Connect to Your Local LLM**
+   - After logging in, you'll see a list of your connected local LLMs.
+   - Select the LLM you want to use.
 
-Here's an overview of the key files and directories in the repository:
+3. **Chat with the LLM**
+   - Create a new conversation or select an existing one.
+   - Type your prompt and press Enter or click Send.
+   - The request will be securely relayed to your local LLM, and the response will be displayed.
 
-- setup.ps1: PowerShell script to automate the setup of the project.
-- git-push.ps1 / git-push.sh: Scripts to automate Git commits and pushes to the repository.
-- docker-compose.yml: Docker Compose configuration for the Ollama, tunnel, and cloud containers.
-- lib/main.dart: Dart code for the tunnel service, responsible for relaying requests between the cloud and Ollama.
-- cloud/server.js: Node.js code for the cloud service, providing the web interface.
-- logs/: Directory where setup logs (e.g., ollama_setup.log) are stored.
-- setup_ollama.sh, setup_tunnel.sh, setup_cloud.sh: Bash scripts executed inside the containers to handle setup and validation.
+## Project Structure
 
-Troubleshooting
+The project is organized into the following main directories:
 
-- Ollama Server Not Starting:
-    - Check the logs for the Ollama container:
-      docker logs cloudtolocalllm_dev_ollama
-    - Ensure your system has enough resources (CPU, memory) to run the containers.
-    - Verify that port 11434 is not in use by another process.
+### Windows Application
 
-- Web Interface Not Accessible:
-    - Ensure the cloud container is running:
-      docker ps
-    - Check the logs for the cloud container:
-      docker logs cloudtolocalllm_dev_cloud
-    - Verify that port 3000 is not blocked by your firewall.
+- **lib/**: Flutter application code
+  - **config/**: Configuration files
+    - **app_config.dart**: Application settings
+    - **theme.dart**: UI theme definitions
+  - **models/**: Data models
+    - **llm_model.dart**: LLM model class
+    - **message.dart**: Chat message class
+    - **user.dart**: User profile class
+    - **conversation.dart**: Conversation class
+  - **services/**: Business logic
+    - **ollama_service.dart**: Communicates with Ollama API
+    - **auth_service.dart**: Handles authentication
+    - **tunnel_service.dart**: Manages tunnel for remote access
+    - **cloud_service.dart**: Handles cloud communication
+    - **storage_service.dart**: Local data persistence
+  - **providers/**: State management
+    - **llm_provider.dart**: LLM state management
+    - **auth_provider.dart**: Authentication state
+    - **settings_provider.dart**: App settings state
+  - **screens/**: UI screens
+    - **home_screen.dart**: Main screen
+    - **chat_screen.dart**: Chat interface
+    - **models_screen.dart**: Model management
+    - **settings_screen.dart**: Application settings
+  - **widgets/**: Reusable UI components
+  - **main.dart**: Application entry point
+- **windows/**: Windows-specific code
+  - **runner/**: Native Windows code
 
-- Model Not Found:
-    - If the tinyllama model fails to install, ensure you have an internet connection, as the model needs to be downloaded.
-    - Check the Ollama setup logs in logs/ollama_setup.log.
+### Cloud Component
 
-Contributing
+- **webapp/**: Cloud service code
+  - **server.js**: Main server file
+  - **package.json**: Node.js dependencies
+  - **.env**: Environment configuration
+  - **public/**: Static web assets
+
+## Troubleshooting
+
+### Windows Application
+
+- **LLM Provider Not Detected**:
+  - Ensure Ollama or LM Studio is installed and running.
+  - Check the provider's API port (Ollama: 11434, LM Studio: 1234).
+  - Restart the application after starting the LLM provider.
+
+- **Models Not Appearing**:
+  - For Ollama, ensure models are installed using `ollama list`.
+  - For LM Studio, ensure models are properly loaded in the LM Studio interface.
+  - Click the refresh button in the Models screen.
+
+- **Cloud Connection Issues**:
+  - Verify your internet connection.
+  - Check that you're logged in with valid credentials.
+  - Ensure the cloud server is running and accessible.
+
+### Cloud Component
+
+- **Server Not Starting**:
+  - Check that Node.js is installed (version 14+).
+  - Verify all dependencies are installed with `npm install`.
+  - Check the `.env` configuration file.
+
+- **Authentication Issues**:
+  - Verify your Auth0 configuration in the `.env` file.
+  - Check Auth0 dashboard for login errors.
+  - Ensure redirect URLs are properly configured.
+
+## Contributing
 
 Contributions are welcome! To contribute:
-1. Fork the repository.
-2. Create a new branch (git checkout -b feature/your-feature).
-3. Make your changes and commit them (git commit -m "Add your feature").
-4. Push to your branch (git push origin feature/your-feature).
-5. Open a pull request on GitHub.
 
-License
+1. **Fork the Repository**
+   - Fork the repository on GitHub.
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+2. **Create a Feature Branch**
+   ```
+   git checkout -b feature/your-feature-name
+   ```
 
-Acknowledgments
+3. **Make Your Changes**
+   - Implement your feature or bug fix.
+   - Add or update tests as necessary.
+   - Update documentation to reflect your changes.
 
-- Ollama (https://ollama.com/) for providing an easy-to-use LLM server.
-- Docker (https://www.docker.com/) for containerization.
-- Dart (https://dart.dev/) and Node.js (https://nodejs.org/) for the tunnel and cloud services, respectively.
+4. **Follow Coding Standards**
+   - For Flutter/Dart code:
+     - Run `dart format .` to format your code.
+     - Run `dart analyze` to check for issues.
+   - For JavaScript code:
+     - Run `npm run lint` to check for issues.
 
-Happy coding! 🚀
+5. **Commit Your Changes**
+   ```
+   git commit -m "Add feature: your feature description"
+   ```
+
+6. **Push to Your Branch**
+   ```
+   git push origin feature/your-feature-name
+   ```
+
+7. **Create a Pull Request**
+   - Open a pull request on GitHub.
+   - Provide a clear description of the changes.
+   - Link any related issues.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Ollama](https://ollama.ai/) for providing an easy-to-use LLM server.
+- [LM Studio](https://lmstudio.ai/) for local LLM inference.
+- [Flutter](https://flutter.dev/) for the cross-platform UI framework.
+- [Node.js](https://nodejs.org/) for the cloud service.
+- [Auth0](https://auth0.com/) for authentication services.
+
+---
+
+Happy coding with your local LLMs! 🚀
