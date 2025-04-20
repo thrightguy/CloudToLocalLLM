@@ -5,6 +5,13 @@
       - llm-network
     volumes:
       - ./check_ollama.sh:/check_ollama.sh
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434"]
       interval: 30s

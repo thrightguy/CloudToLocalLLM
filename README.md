@@ -33,9 +33,14 @@ This architecture allows you to leverage the power of local LLMs while optionall
 
 ### For the Windows Application
 - **Windows 10/11**: The application is designed for Windows operating systems.
-- **Ollama** or **LM Studio**: At least one of these LLM providers must be installed:
-  - [Ollama](https://ollama.ai/download) - Recommended for ease of use
-  - [LM Studio](https://lmstudio.ai/) - Alternative with additional model options
+- **Hardware Requirements**:
+  - Minimum: 8GB RAM, 4-core CPU
+  - Recommended: 16GB RAM, 8-core CPU, NVIDIA GPU with at least 4GB VRAM for GPU acceleration
+- **Software Requirements**:
+  - The installer will automatically set up Docker Desktop and Ollama
+  - Alternatively, you can manually install one of these LLM providers:
+    - [Ollama](https://ollama.ai/download) - Recommended for ease of use
+    - [LM Studio](https://lmstudio.ai/) - Alternative with additional model options
 - **Flutter**: Only required for development, not for running the application.
 
 ### For the Cloud Component (Optional)
@@ -47,19 +52,17 @@ This architecture allows you to leverage the power of local LLMs while optionall
 
 ### Windows Application Setup
 
-1. **Download the Application**
-   - Download the latest release from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
-   - Extract the ZIP file to a location of your choice.
+1. **Download and Install the Application**
+   - Download the installer from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
+   - Run the installer and follow the on-screen instructions.
+   - The application will be installed to your chosen location and shortcuts will be created in the Start menu and optionally on your desktop.
 
-2. **Install an LLM Provider**
-   - Install [Ollama](https://ollama.ai/download) or [LM Studio](https://lmstudio.ai/).
-   - For Ollama, run the following command to download a starter model:
-     ```
-     ollama pull tinyllama
-     ```
+2. **LLM Provider Setup**
+   - The installer will automatically set up Docker Desktop and Ollama with GPU support (if an NVIDIA GPU is detected).
+   - Alternatively, you can manually install [Ollama](https://ollama.ai/download) or [LM Studio](https://lmstudio.ai/) if you prefer not to use Docker.
 
 3. **Run the Application**
-   - Launch `CloudToLocalLLM.exe` from the extracted folder.
+   - Launch CloudToLocalLLM from the Start menu or desktop shortcut.
    - The application will start and appear in your system tray.
    - Click the system tray icon to open the main interface.
 
@@ -69,6 +72,8 @@ This architecture allows you to leverage the power of local LLMs while optionall
    - Choose whether to enable cloud connectivity.
 
 ### Cloud Component Setup (Optional)
+
+#### Local Development Setup
 
 1. **Clone the Repository**
    ```
@@ -94,6 +99,20 @@ This architecture allows you to leverage the power of local LLMs while optionall
    - Open your browser and navigate to `http://localhost:3000`
    - Log in with your Auth0 credentials
 
+#### Cloud Deployment Options
+
+You can deploy the cloud component to various cloud platforms:
+
+1. **Render** (Recommended)
+   - Easy deployment with automatic updates
+   - Free tier available for testing
+   - See [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for detailed instructions
+
+2. **Other Cloud Platforms**
+   - The application can be deployed to any platform that supports Node.js
+   - Examples include Heroku, AWS, Azure, Google Cloud, etc.
+   - Deployment steps will vary by platform
+
 ## Usage
 
 ### Windows Application
@@ -104,9 +123,9 @@ This architecture allows you to leverage the power of local LLMs while optionall
    - Click the system tray icon to open the main interface.
 
 2. **Connect to an LLM Provider**
-   - The application will automatically detect installed LLM providers (Ollama or LM Studio).
-   - Select your preferred provider from the dropdown in the settings screen.
-   - Ensure the selected provider is running.
+   - If you used the installer, Docker Desktop and Ollama will be automatically set up and running.
+   - If you manually installed an LLM provider, ensure it is running.
+   - Select your preferred provider (Ollama or LM Studio) from the dropdown in the settings screen.
 
 3. **Manage Models**
    - Navigate to the Models screen to see available models.

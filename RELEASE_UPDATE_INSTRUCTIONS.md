@@ -38,19 +38,20 @@ Follow these steps to build a new version of the Windows app:
    flutter build windows
    ```
 
-3. **Package the app into a ZIP file with version number**
+3. **Create a Windows installer**
    ```
    # Create releases directory if it doesn't exist
    if (-not (Test-Path -Path "releases")) {
        New-Item -ItemType Directory -Path "releases"
    }
 
-   # Get version from pubspec.yaml
-   $version = (Get-Content pubspec.yaml | Select-String -Pattern "version: (.+)").Matches.Groups[1].Value.Trim()
-
-   # Create the ZIP file with version number in the releases folder
-   Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "releases\CloudToLocalLLM-Windows-$version.zip" -Force
+   # Compile the installer using Inno Setup
+   # Note: You need to have Inno Setup installed (https://jrsoftware.org/isinfo.php)
+   # The path to the Inno Setup Compiler may vary depending on your installation
+   & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' CloudToLocalLLM.iss
    ```
+
+   The installer will be created in the releases folder with a name like `CloudToLocalLLM-Windows-1.1.0-Setup.exe`.
 
 ## Creating a GitHub Release
 
@@ -65,7 +66,7 @@ Follow these steps to build a new version of the Windows app:
    - **Tag version**: Enter the updated version number (e.g., v1.1.0)
    - **Release title**: Enter a title for the release (e.g., "CloudToLocalLLM Windows App v1.1.0")
    - **Description**: Copy the content from RELEASE_DESCRIPTION.md
-   - **Attach binaries**: Drag and drop the versioned ZIP file from the releases folder (e.g., releases\CloudToLocalLLM-Windows-1.1.0.zip) or click "Attach binaries by selecting them" and select the file
+   - **Attach binaries**: Drag and drop the installer file from the releases folder (e.g., releases\CloudToLocalLLM-Windows-1.1.0-Setup.exe) or click "Attach binaries by selecting them" and select the file
 
 4. **Publish Release**
    - Click the "Publish release" button to make the release available to users
@@ -75,7 +76,7 @@ Follow these steps to build a new version of the Windows app:
 After creating the release, verify that:
 
 1. The release appears on the Releases page of the repository
-2. The versioned ZIP file (e.g., CloudToLocalLLM-Windows-1.1.0.zip) is attached to the release
+2. The installer file (e.g., CloudToLocalLLM-Windows-1.1.0-Setup.exe) is attached to the release
 3. The download link in the README.md file points to the correct location
 
 ## Summary of Changes for v1.1.0

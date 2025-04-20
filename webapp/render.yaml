@@ -1,0 +1,28 @@
+# Render Blueprint for CloudToLocalLLM Cloud Component
+services:
+  - type: web
+    name: cloudtolocalllm-cloud
+    env: node
+    region: oregon  # Change to your preferred region
+    plan: free  # Change to a paid plan for production
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000  # Render assigns a PORT automatically, but we set a fallback
+      - key: SESSION_SECRET
+        sync: false  # This will be set manually in the Render dashboard
+      - key: JWT_SECRET
+        sync: false  # This will be set manually in the Render dashboard
+      - key: AUTH0_DOMAIN
+        sync: false  # This will be set manually in the Render dashboard
+      - key: AUTH0_CLIENT_ID
+        sync: false  # This will be set manually in the Render dashboard
+      - key: AUTH0_CLIENT_SECRET
+        sync: false  # This will be set manually in the Render dashboard
+      - key: AUTH0_CALLBACK_URL
+        sync: false  # This will be set manually in the Render dashboard
+    autoDeploy: true  # Enable auto-deployment on push to the connected repository

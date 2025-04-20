@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Successful - CloudToLocalLLM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .success-icon {
+            color: #27ae60;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .token-box {
+            background-color: #f1f1f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 20px 0;
+        }
+        .instructions {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Authentication Successful</h1>
+        <p>You have successfully authenticated with CloudToLocalLLM.</p>
+        
+        <div class="token-box" id="token-display">
+            Loading token...
+        </div>
+        
+        <button id="copy-token">Copy Token</button>
+        
+        <div class="instructions">
+            <h2>Next Steps:</h2>
+            <ol>
+                <li>Copy the authentication token above.</li>
+                <li>Return to the CloudToLocalLLM application.</li>
+                <li>Paste the token when prompted to complete the authentication process.</li>
+            </ol>
+            <p>This will allow your local LLM to be securely accessible through the cloud.</p>
+        </div>
+        
+        <p>You can close this window after copying the token.</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Extract token from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            // Display token
+            const tokenDisplay = document.getElementById('token-display');
+            if (token) {
+                tokenDisplay.textContent = token;
+            } else {
+                tokenDisplay.textContent = 'No token found. Please try authenticating again.';
+            }
+            
+            // Copy token button
+            const copyButton = document.getElementById('copy-token');
+            copyButton.addEventListener('click', function() {
+                if (token) {
+                    navigator.clipboard.writeText(token)
+                        .then(() => {
+                            copyButton.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyButton.textContent = 'Copy Token';
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy: ', err);
+                            copyButton.textContent = 'Failed to copy';
+                        });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

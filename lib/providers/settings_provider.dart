@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import '../services/storage_service.dart';
 import '../services/tunnel_service.dart';
+import '../services/ollama_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
   final StorageService storageService;
