@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import 'login_screen.dart';
+import 'provider_installation_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -16,7 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -31,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildThemeSelector(settingsProvider),
             ],
           ),
-          
+
           // LLM settings
           _buildSection(
             title: 'LLM Settings',
@@ -55,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          
+
           // Cloud settings
           _buildSection(
             title: 'Cloud Settings',
@@ -145,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ],
           ),
-          
+
           // Account settings
           _buildSection(
             title: 'Account',
@@ -176,7 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          
+
           // About section
           _buildSection(
             title: 'About',
@@ -208,7 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          
+
           // Reset settings button
           const SizedBox(height: 16),
           ElevatedButton.icon(
@@ -224,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Build a section with a title and children
   Widget _buildSection({required String title, required List<Widget> children}) {
     return Column(
@@ -249,7 +250,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
-  
+
   // Build a switch tile
   Widget _buildSwitchTile({
     required String title,
@@ -264,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onChanged: onChanged,
     );
   }
-  
+
   // Build theme selector
   Widget _buildThemeSelector(SettingsProvider settingsProvider) {
     return ListTile(
@@ -294,33 +295,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Build LLM provider selector
   Widget _buildLlmProviderSelector(SettingsProvider settingsProvider) {
-    return ListTile(
-      title: const Text('LLM Provider'),
-      subtitle: const Text('Choose the default LLM provider'),
-      trailing: DropdownButton<String>(
-        value: settingsProvider.llmProvider,
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            settingsProvider.setLlmProvider(newValue);
-          }
-        },
-        items: const [
-          DropdownMenuItem(
-            value: 'ollama',
-            child: Text('Ollama'),
+    return Column(
+      children: [
+        ListTile(
+          title: const Text('LLM Provider'),
+          subtitle: const Text('Choose the default LLM provider'),
+          trailing: DropdownButton<String>(
+            value: settingsProvider.llmProvider,
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                settingsProvider.setLlmProvider(newValue);
+              }
+            },
+            items: const [
+              DropdownMenuItem(
+                value: 'ollama',
+                child: Text('Ollama'),
+              ),
+              DropdownMenuItem(
+                value: 'lmstudio',
+                child: Text('LM Studio'),
+              ),
+            ],
           ),
-          DropdownMenuItem(
-            value: 'lmstudio',
-            child: Text('LM Studio'),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProviderInstallationScreen(provider: 'ollama'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Setup Ollama'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProviderInstallationScreen(provider: 'lmstudio'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings),
+                  label: const Text('Setup LM Studio'),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-  
+
   // Show logout confirmation dialog
   void _showLogoutDialog() {
     showDialog(
@@ -344,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Show reset settings confirmation dialog
   void _showResetSettingsDialog() {
     showDialog(

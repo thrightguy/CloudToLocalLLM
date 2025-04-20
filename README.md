@@ -51,21 +51,19 @@ This architecture allows you to leverage the power of local LLMs while optionall
    - Download the latest release from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
    - Extract the ZIP file to a location of your choice.
 
-2. **Install an LLM Provider**
-   - Install [Ollama](https://ollama.ai/download) or [LM Studio](https://lmstudio.ai/).
-   - For Ollama, run the following command to download a starter model:
-     ```
-     ollama pull tinyllama
-     ```
-
-3. **Run the Application**
+2. **Run the Application**
    - Launch `CloudToLocalLLM.exe` from the extracted folder.
    - The application will start and appear in your system tray.
    - Click the system tray icon to open the main interface.
 
+3. **Install an LLM Provider**
+   - Go to the Settings screen and click on "Setup Ollama" or "Setup LM Studio".
+   - The application will guide you through the installation process.
+   - For Ollama, the application will automatically download and install Ollama and the tinyllama model.
+   - For LM Studio, the application will download and install LM Studio, but you'll need to start it manually and enable the local inference server.
+
 4. **Configure the Application**
-   - On first run, the application will guide you through initial setup.
-   - Select your preferred LLM provider (Ollama or LM Studio).
+   - Select your preferred LLM provider (Ollama or LM Studio) from the dropdown.
    - Choose whether to enable cloud connectivity.
 
 ### Cloud Component Setup (Optional)
