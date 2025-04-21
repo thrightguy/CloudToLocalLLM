@@ -46,3 +46,6 @@ app.*.map.json
 
 # Release files
 /releases/
+
+# Webapp folder (separate repository)
+/webapp/

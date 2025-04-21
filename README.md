@@ -37,7 +37,7 @@ This architecture allows you to leverage the power of local LLMs while optionall
   - Minimum: 8GB RAM, 4-core CPU
   - Recommended: 16GB RAM, 8-core CPU, NVIDIA GPU with at least 4GB VRAM for GPU acceleration
 - **Software Requirements**:
-  - The installer will automatically set up Docker Desktop and Ollama
+  - The installer will automatically set up Ollama as a Windows service
   - Alternatively, you can manually install one of these LLM providers:
     - [Ollama](https://ollama.ai/download) - Recommended for ease of use
     - [LM Studio](https://lmstudio.ai/) - Alternative with additional model options
@@ -58,8 +58,8 @@ This architecture allows you to leverage the power of local LLMs while optionall
    - The application will be installed to your chosen location and shortcuts will be created in the Start menu and optionally on your desktop.
 
 2. **LLM Provider Setup**
-   - The installer will automatically set up Docker Desktop and Ollama with GPU support (if an NVIDIA GPU is detected).
-   - Alternatively, you can manually install [Ollama](https://ollama.ai/download) or [LM Studio](https://lmstudio.ai/) if you prefer not to use Docker.
+   - The installer will automatically set up Ollama as a Windows service with GPU support (if an NVIDIA GPU is detected).
+   - Alternatively, you can manually install [Ollama](https://ollama.ai/download) or [LM Studio](https://lmstudio.ai/).
 
 3. **Run the Application**
    - Launch CloudToLocalLLM from the Start menu or desktop shortcut.
@@ -179,7 +179,7 @@ You can deploy the cloud component to various cloud platforms:
    - Click the system tray icon to open the main interface.
 
 2. **Connect to an LLM Provider**
-   - If you used the installer, Docker Desktop and Ollama will be automatically set up and running.
+   - If you used the installer, Ollama will be automatically set up as a Windows service and running.
    - If you manually installed an LLM provider, ensure it is running.
    - Select your preferred provider (Ollama or LM Studio) from the dropdown in the settings screen.
 
