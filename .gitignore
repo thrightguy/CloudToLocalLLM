@@ -1,0 +1,80 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+cloud/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Release files
+/releases/
+CloudToLocalLLM-Windows-*.zip
+*.zip
+
+# Webapp folder (separate repository)
+/webapp/
+
+# Project files
+CloudToLocalLLM.rivet-project
+
+# Downloaded tools (will be fetched during installation)
+/tools/
+
+# Large DLL files
+**/cublasLt64_*.dll
+**/cublas64_*.dll
+**/ggml-cuda.dll
+**/ollama.exe
+
+# Flutter Windows build files
+**/flutter_windows.dll
+**/flutter_windows.dll.pdb
+**/flutter_windows-*.dll
+**/flutter_export.h
+**/flutter_messenger.h
+**/flutter_plugin_registrar.h
+**/flutter_texture_registrar.h
+**/flutter_windows.h
+**/flutter_windows_winrt.dll
+**/flutter_windows_winrt.dll.lib
+**/flutter_windows_winrt.dll.exp
+**/generated_config.cmake

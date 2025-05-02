@@ -1,0 +1,24 @@
+﻿name: cloud_to_local_llm
+description: A Flutter/Dart tunnel for CloudToLocalLLM
+version: 1.2.0
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.5
+  uuid: ^3.0.7
+  path_provider: ^2.1.1
+  shared_preferences: ^2.2.2
+  http: ^1.2.2
+  shelf: ^1.4.2
+  url_launcher: ^6.1.14
+  process_run: ^0.13.1
+  path: ^1.8.3
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
