@@ -90,8 +90,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Set up custom window procedure to handle system tray operations
   HWND hwnd = window.GetHandle();
   SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&window));
-  WNDPROC originalWndProc = reinterpret_cast<WNDPROC>(
-      SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
+  SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc));
   
   // Setup system tray
   SetupSystemTray(hwnd);
@@ -169,8 +168,6 @@ void SetupMethodChannel() {
 
 // Custom window procedure to handle system tray messages
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-  WNDPROC originalWndProc = reinterpret_cast<WNDPROC>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-  
   switch (message) {
     case WM_SYSTEM_TRAY:
       if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP) {

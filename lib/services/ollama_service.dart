@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import '../models/llm_model.dart';
-import '../models/message.dart';
 
 class OllamaService {
   String baseUrl;
 
-  OllamaService({String? baseUrl}) : baseUrl = baseUrl ?? AppConfig.ollamaBaseUrl;
+  OllamaService({String? baseUrl})
+      : baseUrl = baseUrl ?? AppConfig.ollamaBaseUrl;
 
   // Update the base URL
   void updateBaseUrl(String newBaseUrl) {
@@ -43,7 +44,9 @@ class OllamaService {
             id: model['name'],
             name: model['name'],
             provider: 'ollama',
-            size: model['size'] != null ? (model['size'] as int) ~/ (1024 * 1024) : null, // Convert to MB
+            size: model['size'] != null
+                ? (model['size'] as int) ~/ (1024 * 1024)
+                : null, // Convert to MB
             isInstalled: true,
           );
         }).toList();
@@ -82,7 +85,8 @@ class OllamaService {
   }
 
   // Generate a streaming response
-  Stream<String> generateStreamingResponse(String prompt, String modelId) async* {
+  Stream<String> generateStreamingResponse(
+      String prompt, String modelId) async* {
     try {
       final request = http.Request('POST', Uri.parse('$baseUrl/api/generate'));
       request.headers['Content-Type'] = 'application/json';
@@ -94,7 +98,8 @@ class OllamaService {
 
       final streamedResponse = await http.Client().send(request);
 
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk
+          in streamedResponse.stream.transform(utf8.decoder)) {
         // Ollama returns each chunk as a JSON object with a 'response' field
         try {
           final lines = chunk.split('\n').where((line) => line.isNotEmpty);
@@ -127,7 +132,8 @@ class OllamaService {
       final streamedResponse = await http.Client().send(request);
 
       double progress = 0.0;
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk
+          in streamedResponse.stream.transform(utf8.decoder)) {
         try {
           final lines = chunk.split('\n').where((line) => line.isNotEmpty);
           for (final line in lines) {

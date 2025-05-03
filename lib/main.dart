@@ -35,27 +35,31 @@ void main() async {
   // Initialize other services
   final authService = AuthService();
   final tunnelService = TunnelService(
-    authService: authService, 
+    authService: authService,
     windowsService: windowsService,
   );
-  
+
   // Set up bidirectional connection between WindowsService and TunnelService
   if (windowsService != null) {
     windowsService.setTunnelService(tunnelService);
   }
-  
+
   final cloudService = CloudService(authService: authService);
 
   // Get the saved settings to determine the LLM provider
   final prefs = await SharedPreferences.getInstance();
   final settingsJson = prefs.getString(AppConfig.settingsStorageKey);
-  final settings = settingsJson != null ? Map<String, dynamic>.from(jsonDecode(settingsJson)) : <String, dynamic>{};
-  final llmProvider = settings['llmProvider'] as String? ?? AppConfig.defaultLlmProvider;
+  final settings = settingsJson != null
+      ? Map<String, dynamic>.from(jsonDecode(settingsJson))
+      : <String, dynamic>{};
+  final llmProvider =
+      settings['llmProvider'] as String? ?? AppConfig.defaultLlmProvider;
 
   // Initialize OllamaService with the appropriate base URL based on the provider
   final ollamaService = OllamaService(
-    baseUrl: llmProvider == 'lmstudio' ? AppConfig.lmStudioBaseUrl : AppConfig.ollamaBaseUrl
-  );
+      baseUrl: llmProvider == 'lmstudio'
+          ? AppConfig.lmStudioBaseUrl
+          : AppConfig.ollamaBaseUrl);
 
   // Start Ollama if it's not running and we're on Windows
   if (Platform.isWindows && windowsService != null) {
@@ -75,7 +79,8 @@ void main() async {
         Provider<AuthService>.value(value: authService),
         Provider<TunnelService>.value(value: tunnelService),
         Provider<CloudService>.value(value: cloudService),
-        if (windowsService != null) Provider<WindowsService>.value(value: windowsService),
+        if (windowsService != null)
+          Provider<WindowsService>.value(value: windowsService),
 
         // Providers
         ChangeNotifierProvider(
@@ -142,10 +147,13 @@ class _CloudToLocalLlmAppState extends State<CloudToLocalLlmApp> {
   Future<void> _initializeProviders() async {
     // Initialize auth provider
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!mounted) return;
     await authProvider.initialize();
 
     // Initialize settings provider
-    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
+    if (!mounted) return;
     await settingsProvider.initialize();
   }
 

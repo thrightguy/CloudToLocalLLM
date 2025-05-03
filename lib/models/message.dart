@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart'; // Unused import
 
 enum MessageRole { user, assistant, system }
 

@@ -18,18 +18,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _promptController = TextEditingController();
-  bool _isComposing = false;
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _showFloatingButton = false;
 
   @override
   void initState() {
     super.initState();
-    _promptController.addListener(() {
+    _controller.addListener(() {
       setState(() {
-        _isComposing = _promptController.text.isNotEmpty;
+        _showFloatingButton = _controller.text.isNotEmpty;
       });
     });
-    
+
     // Initialize providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeProviders();
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _promptController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -52,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final llmProvider = Provider.of<LlmProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CloudToLocalLLM'),
@@ -66,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
           ),
-          
+
           // Settings button
           IconButton(
             icon: const Icon(Icons.settings),
@@ -77,13 +78,11 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          
+
           // Login/Account button
           IconButton(
             icon: Icon(
-              authProvider.isAuthenticated
-                  ? Icons.account_circle
-                  : Icons.login,
+              authProvider.isAuthenticated ? Icons.account_circle : Icons.login,
             ),
             onPressed: () {
               if (authProvider.isAuthenticated) {
@@ -100,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      
+
       // Drawer for conversation history and models
       drawer: Drawer(
         child: ListView(
@@ -143,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            
+
             // Conversations section
             const ListTile(
               title: Text(
@@ -151,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            
+
             // List of conversations
             ...llmProvider.conversations.map((conversation) {
               return ListTile(
@@ -160,7 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                selected: llmProvider.currentConversation?.id == conversation.id,
+                selected:
+                    llmProvider.currentConversation?.id == conversation.id,
                 onTap: () {
                   llmProvider.setCurrentConversation(conversation.id);
                   Navigator.pop(context); // Close drawer
@@ -173,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             }).toList(),
-            
+
             // New conversation button
             ListTile(
               leading: const Icon(Icons.add),
@@ -189,9 +189,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context); // Close drawer
               },
             ),
-            
+
             const Divider(),
-            
+
             // Models section
             ListTile(
               leading: const Icon(Icons.model_training),
@@ -204,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-            
+
             // Settings
             ListTile(
               leading: const Icon(Icons.settings),
@@ -213,11 +213,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context); // Close drawer
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const SettingsScreen()),
                 );
               },
             ),
-            
+
             // Login/Logout
             ListTile(
               leading: Icon(
@@ -228,13 +229,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               onTap: () {
                 Navigator.pop(context); // Close drawer
-                
+
                 if (authProvider.isAuthenticated) {
                   _showLogoutDialog();
                 } else {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const LoginScreen()),
                   );
                 }
               },
@@ -242,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      
+
       // Main content - chat messages
       body: llmProvider.currentConversation == null
           ? _buildWelcomeScreen()
@@ -256,23 +258,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemCount: llmProvider.currentConversation!.messages.length,
                     itemBuilder: (context, index) {
                       // Display messages in reverse order (newest first)
-                      final reversedIndex = llmProvider.currentConversation!.messages.length - 1 - index;
-                      final message = llmProvider.currentConversation!.messages[reversedIndex];
-                      
+                      final reversedIndex =
+                          llmProvider.currentConversation!.messages.length -
+                              1 -
+                              index;
+                      final message = llmProvider
+                          .currentConversation!.messages[reversedIndex];
+
                       return ChatMessage(message: message);
                     },
                   ),
                 ),
-                
+
                 // Input area
                 PromptInput(
-                  controller: _promptController,
+                  controller: _controller,
                   onSend: _handleSubmitted,
                   isLoading: llmProvider.isLoading,
                 ),
               ],
             ),
-      
+
       // FAB for new conversation
       floatingActionButton: llmProvider.currentConversation == null
           ? FloatingActionButton(
@@ -295,12 +301,12 @@ class _HomeScreenState extends State<HomeScreen> {
   // Handle sending a message
   void _handleSubmitted(String text) {
     if (text.isEmpty) return;
-    
+
     final llmProvider = Provider.of<LlmProvider>(context, listen: false);
-    
+
     // Clear the input field
-    _promptController.clear();
-    
+    _controller.clear();
+
     // Send the message
     llmProvider.sendMessage(text);
   }
@@ -359,7 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              final llmProvider = Provider.of<LlmProvider>(context, listen: false);
+              final llmProvider =
+                  Provider.of<LlmProvider>(context, listen: false);
               llmProvider.createConversation(
                 'New Conversation',
                 llmProvider.models.isNotEmpty

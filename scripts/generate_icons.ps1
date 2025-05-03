@@ -100,7 +100,7 @@ if (-not (Test-Path $logoPath)) {
 Write-Host "Generating icons from: $logoPath" -ForegroundColor Cyan
 
 # Function to generate icon with error handling
-function Generate-Icon {
+function New-Icon {
     param (
         [string]$inputPath,
         [string]$outputPath,
@@ -163,7 +163,7 @@ foreach ($set in $iconSets) {
     foreach ($icon in $set.Icons) {
         $currentIcon++
         Write-Host "  [$currentIcon/$totalIcons] Processing $($icon.Size) icon"
-        Generate-Icon $logoPath $icon.Path $icon.Size
+        New-Icon $logoPath $icon.Path $icon.Size
     }
     
     Write-Host "$($set.Name) icons generated successfully!" -ForegroundColor Green

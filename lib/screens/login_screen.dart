@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -14,11 +15,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  
+
   bool _isLogin = true; // Toggle between login and register
   bool _isLoading = false;
   String _errorMessage = '';
-  
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -26,11 +27,9 @@ class _LoginScreenState extends State<LoginScreen> {
     _nameController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    
     return Scaffold(
       appBar: AppBar(
         title: Text(_isLogin ? 'Login' : 'Register'),
@@ -58,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Error message
               if (_errorMessage.isNotEmpty)
                 Container(
@@ -73,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: Colors.red.shade900),
                   ),
                 ),
-              
+
               // Login/Register form
               Form(
                 key: _formKey,
@@ -96,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                     if (!_isLogin) const SizedBox(height: 16),
-                    
+
                     // Email field
                     TextFormField(
                       controller: _emailController,
@@ -110,14 +109,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Password field
                     TextFormField(
                       controller: _passwordController,
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Login/Register button
                     SizedBox(
                       width: double.infinity,
@@ -151,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Toggle between login and register
                     TextButton(
                       onPressed: _isLoading ? null : _toggleAuthMode,
@@ -161,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             : 'Already have an account? Login',
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
                     const Text(
                       'Or continue with',
@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Auth0 login button
                     SizedBox(
                       width: double.infinity,
@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-  
+
   // Toggle between login and register
   void _toggleAuthMode() {
     setState(() {
@@ -197,22 +197,22 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = '';
     });
   }
-  
+
   // Handle form submission
   Future<void> _handleSubmit() async {
     if (_formKey.currentState?.validate() != true) {
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       bool success;
-      
+
       if (_isLogin) {
         // Login
         success = await authProvider.login(
@@ -227,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text,
         );
       }
-      
+
       if (success) {
         if (mounted) {
           Navigator.pop(context);
@@ -253,18 +253,18 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
-  
+
   // Handle Auth0 login
   Future<void> _handleAuth0Login() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.loginWithAuth0();
-      
+
       if (success) {
         if (mounted) {
           Navigator.pop(context);
@@ -287,5 +287,13 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  void _login(BuildContext context) async {
+    // final authProvider = Provider.of<AuthProvider>(context, listen: false); // Unused local variable
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
+
+    // ... existing code ...
   }
 }
