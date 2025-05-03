@@ -119,7 +119,7 @@ server {
 Set-Content -Path "$tempDir\cloudtolocalllm.conf" -Value $nginxConfig
 
 # Create server setup script
-$setupScript = @"
+$setupScript = @'
 #!/bin/bash
 set -e
 
@@ -129,7 +129,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "\${YELLOW}Starting VPS setup and configuration...${NC}"
+echo -e "${YELLOW}Starting VPS setup and configuration...${NC}"
 
 # Update system and install dependencies
 sudo apt update
@@ -138,11 +138,11 @@ sudo apt install -y docker.io docker-compose nginx curl git
 # Configure Docker
 sudo systemctl start docker
 sudo systemctl enable docker
-sudo usermod -aG docker \$USER
+sudo usermod -aG docker $USER
 
 # Copy docker-compose.yml to /var/www/html
 sudo mkdir -p /var/www/html
-sudo chown -R \$USER:\$USER /var/www/html
+sudo chown -R $USER:$USER /var/www/html
 cp docker-compose.yml /var/www/html/
 
 # Configure nginx
@@ -197,12 +197,12 @@ sudo chmod -R 755 /var/www/html
 if command -v ufw &> /dev/null; then
     sudo ufw allow 80/tcp
     sudo ufw allow 8080/tcp
-    echo -e "\${GREEN}UFW firewall ports opened${NC}"
+    echo -e "${GREEN}UFW firewall ports opened${NC}"
 elif command -v firewall-cmd &> /dev/null; then
     sudo firewall-cmd --permanent --add-port=80/tcp
     sudo firewall-cmd --permanent --add-port=8080/tcp
     sudo firewall-cmd --reload
-    echo -e "\${GREEN}FirewallD ports opened${NC}"
+    echo -e "${GREEN}FirewallD ports opened${NC}"
 fi
 
 # Start Docker containers
@@ -211,15 +211,15 @@ sudo docker-compose down || true
 sudo docker-compose up -d
 
 # Test connection
-echo -e "\${YELLOW}Testing local connection...${NC}"
+echo -e "${YELLOW}Testing local connection...${NC}"
 curl -I http://localhost
 curl -I http://localhost:8080
 
-echo -e "\${GREEN}Setup completed successfully!${NC}"
-echo -e "\${YELLOW}Your site should now be accessible at:${NC}"
-echo -e "\${GREEN}http://cloudtolocalllm.online${NC}"
-echo -e "\${GREEN}http://cloudtolocalllm.online/cloud/${NC}"
-"@
+echo -e "${GREEN}Setup completed successfully!${NC}"
+echo -e "${YELLOW}Your site should now be accessible at:${NC}"
+echo -e "${GREEN}http://cloudtolocalllm.online${NC}"
+echo -e "${GREEN}http://cloudtolocalllm.online/cloud/${NC}"
+'@
 
 Set-Content -Path "$tempDir\setup.sh" -Value $setupScript -Encoding UTF8
 
