@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 /// A centralized logging utility for the app
 class AppLogger {
-  static bool _initialized = false;
   static LogLevel _logLevel = LogLevel.info;
 
   /// The tag for this logger instance
@@ -14,7 +13,6 @@ class AppLogger {
   /// Initialize the logger
   static void init({LogLevel logLevel = LogLevel.info}) {
     _logLevel = logLevel;
-    _initialized = true;
   }
 
   /// Log a debug message

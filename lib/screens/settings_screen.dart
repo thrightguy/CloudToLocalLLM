@@ -17,7 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -32,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildThemeSelector(settingsProvider),
             ],
           ),
-          
+
           // LLM settings
           _buildSection(
             title: 'LLM Settings',
@@ -56,7 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          
+
           // Windows-specific LLM management
           if (Platform.isWindows)
             _buildSection(
@@ -85,14 +85,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ElevatedButton.icon(
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('Start LLM'),
-                      onPressed: settingsProvider.isOllamaRunning 
-                          ? null 
+                      onPressed: settingsProvider.isOllamaRunning
+                          ? null
                           : () async {
                               final result = await settingsProvider.startLlm();
                               if (!result && mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Failed to start LLM. Please check installation.'),
+                                    content: Text(
+                                        'Failed to start LLM. Please check installation.'),
                                   ),
                                 );
                               }
@@ -101,8 +102,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ElevatedButton.icon(
                       icon: const Icon(Icons.stop),
                       label: const Text('Stop LLM'),
-                      onPressed: !settingsProvider.isOllamaRunning 
-                          ? null 
+                      onPressed: !settingsProvider.isOllamaRunning
+                          ? null
                           : () async {
                               final result = await settingsProvider.stopLlm();
                               if (!result && mounted) {
@@ -118,17 +119,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.settings_applications),
                       label: const Text('Install as Service'),
                       onPressed: () async {
-                        final result = await settingsProvider.installLlmAsService();
+                        final result =
+                            await settingsProvider.installLlmAsService();
                         if (!result && mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Failed to install LLM as a service. Try running as administrator.'),
+                              content: Text(
+                                  'Failed to install LLM as a service. Try running as administrator.'),
                             ),
                           );
                         } else if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Successfully installed LLM as a Windows service.'),
+                              content: Text(
+                                  'Successfully installed LLM as a Windows service.'),
                             ),
                           );
                         }
@@ -138,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-          
+
           // Cloud settings
           _buildSection(
             title: 'Cloud Settings',
@@ -189,7 +193,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ],
                         ),
-                        if (settingsProvider.isTunnelConnected && settingsProvider.tunnelUrl.isNotEmpty) ...[
+                        if (settingsProvider.isTunnelConnected &&
+                            settingsProvider.tunnelUrl.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           const Text(
                             'Your LLM is accessible at:',
@@ -210,11 +215,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: () async {
-                            final result = await settingsProvider.checkTunnelStatus();
+                            final result =
+                                await settingsProvider.checkTunnelStatus();
                             if (!result && mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Failed to connect to tunnel. Make sure you are logged in.'),
+                                  content: Text(
+                                      'Failed to connect to tunnel. Make sure you are logged in.'),
                                 ),
                               );
                             }
@@ -228,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ],
           ),
-          
+
           // Account settings
           _buildSection(
             title: 'Account',
@@ -248,7 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     } else {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
                       );
                     }
                   },
@@ -259,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          
+
           // About section
           _buildSection(
             title: 'About',
@@ -291,25 +299,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          
+
           // Reset settings button
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _showResetSettingsDialog,
-            icon: const Icon(Icons.restore),
-            label: const Text('Reset Settings'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'reset') {
+                _showResetSettingsDialog();
+              }
+            },
+            itemBuilder: (context) {
+              return [
+                const PopupMenuItem<String>(
+                  value: 'reset',
+                  child: Text('Reset Settings'),
+                ),
+              ];
+            },
+            child: OverflowBar(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _showResetSettingsDialog,
+                  icon: const Icon(Icons.restore),
+                  label: const Text('Reset Settings'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-  
+
   // Build a section with a title and children
-  Widget _buildSection({required String title, required List<Widget> children}) {
+  Widget _buildSection(
+      {required String title, required List<Widget> children}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -332,7 +360,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
     );
   }
-  
+
   // Build a switch tile
   Widget _buildSwitchTile({
     required String title,
@@ -347,7 +375,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onChanged: onChanged,
     );
   }
-  
+
   // Build theme selector
   Widget _buildThemeSelector(SettingsProvider settingsProvider) {
     return ListTile(
@@ -377,7 +405,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Build LLM provider selector
   Widget _buildLlmProviderSelector(SettingsProvider settingsProvider) {
     return ListTile(
@@ -403,13 +431,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Build Windows LLM status card
   Widget _buildWindowsLlmStatus(SettingsProvider settingsProvider) {
-    final isRunning = settingsProvider.llmProvider == 'ollama' 
-        ? settingsProvider.isOllamaRunning 
+    final isRunning = settingsProvider.llmProvider == 'ollama'
+        ? settingsProvider.isOllamaRunning
         : settingsProvider.isLmStudioRunning;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -437,7 +465,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Provider: ${settingsProvider.llmProvider}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            if (settingsProvider.llmProvider == 'ollama' && 
+            if (settingsProvider.llmProvider == 'ollama' &&
                 settingsProvider.ollamaVersion.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Version: ${settingsProvider.ollamaVersion}'),
@@ -454,7 +482,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Show logout confirmation dialog
   void _showLogoutDialog() {
     showDialog(
@@ -478,14 +506,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   // Show reset settings confirmation dialog
   void _showResetSettingsDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset Settings'),
-        content: const Text('Are you sure you want to reset all settings to default values?'),
+        content: const Text(
+            'Are you sure you want to reset all settings to default values?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -494,7 +523,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Provider.of<SettingsProvider>(context, listen: false).resetSettings();
+              Provider.of<SettingsProvider>(context, listen: false)
+                  .resetSettings();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Settings reset to defaults')),
               );

@@ -4,9 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../config/app_config.dart';
-import 'auth_service.dart';
+import '../services/auth_service.dart';
 import 'windows_service.dart';
 
 class TunnelService {

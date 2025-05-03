@@ -3,7 +3,7 @@ import '../models/message.dart';
 
 class ChatMessage extends StatelessWidget {
   final Message message;
-  
+
   const ChatMessage({
     Key? key,
     required this.message,
@@ -12,11 +12,12 @@ class ChatMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == MessageRole.user;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar for assistant messages
@@ -30,7 +31,7 @@ class ChatMessage extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          
+
           // Message content
           Flexible(
             child: Container(
@@ -54,21 +55,21 @@ class ChatMessage extends StatelessWidget {
                         color: _getTextColor(context, isUser),
                       ),
                     ),
-                  
+
                   // Timestamp
                   const SizedBox(height: 4),
                   Text(
                     _formatTimestamp(message.timestamp),
                     style: TextStyle(
                       fontSize: 10,
-                      color: _getTextColor(context, isUser).withOpacity(0.7),
+                      color: _getTextColor(context, isUser).withAlpha(178),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // Avatar for user messages
           if (isUser) ...[
             const SizedBox(width: 8),
@@ -84,37 +85,38 @@ class ChatMessage extends StatelessWidget {
       ),
     );
   }
-  
+
   // Get the background color for the message bubble
   Color _getMessageColor(BuildContext context, bool isUser) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     if (isUser) {
-      return theme.colorScheme.primary.withOpacity(0.8);
+      return theme.colorScheme.primary.withAlpha(204);
     } else {
       return isDark ? Colors.grey[800]! : Colors.grey[200]!;
     }
   }
-  
+
   // Get the text color for the message
   Color _getTextColor(BuildContext context, bool isUser) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     if (isUser) {
       return Colors.white;
     } else {
       return isDark ? Colors.white : Colors.black;
     }
   }
-  
+
   // Format the timestamp
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(timestamp.year, timestamp.month, timestamp.day);
-    
+    final messageDate =
+        DateTime(timestamp.year, timestamp.month, timestamp.day);
+
     if (messageDate == today) {
       // Today, show time only
       return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
@@ -160,7 +162,7 @@ class _LoadingIndicator extends StatelessWidget {
 // Error message display
 class _ErrorMessage extends StatelessWidget {
   final String message;
-  
+
   const _ErrorMessage({
     Key? key,
     required this.message,

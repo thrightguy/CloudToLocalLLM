@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../models/user.dart';
 
@@ -19,6 +18,9 @@ class AuthService {
   User? get currentUser => _currentUser;
 
   // Get the authentication token
+  String? getToken() => _token;
+
+  // For backward compatibility
   String? get token => _token;
 
   // Initialize the auth service

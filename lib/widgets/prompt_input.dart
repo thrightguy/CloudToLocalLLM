@@ -4,7 +4,7 @@ class PromptInput extends StatefulWidget {
   final TextEditingController controller;
   final Function(String) onSend;
   final bool isLoading;
-  
+
   const PromptInput({
     Key? key,
     required this.controller,
@@ -18,19 +18,19 @@ class PromptInput extends StatefulWidget {
 
 class _PromptInputState extends State<PromptInput> {
   bool _isComposing = false;
-  
+
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_updateComposingState);
   }
-  
+
   @override
   void dispose() {
     widget.controller.removeListener(_updateComposingState);
     super.dispose();
   }
-  
+
   void _updateComposingState() {
     final isComposing = widget.controller.text.isNotEmpty;
     if (isComposing != _isComposing) {
@@ -39,15 +39,15 @@ class _PromptInputState extends State<PromptInput> {
       });
     }
   }
-  
+
   void _handleSubmitted() {
     final text = widget.controller.text.trim();
     if (text.isEmpty) return;
-    
+
     widget.onSend(text);
     // Controller will be cleared by the parent
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -55,7 +55,7 @@ class _PromptInputState extends State<PromptInput> {
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(128),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -105,7 +105,7 @@ class _PromptInputState extends State<PromptInput> {
                 enabled: !widget.isLoading,
               ),
             ),
-            
+
             // Send button
             const SizedBox(width: 8),
             AnimatedOpacity(

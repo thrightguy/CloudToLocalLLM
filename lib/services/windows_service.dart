@@ -397,14 +397,4 @@ class WindowsService {
     final results = await shell.run('powershell.exe -Command "$command"');
     return results.first;
   }
-
-  /// Call a native method through the method channel
-  Future<dynamic> _callNativeMethod(String method, [dynamic arguments]) async {
-    try {
-      return await platform.invokeMethod(method, arguments);
-    } on PlatformException catch (e) {
-      debugPrint('Error calling native method: $e');
-      return null;
-    }
-  }
 }

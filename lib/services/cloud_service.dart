@@ -6,7 +6,7 @@ import '../models/conversation.dart';
 import '../models/llm_model.dart';
 import '../models/message.dart';
 import '../models/user.dart';
-import 'auth_service.dart';
+import '../services/auth_service.dart';
 
 class CloudService {
   final String baseUrl;
@@ -26,7 +26,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/user/profile'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
       );
 
@@ -51,7 +51,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/user/profile'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
         body: jsonEncode(user.toJson()),
       );
@@ -71,7 +71,7 @@ class CloudService {
         headers: {
           'Content-Type': 'application/json',
           if (authService.isAuthenticated.value)
-            'Authorization': 'Bearer ${authService.token}',
+            'Authorization': 'Bearer ${authService.getToken()}',
         },
       );
 
@@ -96,7 +96,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/conversations'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
       );
 
@@ -121,7 +121,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/conversations/$conversationId'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
       );
 
@@ -146,7 +146,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/conversations'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
         body: jsonEncode({
           'title': title,
@@ -175,7 +175,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/conversations/${conversation.id}'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
         body: jsonEncode(conversation.toJson()),
       );
@@ -196,7 +196,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/conversations/$conversationId'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
       );
 
@@ -216,7 +216,7 @@ class CloudService {
         Uri.parse('$baseUrl/api/conversations/$conversationId/messages'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
         body: jsonEncode({
           'content': content,
@@ -247,7 +247,7 @@ class CloudService {
             '$baseUrl/api/conversations/$conversationId/messages/$messageId/response'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${authService.token}',
+          'Authorization': 'Bearer ${authService.getToken()}',
         },
       );
 

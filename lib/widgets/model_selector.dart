@@ -5,7 +5,7 @@ import '../providers/llm_provider.dart';
 
 class ModelSelector extends StatelessWidget {
   final Function(String)? onModelSelected;
-  
+
   const ModelSelector({
     Key? key,
     this.onModelSelected,
@@ -15,7 +15,7 @@ class ModelSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final llmProvider = Provider.of<LlmProvider>(context);
     final models = llmProvider.models;
-    
+
     // If no models are available, show a refresh button
     if (models.isEmpty) {
       return IconButton(
@@ -26,21 +26,23 @@ class ModelSelector extends StatelessWidget {
         },
       );
     }
-    
+
     // Get the current model ID from the current conversation or use the first model
-    final currentModelId = llmProvider.currentConversation?.modelId ?? 
+    final currentModelId = llmProvider.currentConversation?.modelId ??
         (models.isNotEmpty ? models.first.id : '');
-    
+
     // Find the current model
     final currentModel = models.firstWhere(
       (model) => model.id == currentModelId,
-      orElse: () => models.isNotEmpty ? models.first : LlmModel(
-        id: 'unknown',
-        name: 'Unknown',
-        provider: 'unknown',
-      ),
+      orElse: () => models.isNotEmpty
+          ? models.first
+          : LlmModel(
+              id: 'unknown',
+              name: 'Unknown',
+              provider: 'unknown',
+            ),
     );
-    
+
     return PopupMenuButton<String>(
       tooltip: 'Select Model',
       onSelected: (modelId) {
@@ -62,7 +64,7 @@ class ModelSelector extends StatelessWidget {
             ),
           ),
           const PopupMenuDivider(),
-          
+
           // Models
           ...models.where((model) => model.isInstalled).map((model) {
             return PopupMenuItem<String>(
@@ -71,7 +73,9 @@ class ModelSelector extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.check,
-                    color: model.id == currentModelId ? Colors.green : Colors.transparent,
+                    color: model.id == currentModelId
+                        ? Colors.green
+                        : Colors.transparent,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -80,7 +84,8 @@ class ModelSelector extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: _getProviderColor(model.provider),
                       borderRadius: BorderRadius.circular(4),
@@ -97,16 +102,16 @@ class ModelSelector extends StatelessWidget {
               ),
             );
           }).toList(),
-          
+
           // Divider before actions
           if (models.where((model) => model.isInstalled).isNotEmpty)
             const PopupMenuDivider(),
-          
+
           // Manage models action
           PopupMenuItem<String>(
             value: 'manage_models',
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Icon(Icons.settings),
                 SizedBox(width: 8),
                 Text('Manage Models'),
@@ -133,7 +138,7 @@ class ModelSelector extends StatelessWidget {
       ),
     );
   }
-  
+
   // Get color for provider badge
   Color _getProviderColor(String provider) {
     switch (provider.toLowerCase()) {

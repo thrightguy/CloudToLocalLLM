@@ -19,16 +19,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  bool _showFloatingButton = false;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(() {
-      setState(() {
-        _showFloatingButton = _controller.text.isNotEmpty;
-      });
+      // We can simplify this since we're not using a floating button indicator
     });
 
     // Initialize providers
