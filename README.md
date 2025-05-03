@@ -1,112 +1,108 @@
 # CloudToLocalLLM
 
-A Windows application that serves as an entry point for communicating with local LLMs (Language Learning Models). Built with Flutter, it provides a native Windows experience for managing and interacting with locally installed LLMs like Ollama.
-
-> **Note**: This project has moved to GitLab for better large file support and enhanced CI/CD capabilities.
-
-## What's New in v1.2.0
-- **Enhanced System Tray Integration**: Full control of the application from the system tray
-- **Improved Ollama Integration**: 
-  - Automatic installation and setup via Setup-Ollama.ps1
-  - ZIP-based installation for better portability
-  - Support for both NVIDIA and AMD GPUs
-- **Tunnel Management**: Secure remote access through ngrok integration
-- **Settings UI**: Enhanced Windows-specific settings and LLM process management
+A Flutter application that bridges the gap between cloud services and local large language models (LLMs).
 
 ## Features
 
-- **Native Windows Experience**
-  - System tray integration with status indicators
-  - Automatic LLM service management
-  - Dark/Light theme support
-  
-- **LLM Integration**
-  - Direct communication with Ollama
-  - Automatic installation and configuration
-  - Model management and status monitoring
-  
-- **Remote Access**
-  - Secure tunneling via ngrok
-  - Automatic tunnel management
-  - Status monitoring and health checks
+- **Local LLM Integration**: Connect to locally running LLM services like Ollama or LM Studio
+- **Cloud Synchronization**: Optional synchronization of your conversations with cloud
+- **Remote Access**: Access your local LLM from anywhere via secure tunnels
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Multiple LLM Providers**: Support for Ollama and LM Studio, with extensible architecture
 
-## Prerequisites
+## Getting Started
 
-- **Windows 10/11**
-- **Hardware Requirements**:
-  - Minimum: 8GB RAM, 4-core CPU
-  - Recommended: 16GB RAM, 8-core CPU
-  - Optional: NVIDIA/AMD GPU for acceleration
+### Prerequisites
 
-## Installation
+- Flutter SDK (2.10.0 or higher)
+- Dart SDK (2.16.0 or higher)
+- (Optional) Ollama or LM Studio installed locally
 
-1. **Download and Install**
-   ```powershell
-   # Clone the repository
-   git clone https://gitlab.com/thrightguy-group/CloudToLocalLLM.git
-   cd CloudToLocalLLM
-   
-   # Run the setup script
-   .\Setup-Ollama.ps1
+### Installation
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/your-username/CloudToLocalLLM.git
    ```
 
-2. **Build the Application**
-   ```powershell
-   # Install Flutter (if not already installed)
-   # Then build the application
-   .\build.ps1 -Release
+2. Navigate to the project directory:
+   ```
+   cd CloudToLocalLLM
+   ```
+
+3. Install dependencies:
+   ```
+   flutter pub get
+   ```
+
+4. Run the application:
+   ```
+   flutter run
    ```
 
 ## Usage
 
-1. **Start the Application**
-   - Launch from the Start menu or desktop shortcut
-   - The app will appear in your system tray
-   - Click the tray icon to open the interface
+### Connecting to Local LLM
 
-2. **LLM Management**
-   - Ollama will be automatically installed and configured
-   - Download models through the UI or using `ollama pull model_name`
-   - Monitor LLM status from the system tray
+1. Open the app and navigate to Settings
+2. Select your LLM provider (Ollama or LM Studio)
+3. Configure the IP address and port if different from default
+4. Create a new conversation and start chatting!
 
-3. **Remote Access**
-   - Enable remote access in settings
-   - A secure tunnel will be created automatically
-   - Access your LLM through the provided URL
+### Cloud Synchronization
+
+1. Create an account or log in
+2. Enable cloud synchronization in Settings
+3. Your conversations will automatically sync when you're online
+
+### Remote Access
+
+1. Log in to your account
+2. Enable tunnel in Settings
+3. Your local LLM will be accessible via the provided URL
 
 ## Project Structure
 
-```
-CloudToLocalLLM/
-├── lib/                    # Flutter application code
-│   ├── config/            # Application configuration
-│   ├── models/            # Data models
-│   ├── services/          # Business logic
-│   ├── providers/         # State management
-│   ├── screens/           # UI screens
-│   └── widgets/           # Reusable components
-├── windows/               # Windows-specific code
-├── tools/                 # Installation tools
-└── Setup-Ollama.ps1      # Ollama setup script
-```
+- `lib/`: Main application code
+  - `config/`: Application configuration
+  - `models/`: Data models
+  - `providers/`: State management providers
+  - `screens/`: UI screens
+  - `services/`: Business logic services
+  - `utils/`: Utility classes
+  - `widgets/`: Reusable UI components
 
-## Remote Access
+- `cloud/`: Cloud service components
+  - Similar structure to `lib/`
 
-Remote access is handled by the separate cloud component. See [CloudToLocalLLM_cloud](https://gitlab.com/thrightguy-group/CloudToLocalLLM_cloud) for details.
+## Development
+
+### Architecture
+
+The application follows a provider-based state management approach with a clear separation of concerns:
+
+- **Models**: Data structures
+- **Providers**: State management and business logic coordination
+- **Services**: Core business logic and API interactions
+- **Screens**: UI components
+
+### Adding a New LLM Provider
+
+1. Create a new service in `lib/services/`
+2. Implement the required methods for model management and response generation
+3. Update the `SettingsProvider` to include the new provider option
+4. Add UI settings for the new provider in `settings_screen.dart`
 
 ## Contributing
 
-1. Fork the repository on [GitLab](https://gitlab.com/thrightguy-group/CloudToLocalLLM)
-2. Create a feature branch
-3. Make your changes
-4. Create a merge request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT License - see LICENSE file
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## Acknowledgements
 
-- [Ollama](https://ollama.ai/)
 - [Flutter](https://flutter.dev/)
-- [ngrok](https://ngrok.com/)
+- [Ollama](https://ollama.ai/)
+- [LM Studio](https://lmstudio.ai/)
