@@ -10,14 +10,17 @@ This guide explains how to deploy the CloudToLocalLLM cloud portal (Flutter web)
   - `lib/` (Flutter source code)
   - `web/` (Web entrypoint: index.html, favicon, etc.)
   - `pubspec.yaml` (Flutter dependencies)
-  - `Dockerfile` (see below)
+  - `Dockerfile` (already configured)
+  - `.dockerignore` (already configured)
   - This README
 
 ---
 
-## 2. Dockerfile for Flutter Web
+## 2. Docker Configuration (Already Implemented)
 
-```
+The Docker setup is already implemented with a multi-stage build for optimal image size:
+
+```dockerfile
 # Use the official Dart image to build the web app
 FROM dart:stable AS build
 WORKDIR /app
@@ -33,9 +36,57 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
+This Dockerfile:
+1. Uses Dart to build the Flutter web app
+2. Creates a minimal Nginx image with only the built assets
+3. Results in a small, efficient Docker image
+
 ---
 
-## 3. How to Build and Run Locally
+## 3. Optimizing the Docker Image
+
+To keep the Docker image as small as possible:
+
+### 3.1 Use the `.dockerignore` file
+
+The `.dockerignore` file prevents unnecessary files from being included in the build context:
+
+```
+# Development
+.git
+.github
+.gitignore
+.vscode
+.idea
+
+# Build artifacts
+build/
+.dart_tool/
+
+# Tests
+test/
+*_test.dart
+
+# Documentation
+*.md
+LICENSE
+
+# Dependencies cached locally
+.pub-cache/
+.pub/
+```
+
+### 3.2 Remove Unnecessary Packages
+
+Before building the Docker image, you can remove any development dependencies that aren't needed in production:
+
+1. Audit `pubspec.yaml` and move development-only packages to `dev_dependencies`
+2. Consider using conditional imports to exclude debug tooling in production builds
+3. The multi-stage build already eliminates build tools from the final image
+
+---
+
+## 4. How to Build and Run Locally
 
 ```sh
 # Build the Docker image
@@ -50,7 +101,7 @@ Then visit [http://localhost:8080](http://localhost:8080) in your browser.
 
 ---
 
-## 4. Deploying on Render.com
+## 5. Deploying on Render.com
 
 1. Create a new GitHub repository with only the cloud portal code (see structure above).
 2. Push your code to GitHub.
@@ -67,7 +118,7 @@ Your portal will be available at the Render-provided URL.
 
 ---
 
-## 5. Non-Technical Notes
+## 6. Non-Technical Notes
 
 - No coding is required to deploy or update the portal—just follow these steps.
 - The portal will look and work the same as your local app, but is accessible from anywhere.
@@ -75,11 +126,12 @@ Your portal will be available at the Render-provided URL.
 
 ---
 
-## 6. For Developers
+## 7. For Developers
 
 - Ensure only the cloud portal code is in the repo (do not include Windows/native/local files).
 - The Dockerfile builds the Flutter web app and serves it with nginx for maximum compatibility.
 - For custom domains or HTTPS, see Render.com documentation.
+- Regular updates of base images (`dart:stable` and `nginx:alpine`) ensure security patches are applied.
 
 ---
 
