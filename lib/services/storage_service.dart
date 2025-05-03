@@ -92,7 +92,7 @@ class StorageService {
         final json = jsonDecode(await File(file.path).readAsString());
         conversations.add(Conversation.fromJson(json));
       } catch (e) {
-        print('Error reading conversation file: $e');
+        debugPrint('Error reading conversation file: $e');
       }
     }
 
@@ -143,7 +143,7 @@ class StorageService {
         final json = jsonDecode(await File(file.path).readAsString());
         models.add(LlmModel.fromJson(json));
       } catch (e) {
-        print('Error reading model file: $e');
+        debugPrint('Error reading model file: $e');
       }
     }
 
