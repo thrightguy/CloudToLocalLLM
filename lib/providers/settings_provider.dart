@@ -48,11 +48,12 @@ class SettingsProvider extends ChangeNotifier {
   bool get installAsService => _installAsService;
   bool get isTunnelConnected => tunnelService.isConnected.value;
   String get tunnelUrl => tunnelService.tunnelUrl.value;
-  
+
   // Windows-specific getters
   bool get isWindows => Platform.isWindows;
   bool get isOllamaRunning => windowsService?.isOllamaRunning.value ?? false;
-  bool get isLmStudioRunning => windowsService?.isLmStudioRunning.value ?? false;
+  bool get isLmStudioRunning =>
+      windowsService?.isLmStudioRunning.value ?? false;
   String get ollamaVersion => windowsService?.ollamaVersion.value ?? '';
 
   // Initialize the provider
@@ -68,7 +69,7 @@ class SettingsProvider extends ChangeNotifier {
       // Listen for tunnel status changes
       tunnelService.isConnected.addListener(_onTunnelStatusChanged);
       tunnelService.tunnelUrl.addListener(_onTunnelUrlChanged);
-      
+
       // Listen for Windows service status changes if available
       if (windowsService != null) {
         windowsService!.isOllamaRunning.addListener(_onLlmStatusChanged);
@@ -80,7 +81,7 @@ class SettingsProvider extends ChangeNotifier {
       _error = '';
     } catch (e) {
       _error = 'Error initializing settings provider: $e';
-      print(_error);
+      debugPrint(_error);
     } finally {
       _setLoading(false);
     }
@@ -96,14 +97,18 @@ class SettingsProvider extends ChangeNotifier {
       _themeMode = _parseThemeMode(themeModeStr);
 
       // LLM provider
-      _llmProvider = settings['llmProvider'] as String? ?? AppConfig.defaultLlmProvider;
+      _llmProvider =
+          settings['llmProvider'] as String? ?? AppConfig.defaultLlmProvider;
 
       // Feature flags
-      _enableCloudSync = settings['enableCloudSync'] as bool? ?? AppConfig.enableCloudSync;
-      _enableOfflineMode = settings['enableOfflineMode'] as bool? ?? AppConfig.enableOfflineMode;
-      _enableModelDownload = settings['enableModelDownload'] as bool? ?? AppConfig.enableModelDownload;
+      _enableCloudSync =
+          settings['enableCloudSync'] as bool? ?? AppConfig.enableCloudSync;
+      _enableOfflineMode =
+          settings['enableOfflineMode'] as bool? ?? AppConfig.enableOfflineMode;
+      _enableModelDownload = settings['enableModelDownload'] as bool? ??
+          AppConfig.enableModelDownload;
       _enableTunnel = settings['enableTunnel'] as bool? ?? false;
-      
+
       // Windows-specific settings
       _autoStartLlm = settings['autoStartLlm'] as bool? ?? true;
       _installAsService = settings['installAsService'] as bool? ?? true;
@@ -112,17 +117,18 @@ class SettingsProvider extends ChangeNotifier {
       if (_enableTunnel) {
         await _startTunnel();
       }
-      
+
       // Auto-start LLM if enabled and on Windows
       if (_autoStartLlm && Platform.isWindows && windowsService != null) {
-        if (_llmProvider == 'ollama' && !windowsService!.isOllamaRunning.value) {
+        if (_llmProvider == 'ollama' &&
+            !windowsService!.isOllamaRunning.value) {
           windowsService!.startOllama();
         }
       }
 
       notifyListeners();
     } catch (e) {
-      print('Error loading settings: $e');
+      debugPrint('Error loading settings: $e');
       // Use defaults
     }
   }
@@ -143,7 +149,7 @@ class SettingsProvider extends ChangeNotifier {
 
       await storageService.saveSettings(settings);
     } catch (e) {
-      print('Error saving settings: $e');
+      debugPrint('Error saving settings: $e');
     }
   }
 
@@ -164,12 +170,12 @@ class SettingsProvider extends ChangeNotifier {
     // Update the OllamaService with the new base URL
     try {
       // Update the base URL based on the provider
-      final newBaseUrl = provider == 'lmstudio' 
-          ? AppConfig.lmStudioBaseUrl 
+      final newBaseUrl = provider == 'lmstudio'
+          ? AppConfig.lmStudioBaseUrl
           : AppConfig.ollamaBaseUrl;
 
       ollamaService.updateBaseUrl(newBaseUrl);
-      
+
       // Start the appropriate LLM if auto-start is enabled
       if (_autoStartLlm && Platform.isWindows && windowsService != null) {
         if (provider == 'ollama' && !windowsService!.isOllamaRunning.value) {
@@ -180,7 +186,7 @@ class SettingsProvider extends ChangeNotifier {
       // Note: The LlmProvider will be notified of the change through the ChangeNotifierProxyProvider
       // and will refresh its models accordingly
     } catch (e) {
-      print('Error updating OllamaService base URL: $e');
+      debugPrint('Error updating OllamaService base URL: $e');
     }
 
     notifyListeners();
@@ -222,67 +228,67 @@ class SettingsProvider extends ChangeNotifier {
     await _saveSettings();
     notifyListeners();
   }
-  
+
   // Set auto-start LLM
   Future<void> setAutoStartLlm(bool enable) async {
     _autoStartLlm = enable;
     await _saveSettings();
     notifyListeners();
   }
-  
+
   // Set install as service
   Future<void> setInstallAsService(bool enable) async {
     _installAsService = enable;
     await _saveSettings();
     notifyListeners();
   }
-  
+
   // Start/stop LLM operations for Windows
   Future<bool> startLlm() async {
     if (!Platform.isWindows || windowsService == null) {
       return false;
     }
-    
+
     if (_llmProvider == 'ollama') {
       return await windowsService!.startOllama();
     }
-    
+
     return false;
   }
-  
+
   Future<bool> stopLlm() async {
     if (!Platform.isWindows || windowsService == null) {
       return false;
     }
-    
+
     if (_llmProvider == 'ollama') {
       return await windowsService!.stopOllama();
     }
-    
+
     return false;
   }
-  
+
   Future<bool> installLlmAsService() async {
     if (!Platform.isWindows || windowsService == null) {
       return false;
     }
-    
+
     if (_llmProvider == 'ollama') {
       return await windowsService!.installOllamaAsService();
     }
-    
+
     return false;
   }
-  
+
   Future<bool> isLlmInstalled() async {
     if (!Platform.isWindows || windowsService == null) {
       return false;
     }
-    
+
     if (_llmProvider == 'ollama') {
       return await windowsService!.isOllamaInstalled();
     }
-    
+
     return false;
   }
 
@@ -291,7 +297,7 @@ class SettingsProvider extends ChangeNotifier {
     try {
       return await tunnelService.startTunnel();
     } catch (e) {
-      print('Error starting tunnel: $e');
+      debugPrint('Error starting tunnel: $e');
       return false;
     }
   }
@@ -301,7 +307,7 @@ class SettingsProvider extends ChangeNotifier {
     try {
       await tunnelService.stopTunnel();
     } catch (e) {
-      print('Error stopping tunnel: $e');
+      debugPrint('Error stopping tunnel: $e');
     }
   }
 
@@ -310,23 +316,23 @@ class SettingsProvider extends ChangeNotifier {
     try {
       return await tunnelService.checkTunnelStatus();
     } catch (e) {
-      print('Error checking tunnel status: $e');
+      debugPrint('Error checking tunnel status: $e');
       return false;
     }
   }
-  
+
   // Check LLM status
   Future<bool> checkLlmStatus() async {
     if (!Platform.isWindows || windowsService == null) {
       return false;
     }
-    
+
     if (_llmProvider == 'ollama') {
       return await windowsService!.checkOllamaStatus();
     } else if (_llmProvider == 'lmstudio') {
       return await windowsService!.checkLmStudioStatus();
     }
-    
+
     return false;
   }
 
@@ -359,7 +365,7 @@ class SettingsProvider extends ChangeNotifier {
   void _onTunnelUrlChanged() {
     notifyListeners();
   }
-  
+
   // Handle LLM status changes
   void _onLlmStatusChanged() {
     notifyListeners();
@@ -399,13 +405,13 @@ class SettingsProvider extends ChangeNotifier {
   void dispose() {
     tunnelService.isConnected.removeListener(_onTunnelStatusChanged);
     tunnelService.tunnelUrl.removeListener(_onTunnelUrlChanged);
-    
+
     if (windowsService != null) {
       windowsService!.isOllamaRunning.removeListener(_onLlmStatusChanged);
       windowsService!.isLmStudioRunning.removeListener(_onLlmStatusChanged);
       windowsService!.ollamaVersion.removeListener(_onLlmStatusChanged);
     }
-    
+
     super.dispose();
   }
 }

@@ -30,6 +30,12 @@ class LlmProvider extends ChangeNotifier {
   // Set the current provider
   void setCurrentProvider(String provider) {
     _currentProvider = provider;
+    // Update OllamaService base URL
+    ollamaService.updateBaseUrl(provider == 'lmstudio'
+        ? AppConfig.lmStudioBaseUrl
+        : AppConfig.ollamaBaseUrl);
+    debugPrint('LLM provider changed to: $provider');
+    refreshModels(); // Refresh models when provider changes
   }
 
   // Getters
@@ -53,7 +59,7 @@ class LlmProvider extends ChangeNotifier {
       _error = '';
     } catch (e) {
       _error = 'Error initializing LLM provider: $e';
-      print(_error);
+      debugPrint(_error);
     } finally {
       _setLoading(false);
     }
@@ -89,9 +95,10 @@ class LlmProvider extends ChangeNotifier {
       }).toList();
 
       // Add any stored models that aren't in Ollama (e.g., LM Studio models)
-      final nonOllamaModels = storedModels.where(
-        (m) => m.provider != 'ollama' || !_models.any((om) => om.id == m.id)
-      ).toList();
+      final nonOllamaModels = storedModels
+          .where((m) =>
+              m.provider != 'ollama' || !_models.any((om) => om.id == m.id))
+          .toList();
 
       _models.addAll(nonOllamaModels);
 
@@ -110,7 +117,7 @@ class LlmProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      print('Error loading models: $e');
+      debugPrint('Error loading models: $e');
       _models = [];
     }
   }
@@ -121,7 +128,7 @@ class LlmProvider extends ChangeNotifier {
       _conversations = await storageService.getAllConversations();
       notifyListeners();
     } catch (e) {
-      print('Error loading conversations: $e');
+      debugPrint('Error loading conversations: $e');
       _conversations = [];
     }
   }
@@ -225,7 +232,7 @@ class LlmProvider extends ChangeNotifier {
       _error = '';
     } catch (e) {
       _error = 'Error sending message: $e';
-      print(_error);
+      debugPrint(_error);
 
       // If there's a pending message, mark it as error
       if (_currentConversation != null) {
@@ -256,7 +263,8 @@ class LlmProvider extends ChangeNotifier {
     _conversations.removeWhere((c) => c.id == conversationId);
 
     if (_currentConversation?.id == conversationId) {
-      _currentConversation = _conversations.isNotEmpty ? _conversations.first : null;
+      _currentConversation =
+          _conversations.isNotEmpty ? _conversations.first : null;
     }
 
     await storageService.deleteConversation(conversationId);
@@ -314,7 +322,7 @@ class LlmProvider extends ChangeNotifier {
       _error = '';
     } catch (e) {
       _error = 'Error pulling model: $e';
-      print(_error);
+      debugPrint(_error);
     } finally {
       _setLoading(false);
       notifyListeners();
@@ -338,7 +346,7 @@ class LlmProvider extends ChangeNotifier {
       _error = '';
     } catch (e) {
       _error = 'Error deleting model: $e';
-      print(_error);
+      debugPrint(_error);
     } finally {
       _setLoading(false);
       notifyListeners();

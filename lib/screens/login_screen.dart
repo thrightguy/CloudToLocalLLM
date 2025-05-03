@@ -263,9 +263,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.loginWithAuth0();
+      // Call loginWithAuth0 but don't expect a return value since it's void
+      await authProvider.loginWithAuth0();
 
-      if (success) {
+      // Check authentication status after the call
+      if (authProvider.isAuthenticated) {
         if (mounted) {
           Navigator.pop(context);
         }
@@ -287,13 +289,5 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }
-
-  void _login(BuildContext context) async {
-    // final authProvider = Provider.of<AuthProvider>(context, listen: false); // Unused local variable
-    final settingsProvider =
-        Provider.of<SettingsProvider>(context, listen: false);
-
-    // ... existing code ...
   }
 }

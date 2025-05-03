@@ -1,59 +1,65 @@
-import 'package:logging/logging.dart';
+import 'package:flutter/foundation.dart';
 
 /// A centralized logging utility for the app
 class AppLogger {
-  static final Logger _logger = Logger('CloudToLocalLLM');
   static bool _initialized = false;
+  static LogLevel _logLevel = LogLevel.info;
+
+  /// The tag for this logger instance
+  final String _tag;
+
+  /// Create a new logger with the given tag
+  AppLogger(this._tag);
 
   /// Initialize the logger
-  static void init() {
-    if (_initialized) return;
-
-    Logger.root.level = Level.ALL;
-    Logger.root.onRecord.listen((record) {
-      // In development: print to console
-      // In production: could send to a monitoring service
-      final message = '${record.level.name}: ${record.time}: ${record.message}';
-
-      if (record.level >= Level.SEVERE) {
-        // Error and critical logs
-        print('\x1B[31m$message\x1B[0m'); // Red text
-      } else if (record.level >= Level.WARNING) {
-        // Warning logs
-        print('\x1B[33m$message\x1B[0m'); // Yellow text
-      } else if (record.level >= Level.INFO) {
-        // Info logs
-        print('\x1B[36m$message\x1B[0m'); // Cyan text
-      } else {
-        // Debug and trace logs
-        print(message);
-      }
-    });
-
+  static void init({LogLevel logLevel = LogLevel.info}) {
+    _logLevel = logLevel;
     _initialized = true;
   }
 
   /// Log a debug message
-  static void debug(String message) {
-    if (!_initialized) init();
-    _logger.fine(message);
+  void debug(String message) {
+    _log(LogLevel.debug, message);
   }
 
   /// Log an info message
-  static void info(String message) {
-    if (!_initialized) init();
-    _logger.info(message);
+  void info(String message) {
+    _log(LogLevel.info, message);
   }
 
   /// Log a warning message
-  static void warning(String message) {
-    if (!_initialized) init();
-    _logger.warning(message);
+  void warning(String message) {
+    _log(LogLevel.warning, message);
   }
 
   /// Log an error message
-  static void error(String message, [Object? error, StackTrace? stackTrace]) {
-    if (!_initialized) init();
-    _logger.severe(message, error, stackTrace);
+  void error(String message, [Object? error, StackTrace? stackTrace]) {
+    final errorMsg = error != null ? '$message: $error' : message;
+    _log(LogLevel.error, errorMsg);
+    if (stackTrace != null) {
+      _log(LogLevel.error, 'Stack trace: $stackTrace');
+    }
   }
+
+  /// Internal log method
+  void _log(LogLevel level, String message) {
+    if (!_shouldLog(level)) return;
+
+    final timestamp = DateTime.now().toString();
+    final levelString = level.toString().split('.').last.toUpperCase();
+    debugPrint('$timestamp [$levelString] [$_tag] $message');
+  }
+
+  /// Check if we should log at the given level
+  bool _shouldLog(LogLevel level) {
+    return level.index >= _logLevel.index;
+  }
+}
+
+/// Log levels
+enum LogLevel {
+  debug,
+  info,
+  warning,
+  error,
 }
