@@ -89,7 +89,9 @@ networks:
     driver: bridge
 "@
 
-Set-Content -Path "$tempDir\docker-compose.yml" -Value $dockerComposeContent
+# Convert to Unix line endings (LF)
+$dockerComposeContent = $dockerComposeContent -replace "`r`n", "`n"
+Set-Content -Path "$tempDir\docker-compose.yml" -Value $dockerComposeContent -NoNewline
 
 # Create nginx configuration file
 $nginxConfig = @"
@@ -116,7 +118,9 @@ server {
 }
 "@
 
-Set-Content -Path "$tempDir\cloudtolocalllm.conf" -Value $nginxConfig
+# Convert to Unix line endings (LF)
+$nginxConfig = $nginxConfig -replace "`r`n", "`n"
+Set-Content -Path "$tempDir\cloudtolocalllm.conf" -Value $nginxConfig -NoNewline
 
 # Create server setup script
 $setupScript = @'
@@ -221,7 +225,9 @@ echo -e "${GREEN}http://cloudtolocalllm.online${NC}"
 echo -e "${GREEN}http://cloudtolocalllm.online/cloud/${NC}"
 '@
 
-Set-Content -Path "$tempDir\setup.sh" -Value $setupScript -Encoding UTF8
+# Convert to Unix line endings (LF)
+$setupScript = $setupScript -replace "`r`n", "`n"
+Set-Content -Path "$tempDir\setup.sh" -Value $setupScript -NoNewline -Encoding utf8
 
 # Upload files to VPS
 Write-ColorOutput Yellow "Uploading configuration files to VPS..."
@@ -229,9 +235,13 @@ Invoke-ScpCommand "$tempDir\docker-compose.yml" "~/"
 Invoke-ScpCommand "$tempDir\cloudtolocalllm.conf" "~/"
 Invoke-ScpCommand "$tempDir\setup.sh" "~/"
 
-# Make the setup script executable and run it
+# Fix line endings on the server and make executable
+Write-ColorOutput Yellow "Fixing line endings and making script executable..."
+Invoke-SshCommand "sed -i 's/\r$//' setup.sh && chmod +x setup.sh"
+
+# Run the script
 Write-ColorOutput Yellow "Running setup script on VPS..."
-Invoke-SshCommand "chmod +x setup.sh && ./setup.sh"
+Invoke-SshCommand "./setup.sh"
 
 # Clean up temporary directory
 Remove-Item -Recurse -Force $tempDir
