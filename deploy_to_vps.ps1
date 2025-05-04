@@ -105,17 +105,18 @@ echo -e "${YELLOW}Your website should now be available at http://cloudtolocalllm
     if (-not $DryRun) {
         # Use scp to upload files to the server
         Write-Host "Uploading files to VPS..." -ForegroundColor Green
-        $uploadCommand = "scp -r -i '$SshKeyPath' '$tempDir\*' '$VpsConnection:/tmp/cloudtolocalllm-deploy'"
+        $remoteDir = "/tmp/cloudtolocalllm-deploy"
+        $uploadCommand = "scp -r -i '$SshKeyPath' '$tempDir\*' '$($VpsConnection):$remoteDir'"
         Write-Host "Executing: $uploadCommand" -ForegroundColor Gray
         
-        Invoke-Expression "scp -r -i '$SshKeyPath' '$tempDir\*' '$VpsConnection:/tmp/cloudtolocalllm-deploy'"
+        & scp -r -i "$SshKeyPath" "$tempDir\*" "$($VpsConnection):$remoteDir"
         
         # Run the deploy script on the server
         Write-Host "Running deployment on VPS..." -ForegroundColor Green
-        $sshCommand = "ssh -i '$SshKeyPath' '$VpsConnection' 'mkdir -p /tmp/cloudtolocalllm-deploy && cd /tmp/cloudtolocalllm-deploy && bash deploy.sh'"
+        $sshCommand = "ssh -i '$SshKeyPath' '$VpsConnection' 'mkdir -p $remoteDir && cd $remoteDir && bash deploy.sh'"
         Write-Host "Executing: $sshCommand" -ForegroundColor Gray
         
-        Invoke-Expression "ssh -i '$SshKeyPath' '$VpsConnection' 'mkdir -p /tmp/cloudtolocalllm-deploy && cd /tmp/cloudtolocalllm-deploy && bash deploy.sh'"
+        & ssh -i "$SshKeyPath" "$VpsConnection" "mkdir -p $remoteDir && cd $remoteDir && bash deploy.sh"
         
         Write-Host "Deployment completed successfully!" -ForegroundColor Green
     } else {
