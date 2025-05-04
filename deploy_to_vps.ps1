@@ -81,6 +81,15 @@ find /var/www/html -type f -exec chmod 644 {} \;
 # Restart Nginx if it's running
 systemctl restart nginx 2>/dev/null || true
 
+# Also rebuild and restart the Docker container to apply changes
+if [ -f "docker-compose.yml" ]; then
+    echo -e "${YELLOW}Rebuilding and restarting Docker container...${NC}"
+    docker-compose down || true
+    docker-compose build --no-cache
+    docker-compose up -d
+    echo -e "${GREEN}Docker container restarted successfully!${NC}"
+fi
+
 echo -e "${GREEN}Web UI deployment completed successfully!${NC}"
 echo -e "${YELLOW}Your website should now be available at http://cloudtolocalllm.online${NC}"
 '@
@@ -106,17 +115,27 @@ echo -e "${YELLOW}Your website should now be available at http://cloudtolocalllm
         # Use scp to upload files to the server
         Write-Host "Uploading files to VPS..." -ForegroundColor Green
         $remoteDir = "/tmp/cloudtolocalllm-deploy"
-        $uploadCommand = "scp -r -i '$SshKeyPath' '$tempDir\*' '$($VpsConnection):$remoteDir'"
-        Write-Host "Executing: $uploadCommand" -ForegroundColor Gray
         
-        & scp -r -i "$SshKeyPath" "$tempDir\*" "$($VpsConnection):$remoteDir"
+        Write-Host "Copying files to $remoteDir on $VpsConnection..." -ForegroundColor Gray
+        $scpArgs = @(
+            "-r",
+            "-i", $SshKeyPath,
+            "$tempDir\*",
+            ($VpsConnection + ":" + $remoteDir)
+        )
+        Start-Process -FilePath "scp" -ArgumentList $scpArgs -Wait -NoNewWindow
         
         # Run the deploy script on the server
         Write-Host "Running deployment on VPS..." -ForegroundColor Green
-        $sshCommand = "ssh -i '$SshKeyPath' '$VpsConnection' 'mkdir -p $remoteDir && cd $remoteDir && bash deploy.sh'"
-        Write-Host "Executing: $sshCommand" -ForegroundColor Gray
+        $remoteCmd = "mkdir -p $remoteDir && cd $remoteDir && bash deploy.sh"
         
-        & ssh -i "$SshKeyPath" "$VpsConnection" "mkdir -p $remoteDir && cd $remoteDir && bash deploy.sh"
+        Write-Host "Executing remote command on $VpsConnection..." -ForegroundColor Gray
+        $sshArgs = @(
+            "-i", $SshKeyPath,
+            $VpsConnection,
+            $remoteCmd
+        )
+        Start-Process -FilePath "ssh" -ArgumentList $sshArgs -Wait -NoNewWindow
         
         Write-Host "Deployment completed successfully!" -ForegroundColor Green
     } else {
