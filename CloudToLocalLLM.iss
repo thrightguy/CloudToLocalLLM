@@ -14,7 +14,10 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-PrivilegesRequiredOverridesAllowed=dialog
+; Allow user to choose whether to install for all users or just the current user
+PrivilegesRequiredOverridesAllowed=dialog commandline
+; Default to lowest privileges, UAC will request elevation when needed
+PrivilegesRequired=lowest
 OutputBaseFilename=CloudToLocalLLM-Windows-{#MyAppVersion}-Setup
 Compression=lzma
 SolidCompression=yes
@@ -95,6 +98,12 @@ begin
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing),
     SetupMessage(msgPreparingDesc),
     nil);
+    
+  // If installing for current user only, change the default directory
+  if (Pos('/CURRENTUSER', UpperCase(GetCmdTail)) > 0) or not IsAdminLoggedOn then
+  begin
+    WizardForm.DirEdit.Text := ExpandConstant('{localappdata}\{#MyAppName}');
+  end;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -205,4 +214,63 @@ end;
 function GetLMStudioUrl(Param: String): String;
 begin
   Result := LMStudioConfigPage.Values[0];
+end;
+
+function InitializeSetup(): Boolean;
+var
+  ErrorCode: Integer;
+  IsCurrentUserRequested: Boolean;
+begin
+  Result := True;
+  
+  // Check if /CURRENTUSER parameter was passed
+  IsCurrentUserRequested := Pos('/CURRENTUSER', UpperCase(GetCmdTail)) > 0;
+  
+  // Default to user installation if requested via command line
+  if IsCurrentUserRequested then
+  begin
+    // Will be initialized in InitializeWizard
+    Exit;
+  end;
+  
+  // If we're not running as admin, let's ask the user if they want to install
+  // for all users or just for the current user
+  if not IsAdminLoggedOn then
+  begin
+    case SuppressibleMsgBox(
+      'This application can be installed for all users or just for the current user.' + #13#10 + 
+      #13#10 +
+      'Installing for all users requires administrator privileges.' + #13#10 +
+      'Installing for the current user only does not require administrator privileges.' + #13#10 +
+      #13#10 +
+      'Would you like to install for all users (Yes) or just for yourself (No)?',
+      mbConfirmation, MB_YESNOCANCEL, IDNO) of
+      IDYES:
+        begin
+          // Try to elevate with UAC prompt
+          if ShellExecute('', 'open', ExpandConstant('{srcexe}'), '/ALLUSERS', '',
+             SW_SHOWNORMAL, ewNoWait, ErrorCode) then
+          begin
+            // Successfully launched elevated instance, terminate this instance
+            Result := False;
+            Exit;
+          end
+          else begin
+            // Failed to elevate
+            SuppressibleMsgBox('Failed to launch elevated installer. ' +
+              'You may try running this installer as an administrator.', mbError, MB_OK, IDOK);
+            Result := False;
+            Exit;
+          end;
+        end;
+      IDNO:
+        begin
+          // Install for current user only - will be initialized in InitializeWizard
+        end;
+      IDCANCEL:
+        begin
+          Result := False;
+        end;
+    end;
+  end;
 end;

@@ -17,7 +17,10 @@ import 'services/tunnel_service.dart';
 import 'services/windows_service.dart';
 import 'services/api_service.dart';
 import 'services/backend_service.dart';
+import 'services/license_service.dart';
 import 'screens/home_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 
 void main() async {
   // Ensure Flutter is initialized
@@ -70,6 +73,27 @@ void main() async {
     }
   }
 
+  // Set up provider dependencies
+  final settingsProvider = SettingsProvider(
+    storageService: storageService,
+    tunnelService: tunnelService,
+    ollamaService: ollamaService,
+    windowsService: windowsService,
+  );
+  await settingsProvider.initialize();
+
+  final authProvider = AuthProvider(
+    authService: authService,
+    cloudService: CloudService(authService: authService),
+    storageService: StorageService(),
+  );
+  await authProvider.initialize();
+
+  final licenseService = LicenseService(
+    secureStorage: const FlutterSecureStorage(),
+    httpClient: http.Client(),
+  );
+
   // Run the app
   runApp(
     MultiProvider(
@@ -93,52 +117,24 @@ void main() async {
           Provider<WindowsService>.value(value: windowsService),
 
         // Providers
+        ChangeNotifierProvider(create: (_) => settingsProvider),
+        ChangeNotifierProvider(create: (_) => authProvider),
         ChangeNotifierProvider(
-          create: (context) => AuthProvider(
-            authService: authService,
-            cloudService: cloudService,
-            storageService: storageService,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => SettingsProvider(
-            storageService: storageService,
-            tunnelService: tunnelService,
-            ollamaService: ollamaService,
-            windowsService: windowsService,
-          ),
-        ),
-        ChangeNotifierProxyProvider<AuthProvider, OnboardingProvider>(
-          create: (context) => OnboardingProvider(
-            apiService: Provider.of<ApiService>(context, listen: false),
-            authProvider: Provider.of<AuthProvider>(context, listen: false),
-          ),
-          update: (context, authProvider, previous) {
-            return previous!..setAuthProvider(authProvider);
-          },
-        ),
-        ChangeNotifierProxyProvider<SettingsProvider, LlmProvider>(
-          create: (context) => LlmProvider(
+          create: (_) => LlmProvider(
             ollamaService: ollamaService,
             storageService: storageService,
           ),
-          update: (context, settingsProvider, llmProvider) {
-            if (llmProvider != null) {
-              // Refresh models when the LLM provider changes
-              if (settingsProvider.llmProvider != llmProvider.currentProvider) {
-                // Set the current provider
-                llmProvider.setCurrentProvider(settingsProvider.llmProvider);
-                // Refresh models
-                llmProvider.refreshModels();
-              }
-              return llmProvider;
-            }
-            return LlmProvider(
-              ollamaService: ollamaService,
-              storageService: storageService,
-            );
-          },
         ),
+        ChangeNotifierProvider(
+          create: (_) => OnboardingProvider(
+            apiService: ApiService(
+              authService: authService,
+              backendService: BackendService(authService: authService),
+            ),
+            authProvider: authProvider,
+          ),
+        ),
+        Provider(create: (_) => licenseService),
       ],
       child: const CloudToLocalLlmApp(),
     ),
