@@ -10,6 +10,23 @@ A Flutter application that bridges the gap between cloud services and local larg
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Multiple LLM Providers**: Support for Ollama and LM Studio, with extensible architecture
 
+## SSL Configuration
+
+The CloudToLocalLLM deployment supports two SSL certificate options:
+
+1. **Let's Encrypt (Default)**: Automatically configured free certificates
+   - Requires renewal every 90 days (automatic)
+   - Each subdomain must be explicitly specified
+   
+2. **Wildcard SSL Certificate**: Recommended for production with multiple user subdomains
+   - Covers all subdomains (*.cloudtolocalllm.online)
+   - Ideal for dynamic user environments
+   - Simplified maintenance
+   - Available from providers like Namecheap
+   - Use `wildcard_ssl_setup.ps1` for easy installation
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed SSL configuration instructions.
+
 ## Getting Started
 
 ### Prerequisites
