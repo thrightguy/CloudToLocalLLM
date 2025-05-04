@@ -118,19 +118,59 @@ Your portal will be available at the Render-provided URL.
 
 ---
 
-## 6. Non-Technical Notes
+## 6. VPS Deployment with SSL
+
+For VPS deployments with a custom domain and SSL configuration:
+
+### 6.1 Prerequisites
+
+- A VPS running Ubuntu/Debian
+- Domain name pointing to your VPS IP (e.g., cloudtolocalllm.online)
+- SSH access to your VPS
+
+### 6.2 Automated Deployment with SSL
+
+Use our automated deployment scripts:
+
+```powershell
+# Deploy the basic web server
+.\deploy_ssl_fix.ps1 "user@your-vps-ip"
+```
+
+The script handles:
+- SSL certificate acquisition via Certbot
+- Nginx configuration with proper SSL settings
+- Docker container setup
+- Automatic certificate renewal
+
+### 6.3 Manual SSL Setup
+
+For manual SSL configuration:
+
+1. Install Certbot on your VPS
+2. Obtain SSL certificates in standalone mode
+3. Configure Nginx with SSL certificates
+4. Set up renewal hooks
+
+See `direct_ssl_fix.sh` for detailed implementation.
+
+---
+
+## 7. Non-Technical Notes
 
 - No coding is required to deploy or update the portal—just follow these steps.
 - The portal will look and work the same as your local app, but is accessible from anywhere.
 - If you need to update the portal, just push changes to GitHub and Render will redeploy automatically.
+- For VPS deployments, use the automated scripts provided.
 
 ---
 
-## 7. For Developers
+## 8. For Developers
 
 - Ensure only the cloud portal code is in the repo (do not include Windows/native/local files).
 - The Dockerfile builds the Flutter web app and serves it with nginx for maximum compatibility.
-- For custom domains or HTTPS, see Render.com documentation.
+- For custom domains or HTTPS on Render, see Render.com documentation.
+- For VPS deployments, check the `VPS_DEPLOYMENT.md` documentation.
 - Regular updates of base images (`dart:stable` and `nginx:alpine`) ensure security patches are applied.
 
 ---

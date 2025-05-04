@@ -19,6 +19,22 @@ This script will:
 4. Install all required dependencies
 5. Start the application
 
+## SSL Setup
+
+To set up SSL for your VPS deployment, use our SSL setup script:
+
+```powershell
+# From your local machine
+.\deploy_ssl_fix.ps1 "user@your-vps-ip"
+```
+
+This script will:
+1. Upload an SSL fix script to your VPS
+2. Install and configure Certbot to obtain SSL certificates
+3. Set up Nginx with proper SSL configuration
+4. Configure automatic certificate renewal
+5. Create a simple test website to verify SSL is working
+
 ## Manual Deployment
 
 If you prefer to deploy manually, follow these steps:
@@ -111,6 +127,26 @@ cd /var/www/html
 sudo docker-compose up -d
 ```
 
+## Manual SSL Configuration
+
+To manually secure your site with HTTPS:
+
+```bash
+# Install Certbot
+sudo apt install -y certbot
+
+# Stop services using port 80
+sudo systemctl stop nginx
+sudo docker stop $(docker ps -q --filter publish=80) || true
+
+# Get SSL certificate
+sudo certbot certonly --standalone --non-interactive --agree-tos \
+  --email admin@your-domain.com -d your-domain.com -d www.your-domain.com
+
+# Set up Nginx with SSL
+# See direct_ssl_fix.sh for a complete example
+```
+
 ## Troubleshooting
 
 If you experience connectivity issues:
@@ -121,17 +157,11 @@ If you experience connectivity issues:
 4. Check nginx error logs: `sudo tail -f /var/log/nginx/error.log`
 5. Check Docker logs: `docker-compose logs`
 
-## SSL Configuration (Optional)
-
-To secure your site with HTTPS:
-
-```bash
-# Install Certbot
-sudo apt install -y certbot python3-certbot-nginx
-
-# Obtain and install certificate
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
-```
+SSL-specific issues:
+1. Verify certificate paths: `ls -la /etc/letsencrypt/live/your-domain.com/`
+2. Check certificate permissions
+3. Validate nginx SSL configuration: `nginx -t`
+4. Check SSL connectivity: `openssl s_client -connect your-domain.com:443`
 
 ## Updating the Application
 
