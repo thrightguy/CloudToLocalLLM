@@ -116,7 +116,7 @@ begin
   if (CurPageID = wpReady) and WizardIsTaskSelected('downloadollama') then
   begin
     DownloadPage.Clear;
-    DownloadPage.Add('https://ollama.com/download/ollama-windows-amd64-v0.1.30.zip', 'ollama.zip', '');
+    DownloadPage.Add('https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip', 'ollama.zip', '');
     DownloadPage.Show;
     try
       try
