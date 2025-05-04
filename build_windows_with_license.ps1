@@ -4,6 +4,15 @@
 # Stop on any error
 $ErrorActionPreference = "Stop"
 
+# Parameters for building
+param(
+    [Parameter(Mandatory=$false)]
+    [switch]$KeepAllReleases,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$CleanupDryRun
+)
+
 Write-Host "Building CloudToLocalLLM for Windows with License Verification..." -ForegroundColor Cyan
 
 # Ensure we have all dependencies
@@ -334,30 +343,50 @@ $innoSetupScript | Out-File -FilePath "CloudToLocalLLM.iss" -Encoding UTF8
 # Check if InnoSetup is installed
 $innoSetupPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if (Test-Path $innoSetupPath) {
+    # Create the release directory if it doesn't exist
+    $releasesDir = Join-Path $PSScriptRoot "releases"
+    New-Item -ItemType Directory -Path $releasesDir -Force | Out-Null
+
+    # Generate a timestamp for the installer
+    $timestamp = Get-Date -Format "yyyyMMddHHmm"
+    $outputFile = "CloudToLocalLLM-Windows-$MyAppVersion-$timestamp-Setup.exe"
+    $outputPath = Join-Path $releasesDir $outputFile
+
     # Build the installer
     Write-Host "Building installer..." -ForegroundColor Green
-    & $innoSetupPath "CloudToLocalLLM.iss"
+    & iscc /O"$releasesDir" /F"CloudToLocalLLM-Windows-$MyAppVersion-$timestamp-Setup" CloudToLocalLLM.iss
+
+    # Create ZIP archive of the built app
+    Write-Host "Creating ZIP archive..." -ForegroundColor Green
+    $zipFile = Join-Path $releasesDir "CloudToLocalLLM-Windows-$MyAppVersion.zip"
+    if (Test-Path $zipFile) {
+        Remove-Item $zipFile -Force
+    }
+    Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath $zipFile
+
+    Write-Host "Build completed successfully!" -ForegroundColor Green
+    Write-Host "Installer: $outputPath" -ForegroundColor Cyan
+    Write-Host "ZIP archive: $zipFile" -ForegroundColor Cyan
+
+    # Clean up old releases if not keeping all
+    if (-not $KeepAllReleases) {
+        Write-Host "Cleaning up old releases..." -ForegroundColor Yellow
+        
+        $cleanupParams = @{
+            PreserveRegular = $true
+            KeepLatestBuild = $true
+        }
+        
+        if ($CleanupDryRun) {
+            $cleanupParams.Add("DryRun", $true)
+        }
+        
+        & "$PSScriptRoot\clean_releases.ps1" @cleanupParams
+    }
 } else {
     Write-Host "InnoSetup not found. Please install InnoSetup to build the installer." -ForegroundColor Yellow
     Write-Host "Skipping installer creation..." -ForegroundColor Yellow
 }
-
-# Create a ZIP release package
-Write-Host "Creating ZIP release package..." -ForegroundColor Green
-$releaseFileName = "CloudToLocalLLM-Windows-1.3.0.zip"
-$sourcePath = "build/windows/x64/runner/Release/*"
-$destinationPath = $releaseFileName
-
-# Create release directory if it doesn't exist
-New-Item -ItemType Directory -Path "releases" -Force | Out-Null
-
-# Create the ZIP file
-Compress-Archive -Path $sourcePath -DestinationPath "releases/$releaseFileName" -Force
-
-Write-Host "Windows build completed successfully!" -ForegroundColor Green
-Write-Host "Release files available at:" -ForegroundColor Cyan
-Write-Host " - Installer: CloudToLocalLLM-Windows-1.3.0-Setup.exe (if InnoSetup was available)" -ForegroundColor White
-Write-Host " - ZIP Package: releases/$releaseFileName" -ForegroundColor White
 
 # Update release documentation
 $releaseNotes = @"

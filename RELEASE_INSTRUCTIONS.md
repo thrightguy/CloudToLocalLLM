@@ -5,7 +5,7 @@ This document provides instructions on how to create a GitHub release and make t
 ## Prerequisites
 
 - A GitHub account with write access to the repository
-- The CloudToLocalLLM-Windows.zip file (already created in the repository root)
+- The release candidate installer file and ZIP package from the `releases` directory
 
 ## Creating a GitHub Release
 
@@ -20,7 +20,7 @@ This document provides instructions on how to create a GitHub release and make t
    - **Tag version**: Enter a version number (e.g., v1.0.0)
    - **Release title**: Enter a title for the release (e.g., "CloudToLocalLLM Windows App v1.0.0")
    - **Description**: Provide a description of the release, including any new features, bug fixes, or changes
-   - **Attach binaries**: Drag and drop the CloudToLocalLLM-Windows.zip file or click "Attach binaries by selecting them" and select the file
+   - **Attach binaries**: Upload both the installer (.exe) and ZIP package from the `releases` directory
 
 4. **Publish Release**
    - Click the "Publish release" button to make the release available to users
@@ -30,7 +30,7 @@ This document provides instructions on how to create a GitHub release and make t
 After creating the release, verify that:
 
 1. The release appears on the Releases page of the repository
-2. The CloudToLocalLLM-Windows.zip file is attached to the release
+2. Both the installer and ZIP files are attached to the release
 3. The download link in the README.md file points to the correct location
 
 ## Updating the README (if necessary)
@@ -40,8 +40,40 @@ The README.md file already contains instructions for downloading the app from th
 ```markdown
 1. **Download the Application**
    - Download the latest release from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
-   - Extract the ZIP file to a location of your choice.
+   - Either run the installer or extract the ZIP file to a location of your choice.
 ```
+
+## Building a New Release
+
+Follow the instructions in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md) for creating a new release. The process includes:
+
+1. **Update Version Numbers**
+   - Update version numbers in all relevant files (ISS installers, pubspec.yaml)
+
+2. **Build Both Installer Types**
+   - Build the regular installer with `build_windows_with_license.ps1`
+   - Build the admin installer with `build_windows_admin_installer.ps1`
+
+3. **Test Builds Thoroughly**
+   - Test both installer types to verify functionality
+
+4. **Select Release Candidate**
+   - Identify the build that will become the release candidate
+   - Clean up older builds using `clean_releases.ps1 -KeepLatestBuild`
+
+5. **Create GitHub Release**
+   - Upload the final installer and ZIP files to GitHub as described above
+
+## Release File Naming Conventions
+
+Release files should follow these naming conventions:
+
+- Regular installer: `CloudToLocalLLM-Windows-VERSION-Setup.exe`
+- Admin installer: `CloudToLocalLLM-Admin.exe`
+- Regular ZIP package: `CloudToLocalLLM-Windows-VERSION.zip`
+- Admin ZIP package: `CloudToLocalLLM-Windows-Admin.zip`
+
+For more details on the release process including automated cleanup, see [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md).
 
 ## Building the Windows App (for future releases)
 

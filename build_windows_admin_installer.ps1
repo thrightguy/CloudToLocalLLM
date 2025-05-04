@@ -4,6 +4,15 @@
 # Stop on any error
 $ErrorActionPreference = "Stop"
 
+# Parameters for building
+param(
+    [Parameter(Mandatory=$false)]
+    [switch]$KeepAllReleases,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$CleanupDryRun
+)
+
 Write-Host "Building CloudToLocalLLM for Windows with Admin-Only Installer..." -ForegroundColor Cyan
 
 # Ensure we have all dependencies
@@ -55,6 +64,22 @@ Write-Host "Windows build with admin-only installer completed successfully!" -Fo
 Write-Host "Release files available at:" -ForegroundColor Cyan
 Write-Host " - Admin Installer: releases/CloudToLocalLLM-Admin-$timestamp.exe (if InnoSetup was available)" -ForegroundColor White
 Write-Host " - ZIP Package: releases/$zipFileName" -ForegroundColor White
+
+# Clean up old releases if not keeping all
+if (-not $KeepAllReleases) {
+    Write-Host "Cleaning up old releases..." -ForegroundColor Yellow
+    
+    $cleanupParams = @{
+        PreserveAdmin = $true
+        KeepLatestBuild = $true
+    }
+    
+    if ($CleanupDryRun) {
+        $cleanupParams.Add("DryRun", $true)
+    }
+    
+    & "$PSScriptRoot\clean_releases.ps1" @cleanupParams
+}
 
 # Add a note to differentiate this installer
 Write-Host "NOTE: This installer requires administrator privileges and will install for all users only." -ForegroundColor Yellow
