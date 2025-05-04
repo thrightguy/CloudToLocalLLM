@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth0 Callback</title>
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+  <main class="main">
+    <div class="card">
+      <div class="card-title" id="status-title">Processing Login...</div>
+      <div class="card-desc" id="status-desc">Please wait while we complete your login.</div>
+    </div>
+  </main>
+  <script>
+    // Extract parameters from URL
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
+
+    function showError(message) {
+      document.getElementById('status-title').textContent = 'Login Failed';
+      document.getElementById('status-desc').textContent = message;
+      setTimeout(() => { window.location.href = '/login.html'; }, 3000);
+    }
+
+    if (error) {
+      showError(errorDescription || 'An error occurred during login. Please try again.');
+    } else if (code && state) {
+      // Store auth data
+      sessionStorage.setItem('auth0_code', code);
+      sessionStorage.setItem('auth0_state', state);
+      sessionStorage.setItem('auth0_timestamp', Date.now().toString());
+      
+      // Redirect to home
+      setTimeout(() => { window.location.href = '/'; }, 800);
+    } else {
+      showError('Invalid authentication response. Please try again.');
+    }
+  </script>
+</body>
+</html> 

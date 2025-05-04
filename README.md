@@ -123,3 +123,29 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Flutter](https://flutter.dev/)
 - [Ollama](https://ollama.ai/)
 - [LM Studio](https://lmstudio.ai/)
+
+## Updating Live Site Files (Nginx Container)
+
+All live HTML, CSS, and static files for your site are served from:
+
+```
+/opt/cloudtolocalllm/portal/
+```
+**on the host**. This directory is bind-mounted into the running `nginx-proxy` container at `/usr/share/nginx/html`.
+
+**To update your site:**
+1. Edit your HTML or CSS files locally.
+2. Upload them to `/opt/cloudtolocalllm/portal/` on the host server.
+
+**Example commands:**
+
+```
+scp -i ~/.ssh/id_rsa index.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/index.html
+scp -i ~/.ssh/id_rsa login.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/login.html
+scp -i ~/.ssh/id_rsa css/theme.css root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/css/theme.css
+```
+
+> ⚠️ **Do NOT copy files directly into the container.**
+> Any files placed in `/usr/share/nginx/html` inside the container will be overwritten by the contents of `/opt/cloudtolocalllm/portal/` on the host.
+
+No container restart is needed for static file changes.

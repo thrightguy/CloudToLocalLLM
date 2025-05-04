@@ -8,12 +8,15 @@ import 'config/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/llm_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/onboarding_provider.dart';
 import 'services/auth_service.dart';
 import 'services/cloud_service.dart';
 import 'services/ollama_service.dart';
 import 'services/storage_service.dart';
 import 'services/tunnel_service.dart';
 import 'services/windows_service.dart';
+import 'services/api_service.dart';
+import 'services/backend_service.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -77,6 +80,15 @@ void main() async {
         Provider<AuthService>.value(value: authService),
         Provider<TunnelService>.value(value: tunnelService),
         Provider<CloudService>.value(value: cloudService),
+        Provider<BackendService>(
+          create: (context) => BackendService(authService: authService),
+        ),
+        Provider<ApiService>(
+          create: (context) => ApiService(
+            authService: authService,
+            backendService: Provider.of<BackendService>(context, listen: false),
+          ),
+        ),
         if (windowsService != null)
           Provider<WindowsService>.value(value: windowsService),
 
@@ -95,6 +107,15 @@ void main() async {
             ollamaService: ollamaService,
             windowsService: windowsService,
           ),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, OnboardingProvider>(
+          create: (context) => OnboardingProvider(
+            apiService: Provider.of<ApiService>(context, listen: false),
+            authProvider: Provider.of<AuthProvider>(context, listen: false),
+          ),
+          update: (context, authProvider, previous) {
+            return previous!..setAuthProvider(authProvider);
+          },
         ),
         ChangeNotifierProxyProvider<SettingsProvider, LlmProvider>(
           create: (context) => LlmProvider(

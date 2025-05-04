@@ -9,6 +9,7 @@ import '../widgets/prompt_input.dart';
 import 'models_screen.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
+import '../widgets/onboarding_wizard.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -241,39 +242,47 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // Main content - chat messages
-      body: llmProvider.currentConversation == null
-          ? _buildWelcomeScreen()
-          : Column(
-              children: [
-                // Messages list
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    reverse: true, // Start from the bottom
-                    itemCount: llmProvider.currentConversation!.messages.length,
-                    itemBuilder: (context, index) {
-                      // Display messages in reverse order (newest first)
-                      final reversedIndex =
-                          llmProvider.currentConversation!.messages.length -
-                              1 -
-                              index;
-                      final message = llmProvider
-                          .currentConversation!.messages[reversedIndex];
+      // Main content - onboarding wizard and chat messages
+      body: Column(
+        children: [
+          OnboardingWizard(),
+          Expanded(
+            child: llmProvider.currentConversation == null
+                ? _buildWelcomeScreen()
+                : Column(
+                    children: [
+                      // Messages list
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(8.0),
+                          reverse: true, // Start from the bottom
+                          itemCount:
+                              llmProvider.currentConversation!.messages.length,
+                          itemBuilder: (context, index) {
+                            // Display messages in reverse order (newest first)
+                            final reversedIndex = llmProvider
+                                    .currentConversation!.messages.length -
+                                1 -
+                                index;
+                            final message = llmProvider
+                                .currentConversation!.messages[reversedIndex];
 
-                      return ChatMessage(message: message);
-                    },
+                            return ChatMessage(message: message);
+                          },
+                        ),
+                      ),
+
+                      // Input area
+                      PromptInput(
+                        controller: _controller,
+                        onSend: _handleSubmitted,
+                        isLoading: llmProvider.isLoading,
+                      ),
+                    ],
                   ),
-                ),
-
-                // Input area
-                PromptInput(
-                  controller: _controller,
-                  onSend: _handleSubmitted,
-                  isLoading: llmProvider.isLoading,
-                ),
-              ],
-            ),
+          ),
+        ],
+      ),
 
       // FAB for new conversation
       floatingActionButton: llmProvider.currentConversation == null

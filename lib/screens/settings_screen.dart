@@ -1,9 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/conversation.dart';
 import '../providers/auth_provider.dart';
+import '../providers/llm_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/onboarding_provider.dart';
+import '../widgets/section_header.dart';
 import 'login_screen.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -330,6 +336,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+
+          // Container management settings
+          _buildContainerManagementSettings(),
         ],
       ),
     );
@@ -533,6 +542,172 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildContainerManagementSettings() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isAuthenticated) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Container Management'),
+        Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Consumer<OnboardingProvider>(
+                      builder: (context, provider, _) {
+                        final containerStatus =
+                            provider.containerStatus ?? 'unknown';
+                        final isReady = provider.containerReady;
+
+                        return Expanded(
+                          child: Row(
+                            children: [
+                              Icon(
+                                isReady ? Icons.check_circle : Icons.pending,
+                                color: isReady ? Colors.green : Colors.orange,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Container status: $containerStatus',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh status',
+                      onPressed: () {
+                        final provider = Provider.of<OnboardingProvider>(
+                          context,
+                          listen: false,
+                        );
+                        provider.checkContainerStatus();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Your secure container is where your cloud resources are managed.',
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.restart_alt),
+                      label: const Text('Reset Container'),
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Reset Container?'),
+                            content: const Text(
+                              'This will delete your container and all data inside it. '
+                              'You will need to generate a new API key. This action cannot be undone.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Reset'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed == true) {
+                          final provider = Provider.of<OnboardingProvider>(
+                            context,
+                            listen: false,
+                          );
+                          await provider.resetApiKey();
+
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Container reset. Please generate a new API key.'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    Consumer<OnboardingProvider>(
+                      builder: (context, provider, _) {
+                        if (provider.apiKey == null) {
+                          return ElevatedButton.icon(
+                            icon: const Icon(Icons.key),
+                            label: const Text('Generate API Key'),
+                            onPressed: provider.isLoading
+                                ? null
+                                : () async {
+                                    try {
+                                      await provider.generateApiKey();
+                                      if (!context.mounted) return;
+
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'API key generated successfully.'),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  },
+                          );
+                        } else {
+                          return ElevatedButton.icon(
+                            icon: const Icon(Icons.copy),
+                            label: const Text('Copy API Key'),
+                            onPressed: () {
+                              Clipboard.setData(
+                                  ClipboardData(text: provider.apiKey!));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('API key copied to clipboard'),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

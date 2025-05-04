@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudToLocalLLM</title>
+  <link rel="stylesheet" href="/css/theme.css">
+</head>
+<body>
+  <div class="banner">WEBSITE UNDER CONSTRUCTION<br>The system is being set up and will be available soon.</div>
+  <div class="header">
+    <div class="logo">LLM</div>
+    <h1>CloudToLocalLLM</h1>
+    <h2>Run powerful Large Language Models locally with cloud-based management</h2>
+  </div>
+  <main class="main">
+    <div class="card" id="info-card">
+      <div class="card-title">What is CloudToLocalLLM?</div>
+      <div class="card-desc">
+        CloudToLocalLLM is an innovative platform that lets you run AI language models on your own computer while managing them through a simple cloud interface.
+      </div>
+      <ul>
+        <li>Run Models Locally</li>
+        <li>Cloud Management</li>
+        <li>Cost Effective</li>
+      </ul>
+    </div>
+    <div class="card" id="login-card" style="display:none; margin-top:2.5rem;">
+      <div class="card-title">Login</div>
+      <div class="card-desc">Sign in to access your CloudToLocalLLM dashboard.</div>
+      <a href="#" class="login-btn" id="login-btn">Log In</a>
+    </div>
+    <div class="card" id="welcome-card" style="display:none; margin-top:2.5rem;">
+      <div class="card-title">Welcome!</div>
+      <div class="card-desc">You are logged in. <span id="user-info"></span></div>
+      <a href="#" class="login-btn" id="logout-btn" style="background:transparent;color:var(--primary);border:2px solid var(--primary);box-shadow:none;">Log Out</a>
+    </div>
+  </main>
+  <script>
+    // Auth0 config
+    const AUTH0_DOMAIN = 'dev-v2f2p008x3dr74ww.us.auth0.com';
+    const AUTH0_CLIENT_ID = 'WBibIxpJlvVp64UlpfMqYxDyYC0XDWbU';
+    const REDIRECT_URI = window.location.origin + '/auth0-callback.html';
+    const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    function isSessionValid() {
+      const timestamp = sessionStorage.getItem('auth0_timestamp');
+      if (!timestamp) return false;
+      
+      const sessionAge = Date.now() - parseInt(timestamp);
+      return sessionAge < SESSION_TIMEOUT;
+    }
+
+    function showLogin() {
+      document.getElementById('login-card').style.display = '';
+      document.getElementById('welcome-card').style.display = 'none';
+    }
+
+    function showWelcome() {
+      document.getElementById('login-card').style.display = 'none';
+      document.getElementById('welcome-card').style.display = '';
+      const code = sessionStorage.getItem('auth0_code');
+      document.getElementById('user-info').textContent = code ? '(auth code: ' + code.substring(0,8) + '...)' : '';
+    }
+
+    function logout() {
+      sessionStorage.removeItem('auth0_code');
+      sessionStorage.removeItem('auth0_state');
+      sessionStorage.removeItem('auth0_timestamp');
+      showLogin();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const code = sessionStorage.getItem('auth0_code');
+      if (code && isSessionValid()) {
+        showWelcome();
+      } else {
+        logout(); // Clear invalid session
+      }
+
+      document.getElementById('login-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = `https://${AUTH0_DOMAIN}/authorize?` +
+          `response_type=code&` +
+          `client_id=${encodeURIComponent(AUTH0_CLIENT_ID)}&` +
+          `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+          `scope=openid%20profile%20email`;
+        window.location.href = url;
+      });
+
+      document.getElementById('logout-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        logout();
+      });
+
+      // Check session validity periodically
+      setInterval(() => {
+        if (!isSessionValid()) {
+          logout();
+        }
+      }, 60000); // Check every minute
+    });
+  </script>
+</body>
+</html> 
