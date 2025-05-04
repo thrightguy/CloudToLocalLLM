@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -18,6 +19,23 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true; // Toggle between login and register
   bool _isLoading = false;
   String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-redirect to Auth0 on web platform
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkForAuth0Callback();
+      });
+    }
+  }
+
+  // Check for Auth0 callback parameters
+  void _checkForAuth0Callback() {
+    // This would be handled by web/index.html JavaScript code
+    // This is just a placeholder for any additional logic needed
+  }
 
   @override
   void dispose() {
@@ -73,94 +91,138 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
               // Login/Register form
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    // Name field (only for register)
-                    if (!_isLogin)
+              if (!kIsWeb ||
+                  !_isLogin) // Only show form on non-web or for registration
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      // Name field (only for register)
+                      if (!_isLogin)
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            prefixIcon: Icon(Icons.person),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (!_isLogin && (value == null || value.isEmpty)) {
+                              return 'Please enter your name';
+                            }
+                            return null;
+                          },
+                        ),
+                      if (!_isLogin) const SizedBox(height: 16),
+
+                      // Email field
                       TextFormField(
-                        controller: _nameController,
+                        controller: _emailController,
                         decoration: const InputDecoration(
-                          labelText: 'Name',
-                          prefixIcon: Icon(Icons.person),
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email),
                           border: OutlineInputBorder(),
                         ),
+                        keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (!_isLogin && (value == null || value.isEmpty)) {
-                            return 'Please enter your name';
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(value)) {
+                            return 'Please enter a valid email';
                           }
                           return null;
                         },
                       ),
-                    if (!_isLogin) const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Email field
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
+                      // Password field
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock),
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (!_isLogin && value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                            .hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 24),
 
-                    // Password field
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock),
-                        border: OutlineInputBorder(),
+                      // Login/Register button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleSubmit,
+                          child: _isLoading
+                              ? const CircularProgressIndicator()
+                              : Text(_isLogin ? 'Login' : 'Register'),
+                        ),
                       ),
-                      obscureText: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (!_isLogin && value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      const SizedBox(height: 16),
+
+                      // Toggle between login and register
+                      TextButton(
+                        onPressed: _isLoading ? null : _toggleAuthMode,
+                        child: Text(
+                          _isLogin
+                              ? 'Don\'t have an account? Register'
+                              : 'Already have an account? Login',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Web login - show only Auth0 button for login on web
+              if (kIsWeb && _isLogin)
+                Column(
+                  children: [
+                    const Text(
+                      'Sign in with your account:',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16),
                     ),
                     const SizedBox(height: 24),
 
-                    // Login/Register button
+                    // Auth0 login button (main button on web)
                     SizedBox(
                       width: double.infinity,
                       height: 50,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleSubmit,
-                        child: _isLoading
-                            ? const CircularProgressIndicator()
-                            : Text(_isLogin ? 'Login' : 'Register'),
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _handleAuth0Login,
+                        icon: const Icon(Icons.login),
+                        label: const Text('Login'),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.blue,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
 
-                    // Toggle between login and register
+                    // Toggle to register form
                     TextButton(
                       onPressed: _isLoading ? null : _toggleAuthMode,
-                      child: Text(
-                        _isLogin
-                            ? 'Don\'t have an account? Register'
-                            : 'Already have an account? Login',
-                      ),
+                      child: const Text('Don\'t have an account? Register'),
                     ),
+                  ],
+                ),
 
+              // Mobile/Desktop - show both local and Auth0 options
+              if (!kIsWeb && _isLogin)
+                Column(
+                  children: [
                     const SizedBox(height: 24),
                     const Text(
                       'Or continue with',
@@ -181,7 +243,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-              ),
             ],
           ),
         ),
@@ -213,11 +274,17 @@ class _LoginScreenState extends State<LoginScreen> {
       bool success;
 
       if (_isLogin) {
-        // Login
-        success = await authProvider.login(
-          _emailController.text,
-          _passwordController.text,
-        );
+        if (kIsWeb) {
+          // On web, we always use Auth0 for login
+          await _handleAuth0Login();
+          return;
+        } else {
+          // Use regular login for non-web platforms
+          success = await authProvider.login(
+            _emailController.text,
+            _passwordController.text,
+          );
+        }
       } else {
         // Register
         success = await authProvider.register(
@@ -262,20 +329,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      // Call loginWithAuth0 but don't expect a return value since it's void
+      // Call loginWithAuth0 which will redirect to Auth0
       await authProvider.loginWithAuth0();
 
-      // Check authentication status after the call
-      if (authProvider.isAuthenticated) {
-        if (mounted) {
-          Navigator.pop(context);
+      // Note: For web, we won't reach this point as the page redirects
+
+      // For non-web platforms, we check authentication
+      if (!kIsWeb) {
+        if (authProvider.isAuthenticated) {
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        } else {
+          setState(() {
+            _errorMessage = authProvider.error.isNotEmpty
+                ? authProvider.error
+                : 'Auth0 login failed. Please try again.';
+          });
         }
-      } else {
-        setState(() {
-          _errorMessage = authProvider.error.isNotEmpty
-              ? authProvider.error
-              : 'Auth0 login failed. Please try again.';
-        });
       }
     } catch (e) {
       setState(() {
