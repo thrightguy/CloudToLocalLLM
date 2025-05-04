@@ -1,18 +1,11 @@
-; Inno Setup Script for CloudToLocalLLM
-; This script creates a Windows installer for the CloudToLocalLLM application
-
 #define MyAppName "CloudToLocalLLM"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "CloudToLocalLLM"
-#define MyAppURL "https://github.com/thrightguy/CloudToLocalLLM"
+#define MyAppURL "https://cloudtolocalllm.online"
 #define MyAppExeName "cloudtolocalllm_dev.exe"
 
-#define MyAppVersion "1.2.0"
-#define MyDateTime GetDateTimeString('yyyymmddhhnn', '', '')
-
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application.
-; Do not use the same AppId value in installers for other applications.
-AppId={{8F6E7F9A-5E0A-4B7C-8D3A-9E7F8D5E0A9B}
+AppId={{com.cloudtolocalllm.app}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -20,49 +13,126 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
-DefaultGroupName={#MyAppName}
-OutputDir=releases
-OutputBaseFilename={#MyAppName}-Windows-{#MyAppVersion}-{#MyDateTime}-Setup
+DisableProgramGroupPage=yes
+PrivilegesRequiredOverridesAllowed=dialog
+OutputBaseFilename=CloudToLocalLLM-Windows-{#MyAppVersion}-Setup
 Compression=lzma
 SolidCompression=yes
-; Set privileges based on installation type
-PrivilegesRequiredOverridesAllowed=dialog
-PrivilegesRequired=lowest
+WizardStyle=modern
+ArchitecturesInstallIn64BitMode=x64
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "downloadollama"; Description: "Download and install Ollama"; GroupDescription: "LLM Providers"; Flags: unchecked
+Name: "existingollama"; Description: "Configure existing Ollama installation"; GroupDescription: "LLM Providers"; Flags: unchecked
+Name: "lmstudio"; Description: "Configure LM Studio"; GroupDescription: "LLM Providers"; Flags: unchecked
+
+[Files]
+Source: "build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "Setup-Ollama.ps1"; DestDir: "{app}"; Flags: ignoreversion
+
+[Icons]
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Run]
+Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\Setup-Ollama.ps1"" -DownloadOnly -OllamaPort '{code:GetOllamaPort}' -DefaultModel '{code:GetDefaultModel}' -ExistingOllamaUrl '{code:GetExistingOllamaUrl}'"; Description: "Setup Ollama"; Flags: runhidden; Tasks: downloadollama
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 var
-  OllamaPage: TInputQueryWizardPage;
-  CustomDataDirPage: TInputDirWizardPage;
+  DownloadPage: TDownloadWizardPage;
+  LLMProviderPage: TInputOptionWizardPage;
+  OllamaConfigPage: TInputQueryWizardPage;
+  LMStudioConfigPage: TInputQueryWizardPage;
+  ExistingOllamaConfigPage: TInputQueryWizardPage;
 
 procedure InitializeWizard;
 begin
-  OllamaPage := nil;
-  CustomDataDirPage := nil;
-  // Only create Ollama configuration page if the task is selected
-  if WizardIsTaskSelected('ollamaservice') then
+  // LLM Provider selection page
+  LLMProviderPage := CreateInputOptionPage(wpSelectTasks,
+    'LLM Provider Configuration',
+    'Select your preferred LLM provider',
+    'CloudToLocalLLM can work with different LLM providers. Please select your preferred option:',
+    True, False);
+  LLMProviderPage.Add('Download and install Ollama (recommended)');
+  LLMProviderPage.Add('Use existing Ollama installation');
+  LLMProviderPage.Add('Configure LM Studio');
+  LLMProviderPage.SelectedValueIndex := 0;
+
+  // Ollama configuration page
+  OllamaConfigPage := CreateInputQueryPage(LLMProviderPage.ID,
+    'Ollama Configuration',
+    'Configure Ollama options',
+    'Please specify the settings for Ollama:');
+  OllamaConfigPage.Add('Ollama API Port (default: 11434):', False);
+  OllamaConfigPage.Add('Default model to download (e.g., llama2, mistral):', False);
+  OllamaConfigPage.Values[0] := '11434';
+  OllamaConfigPage.Values[1] := 'llama2';
+
+  // Existing Ollama configuration page
+  ExistingOllamaConfigPage := CreateInputQueryPage(LLMProviderPage.ID,
+    'Existing Ollama Configuration',
+    'Configure your existing Ollama installation',
+    'Please specify the settings for your existing Ollama:');
+  ExistingOllamaConfigPage.Add('Ollama API URL (default: http://localhost:11434):', False);
+  ExistingOllamaConfigPage.Values[0] := 'http://localhost:11434';
+
+  // LM Studio configuration page
+  LMStudioConfigPage := CreateInputQueryPage(LLMProviderPage.ID,
+    'LM Studio Configuration',
+    'Configure LM Studio options',
+    'Please specify the settings for LM Studio:');
+  LMStudioConfigPage.Add('LM Studio API URL (default: http://localhost:1234/v1):', False);
+  LMStudioConfigPage.Values[0] := 'http://localhost:1234/v1';
+
+  // Download page for additional files
+  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing),
+    SetupMessage(msgPreparingDesc),
+    nil);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+
+  // Set tasks based on LLM provider selection
+  if CurPageID = LLMProviderPage.ID then
   begin
-    OllamaPage := CreateInputQueryPage(wpSelectTasks,
-      'Ollama Configuration',
-      'Configure Ollama Windows Service settings',
-      'Please specify the following optional settings for Ollama service setup, then click Next.');
-    OllamaPage.Add('Ollama API Port (default: 11434):', False);
-    OllamaPage.Values[0] := '11434';
+    WizardSelectTasks('!downloadollama,!existingollama,!lmstudio');
+
+    case LLMProviderPage.SelectedValueIndex of
+      0: WizardSelectTasks('downloadollama');
+      1: WizardSelectTasks('existingollama');
+      2: WizardSelectTasks('lmstudio');
+    end;
   end;
 
-  // Only create custom data directory page if the task is selected
-  if WizardIsTaskSelected('customdatadir') then
+  // Handle downloading Ollama if selected
+  if (CurPageID = wpReady) and WizardIsTaskSelected('downloadollama') then
   begin
-    CustomDataDirPage := CreateInputDirPage(wpSelectTasks,
-      'Custom Data Directory',
-      'Select where to store LLM models and data',
-      'Select the folder where you want to store LLM models and data:',
-      False,
-      '');
-    CustomDataDirPage.Values[0] := ExpandConstant('{userappdata}\{#MyAppName}\models');
+    DownloadPage.Clear;
+    DownloadPage.Add('https://ollama.com/download/ollama-windows-amd64-v0.1.30.zip', 'ollama.zip', '');
+    DownloadPage.Show;
+    try
+      try
+        DownloadPage.Download;
+        // The actual extraction will be handled by Setup-Ollama.ps1
+        Result := True;
+      except
+        if DownloadPage.AbortedByUser then
+          Log('Download aborted by user.')
+        else
+          SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbCriticalError, MB_OK, IDOK);
+        Result := False;
+      end;
+    finally
+      DownloadPage.Hide;
+    end;
   end;
 end;
 
@@ -70,124 +140,67 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := False;
 
-  // Skip the Ollama configuration page if Ollama service setup is not selected
-  if (Assigned(OllamaPage) and (PageID = OllamaPage.ID)) and (not WizardIsTaskSelected('ollamaservice')) then
+  // Skip Ollama download/config page if not selected
+  if (PageID = OllamaConfigPage.ID) and not WizardIsTaskSelected('downloadollama') then
     Result := True;
 
-  // Skip the custom data directory page if custom data dir is not selected
-  if (Assigned(CustomDataDirPage) and (PageID = CustomDataDirPage.ID)) and (not WizardIsTaskSelected('customdatadir')) then
+  // Skip existing Ollama config page if not selected
+  if (PageID = ExistingOllamaConfigPage.ID) and not WizardIsTaskSelected('existingollama') then
     Result := True;
+
+  // Skip LM Studio config page if not selected
+  if (PageID = LMStudioConfigPage.ID) and not WizardIsTaskSelected('lmstudio') then
+    Result := True;
+end;
+
+// Store configuration in registry for the app to use
+procedure RegisterPaths;
+begin
+  // Register LLM provider configuration
+  case LLMProviderPage.SelectedValueIndex of
+    0: begin
+         // Ollama (new installation)
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'LLMProvider', 'ollama');
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'OllamaAPIPort', OllamaConfigPage.Values[0]);
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'DefaultModel', OllamaConfigPage.Values[1]);
+       end;
+    1: begin
+         // Existing Ollama
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'LLMProvider', 'ollama');
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'OllamaAPIURL', ExistingOllamaConfigPage.Values[0]);
+       end;
+    2: begin
+         // LM Studio
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'LLMProvider', 'lmstudio');
+         RegWriteStringValue(HKCU, 'Software\{#MyAppName}\Config', 'LMStudioAPIURL', LMStudioConfigPage.Values[0]);
+       end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    RegisterPaths;
+  end;
 end;
 
 function GetOllamaPort(Param: String): String;
 begin
-  try
-    if Assigned(OllamaPage) and (OllamaPage.Values[0] <> '') then
-      Result := OllamaPage.Values[0]
-    else
-      Result := '11434';
-  except
-    Result := '11434';
-  end;
+  Result := OllamaConfigPage.Values[0];
 end;
 
-function GetCustomDataDir(Param: String): String;
+function GetDefaultModel(Param: String): String;
 begin
-  try
-    if Assigned(CustomDataDirPage) and (CustomDataDirPage.Values[0] <> '') then
-      Result := CustomDataDirPage.Values[0]
-    else
-      Result := ExpandConstant('{userappdata}\{#MyAppName}\models');
-  except
-    Result := ExpandConstant('{userappdata}\{#MyAppName}\models');
-  end;
+  Result := OllamaConfigPage.Values[1];
 end;
 
-function GetUseCustomDataDir(Param: String): String;
+function GetExistingOllamaUrl(Param: String): String;
 begin
-  try
-    if WizardIsTaskSelected('customdatadir') then
-      Result := 'true'
-    else
-      Result := 'false';
-  except
-    Result := 'false';
-  end;
+  Result := ExistingOllamaConfigPage.Values[0];
 end;
 
-function GetEnableGPU(Param: String): String;
+function GetLMStudioUrl(Param: String): String;
 begin
-  if WizardIsTaskSelected('gpuacceleration') then
-    Result := 'true'
-  else
-    Result := 'false';
+  Result := LMStudioConfigPage.Values[0];
 end;
-
-function GetUseAutostart(Param: String): String;
-begin
-  if WizardIsTaskSelected('autostart') then
-    Result := 'true'
-  else
-    Result := 'false';
-end;
-
-function GetLogLevel(Param: String): String;
-begin
-  if WizardIsTaskSelected('enablelogging') then
-    Result := 'DEBUG'
-  else
-    Result := 'INFO';
-end;
-
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "ollamaservice"; Description: "Install Ollama as Windows service"; GroupDescription: "LLM Setup"; Flags: unchecked
-Name: "customdatadir"; Description: "Use custom data directory for models"; GroupDescription: "Advanced Options"; Flags: unchecked
-Name: "autostart"; Description: "Start application at Windows startup"; GroupDescription: "Advanced Options"; Flags: unchecked
-Name: "gpuacceleration"; Description: "Enable GPU acceleration (NVIDIA only)"; GroupDescription: "Performance"; Flags: unchecked
-Name: "selftest"; Description: "Run self-test after installation"; GroupDescription: "Diagnostics"; Flags: unchecked
-Name: "enablelogging"; Description: "Enable detailed logging"; GroupDescription: "Diagnostics"; Flags: unchecked
-
-[Files]
-; Main executable
-Source: "build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-; DLLs
-Source: "build\windows\x64\runner\Release\flutter_windows.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "build\windows\x64\runner\Release\url_launcher_windows_plugin.dll"; DestDir: "{app}"; Flags: ignoreversion
-; Data directory and all files in it
-Source: "build\windows\x64\runner\Release\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; Ollama service files
-Source: "scripts\install_ollama_service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "scripts\uninstall_ollama_service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "scripts\ollama_service_manager.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "scripts\logging.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "scripts\test_installation.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-
-; Create tools directory
-Source: "tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; Update checker
-Source: "check_for_updates.ps1"; DestDir: "{app}"; Flags: ignoreversion
-
-[Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\Check for Updates"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\check_for_updates.ps1"""; WorkingDir: "{app}"
-Name: "{group}\Run Self-Test"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\scripts\test_installation.ps1"""; WorkingDir: "{app}"
-Name: "{group}\View Logs"; Filename: "explorer.exe"; Parameters: """{app}\logs"""; WorkingDir: "{app}"
-Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-
-[Registry]
-; Create registry entries for auto-update settings
-Root: HKCU; Subkey: "Software\{#MyAppName}"; Flags: uninsdeletekeyifempty
-Root: HKCU; Subkey: "Software\{#MyAppName}\Updates"; Flags: uninsdeletekeyifempty
-Root: HKCU; Subkey: "Software\{#MyAppName}\Updates"; ValueType: dword; ValueName: "CheckForUpdatesAtStartup"; ValueData: "1"; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\{#MyAppName}\Updates"; ValueType: dword; ValueName: "AutoInstallUpdates"; ValueData: "0"; Flags: uninsdeletevalue
-; Add logging settings
-Root: HKCU; Subkey: "Software\{#MyAppName}\Logging"; Flags: uninsdeletekeyifempty
-Root: HKCU; Subkey: "Software\{#MyAppName}\Logging"; ValueType: string; ValueName: "LogLevel"; ValueData: "{code:GetLogLevel}"; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\{#MyAppName}\Logging"; ValueType: string; ValueName: "LogPath"; ValueData: "{app}\logs\cloudtolocalllm.log"; Flags: uninsdeletevalue
-
-[Run]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\scripts\test_installation.ps1"""; WorkingDir: "{app}"; Flags: runhidden; Tasks: selftest; Description: "Running self-test..."
