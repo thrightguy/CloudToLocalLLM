@@ -26,9 +26,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "downloadollama"; Description: "Download and install Ollama"; GroupDescription: "LLM Providers"; Flags: unchecked
-Name: "existingollama"; Description: "Configure existing Ollama installation"; GroupDescription: "LLM Providers"; Flags: unchecked
-Name: "lmstudio"; Description: "Configure LM Studio"; GroupDescription: "LLM Providers"; Flags: unchecked
+; LLM providers are now managed via radio buttons on a dedicated page instead of checkboxes
+; Name: "downloadollama"; Description: "Download and install Ollama"; GroupDescription: "LLM Providers"; Flags: unchecked
+; Name: "existingollama"; Description: "Configure existing Ollama installation"; GroupDescription: "LLM Providers"; Flags: unchecked
+; Name: "lmstudio"; Description: "Configure LM Studio"; GroupDescription: "LLM Providers"; Flags: unchecked
 
 [Files]
 Source: "build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -40,7 +41,7 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\Setup-Ollama.ps1"" -DownloadOnly -OllamaPort '{code:GetOllamaPort}' -DefaultModel '{code:GetDefaultModel}' -ExistingOllamaUrl '{code:GetExistingOllamaUrl}'"; Description: "Setup Ollama"; Flags: runhidden; Tasks: downloadollama
+Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\Setup-Ollama.ps1"" -DownloadOnly -OllamaPort '{code:GetOllamaPort}' -DefaultModel '{code:GetDefaultModel}' -ExistingOllamaUrl '{code:GetExistingOllamaUrl}'"; Description: "Setup Ollama"; Flags: runhidden; Check: IsOllamaDownloadSelected
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -97,23 +98,19 @@ begin
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  SelectedLLMProvider: Integer;
 begin
   Result := True;
 
-  // Set tasks based on LLM provider selection
+  // Store the selected LLM provider
   if CurPageID = LLMProviderPage.ID then
   begin
-    WizardSelectTasks('!downloadollama,!existingollama,!lmstudio');
-
-    case LLMProviderPage.SelectedValueIndex of
-      0: WizardSelectTasks('downloadollama');
-      1: WizardSelectTasks('existingollama');
-      2: WizardSelectTasks('lmstudio');
-    end;
+    SelectedLLMProvider := LLMProviderPage.SelectedValueIndex;
   end;
 
   // Handle downloading Ollama if selected
-  if (CurPageID = wpReady) and WizardIsTaskSelected('downloadollama') then
+  if (CurPageID = wpReady) and (LLMProviderPage.SelectedValueIndex = 0) then
   begin
     DownloadPage.Clear;
     DownloadPage.Add('https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip', 'ollama.zip', '');
@@ -141,16 +138,21 @@ begin
   Result := False;
 
   // Skip Ollama download/config page if not selected
-  if (PageID = OllamaConfigPage.ID) and not WizardIsTaskSelected('downloadollama') then
+  if (PageID = OllamaConfigPage.ID) and (LLMProviderPage.SelectedValueIndex <> 0) then
     Result := True;
 
   // Skip existing Ollama config page if not selected
-  if (PageID = ExistingOllamaConfigPage.ID) and not WizardIsTaskSelected('existingollama') then
+  if (PageID = ExistingOllamaConfigPage.ID) and (LLMProviderPage.SelectedValueIndex <> 1) then
     Result := True;
 
   // Skip LM Studio config page if not selected
-  if (PageID = LMStudioConfigPage.ID) and not WizardIsTaskSelected('lmstudio') then
+  if (PageID = LMStudioConfigPage.ID) and (LLMProviderPage.SelectedValueIndex <> 2) then
     Result := True;
+end;
+
+function IsOllamaDownloadSelected: Boolean;
+begin
+  Result := (LLMProviderPage.SelectedValueIndex = 0);
 end;
 
 // Store configuration in registry for the app to use
