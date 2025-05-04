@@ -83,5 +83,11 @@ CloudToLocalLLM.rivet-project
 PRICING_STRATEGY.md
 *PRICING*.md
 
-# Allow license server in cloud directory
+# Allow specific files in cloud directory
 !cloud/license_server/
+!cloud/web/
+!cloud/web/index.html
+!cloud/web/login.html
+!cloud/web/manifest.json
+!cloud/web/favicon.png
+!cloud/web/icons/
