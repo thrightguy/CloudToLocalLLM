@@ -34,6 +34,14 @@
    - Added automatic Docker and Docker Compose installation
    - Improved SSH key verification and setup process
    - Added deployment test validation procedure
+   
+3. **Web UI Updates**
+   - Implemented new modern gradient design for the landing page
+   - Added "Website Under Construction" banner
+   - Created dedicated login page with matching design
+   - Improved mobile responsiveness for all screen sizes
+   - Updated web manifest for PWA capabilities
+   - Added PowerShell deployment script for easier web UI updates
 
 ## Next Steps
 
