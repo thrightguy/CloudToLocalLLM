@@ -51,15 +51,15 @@ Follow the instructions in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md) for cr
    - Update version numbers in all relevant files (ISS installers, pubspec.yaml)
 
 2. **Build Both Installer Types**
-   - Build the regular installer with `build_windows_with_license.ps1`
-   - Build the admin installer with `build_windows_admin_installer.ps1`
+   - Build the regular installer with `scripts\build\build_windows_with_license.ps1`
+   - Build the admin installer with `scripts\build\build_windows_admin_installer.ps1`
 
 3. **Test Builds Thoroughly**
    - Test both installer types to verify functionality
 
 4. **Select Release Candidate**
    - Identify the build that will become the release candidate
-   - Clean up older builds using `clean_releases.ps1 -KeepLatestBuild`
+   - Clean up older builds using `scripts\release\clean_releases.ps1 -KeepLatestBuild`
 
 5. **Create GitHub Release**
    - Upload the final installer and ZIP files to GitHub as described above

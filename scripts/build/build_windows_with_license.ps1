@@ -98,14 +98,14 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "build\windows\x64\runner\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Setup-Ollama.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "scripts\utils\Setup-Ollama.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\Setup-Ollama.ps1"" -DownloadOnly -OllamaPort '{code:GetOllamaPort}' -DefaultModel '{code:GetDefaultModel}' -ExistingOllamaUrl '{code:GetExistingOllamaUrl}'"; Description: "Setup Ollama"; Flags: waituntilterminated shellexec; Check: IsOllamaDownloadSelected
+Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\scripts\utils\Setup-Ollama.ps1"" -DownloadOnly -OllamaPort '{code:GetOllamaPort}' -DefaultModel '{code:GetDefaultModel}' -ExistingOllamaUrl '{code:GetExistingOllamaUrl}'"; Description: "Setup Ollama"; Flags: waituntilterminated shellexec; Check: IsOllamaDownloadSelected
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -188,7 +188,7 @@ begin
     try
       try
         DownloadPage.Download;
-        // The actual extraction will be handled by Setup-Ollama.ps1
+        // The actual extraction will be handled by scripts\utils\Setup-Ollama.ps1
         Result := True;
       except
         if DownloadPage.AbortedByUser then
@@ -381,7 +381,7 @@ if (Test-Path $innoSetupPath) {
             $cleanupParams.Add("DryRun", $true)
         }
         
-        & "$PSScriptRoot\clean_releases.ps1" @cleanupParams
+        & "$PSScriptRoot\scripts\release\clean_releases.ps1" @cleanupParams
     }
 } else {
     Write-Host "InnoSetup not found. Please install InnoSetup to build the installer." -ForegroundColor Yellow

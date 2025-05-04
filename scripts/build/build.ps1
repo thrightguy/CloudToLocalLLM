@@ -36,7 +36,7 @@ function Build-WindowsApp {
     }
     
     # Copy Ollama setup script
-    Copy-Item "Setup-Ollama.ps1" -Destination $outputPath
+    Copy-Item "scripts\utils\Setup-Ollama.ps1" -Destination $outputPath
     
     Write-Host "Windows build completed successfully!" -ForegroundColor Green
     Write-Host "Output location: $outputPath"

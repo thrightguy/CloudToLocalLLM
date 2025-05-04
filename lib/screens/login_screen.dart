@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../widgets/version_info_footer.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -243,6 +244,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+
+              // Add version info at the bottom
+              const SizedBox(height: 24),
+              const VersionInfoFooter(showBuild: true),
             ],
           ),
         ),

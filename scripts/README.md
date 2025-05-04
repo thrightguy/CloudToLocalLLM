@@ -1,6 +1,74 @@
-# CloudToLocalLLM Scripts
+# CloudToLocalLLM Scripts Directory
 
-This directory contains utility scripts for the CloudToLocalLLM project.
+This directory contains various scripts organized by function for the CloudToLocalLLM application.
+
+## Directory Structure
+
+- **build/** - Scripts for building the application for different platforms
+- **deploy/** - Scripts for deploying the application to different environments
+- **release/** - Scripts for release management and version control
+- **auth0/** - Scripts for Auth0 integration and authentication
+- **utils/** - Utility scripts for various tasks
+
+## Organization Scripts
+
+Two special scripts help manage the script organization:
+
+- **organize_scripts.ps1** - Moves scripts from the root directory into appropriate subfolders
+- **update_references.ps1** - Updates references to scripts in other files after reorganization
+
+## Script Categories
+
+### Build Scripts
+Build scripts handle the compilation and packaging of the application for different platforms:
+- Windows installers (admin and regular)
+- Android builds
+- Preparation for cloud builds
+
+### Deploy Scripts
+Deploy scripts handle the deployment of the application to different environments:
+- VPS deployment
+- Docker container setup
+- Web deployment
+- Cloud environment deployment
+
+### Release Scripts
+Release scripts handle version management and release processes:
+- Cleaning up old releases
+- Checking for updates
+- Release candidate selection
+
+### Auth0 Scripts
+Auth0 scripts handle authentication integration:
+- Auth0 setup and configuration
+- Authentication flow integration
+- API authentication
+
+### Utility Scripts
+Utility scripts provide various helper functions:
+- SSL certificate management
+- Nginx configuration
+- Container setup
+- UI adjustments
+
+## Running Scripts
+
+Most scripts should be run from the project root directory. Some scripts require administrative privileges and will prompt for elevation if needed.
+
+Example:
+```powershell
+# From the project root
+.\scripts\build\build_windows_with_license.ps1
+```
+
+## Contributing New Scripts
+
+When adding new scripts to the project:
+
+1. Place the script in the appropriate subdirectory based on its function
+2. Update this README if adding a new category of scripts
+3. Follow the naming convention of existing scripts
+4. Include comments at the top of the script describing its purpose and usage
 
 ## Generate Icons Script
 

@@ -78,7 +78,7 @@ if (-not $KeepAllReleases) {
         $cleanupParams.Add("DryRun", $true)
     }
     
-    & "$PSScriptRoot\clean_releases.ps1" @cleanupParams
+    & "$PSScriptRoot\scripts\release\clean_releases.ps1" @cleanupParams
 }
 
 # Add a note to differentiate this installer
