@@ -72,6 +72,50 @@ SSL certificates are obtained and managed through Certbot:
 - Auto-renewal is configured via cron jobs
 - Renewal hooks ensure Nginx is reloaded when certificates are renewed
 
+## SSL Configuration Options
+
+### Let's Encrypt (Current Implementation)
+The current deployment uses Let's Encrypt for SSL certificates, which are:
+- Free
+- Auto-renewable
+- Requires specifying each subdomain explicitly
+- Requires stopping Nginx during renewal
+- Needs certificate updates when adding new subdomains
+
+### Wildcard SSL Certificate (Recommended for Production)
+For production environments with multiple dynamic subdomains, a wildcard SSL certificate from a provider like Namecheap is recommended:
+
+**Advantages:**
+- Single certificate covers all subdomains (*.cloudtolocalllm.online)
+- No need to update certificates when adding new subdomains
+- Simplifies the dynamic user subdomain architecture
+- No service interruption during certificate installation/renewal
+- More reliable than automated renewal processes
+
+**Implementation:**
+1. Purchase a wildcard SSL certificate from Namecheap or similar provider
+2. Install the certificate files on the VPS
+3. Update Nginx configuration to use the wildcard certificate
+4. Remove the Let's Encrypt renewal logic from your maintenance scripts
+
+The wildcard certificate can be installed using:
+```bash
+sudo mkdir -p /opt/cloudtolocalllm/nginx/ssl
+sudo cp /path/to/wildcard.crt /opt/cloudtolocalllm/nginx/ssl/fullchain.pem
+sudo cp /path/to/wildcard.key /opt/cloudtolocalllm/nginx/ssl/privkey.pem
+sudo chmod 644 /opt/cloudtolocalllm/nginx/ssl/fullchain.pem
+sudo chmod 600 /opt/cloudtolocalllm/nginx/ssl/privkey.pem
+```
+
+Then restart the Nginx container:
+```bash
+cd /opt/cloudtolocalllm
+docker-compose restart nginx-proxy
+```
+
+**Cost Consideration:**
+While wildcard certificates typically cost $70-100/year compared to free Let's Encrypt certificates, the simplified management and improved reliability make them worth considering for production deployments.
+
 ## Container Management
 
 User containers are managed through the User Manager service, which:
