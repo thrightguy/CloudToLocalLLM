@@ -140,7 +140,7 @@ echo -e "${YELLOW}Your website should now be available at http://cloudtolocalllm
         Write-Host "Deployment completed successfully!" -ForegroundColor Green
     } else {
         Write-Host "DRY RUN: Files prepared for deployment but not uploaded." -ForegroundColor Yellow
-        Write-Host "Files would be uploaded to: $VpsConnection:/tmp/cloudtolocalllm-deploy" -ForegroundColor Yellow
+        Write-Host ("Files would be uploaded to: " + $VpsConnection + ":/tmp/cloudtolocalllm-deploy") -ForegroundColor Yellow
     }
 } catch {
     Write-Host "Error: Deployment failed with error: $_" -ForegroundColor Red
