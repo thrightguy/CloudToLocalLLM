@@ -78,3 +78,10 @@ CloudToLocalLLM.rivet-project
 **/flutter_windows_winrt.dll.lib
 **/flutter_windows_winrt.dll.exp
 **/generated_config.cmake
+
+# Pricing strategy documents (internal only)
+PRICING_STRATEGY.md
+*PRICING*.md
+
+# Allow license server in cloud directory
+!cloud/license_server/

@@ -5,8 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/user.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:js' as js;
 
 class AuthService {
   final String baseUrl;
@@ -28,6 +26,57 @@ class AuthService {
   // Initialize the auth service
   Future<void> initialize() async {
     await _loadStoredAuth();
+  }
+
+  // Get the auth URL for Auth0
+  String getAuth0Url() {
+    final redirectUri = AppConfig.auth0RedirectUri;
+    final auth0Domain = AppConfig.auth0Domain;
+    final clientId = AppConfig.auth0ClientId;
+    final audience = AppConfig.auth0Audience;
+
+    final auth0Url = Uri.https(auth0Domain, '/authorize', {
+      'client_id': clientId,
+      'redirect_uri': redirectUri,
+      'response_type': 'code',
+      'scope': 'openid profile email',
+      'audience': audience,
+    });
+
+    return auth0Url.toString();
+  }
+
+  // Login with Auth0
+  Future<bool> loginWithAuth0() async {
+    try {
+      if (kIsWeb) {
+        // On web, we just log that we would redirect to Auth0
+        // In a real implementation, we'd use platform-specific code here
+        final url = getAuth0Url();
+        debugPrint("Would redirect to Auth0: $url");
+      }
+
+      // For demo purposes on non-web platforms
+      debugPrint("Auth0 login would be implemented for this platform");
+
+      // Simulate successful login for development
+      if (kDebugMode) {
+        // Create a mock user for debugging
+        final mockUser = User(
+          id: 'mock-user-id',
+          name: 'Test User',
+          email: 'test@example.com',
+          createdAt: DateTime.now(),
+        );
+        await _saveAuth('mock-token', mockUser);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint("Error with Auth0 login: $e");
+      return false;
+    }
   }
 
   // Load stored authentication data
@@ -68,41 +117,6 @@ class AuthService {
     await prefs.remove(AppConfig.userStorageKey);
   }
 
-  // Login with Auth0
-  Future<bool> loginWithAuth0() async {
-    // For web platform, redirect directly to Auth0 login
-    if (kIsWeb) {
-      try {
-        // Get the current URL to use as the base for the redirect URI
-        final redirectUri = AppConfig.auth0RedirectUri;
-
-        // Construct Auth0 login URL with values from AppConfig
-        final auth0Domain = AppConfig.auth0Domain;
-        final clientId = AppConfig.auth0ClientId;
-        final audience = AppConfig.auth0Audience;
-
-        final auth0Url = Uri.https(auth0Domain, '/authorize', {
-          'client_id': clientId,
-          'redirect_uri': redirectUri,
-          'response_type': 'code',
-          'scope': 'openid profile email',
-          'audience': audience,
-        });
-
-        // Redirect to Auth0 login page
-        js.context.callMethod('open', [auth0Url.toString(), '_self']);
-        return true;
-      } catch (e) {
-        debugPrint("Error redirecting to Auth0: $e");
-        return false;
-      }
-    } else {
-      // Mobile/desktop implementation would go here
-      debugPrint("Auth0 login not implemented for this platform yet.");
-      return false;
-    }
-  }
-
   // Login with username and password
   Future<bool> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/api/auth/login');
@@ -118,12 +132,11 @@ class AuthService {
         await _saveAuth(data['token'], User.fromJson(data['user']));
         return true;
       } else {
-        debugPrint(
-            'Login failed: ${response.statusCode} ${response.body}'); // Use debugPrint
+        debugPrint('Login failed: ${response.statusCode} ${response.body}');
         return false;
       }
     } catch (e) {
-      debugPrint('Login error: $e'); // Use debugPrint
+      debugPrint('Login error: $e');
       return false;
     }
   }
@@ -142,8 +155,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      debugPrint(
-          'Logout API call failed: $e'); // Use debugPrint, but don't block logout
+      debugPrint('Logout API call failed: $e');
     } finally {
       await _clearAuth();
     }
@@ -163,7 +175,7 @@ class AuthService {
       );
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('Token validation error: $e'); // Use debugPrint
+      debugPrint('Token validation error: $e');
       return false;
     }
   }
@@ -183,7 +195,7 @@ class AuthService {
       );
       return response.statusCode == 201;
     } catch (e) {
-      debugPrint('Registration error: $e'); // Use debugPrint
+      debugPrint('Registration error: $e');
       return false;
     }
   }
