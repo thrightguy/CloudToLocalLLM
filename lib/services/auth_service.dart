@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/user.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:js' as js;
 
 class AuthService {
   final String baseUrl;
@@ -68,14 +70,37 @@ class AuthService {
 
   // Login with Auth0
   Future<bool> loginWithAuth0() async {
-    debugPrint("Auth0 login not implemented yet."); // Use debugPrint
-    // Placeholder logic
-    await Future.delayed(const Duration(seconds: 1));
-    // Simulate successful login for testing
-    // final dummyUser = User(id: 'auth0|12345', name: 'Auth0 User', email: 'auth0@example.com');
-    // await _saveAuth('dummy-auth0-token', dummyUser);
-    // return true;
-    return false; // Return false until implemented
+    // For web platform, redirect directly to Auth0 login
+    if (kIsWeb) {
+      try {
+        // Get the current URL to use as the base for the redirect URI
+        final redirectUri = AppConfig.auth0RedirectUri;
+
+        // Construct Auth0 login URL with values from AppConfig
+        final auth0Domain = AppConfig.auth0Domain;
+        final clientId = AppConfig.auth0ClientId;
+        final audience = AppConfig.auth0Audience;
+
+        final auth0Url = Uri.https(auth0Domain, '/authorize', {
+          'client_id': clientId,
+          'redirect_uri': redirectUri,
+          'response_type': 'code',
+          'scope': 'openid profile email',
+          'audience': audience,
+        });
+
+        // Redirect to Auth0 login page
+        js.context.callMethod('open', [auth0Url.toString(), '_self']);
+        return true;
+      } catch (e) {
+        debugPrint("Error redirecting to Auth0: $e");
+        return false;
+      }
+    } else {
+      // Mobile/desktop implementation would go here
+      debugPrint("Auth0 login not implemented for this platform yet.");
+      return false;
+    }
   }
 
   // Login with username and password

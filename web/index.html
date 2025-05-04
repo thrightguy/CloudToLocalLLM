@@ -31,6 +31,30 @@
 
   <title>cloudtolocalllm_dev</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- Auth0 SPA JS -->
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+  
+  <!-- Auth0 callback handler -->
+  <script>
+    // Handle Auth0 callback redirect
+    window.handleAuth0Callback = function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      
+      if (code && state) {
+        // Auth0 redirect callback - Flutter will handle this
+        console.log('Auth0 callback detected, code and state present');
+        // The code will be processed by the Flutter app
+      }
+    };
+    
+    // Run on page load
+    window.addEventListener('load', function() {
+      window.handleAuth0Callback();
+    });
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

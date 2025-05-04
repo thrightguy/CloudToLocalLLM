@@ -10,9 +10,10 @@ class AppConfig {
   static const bool useCloudAuthentication = true;
 
   // Authentication Configuration
-  static const String auth0Domain = 'your-auth0-domain.auth0.com';
-  static const String auth0ClientId = 'your-auth0-client-id';
-  static const String auth0RedirectUri = 'com.cloudtolocalllm://login-callback';
+  static const String auth0Domain = 'dev-cloudtolocalllm.us.auth0.com';
+  static const String auth0ClientId = 'your_auth0_client_id';
+  static const String auth0RedirectUri = 'https://cloudtolocalllm.online/';
+  static const String auth0Audience = 'https://api.cloudtolocalllm.online';
 
   // Local Storage Keys
   static const String tokenStorageKey = 'auth_token';
