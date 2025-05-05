@@ -6,37 +6,87 @@ set -e
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
+
+# Function to check system requirements
+check_requirements() {
+    echo -e "${YELLOW}Checking system requirements...${NC}"
+    
+    # Check minimum disk space (20GB free)
+    FREE_SPACE=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [ "$FREE_SPACE" -lt 20 ]; then
+        echo -e "${RED}Error: Insufficient disk space. Need at least 20GB free.${NC}"
+        exit 1
+    fi
+    
+    # Check minimum memory (4GB)
+    TOTAL_MEM=$(free -g | awk 'NR==2 {print $2}')
+    if [ "$TOTAL_MEM" -lt 4 ]; then
+        echo -e "${RED}Error: Insufficient memory. Need at least 4GB RAM.${NC}"
+        exit 1
+    }
+    
+    echo -e "${GREEN}System requirements met.${NC}"
+}
+
+# Function to backup existing configuration
+backup_config() {
+    echo -e "${YELLOW}Backing up existing configuration...${NC}"
+    BACKUP_DIR="/var/www/cloudtolocalllm_backup_$(date +%Y%m%d_%H%M%S)"
+    if [ -d "/var/www/cloudtolocalllm" ]; then
+        sudo cp -r /var/www/cloudtolocalllm $BACKUP_DIR
+        echo -e "${GREEN}Backup created at $BACKUP_DIR${NC}"
+    fi
+}
 
 echo -e "${GREEN}Starting VPS deployment setup...${NC}"
 
+# Check system requirements
+check_requirements
+
+# Backup existing configuration
+backup_config
+
 # Update system
 echo -e "${YELLOW}Updating system packages...${NC}"
-sudo apt update
-sudo apt upgrade -y
+sudo apt update || { echo -e "${RED}Failed to update package list${NC}"; exit 1; }
+sudo apt upgrade -y || { echo -e "${RED}Failed to upgrade packages${NC}"; exit 1; }
 
 # Install required packages
 echo -e "${YELLOW}Installing required packages...${NC}"
-sudo apt install -y docker.io docker-compose nginx certbot python3-certbot-nginx
+sudo apt install -y docker.io docker-compose nginx certbot python3-certbot-nginx || {
+    echo -e "${RED}Failed to install required packages${NC}"
+    exit 1
+}
 
 # Start and enable Docker
 echo -e "${YELLOW}Configuring Docker...${NC}"
-sudo systemctl start docker
-sudo systemctl enable docker
+sudo systemctl start docker || { echo -e "${RED}Failed to start Docker${NC}"; exit 1; }
+sudo systemctl enable docker || { echo -e "${RED}Failed to enable Docker${NC}"; exit 1; }
 
 # Add current user to docker group
 sudo usermod -aG docker $USER
 
-# Clean up existing containers
-echo -e "${YELLOW}Cleaning up existing containers...${NC}"
-if [ -f "/var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh" ]; then
-    bash /var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh
+# Deep clean existing setup
+echo -e "${YELLOW}Performing deep cleanup...${NC}"
+CLEANUP_SCRIPT="/var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh"
+if [ -f "$CLEANUP_SCRIPT" ]; then
+    bash "$CLEANUP_SCRIPT" || {
+        echo -e "${RED}Cleanup script failed, attempting basic cleanup...${NC}"
+        docker stop $(docker ps -q) 2>/dev/null || true
+        docker rm $(docker ps -a -q) 2>/dev/null || true
+        docker network prune -f
+        docker volume prune -f
+        docker builder prune -f
+    }
 else
     echo -e "${YELLOW}Cleanup script not found, performing basic cleanup...${NC}"
     docker stop $(docker ps -q) 2>/dev/null || true
     docker rm $(docker ps -a -q) 2>/dev/null || true
     docker network prune -f
     docker volume prune -f
+    docker builder prune -f
 fi
 
 # Create project directory
@@ -105,8 +155,22 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 EOF
 
-echo -e "${GREEN}VPS setup completed!${NC}"
-echo -e "${YELLOW}Next steps:${NC}"
+# Final system check
+echo -e "${YELLOW}Performing final system check...${NC}"
+docker info || { echo -e "${RED}Docker is not running properly${NC}"; exit 1; }
+nginx -t || { echo -e "${RED}Nginx configuration test failed${NC}"; exit 1; }
+systemctl is-active docker || { echo -e "${RED}Docker service is not active${NC}"; exit 1; }
+systemctl is-active nginx || { echo -e "${RED}Nginx service is not active${NC}"; exit 1; }
+
+echo -e "${GREEN}VPS setup completed successfully!${NC}"
+echo -e "${YELLOW}System Status:${NC}"
+echo "Docker Version: $(docker --version)"
+echo "Docker Compose Version: $(docker-compose --version)"
+echo "Nginx Version: $(nginx -v 2>&1)"
+echo "Available Disk Space: $(df -h / | awk 'NR==2 {print $4}')"
+echo "Memory Usage: $(free -h | awk 'NR==2 {print "Total: "$2"  Used: "$3"  Free: "$4}')"
+
+echo -e "\n${YELLOW}Next steps:${NC}"
 echo "1. Copy your Flutter web app files to $PROJECT_DIR"
 echo "2. Run: cd $PROJECT_DIR && docker-compose up -d"
 echo "3. To set up SSL, run: sudo certbot --nginx -d your-domain.com"
