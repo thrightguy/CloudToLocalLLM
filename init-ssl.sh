@@ -16,23 +16,26 @@ mkdir -p certbot/conf
 # Stop any running containers
 docker-compose -f docker-compose.web.yml down
 
-# Start nginx without SSL
-docker-compose -f docker-compose.web.yml up -d webapp
+# Use standalone mode for certificate generation
+echo -e "${YELLOW}Requesting SSL certificate using standalone mode...${NC}"
+docker run --rm -p 80:80 -p 443:443 \
+  -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+  -v "$(pwd)/certbot/www:/var/www/certbot" \
+  certbot/certbot certonly --standalone \
+  --agree-tos --no-eff-email \
+  --email admin@cloudtolocalllm.online \
+  -d cloudtolocalllm.online -d www.cloudtolocalllm.online
 
-# Wait for nginx to start
-echo -e "${YELLOW}Waiting for nginx to start...${NC}"
-sleep 5
-
-# Request SSL certificate
-docker-compose -f docker-compose.web.yml run --rm certbot
-
-# Restart nginx with SSL
-docker-compose -f docker-compose.web.yml restart webapp
+# Start services with SSL
+echo -e "${YELLOW}Starting services with SSL...${NC}"
+docker-compose -f docker-compose.web.yml up -d
 
 echo -e "${GREEN}SSL initialization complete. Checking certificate status...${NC}"
 
 # Verify certificate
-docker-compose -f docker-compose.web.yml run --rm certbot certificates
+docker run --rm \
+  -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+  certbot/certbot certificates
 
 echo -e "${GREEN}Setup complete. The portal should now be accessible via HTTPS.${NC}"
 
@@ -40,8 +43,17 @@ echo -e "${GREEN}Setup complete. The portal should now be accessible via HTTPS.$
 echo -e "${YELLOW}Setting up automatic certificate renewal...${NC}"
 cat > renew-ssl.sh << 'EOF'
 #!/bin/bash
-docker-compose -f docker-compose.web.yml run --rm certbot renew
-docker-compose -f docker-compose.web.yml exec webapp nginx -s reload
+# Stop services to free port 80
+docker-compose -f docker-compose.web.yml down
+
+# Renew certificate in standalone mode
+docker run --rm -p 80:80 -p 443:443 \
+  -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+  -v "$(pwd)/certbot/www:/var/www/certbot" \
+  certbot/certbot renew
+
+# Restart services
+docker-compose -f docker-compose.web.yml up -d
 EOF
 
 chmod +x renew-ssl.sh
