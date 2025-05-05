@@ -1,13 +1,38 @@
-﻿# Use the official Dart image to build the web app
-FROM dart:stable AS build
-WORKDIR /app
-COPY . .
-RUN dart pub global activate flutter_tools && \
+﻿# Use the official Flutter image
+FROM ghcr.io/cirruslabs/flutter:3.19.3 AS build
+
+# Create a non-root user for building
+RUN useradd -ms /bin/bash builder && \
+    chown -R builder:builder /sdks/flutter && \
+    git config --system --add safe.directory /sdks/flutter
+
+USER builder
+WORKDIR /home/builder/app
+
+# Copy files with correct ownership
+COPY --chown=builder:builder . .
+
+# Enable null safety and build the app
+RUN flutter config --enable-web && \
     flutter pub get && \
-    flutter build web --release
+    flutter clean && \
+    flutter pub upgrade --major-versions && \
+    flutter build web --release --no-sound-null-safety
 
 # Use a lightweight server image to serve the web app
 FROM nginx:alpine
-COPY --from=build /app/build/web /usr/share/nginx/html
+
+# Create necessary directories
+RUN mkdir -p /usr/share/nginx/html
+
+# Copy Nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Copy the built Flutter web app
+COPY --from=build /home/builder/app/build/web /usr/share/nginx/html
+
+# Expose port 80
 EXPOSE 80
+
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

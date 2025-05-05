@@ -1,0 +1,36 @@
+FROM nginx:alpine
+
+# Create necessary directories with correct permissions
+RUN mkdir -p /var/cache/nginx/client_temp \
+    /var/cache/nginx/proxy_temp \
+    /var/cache/nginx/fastcgi_temp \
+    /var/cache/nginx/uwsgi_temp \
+    /var/cache/nginx/scgi_temp \
+    /var/run \
+    /etc/letsencrypt \
+    && chown -R nginx:nginx /var/cache/nginx \
+    && chown -R nginx:nginx /var/run \
+    && chown -R nginx:nginx /etc/letsencrypt \
+    && chmod -R 755 /var/cache/nginx \
+    && chmod -R 755 /var/run \
+    && chmod -R 755 /etc/letsencrypt \
+    && touch /var/run/nginx.pid \
+    && chown nginx:nginx /var/run/nginx.pid \
+    && chmod 644 /var/run/nginx.pid
+
+# Copy the built web files
+COPY . /usr/share/nginx/html
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN chown nginx:nginx /etc/nginx/conf.d/default.conf
+
+# Expose ports
+EXPOSE 80 443
+
+# Switch to non-root user
+USER nginx
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"] 

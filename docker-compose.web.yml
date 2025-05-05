@@ -1,0 +1,38 @@
+version: '3'
+services:
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    environment:
+      - NGINX_HOST=cloudtolocalllm.online
+      - NGINX_SSL_CERT=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem
+      - NGINX_SSL_KEY=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "https://localhost:443/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - webnet
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    command: certonly --webroot -w /var/www/certbot --force-renewal --email admin@cloudtolocalllm.online --agree-tos --no-eff-email -d cloudtolocalllm.online -d www.cloudtolocalllm.online
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    driver: bridge 
