@@ -1,5 +1,7 @@
 # CloudToLocalLLM
 
+> **Note:** The `cloud` folder is now deprecated. All development, documentation, and deployment for the cloud and local apps is now managed from the main project root. The main application is a Flutter/Dart project. For any cloud-related code or deployment, refer to the main project and this README.
+
 A Flutter application that allows you to run LLMs locally and sync your conversations with the cloud.
 
 ## Features
