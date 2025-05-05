@@ -47,6 +47,17 @@ server {
 }
 '@
 
+# Get the current Nginx configuration
+$nginxConfigPath = "/etc/nginx/sites-enabled/cloudtolocalllm.conf"
+$nginxConfigContent = Get-Content -Path $nginxConfigPath -Raw
+
+# Check if the configuration needs to be updated
+if ($nginxConfigContent -notmatch "client_max_body_size") {
+    Write-Host "Adding client_max_body_size directive..."
+    $nginxConfigContent = $nginxConfigContent -replace "http {", "http {`n    client_max_body_size 100M;"
+    Set-Content -Path $nginxConfigPath -Value $nginxConfigContent
+}
+
 # Fix config and SSL setup script
 $setupScript = @'
 #!/bin/bash

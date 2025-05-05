@@ -140,7 +140,7 @@ If you encounter issues:
 
 3. **Database Issues**: Connect to the PostgreSQL container
    ```bash
-   docker exec -it db-service psql -U postgres -d cloudtolocalllm
+   docker exec -it db-service psql cloudtolocalllm postgres
    ```
 
 ## Maintenance
@@ -159,4 +159,25 @@ Planned improvements to the deployment:
 1. Enhanced monitoring with Prometheus/Grafana
 2. Automated backups to cloud storage
 3. Load balancing for high availability
-4. Kubernetes migration for better orchestration 
+4. Kubernetes migration for better orchestration
+
+## Additional Deployment Instructions
+
+### Install Required Packages
+```bash
+# Install required packages
+sudo apt update && sudo apt install -y python3-pip nginx certbot python3-certbot-nginx
+
+# Install Python dependencies
+pip3 install -r requirements.txt
+
+# Rest of the deployment instructions...
+```
+
+### Install Python Dependencies
+```bash
+# Install Python dependencies
+pip3 install -r requirements.txt
+
+# Rest of the deployment instructions...
+``` 

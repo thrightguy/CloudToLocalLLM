@@ -2,7 +2,12 @@
 # This script organizes all PowerShell scripts in the root directory into appropriate subfolders
 
 # Check if running as administrator
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $isAdmin) {
+    Write-Warning "Script is not running as Administrator. Some operations may fail."
+}
 
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "CloudToLocalLLM - PowerShell Script Organization" -ForegroundColor Cyan

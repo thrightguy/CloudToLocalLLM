@@ -1,16 +1,17 @@
-import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
-import '../providers/auth_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/onboarding_provider.dart';
 
-class OnboardingWizard extends StatelessWidget {
-  const OnboardingWizard({Key? key}) : super(key: key);
+class OnboardingWizard extends StatefulWidget {
+  const OnboardingWizard({super.key});
 
+  @override
+  State<OnboardingWizard> createState() => _OnboardingWizardState();
+}
+
+class _OnboardingWizardState extends State<OnboardingWizard> {
   @override
   Widget build(BuildContext context) {
     return Consumer<OnboardingProvider>(
@@ -318,16 +319,24 @@ class OnboardingWizard extends StatelessWidget {
         Row(
           children: [
             ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Link to Windows client download
+              onPressed: () async {
+                final url = Uri.parse(
+                    'https://github.com/yourusername/CloudToLocalLLM/releases/latest/download/CloudToLocalLLM-Windows.exe');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url);
+                }
               },
               icon: const Icon(Icons.desktop_windows),
               label: const Text('Windows Client'),
             ),
             const SizedBox(width: 16),
             ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Link to Ubuntu client download
+              onPressed: () async {
+                final url = Uri.parse(
+                    'https://github.com/yourusername/CloudToLocalLLM/releases/latest/download/CloudToLocalLLM-Ubuntu.deb');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url);
+                }
               },
               icon: const Icon(Icons.computer),
               label: const Text('Ubuntu Client'),

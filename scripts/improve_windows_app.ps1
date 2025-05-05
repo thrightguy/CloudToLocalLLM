@@ -1,8 +1,10 @@
 # Windows App Improvement Script
 
 # Function to create Windows installer
-function Create-WindowsInstaller {
+function New-WindowsInstaller {
     param (
+        [string]$OutputPath,
+        [string]$AppName,
         [string]$Version
     )
     
@@ -147,7 +149,7 @@ class WindowsNotifications {
 $version = "1.2.0"  # Update this version number as needed
 
 Write-Host "Starting Windows app improvements..."
-Create-WindowsInstaller -Version $version
+New-WindowsInstaller -OutputPath $version -AppName CloudToLocalLLM -Version $version
 Add-WindowsFeatures
 
 Write-Host "Windows app improvements completed!"
