@@ -72,10 +72,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"cloudtolocalllm_dev", origin, size)) {
+  if (!window.Create(L"CloudToLocalLLM", origin, size)) {
     return EXIT_FAILURE;
   }
   
+  // Always show window on startup
+  window.Show();
+  g_isWindowVisible = true;
+
   // Don't auto-quit when the window is closed
   window.SetQuitOnClose(false);
 
@@ -186,6 +190,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         case ID_TRAY_SHOW:
           g_isWindowVisible = !g_isWindowVisible;
           ShowWindow(hwnd, g_isWindowVisible ? SW_SHOW : SW_HIDE);
+          if (g_isWindowVisible) {
+            SetForegroundWindow(hwnd);
+            SetFocus(hwnd);
+          }
           return 0;
         case ID_TRAY_LLM_STATUS:
           g_isLlmRunning = CheckLlmStatus();
@@ -212,6 +220,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
       ShowWindow(hwnd, SW_HIDE);
       g_isWindowVisible = false;
       return 0;
+
+    case WM_SIZE:
+      if (wParam == SIZE_MINIMIZED) {
+        // Hide window when minimized
+        ShowWindow(hwnd, SW_HIDE);
+        g_isWindowVisible = false;
+        return 0;
+      }
+      break;
   }
 
   // Pass all other messages to Flutter's window procedure

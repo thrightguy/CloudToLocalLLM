@@ -9,6 +9,23 @@ A Flutter application that bridges the gap between cloud services and local larg
 - **Remote Access**: Access your local LLM from anywhere via secure tunnels
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Multiple LLM Providers**: Support for Ollama and LM Studio, with extensible architecture
+- **System Tray Integration**: Always accessible via system tray with persistent window management
+- **Smart Window Behavior**: Main window shows on startup and minimizes to tray when closed
+
+## Window and System Tray Behavior
+
+The application implements a user-friendly window management system:
+
+- **Startup**: The main window is always visible when the application starts
+- **System Tray**: A persistent system tray icon provides quick access to:
+  - Show/Hide main window
+  - Check LLM status
+  - Manage tunnel connection
+  - Exit application
+- **Window Controls**:
+  - Close button (X) minimizes to system tray
+  - Minimize button minimizes to system tray
+  - System tray icon restores the window when clicked
 
 ## SSL Configuration
 
