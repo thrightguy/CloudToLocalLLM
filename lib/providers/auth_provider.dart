@@ -4,13 +4,13 @@ import 'package:flutter/foundation.dart';
 // import '../config/app_config.dart'; // Unused
 // import 'settings_provider.dart'; // Unused
 import '../models/user.dart';
-import '../services/auth_service.dart';
+import '../services/local_auth_service.dart';
 import '../services/cloud_service.dart';
 import '../services/storage_service.dart';
 // import '../utils/logger.dart'; // Postponing logger
 
 class AuthProvider extends ChangeNotifier {
-  final AuthService authService;
+  final LocalAuthService authService;
   final CloudService cloudService;
   final StorageService storageService;
   // final _logger = Logger('AuthProvider'); // Postponing logger
@@ -56,33 +56,13 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Login with Auth0
-  Future<void> loginWithAuth0() async {
+  // Login with username and password
+  Future<bool> login(String username, String password) async {
     _isLoading = true;
     _error = '';
     notifyListeners();
     try {
-      final success = await authService.loginWithAuth0();
-      if (success) {
-        // Sync user profile with cloud
-        await _syncUserProfile();
-      }
-    } catch (e) {
-      _error = 'Error logging in with Auth0: $e';
-      debugPrint(_error); // Use debugPrint
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Login with email and password
-  Future<bool> login(String email, String password) async {
-    _isLoading = true;
-    _error = '';
-    notifyListeners();
-    try {
-      final success = await authService.login(email, password);
+      final success = await authService.login(username, password);
       if (success) {
         // Sync user profile with cloud
         await _syncUserProfile();
@@ -99,15 +79,15 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Register a new user
-  Future<bool> register(String name, String email, String password) async {
+  Future<bool> register(String username, String email, String password) async {
     _isLoading = true;
     _error = '';
     notifyListeners();
     try {
-      final success = await authService.register(name, email, password);
+      final success = await authService.register(username, email, password);
       if (success) {
         // Login with the new credentials
-        return await login(email, password);
+        return await login(username, password);
       }
       return success;
     } catch (e) {
@@ -134,6 +114,16 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // Login with Auth0 (legacy method - redirects to password login during testing phase)
+  Future<bool> loginWithAuth0() async {
+    debugPrint(
+        'Auth0 login was requested - using local auth during testing phase');
+    _error =
+        'Auth0 is disabled during testing. Please use username/password login.';
+    notifyListeners();
+    return false;
   }
 
   // Validate the current token

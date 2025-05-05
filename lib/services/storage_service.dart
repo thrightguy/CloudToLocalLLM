@@ -8,6 +8,11 @@ import '../models/conversation.dart';
 import '../models/llm_model.dart';
 import '../models/user.dart';
 
+// Keys for SharedPreferences
+const String _preferredLlmProviderKey = 'preferred_llm_provider';
+const String _userSubscriptionKey = 'user_subscription_status';
+const String _recommendedModelsKey = 'recommended_models';
+
 class StorageService {
   late SharedPreferences _prefs;
   late Directory _appDocDir;
@@ -33,6 +38,30 @@ class StorageService {
     }
 
     _initialized = true;
+  }
+
+  // Save preferred LLM provider
+  Future<void> savePreferredLlmProvider(String provider) async {
+    await _ensureInitialized();
+    await _prefs.setString(_preferredLlmProviderKey, provider);
+  }
+
+  // Get preferred LLM provider
+  Future<String?> getPreferredLlmProvider() async {
+    await _ensureInitialized();
+    return _prefs.getString(_preferredLlmProviderKey);
+  }
+
+  // Save user subscription status
+  Future<void> saveUserSubscriptionStatus(bool isPremium) async {
+    await _ensureInitialized();
+    await _prefs.setBool(_userSubscriptionKey, isPremium);
+  }
+
+  // Get user subscription status
+  Future<bool> getUserSubscriptionStatus() async {
+    await _ensureInitialized();
+    return _prefs.getBool(_userSubscriptionKey) ?? false;
   }
 
   // Save app settings
@@ -186,6 +215,18 @@ class StorageService {
       await modelsDir.delete(recursive: true);
       await modelsDir.create();
     }
+  }
+
+  // Save recommended models list
+  Future<void> saveRecommendedModels(List<String> models) async {
+    await _ensureInitialized();
+    await _prefs.setStringList(_recommendedModelsKey, models);
+  }
+
+  // Get recommended models list
+  Future<List<String>> getRecommendedModels() async {
+    await _ensureInitialized();
+    return _prefs.getStringList(_recommendedModelsKey) ?? [];
   }
 
   // Ensure the service is initialized

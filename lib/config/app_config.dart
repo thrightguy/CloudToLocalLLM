@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 /// Global application configuration
 class AppConfig {
   /// App version information
-  static const String appVersion = "1.3.0";
-  static const String buildNumber = "202505051628";
+  static const String appVersion = "1.3.1";
+  static const String buildNumber = "202405051630";
 
   /// Base URL for API calls
   static String get apiBaseUrl {
@@ -71,6 +71,10 @@ class AppConfig {
 
   // Debug Settings
   static bool get isDebugMode => kDebugMode;
+
+  // Premium Feature Settings
+  static const bool freePremiumFeaturesDuringTesting =
+      true; // Set to false when ready to monetize
 
   // Auth0 web authentication (used for desktop app)
   static const bool useExternalBrowser = true;
