@@ -27,6 +27,18 @@ sudo systemctl enable docker
 # Add current user to docker group
 sudo usermod -aG docker $USER
 
+# Clean up existing containers
+echo -e "${YELLOW}Cleaning up existing containers...${NC}"
+if [ -f "/var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh" ]; then
+    bash /var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh
+else
+    echo -e "${YELLOW}Cleanup script not found, performing basic cleanup...${NC}"
+    docker stop $(docker ps -q) 2>/dev/null || true
+    docker rm $(docker ps -a -q) 2>/dev/null || true
+    docker network prune -f
+    docker volume prune -f
+fi
+
 # Create project directory
 echo -e "${YELLOW}Setting up project directory...${NC}"
 PROJECT_DIR="/var/www/cloudtolocalllm"
