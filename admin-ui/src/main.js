@@ -2,25 +2,29 @@ import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
 
-// Import routes
+// Route components
+const HomeView = () => import('./views/Home.vue');
+
+// Define routes
 const routes = [
   {
     path: '/',
-    component: () => import('./views/Home.vue')
+    name: 'home',
+    component: HomeView
   }
 ];
 
-// Create router
+// Create router instance
 const router = createRouter({
   history: createWebHistory(),
   routes
 });
 
-// Create app
+// Create Vue app instance
 const app = createApp(App);
 
-// Use plugins
+// Register plugins
 app.use(router);
 
-// Mount app
+// Mount the app
 app.mount('#app'); 

@@ -1,22 +1,27 @@
 <template>
-  <div id="app">
-    <nav>
-      <router-link to="/">Dashboard</router-link>
+  <div class="app-container">
+    <nav class="app-nav">
+      <router-link
+        to="/"
+        class="nav-link"
+      >
+        Dashboard
+      </router-link>
     </nav>
-    <main>
-      <router-view></router-view>
+    <main class="app-main">
+      <router-view />
     </main>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'AppRoot'
-}
+  name: 'CloudToLocalLLMApp'
+};
 </script>
 
 <style>
-#app {
+.app-container {
   font-family: Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -28,23 +33,23 @@ export default {
   flex-direction: column;
 }
 
-nav {
+.app-nav {
   background-color: #42b983;
   padding: 1rem;
 }
 
-nav a {
+.nav-link {
   font-weight: bold;
   color: #ffffff;
   text-decoration: none;
   font-size: 1.1rem;
 }
 
-nav a.router-link-exact-active {
+.nav-link.router-link-exact-active {
   color: #2c3e50;
 }
 
-main {
+.app-main {
   flex: 1;
   padding: 2rem;
 }
