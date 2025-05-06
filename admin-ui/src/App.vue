@@ -1,15 +1,17 @@
 <template>
   <div id="app">
     <nav>
-      <router-link to="/">Home</router-link>
+      <router-link to="/">Dashboard</router-link>
     </nav>
-    <router-view></router-view>
+    <main>
+      <router-view></router-view>
+    </main>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'App'
+  name: 'AppRoot'
 }
 </script>
 
@@ -18,22 +20,32 @@ export default {
   font-family: Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 nav {
-  padding: 30px;
+  background-color: #42b983;
+  padding: 1rem;
 }
 
 nav a {
   font-weight: bold;
-  color: #2c3e50;
+  color: #ffffff;
   text-decoration: none;
+  font-size: 1.1rem;
 }
 
 nav a.router-link-exact-active {
-  color: #42b983;
+  color: #2c3e50;
+}
+
+main {
+  flex: 1;
+  padding: 2rem;
 }
 </style> 
