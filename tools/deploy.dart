@@ -3,12 +3,10 @@
 // Available commands: deploy, monitor, verify, update
 
 import 'dart:io';
-import 'dart:convert';
-import 'package:path/path.dart' as path;
 import 'package:args/args.dart';
 
-const String APP_NAME = 'CloudToLocalLLM';
-const String DEFAULT_DOMAIN = 'cloudtolocalllm.online';
+const String appName = 'CloudToLocalLLM';
+const String defaultDomain = 'cloudtolocalllm.online';
 
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
@@ -16,21 +14,25 @@ Future<void> main(List<String> arguments) async {
     ..addCommand('monitor')
     ..addCommand('verify')
     ..addCommand('update')
-    ..addOption('domain', abbr: 'd', defaultsTo: DEFAULT_DOMAIN, help: 'Domain name to use')
-    ..addFlag('beta', abbr: 'b', help: 'Include beta subdomain setup', defaultsTo: false)
-    ..addFlag('monitoring', abbr: 'm', help: 'Include monitoring setup', defaultsTo: false)
-    ..addFlag('help', abbr: 'h', help: 'Show this help message', negatable: false);
+    ..addOption('domain',
+        abbr: 'd', defaultsTo: defaultDomain, help: 'Domain name to use')
+    ..addFlag('beta',
+        abbr: 'b', help: 'Include beta subdomain setup', defaultsTo: false)
+    ..addFlag('monitoring',
+        abbr: 'm', help: 'Include monitoring setup', defaultsTo: false)
+    ..addFlag('help',
+        abbr: 'h', help: 'Show this help message', negatable: false);
 
   try {
     final args = parser.parse(arguments);
-    
+
     if (args['help']) {
       printHelp(parser);
       return;
     }
 
     if (args.command == null) {
-      print('No command specified.');
+      stderr.writeln('No command specified.');
       printHelp(parser);
       return;
     }
@@ -54,164 +56,189 @@ Future<void> main(List<String> arguments) async {
         await updateDeployment(domain);
         break;
       default:
-        print('Unknown command: ${command.name}');
+        stderr.writeln('Unknown command: ${command.name}');
         printHelp(parser);
     }
   } catch (e) {
-    print('Error: $e');
+    stderr.writeln('Error: $e');
     printHelp(parser);
     exit(1);
   }
 }
 
 void printHelp(ArgParser parser) {
-  print('Flutter $APP_NAME Deployment Tool');
-  print('Usage: dart tools/deploy.dart [command] [options]');
-  print('');
-  print('Commands:');
-  print('  deploy     Deploy the application to a server');
-  print('  monitor    Set up monitoring for an existing deployment');
-  print('  verify     Verify a deployment is working correctly');
-  print('  update     Update an existing deployment');
-  print('');
-  print('Options:');
-  print(parser.usage);
+  stdout.writeln('Flutter $appName Deployment Tool');
+  stdout.writeln('Usage: dart tools/deploy.dart [command] [options]');
+  stdout.writeln('');
+  stdout.writeln('Commands:');
+  stdout.writeln('  deploy     Deploy the application to a server');
+  stdout.writeln('  monitor    Set up monitoring for an existing deployment');
+  stdout.writeln('  verify     Verify a deployment is working correctly');
+  stdout.writeln('  update     Update an existing deployment');
+  stdout.writeln('');
+  stdout.writeln('Options:');
+  stdout.writeln(parser.usage);
 }
 
-Future<void> deploy(String domain, bool includeBeta, bool includeMonitoring) async {
-  print('Deploying $APP_NAME to $domain...');
-  
+Future<void> deploy(
+    String domain, bool includeBeta, bool includeMonitoring) async {
+  stdout.writeln('Deploying $appName to $domain...');
+
   // Pull latest changes
   await gitPull();
-  
+
   // Setup SSL certificates
   await setupSSL(domain, includeBeta);
-  
+
   // Generate server configuration
   await generateServerConfig(domain, includeBeta, includeMonitoring);
-  
+
   // Deploy with docker-compose
-  final composeFile = includeMonitoring ? 'docker-compose.monitoring.yml' : 'docker-compose.web.yml';
+  final composeFile = includeMonitoring
+      ? 'docker-compose.monitoring.yml'
+      : 'docker-compose.web.yml';
   await runCommand('docker-compose', ['-f', composeFile, 'build']);
   await runCommand('docker-compose', ['-f', composeFile, 'up', '-d']);
-  
-  print('Deployment completed successfully!');
-  print('Website is available at: https://$domain');
+
+  stdout.writeln('Deployment completed successfully!');
+  stdout.writeln('Website is available at: https://$domain');
   if (includeBeta) {
-    print('Beta site is available at: https://beta.$domain');
+    stdout.writeln('Beta site is available at: https://beta.$domain');
   }
   if (includeMonitoring) {
-    print('Monitoring is available at: https://$domain/monitor/');
-    print('Monitoring credentials: admin / cloudtolocalllm');
+    stdout.writeln('Monitoring is available at: https://$domain/monitor/');
+    stdout.writeln('Monitoring credentials: admin / cloudtolocalllm');
   }
 }
 
 Future<void> setupMonitoring(String domain) async {
-  print('Setting up monitoring for $domain...');
-  
+  stdout.writeln('Setting up monitoring for $domain...');
+
   // Create htpasswd file
   await createHtpasswd();
-  
+
   // Update server configuration for monitoring
   await updateServerConfigForMonitoring(domain);
-  
+
   // Deploy netdata with docker-compose
-  await runCommand('docker-compose', ['-f', 'docker-compose.monitor.yml', 'up', '-d']);
-  
-  print('Monitoring setup completed!');
-  print('Monitoring dashboard is available at: https://$domain/monitor/');
-  print('Monitoring credentials: admin / cloudtolocalllm');
+  await runCommand(
+      'docker-compose', ['-f', 'docker-compose.monitor.yml', 'up', '-d']);
+
+  stdout.writeln('Monitoring setup completed!');
+  stdout.writeln(
+      'Monitoring dashboard is available at: https://$domain/monitor/');
+  stdout.writeln('Monitoring credentials: admin / cloudtolocalllm');
 }
 
 Future<void> verifyDeployment(String domain, bool includeBeta) async {
-  print('Verifying deployment on $domain...');
-  
+  stdout.writeln('Verifying deployment on $domain...');
+
   // Check containers are running
-  final result = await runCommand('docker', ['ps', '--format', '{{.Names}}'], true);
-  
+  final result =
+      await runCommand('docker', ['ps', '--format', '{{.Names}}'], true);
+
   if (result.contains('webapp')) {
-    print('✓ Web application container is running');
+    stdout.writeln('✓ Web application container is running');
   } else {
-    print('✗ Web application container is not running');
+    stderr.writeln('✗ Web application container is not running');
   }
-  
+
   if (includeBeta && result.contains('auth')) {
-    print('✓ Auth service container is running');
+    stdout.writeln('✓ Auth service container is running');
   } else if (includeBeta) {
-    print('✗ Auth service container is not running');
+    stderr.writeln('✗ Auth service container is not running');
   }
-  
+
   if (result.contains('cloudtolocalllm_monitor')) {
-    print('✓ Monitoring container is running');
+    stdout.writeln('✓ Monitoring container is running');
   }
-  
+
   // Check SSL certificates
-  await runCommand('docker', ['run', '--rm', '-v', '$(pwd)/certbot/conf:/etc/letsencrypt', 
-      'certbot/certbot', 'certificates']);
-  
-  print('Verification completed!');
+  await runCommand('docker', [
+    'run',
+    '--rm',
+    '-v',
+    'certbot-conf:/etc/letsencrypt',
+    'certbot/certbot',
+    'certificates'
+  ]);
+
+  stdout.writeln('Verification completed!');
 }
 
 Future<void> updateDeployment(String domain) async {
-  print('Updating deployment on $domain...');
-  
+  stdout.writeln('Updating deployment on $domain...');
+
   // Pull latest changes
   await gitPull();
-  
+
   // Restart containers
   await runCommand('docker-compose', ['-f', 'docker-compose.web.yml', 'down']);
   await runCommand('docker-compose', ['-f', 'docker-compose.web.yml', 'build']);
-  await runCommand('docker-compose', ['-f', 'docker-compose.web.yml', 'up', '-d']);
-  
-  print('Update completed!');
+  await runCommand(
+      'docker-compose', ['-f', 'docker-compose.web.yml', 'up', '-d']);
+
+  stdout.writeln('Update completed!');
 }
 
 Future<void> gitPull() async {
-  print('Pulling latest changes from Git...');
-  
+  stdout.writeln('Pulling latest changes from Git...');
+
   if (await Directory('.git').exists()) {
     await runCommand('git', ['stash']);
     await runCommand('git', ['pull']);
     await runCommand('chmod', ['+x', '*.sh']);
   } else {
-    print('Not a Git repository, skipping pull.');
+    stderr.writeln('Not a Git repository, skipping pull.');
   }
 }
 
 Future<void> setupSSL(String domain, bool includeBeta) async {
-  print('Setting up SSL certificates...');
-  
+  stdout.writeln('Setting up SSL certificates...');
+
   final domains = [domain, 'www.$domain'];
   if (includeBeta) {
     domains.add('beta.$domain');
   }
-  
+
   // Create certbot directories
   await Directory('certbot/conf').create(recursive: true);
   await Directory('certbot/www').create(recursive: true);
-  
+
   // Get SSL certificates
-  final args = [
-    'run', '--rm', '-p', '80:80', '-p', '443:443',
-    '-v', '$(pwd)/certbot/conf:/etc/letsencrypt',
-    '-v', '$(pwd)/certbot/www:/var/www/certbot',
-    'certbot/certbot', 'certonly', '--standalone',
-    '--agree-tos', '--no-eff-email',
-    '--email', 'admin@$domain'
+  List<String> args = [
+    'run',
+    '--rm',
+    '-p',
+    '80:80',
+    '-p',
+    '443:443',
+    '-v',
+    'certbot-conf:/etc/letsencrypt',
+    '-v',
+    'certbot-www:/var/www/certbot',
+    'certbot/certbot',
+    'certonly',
+    '--standalone',
+    '--agree-tos',
+    '--no-eff-email',
+    '--email',
+    'admin@$domain',
   ];
-  
+
   for (final d in domains) {
     args.addAll(['-d', d]);
   }
-  
+
   await runCommand('docker', args);
 }
 
-Future<void> generateServerConfig(String domain, bool includeBeta, bool includeMonitoring) async {
-  print('Generating server configuration...');
-  
+Future<void> generateServerConfig(
+    String domain, bool includeBeta, bool includeMonitoring) async {
+  stdout.writeln('Generating server configuration...');
+
   final subdomains = includeBeta ? ' beta.$domain' : '';
-  
+
   String config = '''
 server {
     listen 80;
@@ -286,7 +313,7 @@ server {
     }
 
     # Static files caching
-    location ~* \\.(jpg|jpeg|png|gif|ico|css|js)$ {
+    location ~* \\.(jpg|jpeg|png|gif|ico|css|js) {
         expires 30d;
         add_header Cache-Control "public, no-transform";
     }
@@ -347,7 +374,7 @@ server {
     }
 
     # Static files caching
-    location ~* \\.(jpg|jpeg|png|gif|ico|css|js)$ {
+    location ~* \\.(jpg|jpeg|png|gif|ico|css|js) {
         expires 30d;
         add_header Cache-Control "public, no-transform";
     }
@@ -356,42 +383,44 @@ server {
   }
 
   await File('server.conf').writeAsString(config);
-  print('Server configuration generated: server.conf');
+  stdout.writeln('Server configuration generated: server.conf');
 }
 
 Future<void> createHtpasswd() async {
   // Simple encoded password for example purposes
   // This is "admin:cloudtolocalllm" in htpasswd format
-  await File('.htpasswd').writeAsString('admin:\$apr1\$zrXoWCvp\$AuERJYPWY9SAkmS22S6.I1');
-  print('Created .htpasswd file with default credentials:');
-  print('Username: admin');
-  print('Password: cloudtolocalllm');
+  await File('.htpasswd')
+      .writeAsString('admin:\$apr1\$zrXoWCvp\$AuERJYPWY9SAkmS22S6.I1');
+  stdout.writeln('Created .htpasswd file with default credentials:');
+  stdout.writeln('Username: admin');
+  stdout.writeln('Password: cloudtolocalllm');
 }
 
 Future<void> updateServerConfigForMonitoring(String domain) async {
   // Check if server.conf exists
   final serverConf = File('server.conf');
   if (!await serverConf.exists()) {
-    print('Error: server.conf not found! Run deploy first to create it.');
+    stderr.writeln(
+        'Error: server.conf not found! Run deploy first to create it.');
     exit(1);
   }
-  
+
   // Create backup
   await serverConf.copy('server.conf.bak');
-  
+
   // Read server.conf
   final content = await serverConf.readAsString();
-  
+
   // Check if monitoring location already exists
   if (content.contains('location /monitor/')) {
-    print('Monitoring configuration already exists in server.conf');
+    stdout.writeln('Monitoring configuration already exists in server.conf');
     return;
   }
-  
+
   // Add monitoring location
   final updatedContent = content.replaceFirst(
-    RegExp(r'# Health check endpoint.*?}', dotAll: true),
-    '''# Health check endpoint
+      RegExp(r'# Health check endpoint.*?}', dotAll: true),
+      '''# Health check endpoint
     location = /health {
         return 200 'OK';
         add_header Content-Type text/plain;
@@ -408,33 +437,33 @@ Future<void> updateServerConfigForMonitoring(String domain) async {
         # Basic authentication
         auth_basic "Monitoring Area";
         auth_basic_user_file /etc/nginx/.htpasswd;
-    }'''
-  );
-  
+    }''');
+
   await serverConf.writeAsString(updatedContent);
-  print('Added monitoring location to server.conf');
+  stdout.writeln('Added monitoring location to server.conf');
 }
 
-Future<String> runCommand(String command, List<String> arguments, [bool getOutput = false]) async {
-  print('\$ $command ${arguments.join(' ')}');
-  
+Future<String> runCommand(String command, List<String> arguments,
+    [bool getOutput = false]) async {
+  stdout.writeln('\$ $command ${arguments.join(' ')}');
+
   final result = await Process.run(command, arguments);
-  
+
   if (result.stdout.toString().isNotEmpty) {
-    print(result.stdout);
+    stdout.write(result.stdout);
   }
-  
+
   if (result.stderr.toString().isNotEmpty) {
-    print(result.stderr);
+    stderr.write(result.stderr);
   }
-  
+
   if (result.exitCode != 0) {
     throw 'Command failed with exit code ${result.exitCode}';
   }
-  
+
   if (getOutput) {
     return result.stdout.toString();
   }
-  
+
   return '';
-} 
+}
