@@ -21,12 +21,7 @@ import storeConfig from './store';
 // Create router
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    {
-      path: '/',
-      component: () => import('./views/Home.vue')
-    }
-  ]
+  routes
 });
 
 // Create store
