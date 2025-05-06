@@ -17,7 +17,7 @@ cd /opt/cloudtolocalllm/portal || {
 }
 
 # Clone GitHub repository
-if [ -d ".git" ]; then
+if [[ -d ".git" ]]; then
     echo -e "${YELLOW}Pulling latest changes...${NC}"
     git pull origin main || {
         echo -e "${RED}Failed to pull latest changes${NC}"
@@ -64,11 +64,23 @@ fi
 mkdir -p certbot/www
 mkdir -p certbot/conf
 
+# Check if init-ssl.sh exists
+if [[ ! -f "init-ssl.sh" ]]; then
+    echo -e "${RED}Error: init-ssl.sh not found.${NC}"
+    exit 1
+fi
+
 # Make initialization script executable
 chmod +x init-ssl.sh || {
-    echo -e "${RED}Failed to make init-ssl.sh executable. Does the file exist?${NC}"
+    echo -e "${RED}Failed to make init-ssl.sh executable.${NC}"
     exit 1
 }
+
+# Check if docker-compose.web.yml exists
+if [[ ! -f "docker-compose.web.yml" ]]; then
+    echo -e "${RED}Error: docker-compose.web.yml not found.${NC}"
+    exit 1
+fi
 
 # Stop existing containers
 echo -e "${YELLOW}Stopping any existing containers...${NC}"
