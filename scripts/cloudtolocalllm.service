@@ -8,20 +8,33 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=/opt/cloudtolocalllm/portal
+
+# Environment setup
+Environment=COMPOSE_HTTP_TIMEOUT=300
+
+# Create required directories
 ExecStartPre=/bin/bash -c 'mkdir -p /opt/cloudtolocalllm/logs'
+ExecStartPre=/bin/bash -c 'mkdir -p certbot/www certbot/conf'
 
 # Ensure Docker is running
 ExecStartPre=/bin/bash -c 'systemctl is-active --quiet docker || systemctl start docker'
 
-# Start services
-ExecStart=/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml up
+# Pull images first
+ExecStartPre=/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml pull --quiet --ignore-pull-failures
 
-# Stop services
+# Start services with logging
+ExecStart=/bin/bash -c '/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml up --remove-orphans 2>&1 | tee -a /opt/cloudtolocalllm/logs/service.log'
+
+# Stop services gracefully
 ExecStop=/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml down
 
 # Restart policy
 Restart=always
 RestartSec=10
+
+# Give the service time to start up
+TimeoutStartSec=300
+TimeoutStopSec=120
 
 [Install]
 WantedBy=multi-user.target 
