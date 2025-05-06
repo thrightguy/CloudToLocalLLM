@@ -1,183 +1,126 @@
-# CloudToLocalLLM VPS Deployment
+# CloudToLocalLLM VPS Deployment Guide
 
-This document details the deployment of CloudToLocalLLM on a VPS with containerized architecture.
+This guide provides step-by-step instructions for deploying the CloudToLocalLLM portal to your VPS.
 
-## Overview
+## Prerequisites
+- VPS with Ubuntu/Debian Linux
+- Domain name pointed to your VPS (cloudtolocalllm.online)
+- SSH access to your VPS
+- Ports 80 & 443 open in your firewall
 
-CloudToLocalLLM is deployed on a VPS (162.254.34.115) with the domain `cloudtolocalllm.online`. The deployment uses Docker containers with Nginx for SSL termination and reverse proxy.
+## Deployment Steps
 
-## Architecture
+### 1. Initial Server Setup
 
-The system uses a multi-container architecture with:
-
-1. **Nginx Proxy** - Front-facing reverse proxy handling all incoming traffic with SSL
-2. **API Service** - Backend service providing user authentication and management
-3. **Database** - PostgreSQL database for user data
-4. **User Manager** - Service for container provisioning and management
-
-## Domain Structure
-
-- `cloudtolocalllm.online` - Main portal
-- `api.cloudtolocalllm.online` - API service
-- `users.cloudtolocalllm.online` - User portal
-- `{username}.users.cloudtolocalllm.online` - User-specific environments
-
-## Deployment Scripts
-
-Several PowerShell scripts are used to manage the deployment:
-
-1. **containers_setup.ps1** - Initial container setup script
-   ```powershell
-   .\containers_setup.ps1 -VpsHost "root@162.254.34.115"
-   ```
-
-2. **fix_container_setup.ps1** - Script to fix SSL certification issues
-   ```powershell
-   .\fix_container_setup.ps1 -VpsHost "root@162.254.34.115"
-   ```
-
-3. **fix_ssl_and_add_auth.ps1** - Script to improve SSL security and add authentication
-   ```powershell
-   .\fix_ssl_and_add_auth.ps1 -VpsHost "root@162.254.34.115"
-   ```
-
-4. **fix_api_login.ps1** - Script to configure the API service with login functionality
-   ```powershell
-   .\fix_api_login.ps1 -VpsHost "root@162.254.34.115"
-   ```
-
-## Security Features
-
-The deployment includes several security features:
-
-1. **SSL Everywhere** - All traffic is encrypted with HTTPS
-2. **Authentication** - JWT-based authentication for user access
-3. **Container Isolation** - User environments are isolated in separate containers
-4. **Security Headers** - HTTP security headers are configured in Nginx
-5. **CORS Protection** - API has proper CORS configuration
-
-## Default Credentials
-
-For initial access, use the following credentials:
-
-- **Username**: admin
-- **Password**: admin123
-
-> **Important**: Change these credentials after initial login!
-
-## SSL Certificates
-
-SSL certificates are obtained and managed through Certbot:
-
-- Auto-renewal is configured via cron jobs
-- Renewal hooks ensure Nginx is reloaded when certificates are renewed
-
-## SSL Configuration Options
-
-### Let's Encrypt (Current Implementation)
-The current deployment uses Let's Encrypt for SSL certificates, which are:
-- Free
-- Auto-renewable
-- Requires specifying each subdomain explicitly
-- Requires stopping Nginx during renewal
-- Needs certificate updates when adding new subdomains
-
-### Wildcard SSL Certificate (Recommended for Production)
-For production environments with multiple dynamic subdomains, a wildcard SSL certificate from a provider like Namecheap is recommended:
-
-**Advantages:**
-- Single certificate covers all subdomains (*.cloudtolocalllm.online)
-- No need to update certificates when adding new subdomains
-- Simplifies the dynamic user subdomain architecture
-- No service interruption during certificate installation/renewal
-- More reliable than automated renewal processes
-
-**Implementation:**
-1. Purchase a wildcard SSL certificate from Namecheap or similar provider
-2. Install the certificate files on the VPS
-3. Update Nginx configuration to use the wildcard certificate
-4. Remove the Let's Encrypt renewal logic from your maintenance scripts
-
-The wildcard certificate can be installed using:
 ```bash
-sudo mkdir -p /opt/cloudtolocalllm/nginx/ssl
-sudo cp /path/to/wildcard.crt /opt/cloudtolocalllm/nginx/ssl/fullchain.pem
-sudo cp /path/to/wildcard.key /opt/cloudtolocalllm/nginx/ssl/privkey.pem
-sudo chmod 644 /opt/cloudtolocalllm/nginx/ssl/fullchain.pem
-sudo chmod 600 /opt/cloudtolocalllm/nginx/ssl/privkey.pem
+# SSH into your server
+ssh root@your-server-ip
+
+# Update the system
+apt update && apt upgrade -y
+
+# Install basic tools if needed
+apt install -y curl git
 ```
 
-Then restart the Nginx container:
+### 2. Deploy the Application
+
 ```bash
-cd /opt/cloudtolocalllm
-docker-compose restart nginx-proxy
+# Create deployment directory
+mkdir -p /opt/cloudtolocalllm/portal
+cd /opt/cloudtolocalllm/portal
+
+# Clone the repository
+git clone https://github.com/thrightguy/CloudToLocalLLM.git .
+
+# Make scripts executable
+chmod +x *.sh
+
+# Run the deploy script
+./deploy_commands.sh
 ```
 
-**Cost Consideration:**
-While wildcard certificates typically cost $70-100/year compared to free Let's Encrypt certificates, the simplified management and improved reliability make them worth considering for production deployments.
+The deployment script will:
+1. Pull the latest changes from GitHub
+2. Install Docker and Docker Compose (if not present)
+3. Create necessary directories
+4. Deploy the application with Docker Compose
+5. Set up SSL certificates automatically
 
-## Container Management
+### 3. Verify Deployment
 
-User containers are managed through the User Manager service, which:
+After the deployment completes successfully:
 
-1. Creates containers on demand based on user requests
-2. Provides access via username subdomains
-3. Manages container lifecycle (start, stop, remove)
-
-## Troubleshooting
-
-If you encounter issues:
-
-1. **SSL Problems**: Run the SSL fix script 
-   ```powershell
-   .\fix_ssl_and_add_auth.ps1 -VpsHost "root@162.254.34.115"
-   ```
-
-2. **API Issues**: Check the API logs inside the container
+1. Check that containers are running:
    ```bash
-   docker exec -it api-service cat /app/server.log
+   docker-compose -f docker-compose.web.yml ps
    ```
 
-3. **Database Issues**: Connect to the PostgreSQL container
+2. Visit your domain in a browser:
+   ```
+   https://cloudtolocalllm.online
+   ```
+
+3. Verify SSL certificate is working properly:
    ```bash
-   docker exec -it db-service psql cloudtolocalllm postgres
+   docker run --rm -v "$(pwd)/certbot/conf:/etc/letsencrypt" certbot/certbot certificates
    ```
 
-## Maintenance
+### 4. Troubleshooting
 
-Regular maintenance tasks include:
-
-1. Verifying SSL certificate renewal
-2. Checking container logs for errors
-3. Monitoring disk space and resource usage
-4. Backing up the database
-
-## Future Enhancements
-
-Planned improvements to the deployment:
-
-1. Enhanced monitoring with Prometheus/Grafana
-2. Automated backups to cloud storage
-3. Load balancing for high availability
-4. Kubernetes migration for better orchestration
-
-## Additional Deployment Instructions
-
-### Install Required Packages
+#### Fix Nginx Configuration
+If you encounter issues with the Nginx configuration:
 ```bash
-# Install required packages
-sudo apt update && sudo apt install -y python3-pip nginx certbot python3-certbot-nginx
-
-# Install Python dependencies
-pip3 install -r requirements.txt
-
-# Rest of the deployment instructions...
+./fix_nginx.sh
 ```
 
-### Install Python Dependencies
+#### Fix Permission Issues
+If there are permission issues with the Docker containers:
 ```bash
-# Install Python dependencies
-pip3 install -r requirements.txt
+./fix_user_permissions.sh
+```
 
-# Rest of the deployment instructions...
-``` 
+#### Rebuild and Redeploy
+For a complete rebuild and redeploy:
+```bash
+./fix_and_deploy.sh
+```
+
+### 5. Maintaining Your Deployment
+
+#### Update the Application
+```bash
+# Pull latest changes and restart
+cd /opt/cloudtolocalllm/portal
+git pull origin master
+./deploy_commands.sh
+```
+
+#### Manual SSL Certificate Renewal
+SSL certificates will auto-renew, but you can trigger manually:
+```bash
+./renew-ssl.sh
+```
+
+#### Backup Your Data
+Backup critical files and directories:
+```bash
+mkdir -p /backups
+tar -czf /backups/cloudtolocalllm-$(date +%Y%m%d).tar.gz \
+    /opt/cloudtolocalllm/portal/certbot \
+    /opt/cloudtolocalllm/portal/auth_service/data
+```
+
+## Advanced Configuration
+
+### Adding Subdomains
+To add subdomains (like beta.cloudtolocalllm.online):
+```bash
+./update_ssl_fixed.sh
+```
+
+### Using Wildcard SSL
+For wildcard SSL certificates:
+1. Purchase a wildcard certificate (*.cloudtolocalllm.online)
+2. Follow the installation instructions for your certificate provider
+3. Update the Nginx configuration to use the new certificate 
