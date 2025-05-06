@@ -9,7 +9,10 @@ This document provides an overview of all the maintenance scripts available for 
 | `fix_and_deploy.sh` | Main deployment script - fixes nginx configuration and deploys the portal |
 | `git_pull.sh` | Pulls the latest changes from GitHub |
 | `fix_nginx.sh` | Fixes nginx configuration issues |
-| `update_ssl_fixed.sh` | Updates SSL certificates to include subdomains |
+| `update_ssl_fixed.sh` | Updates SSL certificates to include subdomains and configures auth service |
+| `verify_beta_auth.sh` | Verifies the beta authentication setup is properly configured |
+| `deploy_with_monitoring.sh` | Comprehensive deployment script with Netdata monitoring |
+| `setup_monitoring.sh` | Sets up Netdata monitoring only (for existing deployments) |
 | `renew-ssl.sh` | Manually renews SSL certificates |
 | `deploy_commands.sh` | Original deployment script (deprecated) |
 
@@ -53,7 +56,7 @@ This script:
 3. Provides instructions to restart the containers
 
 ### update_ssl_fixed.sh
-Script to update SSL certificates to include additional subdomains:
+Script to update SSL certificates to include additional subdomains and configure the auth service:
 
 ```bash
 ./update_ssl_fixed.sh
@@ -62,8 +65,55 @@ Script to update SSL certificates to include additional subdomains:
 This script:
 1. Stops containers
 2. Updates the SSL certificate to include the beta subdomain
-3. Updates server.conf
-4. Rebuilds and restarts containers
+3. Updates server.conf with appropriate server blocks
+   - Main domain and www subdomain block
+   - Beta subdomain block with auth service integration
+4. Ensures docker-compose.web.yml includes the auth service
+5. Rebuilds and restarts containers
+
+### verify_beta_auth.sh
+Script to verify that the beta authentication setup is properly configured:
+
+```bash
+./verify_beta_auth.sh
+```
+
+This script:
+1. Checks if server.conf exists and has proper beta subdomain configuration
+2. Verifies that docker-compose.web.yml includes the auth service
+3. Confirms the auth service is running and healthy
+4. Checks if the SSL certificate includes the beta subdomain
+5. Provides guidance for manual testing and troubleshooting
+
+### deploy_with_monitoring.sh
+Comprehensive deployment script that includes Netdata monitoring:
+
+```bash
+./deploy_with_monitoring.sh
+```
+
+This script:
+1. Pulls the latest changes from GitHub if it's a Git repository
+2. Sets up authentication for monitoring access
+3. Configures SSL certificates for all domains
+4. Creates server.conf with Netdata monitoring integration
+5. Optionally connects to Netdata Cloud for remote monitoring
+6. Builds and starts all containers, including the monitoring service
+7. Verifies that all services are running properly
+
+### setup_monitoring.sh
+Script to set up Netdata monitoring for an existing deployment:
+
+```bash
+./setup_monitoring.sh
+```
+
+This script:
+1. Checks Docker and Docker Compose installation
+2. Ensures the webnet network exists
+3. Optionally configures Netdata Cloud integration
+4. Starts the Netdata container
+5. Provides instructions for integrating monitoring with your main site
 
 ### renew-ssl.sh
 Script to manually renew SSL certificates:
@@ -79,7 +129,7 @@ This script:
 
 ## Initial Deployment
 
-For a fresh installation, follow these steps:
+For a fresh installation with monitoring, follow these steps:
 
 ```bash
 # Create deployment directory
@@ -92,7 +142,13 @@ git clone https://github.com/thrightguy/CloudToLocalLLM.git .
 # Make scripts executable
 chmod +x *.sh
 
-# Run the combined fix and deploy script
+# Run the comprehensive deployment script with monitoring
+./deploy_with_monitoring.sh
+```
+
+For a deployment without monitoring, use:
+
+```bash
 ./fix_and_deploy.sh
 ```
 
@@ -103,6 +159,8 @@ If you encounter issues with any script:
 1. Check the container logs:
 ```bash
 docker-compose -f docker-compose.web.yml logs webapp
+docker-compose -f docker-compose.web.yml logs auth
+docker-compose -f docker-compose.monitor.yml logs netdata
 ```
 
 2. Check the SSL certificate status:
@@ -113,5 +171,16 @@ docker run --rm -v "$(pwd)/certbot/conf:/etc/letsencrypt" certbot/certbot certif
 3. For nginx configuration issues:
 ```bash
 cat server.conf
-cat nginx.conf
+```
+
+4. For monitoring issues:
+```bash
+# Check if Netdata is running
+docker ps | grep netdata
+
+# View Netdata logs
+docker logs cloudtolocalllm_monitor
+
+# Try accessing Netdata directly (if available)
+curl http://localhost:19999/api/v1/info
 ``` 
