@@ -89,6 +89,42 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed SSL configuration instructions.
 - (Optional) Ollama or LM Studio installed locally
   - Note: Ollama should only be run on desktop Linux or Docker in WSL2, not on VPS or cloud servers
 
+## Current Project Status
+
+### Services Status (as of latest update)
+
+#### Running Services
+- **Tunnel Service**: 
+  - Successfully built and running
+  - Node.js Express server running on port 8080
+  - Handles remote access to local LLMs
+
+- **Auth Service**:
+  - Successfully built and running
+  - Handles user authentication and authorization
+
+#### Pending Services
+- **Webapp Service**:
+  - Build currently failing
+  - Issue: Dart/Flutter SDK version mismatch (null safety compatibility)
+  - Status: Under investigation for SDK version alignment
+
+### Next Steps
+1. Resolve webapp build issues:
+   - Update Dart/Flutter SDK versions
+   - Ensure null safety compatibility
+   - Review and update dependencies
+
+2. Integration Testing:
+   - Test tunnel service endpoints
+   - Verify auth service functionality
+   - Complete webapp integration once build is fixed
+
+### Server Information
+- Production Server: 162.254.34.115
+- Access: SSH available for both root and cloudllm users
+- Deployment: Docker Compose based deployment
+
 ## Getting Started
 
 ### Installation
@@ -229,3 +265,91 @@ scp -i ~/.ssh/id_rsa css/theme.css root@cloudtolocalllm.online:/opt/cloudtolocal
 > Any files placed in `/usr/share/nginx/html` inside the container will be overwritten by the contents of `/opt/cloudtolocalllm/portal/` on the host.
 
 No container restart is needed for static file changes.
+
+## Deployment
+
+### Dart Deployment Tool
+
+We provide a unified Dart-based tool for deploying and managing the CloudToLocalLLM portal:
+
+```bash
+# Install dependencies
+dart pub add args path
+
+# Deploy with default configuration
+dart tools/deploy.dart deploy
+
+# Deploy with beta subdomain support
+dart tools/deploy.dart deploy -b
+
+# Deploy with monitoring
+dart tools/deploy.dart deploy -m
+
+# Deploy with custom domain
+dart tools/deploy.dart deploy -d example.com
+
+# Add monitoring to existing deployment
+dart tools/deploy.dart monitor
+
+# Verify deployment
+dart tools/deploy.dart verify
+
+# Update existing deployment
+dart tools/deploy.dart update
+
+# Show help
+dart tools/deploy.dart --help
+```
+
+Using this tool eliminates the need for multiple shell scripts and provides a consistent deployment process.
+
+## System Daemon Management
+
+After deployment, you can manage the system using the `cloudctl` command:
+
+```
+cloudctl {start|stop|restart|status|logs|update}
+```
+
+### Available Commands
+
+- `cloudctl start`: Start all services
+- `cloudctl stop`: Stop all services
+- `cloudctl restart`: Restart all services
+- `cloudctl status`: Check service status
+- `cloudctl logs [service]`: View logs (available services: auth, web, admin, db)
+- `cloudctl update`: Pull latest changes and restart services
+
+### Service Configuration
+
+The system uses systemd for service management. The service files are located at:
+
+- `/etc/systemd/system/cloudtolocalllm.service`: Main service
+- `/etc/systemd/system/cloudtolocalllm-monitor.service`: Monitoring service (if enabled)
+
+## Development
+
+### Setting Up Development Environment
+
+1. Install Flutter SDK
+2. Clone the repository
+3. Run `flutter pub get` to fetch dependencies
+4. Run `flutter run` to launch the application in debug mode
+
+### Building for Production
+
+To build the application for production:
+
+```
+flutter build <platform>
+```
+
+Where `<platform>` is one of: `apk`, `ios`, `web`, `windows`, `macos`, `linux`
+
+## License
+
+This project is licensed under the terms of the [LICENSE](LICENSE) file included in the repository.
+
+## Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.

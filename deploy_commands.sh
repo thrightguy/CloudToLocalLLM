@@ -19,7 +19,7 @@ cd /opt/cloudtolocalllm/portal || {
 # Clone GitHub repository
 if [[ -d ".git" ]]; then
     echo -e "${YELLOW}Pulling latest changes...${NC}"
-    git pull origin main || {
+    git pull origin master || {
         echo -e "${RED}Failed to pull latest changes${NC}"
         exit 1
     }
@@ -76,6 +76,14 @@ chmod +x init-ssl.sh || {
     exit 1
 }
 
+# Make daemon installation scripts executable
+if [[ -f "install_daemon.sh" ]]; then
+    chmod +x install_daemon.sh || {
+        echo -e "${RED}Failed to make install_daemon.sh executable.${NC}"
+        exit 1
+    }
+fi
+
 # Check if docker-compose.web.yml exists
 if [[ ! -f "docker-compose.web.yml" ]]; then
     echo -e "${RED}Error: docker-compose.web.yml not found.${NC}"
@@ -93,6 +101,15 @@ docker-compose -f docker-compose.web.yml up -d || {
     exit 1
 }
 
+# Start auth service if available
+if [[ -f "docker-compose.auth.yml" ]]; then
+    echo -e "${YELLOW}Starting authentication services...${NC}"
+    docker-compose -f docker-compose.auth.yml up -d || {
+        echo -e "${RED}Failed to start authentication services${NC}"
+        exit 1
+    }
+fi
+
 # Wait for services to start
 echo -e "${YELLOW}Waiting for services to start...${NC}"
 sleep 10
@@ -104,5 +121,20 @@ echo -e "${YELLOW}Initializing SSL certificates...${NC}"
     exit 1
 }
 
+# Install daemon if script exists
+if [[ -f "install_daemon.sh" ]]; then
+    echo -e "${YELLOW}Installing system daemon...${NC}"
+    ./install_daemon.sh || {
+        echo -e "${RED}Failed to install system daemon${NC}"
+        echo -e "${YELLOW}Continuing without daemon...${NC}"
+    }
+fi
+
 echo -e "${GREEN}Deployment completed successfully!${NC}"
-echo -e "${GREEN}The portal should now be accessible at https://cloudtolocalllm.online${NC}" 
+echo -e "${GREEN}The portal should now be accessible at https://cloudtolocalllm.online${NC}"
+
+# If daemon was installed, show instructions
+if [[ -f "/usr/local/bin/cloudctl" ]]; then
+    echo -e "\n${GREEN}System daemon installed. You can manage the services with:${NC}"
+    echo -e "  ${YELLOW}cloudctl${NC} {start|stop|restart|status|logs|update}"
+fi 
