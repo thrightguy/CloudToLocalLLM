@@ -12,29 +12,51 @@ echo -e "${YELLOW}====== CloudToLocalLLM Portal Fix and Deploy ======${NC}"
 # Pull latest changes from GitHub
 echo -e "${YELLOW}Step 1: Pulling latest changes from GitHub...${NC}"
 
+# Check if we're in a git repository
+if [ ! -d ".git" ]; then
+    echo -e "${RED}Error: Not a git repository. Please run this script from the project root.${NC}"
+    exit 1
+fi
+
 # Save any local changes
 if [[ -n $(git status --porcelain) ]]; then
-  echo -e "${YELLOW}Local changes detected. Stashing them...${NC}"
-  git stash
+    echo -e "${YELLOW}Local changes detected. Stashing them...${NC}"
+    git stash || {
+        echo -e "${RED}Failed to stash local changes${NC}"
+        exit 1
+    }
 fi
 
 # Pull the latest changes
-git pull origin master || git pull origin main
+echo -e "${YELLOW}Pulling latest changes...${NC}"
+(git pull origin master || git pull origin main) || {
+    echo -e "${RED}Failed to pull latest changes${NC}"
+    exit 1
+}
 
 # Make scripts executable
-chmod +x *.sh 2>/dev/null || echo -e "${YELLOW}No .sh files to make executable${NC}"
+echo -e "${YELLOW}Making scripts executable...${NC}"
+find . -name "*.sh" -exec chmod +x {} \; 2>/dev/null || echo -e "${YELLOW}No .sh files to make executable${NC}"
 
 echo -e "${GREEN}Successfully pulled latest changes!${NC}"
 
 # Fix nginx configuration
 echo -e "${YELLOW}Step 2: Fixing Nginx configuration...${NC}"
 
-# Create backup of the original file
-cp nginx.conf nginx.conf.backup
-echo -e "${YELLOW}Backup created: nginx.conf.backup${NC}"
+# Create backup of the original file if it exists
+if [ -f "nginx.conf" ]; then
+    cp nginx.conf nginx.conf.backup || {
+        echo -e "${RED}Failed to create nginx.conf backup${NC}"
+        exit 1
+    }
+    echo -e "${YELLOW}Backup created: nginx.conf.backup${NC}"
+fi
 
 # Create a new nginx.conf without the user directive
-cat > nginx.conf << 'EOF'
+cat > nginx.conf << 'EOF' || {
+    echo -e "${RED}Failed to create nginx.conf${NC}"
+    exit 1
+}
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
 pid /var/run/nginx.pid;
@@ -112,10 +134,29 @@ EOF
 
 echo -e "${GREEN}Nginx configuration fixed!${NC}"
 
+# Check if docker-compose is installed
+if ! command -v docker-compose &> /dev/null; then
+    echo -e "${RED}Error: docker-compose is not installed. Please install it first.${NC}"
+    exit 1
+fi
+
+# Check if docker-compose.web.yml exists
+if [ ! -f "docker-compose.web.yml" ]; then
+    echo -e "${RED}Error: docker-compose.web.yml not found.${NC}"
+    exit 1
+fi
+
 # Restart containers
 echo -e "${YELLOW}Step 3: Restarting containers...${NC}"
-docker-compose -f docker-compose.web.yml down
-docker-compose -f docker-compose.web.yml up -d
+docker-compose -f docker-compose.web.yml down || {
+    echo -e "${RED}Failed to stop containers${NC}"
+    exit 1
+}
+
+docker-compose -f docker-compose.web.yml up -d || {
+    echo -e "${RED}Failed to start containers${NC}"
+    exit 1
+}
 
 echo -e "${GREEN}====== Deployment Completed! ======${NC}"
 echo -e "${GREEN}The portal should now be accessible at https://cloudtolocalllm.online${NC}"
