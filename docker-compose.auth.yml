@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Authentication service
+  auth:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    container_name: cloudtolocalllm-auth
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - ENV=production
+      - LOG_LEVEL=INFO
+      - JWT_SECRET=${JWT_SECRET:-change_this_in_production_this_is_not_safe}
+      - DB_CONN_STRING=postgres://postgres:${DB_PASSWORD:-postgres}@postgres:5432/auth_db
+      - CORS_ALLOWED_ORIGINS=*
+    depends_on:
+      - postgres
+    networks:
+      - cloudtolocalllm-network
+
+  # PostgreSQL database for auth service
+  postgres:
+    image: postgres:13-alpine
+    container_name: cloudtolocalllm-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=auth_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cloudtolocalllm-network
+
+  # Admin web interface
+  admin-ui:
+    build:
+      context: ./admin-ui
+      dockerfile: Dockerfile
+    container_name: cloudtolocalllm-admin-ui
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth
+    networks:
+      - cloudtolocalllm-network
+
+volumes:
+  postgres-data:
+
+networks:
+  cloudtolocalllm-network:
+    driver: bridge 

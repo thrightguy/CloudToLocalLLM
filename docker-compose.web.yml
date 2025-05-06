@@ -16,7 +16,37 @@ services:
       - NGINX_SSL_CERT=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem
       - NGINX_SSL_KEY=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "https://localhost:443/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETGID
+      - SETUID
+    depends_on:
+      - auth
+    networks:
+      - webnet
+      
+  auth:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - JWT_SECRET=your_jwt_secret_key_here
+    volumes:
+      - ./auth_service/data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
