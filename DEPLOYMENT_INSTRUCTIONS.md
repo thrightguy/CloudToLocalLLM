@@ -12,14 +12,13 @@ This document provides step-by-step instructions for deploying the CloudToLocalL
 
 ### 1. SSH to Your Server
 ```bash
-ssh cloudllm@162.254.34.115
-# Then switch to root user
-sudo su -
+# Login directly as root
+ssh root@162.254.34.115
 ```
 
-### 2. Deploy the Portal
+### 2. Initial Deployment
 
-Execute the following commands as root:
+The simplest way to deploy is using our comprehensive deployment script:
 
 ```bash
 # Create deployment directory
@@ -29,28 +28,34 @@ cd /opt/cloudtolocalllm/portal
 # Clone GitHub repository
 git clone https://github.com/thrightguy/CloudToLocalLLM.git .
 
-# Create SSL directories
-mkdir -p certbot/www
-mkdir -p certbot/conf
+# Make scripts executable
+chmod +x *.sh
 
-# Make initialization script executable
-chmod +x init-ssl.sh
-
-# Start Docker services
-docker-compose -f docker-compose.web.yml up -d
-
-# Initialize SSL
-./init-ssl.sh
+# Run the combined fix and deploy script
+./fix_and_deploy.sh
 ```
 
-Alternatively, you can run the included deployment script:
+This script will:
+1. Pull the latest changes from GitHub
+2. Fix any nginx configuration issues
+3. Restart the containers with the correct configuration
+4. Set up SSL certificates
+
+### 3. Adding Additional Subdomains
+
+To add support for additional subdomains (e.g., beta.cloudtolocalllm.online):
 
 ```bash
-chmod +x deploy_commands.sh
-./deploy_commands.sh
+# Run the SSL update script
+./update_ssl_fixed.sh
 ```
 
-### 3. Verify Deployment
+This will:
+1. Update the SSL certificate to include the beta subdomain
+2. Update the nginx configuration to support the new subdomain
+3. Restart the containers with the new configuration
+
+### 4. Verify Deployment
 
 After deployment completes, verify the services are running:
 
@@ -60,13 +65,34 @@ docker-compose -f docker-compose.web.yml ps
 
 Check that the portal is accessible by visiting:
 - https://cloudtolocalllm.online
+- https://www.cloudtolocalllm.online
+- https://beta.cloudtolocalllm.online
 
-### 4. Troubleshooting
+### 5. Troubleshooting
 
 #### SSL Certificate Issues
 If SSL certificate doesn't work properly:
 ```bash
-docker-compose -f docker-compose.web.yml run --rm certbot certificates
+docker run --rm -v "$(pwd)/certbot/conf:/etc/letsencrypt" certbot/certbot certificates
+```
+
+#### Nginx Configuration Issues
+If the server won't start due to nginx configuration issues:
+```bash
+# Run the nginx fix script
+./fix_nginx.sh
+```
+
+#### Server Configuration Issues
+If you need to update the server configuration for multiple domains:
+```bash
+# Edit the server.conf file
+nano server.conf
+
+# Then rebuild and restart the container
+docker-compose -f docker-compose.web.yml down
+docker-compose -f docker-compose.web.yml build webapp
+docker-compose -f docker-compose.web.yml up -d
 ```
 
 #### Webapp Build Issues
@@ -77,21 +103,22 @@ If the webapp build fails due to Flutter SDK version issues:
 docker-compose -f docker-compose.web.yml logs webapp
 ```
 
-### 5. Maintenance
+### 6. Maintenance
+
+#### Regular Updates
+To update the portal with the latest changes:
+```bash
+# Use the git pull script
+./git_pull.sh
+
+# Then reapply configuration and restart
+./fix_and_deploy.sh
+```
 
 #### Renew SSL Certificates
 SSL certificates are set to auto-renew, but you can manually renew them:
 ```bash
 ./renew-ssl.sh
-```
-
-#### Update the Portal
-To update the portal after changes to the repository:
-```bash
-cd /opt/cloudtolocalllm/portal
-git pull
-docker-compose -f docker-compose.web.yml down
-docker-compose -f docker-compose.web.yml up -d --build
 ```
 
 ## Services Architecture
@@ -104,6 +131,10 @@ docker-compose -f docker-compose.web.yml up -d --build
 ## Important Files
 
 - `docker-compose.web.yml`: Docker Compose configuration
-- `init-ssl.sh`: SSL initialization script
-- `nginx.conf`: Nginx configuration
-- `Dockerfile`: Flutter web app build 
+- `server.conf`: Nginx server blocks configuration
+- `nginx.conf`: Main Nginx configuration
+- `Dockerfile`: Flutter web app build
+- `fix_and_deploy.sh`: Combined fix and deployment script
+- `update_ssl_fixed.sh`: Script to add subdomains to SSL certificate
+- `git_pull.sh`: Script to pull latest changes from GitHub
+- `fix_nginx.sh`: Script to fix nginx configuration issues 
