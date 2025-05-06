@@ -4,24 +4,24 @@ After=network.target docker.service
 Requires=docker.service
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/opt/cloudtolocalllm/portal
+Type=simple
 User=root
 Group=root
-
-# Setup environment
+WorkingDirectory=/opt/cloudtolocalllm/portal
 ExecStartPre=/bin/bash -c 'mkdir -p /opt/cloudtolocalllm/logs'
 
-# Start all services
-ExecStart=/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml up -d
+# Ensure Docker is running
+ExecStartPre=/bin/bash -c 'systemctl is-active --quiet docker || systemctl start docker'
 
-# Stop all services
+# Start services
+ExecStart=/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml up
+
+# Stop services
 ExecStop=/usr/bin/docker-compose -f docker-compose.auth.yml -f docker-compose.web.yml down
 
 # Restart policy
-Restart=on-failure
-RestartSec=10s
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target 
