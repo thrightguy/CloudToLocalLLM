@@ -7,9 +7,9 @@ class ModelSelector extends StatelessWidget {
   final Function(String)? onModelSelected;
 
   const ModelSelector({
-    Key? key,
+    super.key,
     this.onModelSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +101,7 @@ class ModelSelector extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
 
           // Divider before actions
           if (models.where((model) => model.isInstalled).isNotEmpty)

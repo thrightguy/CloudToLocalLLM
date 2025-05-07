@@ -17,12 +17,12 @@ class Logger {
   static Logger get root => _root;
   static final Logger _root = Logger('root');
 
-  Level level = Level.INFO;
+  Level level = Level.info;
   void Function(LogRecord)? onRecord;
 
   void info(String message) {
     if (onRecord != null) {
-      onRecord!(LogRecord(Level.INFO, message, name));
+      onRecord!(LogRecord(Level.info, message, name));
     } else {
       stdout.writeln('INFO: $message');
     }
@@ -30,7 +30,7 @@ class Logger {
 
   void warning(String message) {
     if (onRecord != null) {
-      onRecord!(LogRecord(Level.WARNING, message, name));
+      onRecord!(LogRecord(Level.warning, message, name));
     } else {
       stderr.writeln('WARNING: $message');
     }
@@ -38,7 +38,7 @@ class Logger {
 
   void severe(String message, [Object? error]) {
     if (onRecord != null) {
-      onRecord!(LogRecord(Level.SEVERE, message, name, error));
+      onRecord!(LogRecord(Level.severe, message, name, error));
     } else {
       stderr.writeln('SEVERE: $message');
       if (error != null) stderr.writeln(error);
@@ -52,9 +52,9 @@ class Level {
 
   const Level(this.name, this.value);
 
-  static const Level INFO = Level('INFO', 800);
-  static const Level WARNING = Level('WARNING', 900);
-  static const Level SEVERE = Level('SEVERE', 1000);
+  static const Level info = Level('INFO', 800);
+  static const Level warning = Level('WARNING', 900);
+  static const Level severe = Level('SEVERE', 1000);
 }
 
 class LogRecord {
@@ -66,13 +66,11 @@ class LogRecord {
   LogRecord(this.level, this.message, this.loggerName, [this.error]);
 }
 
-final Logger _logger = Logger('MonitorDashboard');
-
 Future<void> main(List<String> arguments) async {
   // Initialize logger
-  Logger.root.level = Level.INFO;
+  Logger.root.level = Level.info;
   Logger.root.onRecord = (record) {
-    if (record.level == Level.SEVERE) {
+    if (record.level == Level.severe) {
       stderr.writeln('${record.level.name}: ${record.message}');
       if (record.error != null) stderr.writeln(record.error);
     } else {

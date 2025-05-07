@@ -14,29 +14,16 @@ class LicenseService {
   static const String _licenseKeyStorage = 'license_key';
   static const String _licenseDataStorage = 'license_data';
   static const String _licenseLastVerifiedStorage = 'license_last_verified';
-  static const Duration _cacheDuration = Duration(days: 7);
-
-  // Embedded public key for signature verification (in a real app, this would be obfuscated)
-  static const String _publicKeyPEM = '''
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvfDDX9k0giJmvTwZTXIg
-ZEQVfAp9+11VSi3zEpgZpSGHSlYQsfUtkw4a5xKUa/hr4H+73bPE9+0gLMfWxQOA
-YSEXAMPLE_KEY_WOULD_GO_HEREL2DaOEA1cW2d9PpWpHFuTutFn7b7yt/EZkbL
-RX/ygwcBEQtVs1rJm2Q+m6+sBBK2fobELBtlH8mwuUU8vwLcF0baJ1QgzWXGf/Nh
-FEZ49xUyxWvg3oEX4cZ+3/gHdQUERC2k0KfFcMlcHWDzKzjH7tR0E6AGZEuBMe3K
-OwIDAQAB
------END PUBLIC KEY-----
-''';
 
   final FlutterSecureStorage _secureStorage;
   final http.Client _httpClient;
   LicenseData? _cachedLicenseData;
 
   LicenseService({
-    FlutterSecureStorage? secureStorage,
-    http.Client? httpClient,
-  })  : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _httpClient = httpClient ?? http.Client();
+    required FlutterSecureStorage secureStorage,
+    required http.Client httpClient,
+  })  : _secureStorage = secureStorage,
+        _httpClient = httpClient;
 
   /// Returns current license data, from cache if available
   Future<LicenseData?> getLicenseData() async {

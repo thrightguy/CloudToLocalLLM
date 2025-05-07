@@ -6,11 +6,11 @@ class PromptInput extends StatefulWidget {
   final bool isLoading;
 
   const PromptInput({
-    Key? key,
+    super.key,
     required this.controller,
     required this.onSend,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   State<PromptInput> createState() => _PromptInputState();

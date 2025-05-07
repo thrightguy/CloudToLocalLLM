@@ -3,9 +3,10 @@ import 'package:provider/provider.dart';
 import '../models/llm_model.dart';
 import '../providers/llm_provider.dart';
 import '../providers/settings_provider.dart';
+import '../widgets/version_info_footer.dart';
 
 class ModelsScreen extends StatefulWidget {
-  const ModelsScreen({Key? key}) : super(key: key);
+  const ModelsScreen({super.key});
 
   @override
   State<ModelsScreen> createState() => _ModelsScreenState();
@@ -64,11 +65,22 @@ class _ModelsScreenState extends State<ModelsScreen> {
           ),
         ],
       ),
-      body: _isRefreshing
-          ? const Center(child: CircularProgressIndicator())
-          : models.isEmpty
-              ? _buildEmptyState()
-              : _buildModelsList(models, llmProvider, settingsProvider),
+      body: Column(
+        children: [
+          Expanded(
+            child: _isRefreshing
+                ? const Center(child: CircularProgressIndicator())
+                : models.isEmpty
+                    ? _buildEmptyState()
+                    : _buildModelsList(models, llmProvider, settingsProvider),
+          ),
+          const VersionInfoFooter(
+            showBuild: true,
+            isDiscrete: true,
+            padding: EdgeInsets.only(bottom: 4),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddModelDialog(context),
         tooltip: 'Add Model',
@@ -120,8 +132,11 @@ class _ModelsScreenState extends State<ModelsScreen> {
   ) {
     // Group models by provider
     final ollamaModels = models.where((m) => m.provider == 'ollama').toList();
-    final lmStudioModels = models.where((m) => m.provider == 'lmstudio').toList();
-    final otherModels = models.where((m) => m.provider != 'ollama' && m.provider != 'lmstudio').toList();
+    final lmStudioModels =
+        models.where((m) => m.provider == 'lmstudio').toList();
+    final otherModels = models
+        .where((m) => m.provider != 'ollama' && m.provider != 'lmstudio')
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -145,7 +160,8 @@ class _ModelsScreenState extends State<ModelsScreen> {
                   value: settingsProvider.llmProvider,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   items: const [
                     DropdownMenuItem(
@@ -277,7 +293,7 @@ class _ModelsScreenState extends State<ModelsScreen> {
                     icon: const Icon(Icons.download),
                     label: const Text('Download'),
                   ),
-                
+
                 // Progress indicator
                 if (model.isDownloading && model.downloadProgress != null)
                   Expanded(
@@ -295,15 +311,16 @@ class _ModelsScreenState extends State<ModelsScreen> {
                       ],
                     ),
                   ),
-                
+
                 // Delete button
                 if (model.isInstalled && !model.isDownloading)
                   TextButton.icon(
                     onPressed: () => _deleteModel(model.id, model.name),
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                    label: const Text('Delete',
+                        style: TextStyle(color: Colors.red)),
                   ),
-                
+
                 // Use button
                 if (model.isInstalled && !model.isDownloading)
                   const SizedBox(width: 8),
@@ -325,7 +342,7 @@ class _ModelsScreenState extends State<ModelsScreen> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 0) {
       return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'} ago';
     } else if (difference.inHours > 0) {
@@ -339,8 +356,10 @@ class _ModelsScreenState extends State<ModelsScreen> {
 
   // Download model
   Future<void> _downloadModel(String modelId) async {
+    if (!mounted) return;
     final llmProvider = Provider.of<LlmProvider>(context, listen: false);
-    
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       await llmProvider.pullModel(
         modelId,
@@ -349,16 +368,19 @@ class _ModelsScreenState extends State<ModelsScreen> {
         },
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error downloading model: $e')),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error downloading model: $e')),
+      );
     }
   }
 
   // Delete model
   Future<void> _deleteModel(String modelId, String modelName) async {
+    if (!mounted) return;
+    final llmProvider = Provider.of<LlmProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -376,18 +398,15 @@ class _ModelsScreenState extends State<ModelsScreen> {
         ],
       ),
     );
-    
+
     if (confirmed == true) {
-      final llmProvider = Provider.of<LlmProvider>(context, listen: false);
-      
       try {
         await llmProvider.deleteModel(modelId);
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting model: $e')),
-          );
-        }
+        if (!mounted) return;
+        messenger.showSnackBar(
+          SnackBar(content: Text('Error deleting model: $e')),
+        );
       }
     }
   }
@@ -395,10 +414,10 @@ class _ModelsScreenState extends State<ModelsScreen> {
   // Use model
   void _useModel(String modelId) {
     final llmProvider = Provider.of<LlmProvider>(context, listen: false);
-    
+
     // Create a new conversation with this model
     llmProvider.createConversation('New Conversation', modelId);
-    
+
     // Navigate back to home screen
     Navigator.pop(context);
   }
@@ -406,7 +425,7 @@ class _ModelsScreenState extends State<ModelsScreen> {
   // Show dialog to add a new model
   Future<void> _showAddModelDialog(BuildContext context) async {
     _modelNameController.clear();
-    
+
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(

@@ -25,7 +25,7 @@ check_requirements() {
     if [ "$TOTAL_MEM" -lt 4 ]; then
         echo -e "${RED}Error: Insufficient memory. Need at least 4GB RAM.${NC}"
         exit 1
-    }
+    fi
     
     echo -e "${GREEN}System requirements met.${NC}"
 }

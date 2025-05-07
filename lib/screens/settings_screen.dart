@@ -1,18 +1,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/conversation.dart';
 import '../providers/auth_provider.dart';
-import '../providers/llm_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../widgets/section_header.dart';
 import 'login_screen.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import '../config/app_config.dart';
+import '../widgets/version_info_footer.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -85,57 +84,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     settingsProvider.setInstallAsService(value);
                   },
                 ),
-                ButtonBar(
-                  alignment: MainAxisAlignment.start,
+                OverflowBar(
+                  spacing: 8,
+                  alignment: MainAxisAlignment.end,
                   children: [
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Start LLM'),
-                      onPressed: settingsProvider.isOllamaRunning
-                          ? null
-                          : () async {
-                              final result = await settingsProvider.startLlm();
-                              if (!result && mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Failed to start LLM. Please check installation.'),
-                                  ),
-                                );
-                              }
-                            },
-                    ),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop LLM'),
-                      onPressed: !settingsProvider.isOllamaRunning
-                          ? null
-                          : () async {
-                              final result = await settingsProvider.stopLlm();
-                              if (!result && mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Failed to stop LLM.'),
-                                  ),
-                                );
-                              }
-                            },
-                    ),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.settings_applications),
-                      label: const Text('Install as Service'),
+                    TextButton(
                       onPressed: () async {
+                        if (!mounted) return;
+                        final settingsProvider = Provider.of<SettingsProvider>(
+                            context,
+                            listen: false);
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        final result = await settingsProvider.startLlm();
+                        if (!mounted) return;
+                        if (!result) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Failed to start LLM. Please check installation.'),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Start LLM'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        if (!mounted) return;
+                        final settingsProvider = Provider.of<SettingsProvider>(
+                            context,
+                            listen: false);
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        final result = await settingsProvider.stopLlm();
+                        if (!mounted) return;
+                        if (!result) {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to stop LLM.'),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Stop LLM'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        if (!mounted) return;
+                        final settingsProvider = Provider.of<SettingsProvider>(
+                            context,
+                            listen: false);
+                        final messenger = ScaffoldMessenger.of(context);
+
                         final result =
                             await settingsProvider.installLlmAsService();
-                        if (!result && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                        if (!mounted) return;
+                        if (!result) {
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text(
                                   'Failed to install LLM as a service. Try running as administrator.'),
                             ),
                           );
-                        } else if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                        } else {
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text(
                                   'Successfully installed LLM as a Windows service.'),
@@ -143,6 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           );
                         }
                       },
+                      child: const Text('Install as Service'),
                     ),
                   ],
                 ),
@@ -221,10 +235,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: () async {
+                            if (!mounted) return;
+                            final settingsProvider =
+                                Provider.of<SettingsProvider>(context,
+                                    listen: false);
+                            final messenger = ScaffoldMessenger.of(context);
+
                             final result =
                                 await settingsProvider.checkTunnelStatus();
-                            if (!result && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                            if (!mounted) return;
+                            if (!result) {
+                              messenger.showSnackBar(
                                 const SnackBar(
                                   content: Text(
                                       'Failed to connect to tunnel. Make sure you are logged in.'),
@@ -281,13 +302,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.info),
                 title: const Text('CloudToLocalLLM'),
-                subtitle: const Text('Version 1.0.0'),
+                subtitle: VersionInfoFooter(
+                  showBuild: true,
+                  isDiscrete: false,
+                  padding: EdgeInsets.zero,
+                ),
                 onTap: () {
                   // Show about dialog
                   showAboutDialog(
                     context: context,
                     applicationName: 'CloudToLocalLLM',
-                    applicationVersion: '1.0.0',
+                    applicationVersion:
+                        'v${AppConfig.appVersion} (${AppConfig.buildNumber})',
                     applicationIcon: const Icon(
                       Icons.cloud_sync,
                       size: 50,
@@ -635,14 +661,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         );
 
                         if (confirmed == true) {
+                          if (!mounted) return;
                           final provider = Provider.of<OnboardingProvider>(
                             context,
                             listen: false,
                           );
+                          final messenger = ScaffoldMessenger.of(context);
+
                           await provider.resetApiKey();
 
                           if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text(
                                   'Container reset. Please generate a new API key.'),
@@ -660,22 +689,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onPressed: provider.isLoading
                                 ? null
                                 : () async {
+                                    if (!mounted) return;
+                                    final messenger =
+                                        ScaffoldMessenger.of(context);
                                     try {
                                       await provider.generateApiKey();
-                                      if (!context.mounted) return;
-
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
                                         const SnackBar(
                                           content: Text(
                                               'API key generated successfully.'),
                                         ),
                                       );
                                     } catch (e) {
-                                      if (!context.mounted) return;
-
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
                                         SnackBar(
                                           content: Text('Error: $e'),
                                           backgroundColor: Colors.red,

@@ -4,30 +4,37 @@ import '../config/app_config.dart';
 class VersionInfoFooter extends StatelessWidget {
   final bool showBuild;
   final Color? textColor;
+  final EdgeInsetsGeometry? padding;
+  final bool isDiscrete;
 
   const VersionInfoFooter({
-    Key? key,
+    super.key,
     this.showBuild = true,
     this.textColor,
-  }) : super(key: key);
+    this.padding,
+    this.isDiscrete = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color =
-        textColor ?? theme.colorScheme.onSurfaceVariant.withOpacity(0.7);
+    final color = textColor ??
+        theme.colorScheme.onSurfaceVariant.withValues(
+          alpha: (0.7 * 255).toDouble(),
+        );
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      padding: padding ?? const EdgeInsets.symmetric(vertical: 8.0),
       child: Text(
         showBuild
-            ? 'CloudToLocalLLM v${AppConfig.appVersion} (${AppConfig.buildNumber})'
-            : 'CloudToLocalLLM v${AppConfig.appVersion}',
+            ? 'v${AppConfig.appVersion} (${AppConfig.buildNumber})'
+            : 'v${AppConfig.appVersion}',
         textAlign: TextAlign.center,
         style: theme.textTheme.bodySmall?.copyWith(
           color: color,
-          fontSize: 11,
+          fontSize: isDiscrete ? 10 : 11,
+          fontWeight: isDiscrete ? FontWeight.normal : FontWeight.w500,
         ),
       ),
     );

@@ -8,10 +8,10 @@ class LicenseKeyInput extends StatefulWidget {
   final Function(bool success) onVerificationComplete;
 
   const LicenseKeyInput({
-    Key? key,
+    super.key,
     required this.licenseService,
     required this.onVerificationComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<LicenseKeyInput> createState() => _LicenseKeyInputState();

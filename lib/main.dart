@@ -10,7 +10,7 @@ import 'providers/auth_provider.dart';
 import 'providers/llm_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/onboarding_provider.dart';
-import 'services/auth_service.dart';
+import 'services/local_auth_service.dart';
 import 'services/cloud_service.dart';
 import 'services/ollama_service.dart';
 import 'services/storage_service.dart';
@@ -54,7 +54,7 @@ void main() async {
   }
 
   // Initialize other services
-  final authService = AuthService();
+  final authService = LocalAuthService();
   final tunnelService = TunnelService(
     authService: authService,
     windowsService: windowsService,
@@ -118,7 +118,7 @@ void main() async {
         // Services
         Provider<StorageService>.value(value: storageService),
         Provider<OllamaService>.value(value: ollamaService),
-        Provider<AuthService>.value(value: authService),
+        Provider<LocalAuthService>.value(value: authService),
         Provider<TunnelService>.value(value: tunnelService),
         Provider<CloudService>.value(value: cloudService),
         Provider<BackendService>(
@@ -126,7 +126,6 @@ void main() async {
         ),
         Provider<ApiService>(
           create: (context) => ApiService(
-            authService: authService,
             backendService: Provider.of<BackendService>(context, listen: false),
           ),
         ),
@@ -145,7 +144,6 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => OnboardingProvider(
             apiService: ApiService(
-              authService: authService,
               backendService: BackendService(authService: authService),
             ),
             authProvider: authProvider,
@@ -159,7 +157,7 @@ void main() async {
 }
 
 class CloudToLocalLlmApp extends StatefulWidget {
-  const CloudToLocalLlmApp({Key? key}) : super(key: key);
+  const CloudToLocalLlmApp({super.key});
 
   @override
   State<CloudToLocalLlmApp> createState() => _CloudToLocalLlmAppState();
@@ -177,15 +175,14 @@ class _CloudToLocalLlmAppState extends State<CloudToLocalLlmApp> {
   }
 
   Future<void> _initializeProviders() async {
-    // Initialize auth provider
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (!mounted) return;
-    await authProvider.initialize();
-
-    // Initialize settings provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final settingsProvider =
         Provider.of<SettingsProvider>(context, listen: false);
+
+    await authProvider.initialize();
     if (!mounted) return;
+
     await settingsProvider.initialize();
   }
 

@@ -1,0 +1,12 @@
+{
+  "name": "tunnel-service",
+  "version": "1.0.0",
+  "description": "Tunnel service for CloudToLocalLLM",
+  "main": "tunnel.js",
+  "scripts": {
+    "start": "node tunnel.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+} 

@@ -1,20 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/container_status.dart';
 import '../config/app_config.dart';
-import 'auth_service.dart';
+import 'local_auth_service.dart';
 
 /// Service that handles backend container orchestration
 class BackendService {
   final http.Client _client;
-  final AuthService _authService;
+  final LocalAuthService _authService;
   final String _baseUrl;
 
   BackendService({
     http.Client? client,
-    required AuthService authService,
+    required LocalAuthService authService,
     String? baseUrl,
   })  : _client = client ?? http.Client(),
         _authService = authService,

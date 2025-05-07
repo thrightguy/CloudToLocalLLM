@@ -1,16 +1,18 @@
-FROM node:20-alpine
+FROM dart:stable
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
+# Copy pubspec files
+COPY pubspec.* ./
+RUN dart pub get
 
 # Copy source code
 COPY . .
+RUN dart pub get --offline
 
-# Expose the port
-EXPOSE 8000
+# Build the application
+RUN dart compile exe bin/auth_service.dart -o bin/server
 
 # Start the service
-CMD ["npm", "start"] 
+EXPOSE 8000
+CMD ["./bin/server"] 

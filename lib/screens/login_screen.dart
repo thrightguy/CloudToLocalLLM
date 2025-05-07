@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../widgets/version_info_footer.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();

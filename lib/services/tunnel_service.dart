@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
-import '../services/auth_service.dart';
+import '../services/local_auth_service.dart';
 import 'windows_service.dart';
 
 class TunnelService {
-  final AuthService authService;
+  final LocalAuthService authService;
   final WindowsService? windowsService;
 
   Process? _ngrokProcess;

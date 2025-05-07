@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
+import '../services/local_auth_service.dart';
 import '../services/tunnel_service.dart';
 import '../config/app_config.dart';
 
 class CloudStatusBar extends StatelessWidget {
-  const CloudStatusBar({Key? key}) : super(key: key);
+  const CloudStatusBar({super.key});
 
   @override
   Widget build(BuildContext context) {
     // Access the services through provider
-    final authService = Provider.of<AuthService>(context);
+    final authService = Provider.of<LocalAuthService>(context);
     final tunnelService = Provider.of<TunnelService>(context, listen: true);
 
     // Get the current theme
@@ -20,7 +20,7 @@ class CloudStatusBar extends StatelessWidget {
       height: 28,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant,
+        color: theme.colorScheme.surfaceContainerHighest,
         border: Border(
           top: BorderSide(
             color: theme.colorScheme.outlineVariant,
@@ -92,16 +92,24 @@ class CloudStatusBar extends StatelessWidget {
               isActive ? activeIcon : inactiveIcon,
               size: 16,
               color: isActive
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  ? theme.colorScheme.primary.withValues(
+                      alpha: (0.1 * 255).toDouble(),
+                    )
+                  : theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: (0.1 * 255).toDouble(),
+                    ),
             ),
             const SizedBox(width: 4),
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: isActive
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ? theme.colorScheme.primary.withValues(
+                        alpha: (0.1 * 255).toDouble(),
+                      )
+                    : theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: (0.1 * 255).toDouble(),
+                      ),
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),

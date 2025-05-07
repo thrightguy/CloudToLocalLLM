@@ -9,6 +9,22 @@ This guide will help you set up CloudToLocalLLM on your system, including both t
 - Disk Space: At least 5GB for the application and base models
 - Optional: NVIDIA GPU with CUDA support for faster model inference
 
+## Data Storage Policy
+
+### Default: Local Storage
+- All conversations and data are stored locally on your device
+- No data is sent to the cloud by default
+- You maintain full control over your data
+
+### Optional: Cloud Storage (Premium)
+> **Important Security Warning**: Cloud storage is a premium feature with important considerations:
+> - Data is encrypted but stored on our servers
+> - If you lose your access code, we CANNOT recover your data
+> - We strongly recommend keeping a secure backup of your access code
+> - Cloud storage requires a premium subscription
+> - You must explicitly opt-in to cloud storage
+> - Review our [Privacy Policy](../PRIVACY.md) and [Terms of Service](../TERMS.md) before enabling
+
 ## Prerequisites
 
 Before installing CloudToLocalLLM, make sure you have:
@@ -29,8 +45,10 @@ You have two options for connecting to LLMs:
 
 ### Option 1: Ollama (Recommended for most users)
 
+> **Important Note**: Ollama should only be run on desktop Linux or Docker in WSL2. It is not recommended to run Ollama on a VPS or cloud server due to resource constraints and potential performance issues.
+
 1. **Install Ollama**:
-   - Windows: [Ollama for Windows](https://ollama.ai/download/windows)
+   - Windows: Install Docker Desktop and run Ollama in WSL2
    - macOS: `curl -fsSL https://ollama.ai/install.sh | sh`
    - Linux: `curl -fsSL https://ollama.ai/install.sh | sh`
 
@@ -108,7 +126,15 @@ After installing CloudToLocalLLM, you'll need to configure it:
    - Select your preferred LLM provider (Ollama or LM Studio)
    - If needed, adjust the IP address and port (defaults should work for local installations)
 
-4. **Test Connection**:
+4. **Configure Storage**:
+   - By default, all data is stored locally
+   - If you want to enable cloud storage:
+     1. Purchase a premium subscription
+     2. Enable cloud storage in Settings
+     3. Set up your secure access code
+     4. Keep a secure backup of your access code
+
+5. **Test Connection**:
    - Create a new conversation and send a test message
    - If the LLM responds, your setup is complete!
 

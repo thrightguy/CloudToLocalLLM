@@ -10,9 +10,10 @@ import 'models_screen.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
 import '../widgets/onboarding_wizard.dart';
+import '../widgets/version_info_footer.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -169,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               );
-            }).toList(),
+            }),
 
             // New conversation button
             ListTile(
@@ -280,6 +281,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+          ),
+          const VersionInfoFooter(
+            showBuild: true,
+            isDiscrete: true,
+            padding: EdgeInsets.only(bottom: 4),
           ),
         ],
       ),

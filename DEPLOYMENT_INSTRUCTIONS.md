@@ -41,9 +41,9 @@ This script will:
 3. Restart the containers with the correct configuration
 4. Set up SSL certificates
 
-### 3. Adding Additional Subdomains
+### 3. Adding Beta Subdomain with Authentication
 
-To add support for additional subdomains (e.g., beta.cloudtolocalllm.online):
+To add support for beta.cloudtolocalllm.online with authentication:
 
 ```bash
 # Run the SSL update script
@@ -52,8 +52,9 @@ To add support for additional subdomains (e.g., beta.cloudtolocalllm.online):
 
 This will:
 1. Update the SSL certificate to include the beta subdomain
-2. Update the nginx configuration to support the new subdomain
-3. Restart the containers with the new configuration
+2. Update the nginx configuration to support the new subdomain with authentication
+3. Add the auth service container to the deployment
+4. Restart the containers with the new configuration
 
 ### 4. Verify Deployment
 
@@ -66,7 +67,7 @@ docker-compose -f docker-compose.web.yml ps
 Check that the portal is accessible by visiting:
 - https://cloudtolocalllm.online
 - https://www.cloudtolocalllm.online
-- https://beta.cloudtolocalllm.online
+- https://beta.cloudtolocalllm.online (with authentication)
 
 ### 5. Troubleshooting
 
@@ -93,6 +94,16 @@ nano server.conf
 docker-compose -f docker-compose.web.yml down
 docker-compose -f docker-compose.web.yml build webapp
 docker-compose -f docker-compose.web.yml up -d
+```
+
+#### Auth Service Issues
+If the authentication service isn't working properly:
+```bash
+# Check the auth service logs
+docker-compose -f docker-compose.web.yml logs auth
+
+# Restart just the auth service
+docker-compose -f docker-compose.web.yml restart auth
 ```
 
 #### Webapp Build Issues
@@ -124,7 +135,7 @@ SSL certificates are set to auto-renew, but you can manually renew them:
 ## Services Architecture
 
 - **Webapp Service**: Flutter web frontend with Nginx
-- **Auth Service**: Authentication service
+- **Auth Service**: Authentication service for the beta subdomain
 - **Tunnel Service**: Node.js Express server for cloud synchronization
 - **SSL**: Managed by Certbot with auto-renewal
 
@@ -132,9 +143,7 @@ SSL certificates are set to auto-renew, but you can manually renew them:
 
 - `docker-compose.web.yml`: Docker Compose configuration
 - `server.conf`: Nginx server blocks configuration
-- `nginx.conf`: Main Nginx configuration
-- `Dockerfile`: Flutter web app build
 - `fix_and_deploy.sh`: Combined fix and deployment script
-- `update_ssl_fixed.sh`: Script to add subdomains to SSL certificate
+- `update_ssl_fixed.sh`: Script to add subdomains to SSL certificate and configure auth
 - `git_pull.sh`: Script to pull latest changes from GitHub
 - `fix_nginx.sh`: Script to fix nginx configuration issues 

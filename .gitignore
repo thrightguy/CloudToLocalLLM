@@ -91,3 +91,31 @@ PRICING_STRATEGY.md
 !cloud/web/manifest.json
 !cloud/web/favicon.png
 !cloud/web/icons/
+
+# SSL certificates and keys
+certbot/
+*.pem
+*.key
+
+# Docker volumes
+data/
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+
+# Build files
+build/
+dist/

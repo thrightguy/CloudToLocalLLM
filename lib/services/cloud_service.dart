@@ -6,11 +6,11 @@ import '../models/conversation.dart';
 import '../models/llm_model.dart';
 import '../models/message.dart';
 import '../models/user.dart';
-import '../services/auth_service.dart';
+import '../services/local_auth_service.dart';
 
 class CloudService {
   final String baseUrl;
-  final AuthService authService;
+  final LocalAuthService authService;
 
   CloudService({
     String? baseUrl,

@@ -41,3 +41,34 @@ echo "Tunnel can reach Ollama"
 
 # Keep the container running
 wait
+
+# Create Dockerfile.tunnel
+cat > Dockerfile.tunnel << 'EOL'
+# Use Node.js as the base image for the tunnel service
+FROM node:20-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application
+COPY . .
+
+# Expose the tunnel port
+EXPOSE 8080
+
+# Start the tunnel service
+CMD ["node", "tunnel.js"]
+EOL
+
+# Update docker-compose.yml
+sed -i 's/dockerfile: Dockerfile/dockerfile: Dockerfile.tunnel/' docker-compose.yml
+
+# Set proper permissions
+chown cloudllm:cloudllm Dockerfile.tunnel
+chown cloudllm:cloudllm docker-compose.yml

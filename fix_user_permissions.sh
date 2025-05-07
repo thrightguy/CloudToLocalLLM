@@ -49,15 +49,17 @@ EOF
 if [ ! -f "server.conf" ]; then
   echo -e "${YELLOW}Creating server.conf...${NC}"
   cat > server.conf << 'EOF'
+# HTTP redirect for all domains
 server {
     listen 80;
     server_name cloudtolocalllm.online www.cloudtolocalllm.online beta.cloudtolocalllm.online;
     return 301 https://$server_name$request_uri;
 }
 
+# Main domain and www subdomain
 server {
     listen 443 ssl http2;
-    server_name cloudtolocalllm.online www.cloudtolocalllm.online beta.cloudtolocalllm.online;
+    server_name cloudtolocalllm.online www.cloudtolocalllm.online;
 
     # SSL configuration
     ssl_certificate /etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem;
@@ -82,6 +84,58 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # Static files caching
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+}
+
+# Beta subdomain with auth service integration
+server {
+    listen 443 ssl http2;
+    server_name beta.cloudtolocalllm.online;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Health check endpoint
+    location = /health {
+        return 200 'OK';
+        add_header Content-Type text/plain;
+    }
+    
+    # Auth service proxy for login/register endpoints
+    location /auth/ {
+        proxy_pass http://auth:8080/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Handle SPA routing
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        
+        # Add header to indicate beta environment to the client app
+        add_header X-Environment "beta";
     }
 
     # Static files caching
@@ -131,6 +185,27 @@ services:
       - CHOWN
       - SETGID
       - SETUID
+    depends_on:
+      - auth
+    networks:
+      - webnet
+      
+  auth:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - JWT_SECRET=your_jwt_secret_key_here
+    volumes:
+      - ./auth_service/data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - webnet
 

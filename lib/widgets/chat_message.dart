@@ -5,9 +5,9 @@ class ChatMessage extends StatelessWidget {
   final Message message;
 
   const ChatMessage({
-    Key? key,
+    super.key,
     required this.message,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +132,7 @@ class ChatMessage extends StatelessWidget {
 
 // Loading indicator for pending messages
 class _LoadingIndicator extends StatelessWidget {
-  const _LoadingIndicator({Key? key}) : super(key: key);
+  const _LoadingIndicator();
 
   @override
   Widget build(BuildContext context) {
@@ -164,9 +164,8 @@ class _ErrorMessage extends StatelessWidget {
   final String message;
 
   const _ErrorMessage({
-    Key? key,
     required this.message,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
