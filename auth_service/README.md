@@ -45,3 +45,14 @@ if (result.affectedRows > 0) {
 ### Troubleshooting
 - If you see errors about `query` or `substitutionValues`, update to use `execute`, `Sql.named`, and `parameters` as above.
 - If you see errors about the operator '>' not being defined for 'Result', use `result.affectedRows > 0` instead.
+
+### Troubleshooting Docker Build
+
+If the Docker container fails to start due to missing ./bin/server:
+- Run `dart pub get` to ensure dependencies are installed.
+- Run `dart compile exe bin/auth_service.dart -o bin/server` to check for build errors.
+- Check Docker build logs for errors during the compile step:
+  ```bash
+  docker-compose -f docker-compose.web.yml build auth
+  ```
+- Fix any Dart errors and retry the build.

@@ -106,6 +106,19 @@ docker-compose -f docker-compose.web.yml logs auth
 docker-compose -f docker-compose.web.yml restart auth
 ```
 
+**If the auth container fails to start due to missing ./bin/server:**
+1. Check Docker build logs:
+   ```bash
+   docker-compose -f docker-compose.web.yml build auth
+   ```
+2. Try building the binary locally:
+   ```bash
+   cd auth_service
+   dart pub get
+   dart compile exe bin/auth_service.dart -o bin/server
+   ```
+3. Fix any Dart errors and retry the build.
+
 #### Webapp Build Issues
 If the webapp build fails due to Flutter SDK version issues:
 1. The Dockerfile has been updated to use `--no-sound-null-safety` flag
