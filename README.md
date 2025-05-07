@@ -80,7 +80,7 @@ The CloudToLocalLLM deployment supports two SSL certificate options:
    - Available from providers like Namecheap
    - Use `wildcard_ssl_setup.ps1` for easy installation
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed SSL configuration instructions.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed SSL configuration instructions.
 
 ## Prerequisites
 
@@ -220,11 +220,33 @@ The application follows a provider-based state management approach with a clear 
 
 ## Documentation
 
-- [OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md): Details about Ollama integration, hardware detection, and model naming conventions
-- [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md): Information about premium features and subscription implementation
-- [DEPLOYMENT.md](DEPLOYMENT.md): Deployment and infrastructure setup instructions
-- [PRIVACY.md](PRIVACY.md): Privacy policy
-- [TERMS.md](TERMS.md): Terms of service
+Refer to the `docs/` directory for detailed documentation. Key documents include:
+
+**Core Concepts & Setup:**
+- [OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md): Ollama integration, hardware detection, model naming.
+- [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md): Premium features and subscription details.
+- [CONTAINER_ARCHITECTURE.md](docs/CONTAINER_ARCHITECTURE.md): Overview of the Docker container setup.
+- [FLUTTER_APP_STRUCTURE.md](docs/flutter_app_structure.md): Details on the Flutter application structure.
+
+**Deployment & Operations:**
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md): General deployment and infrastructure setup.
+- [VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md): Specific guide for VPS deployments.
+- [DEPLOYMENT_INSTRUCTIONS.md](docs/DEPLOYMENT_INSTRUCTIONS.md): Step-by-step deployment instructions.
+- [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render.
+- [MAINTENANCE_SCRIPTS.md](docs/MAINTENANCE_SCRIPTS.md): Information on available maintenance scripts.
+
+**Release & Windows Specific:**
+- [RELEASE_INSTRUCTIONS.md](docs/RELEASE_INSTRUCTIONS.md): How to prepare and manage releases.
+- [WINDOWS_INSTALLER_GUIDE.md](docs/WINDOWS_INSTALLER_GUIDE.md): Guide for the Windows installer.
+
+**Development & Strategy:**
+- [AUTH0_DIRECT_LOGIN.md](docs/auth0_direct_login.md): Auth0 integration details.
+- [DUAL_LICENSE_STRATEGY.md](docs/DUAL_LICENSE_STRATEGY.md): Licensing information.
+- [PRICING_STRATEGY.md](docs/PRICING_STRATEGY.md): Details on pricing. *(Ensure this file is added to docs/ from root)*
+
+**Legal & Policies:**
+- [PRIVACY.md](docs/PRIVACY.md): Privacy Policy. *(Ensure this file exists in docs/ or is created)*
+- [TERMS.md](docs/TERMS.md): Terms of Service. *(Ensure this file exists in docs/ or is created)*
 
 ## Contributing
 
