@@ -38,4 +38,4 @@ COPY --from=build /home/builder/app/build/web /usr/share/nginx/html
 EXPOSE 80
 
 # Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off; error_log /dev/stderr info;"]
