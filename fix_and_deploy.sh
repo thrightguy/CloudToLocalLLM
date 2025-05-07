@@ -53,10 +53,7 @@ if [[ -f "nginx.conf" ]]; then
 fi
 
 # Create a new nginx.conf without the user directive
-cat > "nginx.conf" << 'EOF' || {
-    echo -e "${RED}Failed to create nginx.conf${NC}"
-    exit 1
-}
+cat > "nginx.conf" << 'EOF'
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
 pid /var/run/nginx.pid;
