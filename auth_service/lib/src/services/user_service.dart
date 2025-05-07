@@ -2,11 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:logging/logging.dart';
-import 'package:postgresql2/postgresql.dart';
 import 'package:postgres/postgres.dart';
 import '../models/user.dart';
 import '../models/role.dart';
-import '../config/environment.dart';
 
 class UserService {
   final Logger _logger = Logger('UserService');
@@ -33,7 +31,7 @@ class UserService {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
         permissions TEXT[] NOT NULL,
-        description TEXT
+        description TEXT NOT NULL
       )
     ''');
 
@@ -64,13 +62,15 @@ class UserService {
     // Create default roles if they don't exist
     final adminRoleExists = await _db.query(
         'SELECT COUNT(*) FROM roles WHERE id = @id',
-        {'id': 'admin'}).then((result) => result.first[0] > 0);
+        substitutionValues: {
+          'id': 'admin'
+        }).then((result) => (result.first[0] as int) > 0);
 
     if (!adminRoleExists) {
       final adminRole = Role.admin();
       await _db.execute(
           'INSERT INTO roles (id, name, permissions, description) VALUES (@id, @name, @permissions, @description)',
-          {
+          substitutionValues: {
             'id': adminRole.id,
             'name': adminRole.name,
             'permissions': adminRole.permissions,
@@ -80,7 +80,7 @@ class UserService {
       final userRole = Role.user();
       await _db.execute(
           'INSERT INTO roles (id, name, permissions, description) VALUES (@id, @name, @permissions, @description)',
-          {
+          substitutionValues: {
             'id': userRole.id,
             'name': userRole.name,
             'permissions': userRole.permissions,
@@ -95,24 +95,23 @@ class UserService {
 
     // Create default admin if no users exist
     if (userCount == 0) {
-      final adminUser = {
-        'id': 'admin',
+      final userId = 'admin';
+      await _db.execute('''
+        INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) 
+        VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)
+        ''', substitutionValues: {
+        'id': userId,
         'username': 'admin',
         'email': 'admin@example.com',
         'password_hash': _hashPassword('admin'), // Change in production!
         'name': 'Administrator',
         'created_at': DateTime.now().toIso8601String(),
         'is_active': true,
-      };
-
-      await _db.execute('''
-        INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) 
-        VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)
-      ''', adminUser);
+      });
 
       await _db.execute(
           'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-          {'user_id': 'admin', 'role_id': 'admin'});
+          substitutionValues: {'user_id': userId, 'role_id': 'admin'});
 
       _logger.info('Created default admin user');
     }
@@ -122,22 +121,23 @@ class UserService {
   Future<User?> registerUser(
       String username, String password, String? email, String? name) async {
     try {
-      // Check if username or email already exists
       final existingUser = await _db.query(
           'SELECT COUNT(*) FROM users WHERE username = @username OR (email = @email AND @email IS NOT NULL)',
-          {
+          substitutionValues: {
             'username': username,
             'email': email
-          }).then((result) => result.first[0] > 0);
+          }).then((result) => (result.first[0] as int) > 0);
 
       if (existingUser) {
         _logger.warning('Username or email already exists: $username, $email');
         return null;
       }
 
-      // Create new user
       final userId = DateTime.now().millisecondsSinceEpoch.toString();
-      final user = {
+      await _db.execute('''
+        INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) 
+        VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)
+        ''', substitutionValues: {
         'id': userId,
         'username': username,
         'email': email,
@@ -145,19 +145,12 @@ class UserService {
         'name': name,
         'created_at': DateTime.now().toIso8601String(),
         'is_active': true,
-      };
+      });
 
-      await _db.execute('''
-        INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) 
-        VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)
-      ''', user);
-
-      // Assign default user role
       await _db.execute(
           'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-          {'user_id': userId, 'role_id': 'user'});
+          substitutionValues: {'user_id': userId, 'role_id': 'user'});
 
-      // Return the created user
       return await getUserById(userId);
     } catch (e) {
       _logger.severe('Error registering user: $e');
@@ -169,10 +162,9 @@ class UserService {
   Future<User?> authenticateUser(
       String usernameOrEmail, String password) async {
     try {
-      // Find user by username or email
       final result = await _db.query(
           'SELECT id, password_hash FROM users WHERE (username = @login OR email = @login) AND is_active = true',
-          {'login': usernameOrEmail});
+          substitutionValues: {'login': usernameOrEmail});
 
       if (result.isEmpty) {
         _logger.info('User not found or inactive: $usernameOrEmail');
@@ -182,14 +174,11 @@ class UserService {
       final userId = result.first[0] as String;
       final storedHash = result.first[1] as String;
 
-      // Verify password
       if (_verifyPassword(password, storedHash)) {
-        // Update last login time
         await _db.execute(
             'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = @id',
-            {'id': userId});
+            substitutionValues: {'id': userId});
 
-        // Return the authenticated user
         return await getUserById(userId);
       }
 
@@ -204,88 +193,44 @@ class UserService {
   /// Get user by ID with roles
   Future<User?> getUserById(String userId) async {
     try {
-      // Get user data
-      final userResult =
-          await _db.query('SELECT * FROM users WHERE id = @id', {'id': userId});
+      final userResult = await _db.query('SELECT * FROM users WHERE id = @id',
+          substitutionValues: {'id': userId});
 
-      if (userResult.isEmpty) {
-        return null;
-      }
+      if (userResult.isEmpty) return null;
 
-      final userData = userResult.first;
-
-      // Get user roles
       final rolesResult = await _db.query('''
         SELECT r.* FROM roles r
         JOIN user_roles ur ON r.id = ur.role_id
         WHERE ur.user_id = @user_id
-      ''', {'user_id': userId});
+        ''', substitutionValues: {'user_id': userId});
 
-      final roles = rolesResult
-          .map((roleRow) => Role(
-                id: roleRow[0] as String,
-                name: roleRow[1] as String,
-                permissions: (roleRow[2] as List).cast<String>(),
-                description: roleRow[3] as String?,
-              ))
-          .toList();
-
-      return User(
-        id: userData[0] as String,
-        username: userData[1] as String,
-        email: userData[2] as String?,
-        passwordHash: userData[3] as String,
-        name: userData[4] as String?,
-        createdAt: userData[5] as DateTime,
-        lastLogin: userData[6] as DateTime?,
-        isActive: userData[7] as bool,
-        roles: roles,
-      );
+      final roles = rolesResult.map((row) => Role.fromRow(row)).toList();
+      return User.fromRow(userResult.first, roles: roles);
     } catch (e) {
       _logger.severe('Error getting user by ID: $e');
       return null;
     }
   }
 
-  /// Get all users (with pagination)
+  /// Get all users with their roles
   Future<List<User>> getUsers({int limit = 50, int offset = 0}) async {
     try {
-      // Get users with pagination
       final userResult = await _db.query(
           'SELECT * FROM users ORDER BY created_at DESC LIMIT @limit OFFSET @offset',
-          {'limit': limit, 'offset': offset});
+          substitutionValues: {'limit': limit, 'offset': offset});
 
       final users = <User>[];
-
-      for (final userData in userResult) {
-        // Get user roles
-        final userId = userData[0] as String;
+      for (final row in userResult) {
+        final userId = row[0] as String;
         final rolesResult = await _db.query('''
           SELECT r.* FROM roles r
           JOIN user_roles ur ON r.id = ur.role_id
           WHERE ur.user_id = @user_id
-        ''', {'user_id': userId});
+          ''', substitutionValues: {'user_id': userId});
 
-        final roles = rolesResult
-            .map((roleRow) => Role(
-                  id: roleRow[0] as String,
-                  name: roleRow[1] as String,
-                  permissions: (roleRow[2] as List).cast<String>(),
-                  description: roleRow[3] as String?,
-                ))
-            .toList();
-
-        users.add(User(
-          id: userData[0] as String,
-          username: userData[1] as String,
-          email: userData[2] as String?,
-          passwordHash: userData[3] as String,
-          name: userData[4] as String?,
-          createdAt: userData[5] as DateTime,
-          lastLogin: userData[6] as DateTime?,
-          isActive: userData[7] as bool,
-          roles: roles,
-        ));
+        final roles =
+            rolesResult.map((roleRow) => Role.fromRow(roleRow)).toList();
+        users.add(User.fromRow(row, roles: roles));
       }
 
       return users;
@@ -339,45 +284,181 @@ class UserService {
   }
 
   Future<List<User>> getAllUsers() async {
-    final results = await _db.query('SELECT * FROM users');
-    return results.map((row) => User.fromRow(row)).toList();
+    try {
+      final results = await _db.query('SELECT * FROM users');
+      final users = <User>[];
+
+      for (final row in results) {
+        final userId = row[0] as String;
+        final roles = await getUserRoles(userId);
+        users.add(User.fromRow(row, roles: roles));
+      }
+
+      return users;
+    } catch (e) {
+      _logger.severe('Error getting all users: $e');
+      return [];
+    }
   }
 
-  Future<User> createUser(User user) async {
-    final result = await _db.query(
-        'INSERT INTO users (email, password_hash, name, role) VALUES (@email, @password, @name, @role) RETURNING *',
-        substitutionValues: {
-          'email': user.email,
-          'password': user.passwordHash,
-          'name': user.name,
-          'role': user.role.toString()
-        });
-    return User.fromRow(result.first);
+  Future<User?> createUser(User user) async {
+    try {
+      // Start a transaction
+      await _db.execute('BEGIN');
+
+      // Insert user
+      final result = await _db.query('''
+        INSERT INTO users (
+          id, username, email, password_hash, name, created_at, is_active
+        ) VALUES (
+          @id, @username, @email, @password_hash, @name, @created_at, @is_active
+        ) RETURNING *
+      ''', substitutionValues: {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'password_hash': user.passwordHash,
+        'name': user.name,
+        'created_at': user.createdAt.toIso8601String(),
+        'is_active': user.isActive,
+      });
+
+      if (result.isEmpty) {
+        await _db.execute('ROLLBACK');
+        return null;
+      }
+
+      // Insert user roles
+      for (final role in user.roles) {
+        await _db.execute(
+          'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
+          substitutionValues: {
+            'user_id': user.id,
+            'role_id': role.id,
+          },
+        );
+      }
+
+      // Commit transaction
+      await _db.execute('COMMIT');
+
+      // Return user with roles
+      return User.fromRow(result.first, roles: user.roles);
+    } catch (e) {
+      await _db.execute('ROLLBACK');
+      _logger.severe('Error creating user: $e');
+      return null;
+    }
   }
 
   Future<User?> updateUser(String id, Map<String, dynamic> updates) async {
-    if (updates.isEmpty) return null;
+    try {
+      await _db.execute('BEGIN');
 
-    final setClause = updates.keys.map((key) => '$key = @$key').join(', ');
-    final query = 'UPDATE users SET $setClause WHERE id = @id RETURNING *';
+      // Handle role updates separately
+      final List<Role>? newRoles = updates.remove('roles') as List<Role>?;
 
-    final values = {...updates, 'id': id};
-    final result = await _db.query(query, substitutionValues: values);
+      if (updates.isNotEmpty) {
+        final setClause = updates.keys.map((key) => '$key = @$key').join(', ');
+        final query = 'UPDATE users SET $setClause WHERE id = @id RETURNING *';
 
-    if (result.isEmpty) return null;
-    return User.fromRow(result.first);
+        final values = {...updates, 'id': id};
+        final result = await _db.query(query, substitutionValues: values);
+
+        if (result.isEmpty) {
+          await _db.execute('ROLLBACK');
+          return null;
+        }
+      }
+
+      // Update roles if provided
+      if (newRoles != null) {
+        // Remove existing roles
+        await _db.execute(
+          'DELETE FROM user_roles WHERE user_id = @user_id',
+          substitutionValues: {'user_id': id},
+        );
+
+        // Add new roles
+        for (final role in newRoles) {
+          await _db.execute(
+            'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
+            substitutionValues: {
+              'user_id': id,
+              'role_id': role.id,
+            },
+          );
+        }
+      }
+
+      await _db.execute('COMMIT');
+
+      // Get updated user with roles
+      return await getUserById(id);
+    } catch (e) {
+      await _db.execute('ROLLBACK');
+      _logger.severe('Error updating user: $e');
+      return null;
+    }
   }
 
   Future<bool> deleteUser(String id) async {
-    final result = await _db.execute('DELETE FROM users WHERE id = @id',
-        substitutionValues: {'id': id});
-    return result == 1;
+    try {
+      final result = await _db.execute(
+        'DELETE FROM users WHERE id = @id',
+        substitutionValues: {'id': id},
+      );
+      return result > 0;
+    } catch (e) {
+      _logger.severe('Error deleting user: $e');
+      return false;
+    }
   }
 
   Future<List<Role>> getUserRoles(String userId) async {
-    final results = await _db.query(
-        'SELECT r.* FROM roles r INNER JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = @userId',
-        substitutionValues: {'userId': userId});
-    return results.map((row) => Role.fromRow(row)).toList();
+    try {
+      final results = await _db.query('''
+        SELECT r.* FROM roles r
+        INNER JOIN user_roles ur ON r.id = ur.role_id
+        WHERE ur.user_id = @userId
+      ''', substitutionValues: {'userId': userId});
+
+      return results.map((row) => Role.fromRow(row)).toList();
+    } catch (e) {
+      _logger.severe('Error getting user roles: $e');
+      return [];
+    }
+  }
+
+  Future<bool> addUserRole(String userId, String roleId) async {
+    try {
+      await _db.execute(
+        'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
+        substitutionValues: {
+          'user_id': userId,
+          'role_id': roleId,
+        },
+      );
+      return true;
+    } catch (e) {
+      _logger.severe('Error adding user role: $e');
+      return false;
+    }
+  }
+
+  Future<bool> removeUserRole(String userId, String roleId) async {
+    try {
+      final result = await _db.execute(
+        'DELETE FROM user_roles WHERE user_id = @user_id AND role_id = @role_id',
+        substitutionValues: {
+          'user_id': userId,
+          'role_id': roleId,
+        },
+      );
+      return result > 0;
+    } catch (e) {
+      _logger.severe('Error removing user role: $e');
+      return false;
+    }
   }
 }
