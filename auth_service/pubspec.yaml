@@ -1,0 +1,25 @@
+name: auth_service
+description: Authentication service for CloudToLocalLLM
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+# Add regular dependencies here.
+dependencies:
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  postgres: ^2.6.3
+  dart_jsonwebtoken: ^2.12.1
+  logging: ^1.2.0
+  crypto: ^3.0.3
+  uuid: ^4.2.1
+  shelf_cors_headers: ^0.1.4
+  meta: ^1.8.0
+  http: ^0.13.5
+  # path: ^1.8.0
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0
