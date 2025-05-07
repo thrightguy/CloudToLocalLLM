@@ -1,3 +1,5 @@
+// Unused: All state management is now handled by Pinia in src/store/auth.js
+
 import axios from 'axios';
 
 // Define Vuex store for the admin UI

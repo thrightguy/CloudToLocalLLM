@@ -37,7 +37,7 @@
 
 <script>
 import { ref, computed } from 'vue';
-import { useStore } from 'vuex';
+import { useAuthStore } from '../store/auth';
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useVuelidate } from '@vuelidate/core';
@@ -54,7 +54,7 @@ export default {
     Button
   },
   setup() {
-    const store = useStore();
+    const auth = useAuthStore();
     const router = useRouter();
     const route = useRoute();
     const toast = useToast();
@@ -72,20 +72,18 @@ export default {
     const v$ = useVuelidate(rules, { username, password });
     
     // Computed properties
-    const isLoading = computed(() => store.getters.isLoading);
-    const error = computed(() => store.getters.error);
+    const isLoading = computed(() => auth.isLoading);
+    const error = computed(() => auth.error);
     
     // Methods
     const handleSubmit = async () => {
       const isValid = await v$.value.$validate();
       if (!isValid) return;
       
-      const credentials = {
+      const success = await auth.login({
         username: username.value,
         password: password.value
-      };
-      
-      const success = await store.dispatch('login', credentials);
+      });
       
       if (success) {
         // Redirect to dashboard or previous page
