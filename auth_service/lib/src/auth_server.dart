@@ -28,15 +28,16 @@ class AuthServer {
   Future<void> init() async {
     // Initialize database connection
     final uri = Uri.parse(Environment.dbConnString);
-    final db = PostgreSQLConnection(
-      uri.host,
-      uri.port,
-      uri.pathSegments.last,
-      username: uri.userInfo.split(':')[0],
-      password: uri.userInfo.split(':')[1],
-      timeoutInSeconds: 30,
+    final db = await Connection.open(
+      Endpoint(
+        host: uri.host,
+        database: uri.pathSegments.last,
+        username: uri.userInfo.split(':')[0],
+        password: uri.userInfo.split(':')[1],
+        port: uri.port,
+      ),
+      settings: ConnectionSettings(sslMode: SslMode.disable),
     );
-    await db.open();
 
     _userService = UserService(db);
     await _userService.initialize();

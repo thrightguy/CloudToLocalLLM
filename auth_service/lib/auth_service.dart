@@ -1,5 +1,3 @@
-library auth_service;
-
 export 'src/auth_server.dart';
 export 'src/models/user.dart';
 export 'src/models/role.dart';

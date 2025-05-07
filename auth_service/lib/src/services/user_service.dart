@@ -8,7 +8,7 @@ import '../models/role.dart';
 
 class UserService {
   final Logger _logger = Logger('UserService');
-  final PostgreSQLConnection _db;
+  final Connection _db;
 
   UserService(this._db);
 
@@ -60,58 +60,64 @@ class UserService {
   /// Create default admin user if no users exist
   Future<void> _createDefaultAdmin() async {
     // Create default roles if they don't exist
-    final adminRoleExists = await _db.query(
-        'SELECT COUNT(*) FROM roles WHERE id = @id',
-        substitutionValues: {
-          'id': 'admin'
-        }).then((result) => (result.first[0] as int) > 0);
+    final adminRoleResult = await _db.execute(
+      Sql.named('SELECT COUNT(*) FROM roles WHERE id = @id'),
+      parameters: {'id': 'admin'},
+    );
+    final adminRoleExists = (adminRoleResult.first[0] as int) > 0;
 
     if (!adminRoleExists) {
       final adminRole = Role.admin();
       await _db.execute(
-          'INSERT INTO roles (id, name, permissions, description) VALUES (@id, @name, @permissions, @description)',
-          substitutionValues: {
-            'id': adminRole.id,
-            'name': adminRole.name,
-            'permissions': adminRole.permissions,
-            'description': adminRole.description,
-          });
+        Sql.named(
+            'INSERT INTO roles (id, name, permissions, description) VALUES (@id, @name, @permissions, @description)'),
+        parameters: {
+          'id': adminRole.id,
+          'name': adminRole.name,
+          'permissions': adminRole.permissions,
+          'description': adminRole.description,
+        },
+      );
 
       final userRole = Role.user();
       await _db.execute(
-          'INSERT INTO roles (id, name, permissions, description) VALUES (@id, @name, @permissions, @description)',
-          substitutionValues: {
-            'id': userRole.id,
-            'name': userRole.name,
-            'permissions': userRole.permissions,
-            'description': userRole.description,
-          });
+        Sql.named(
+            'INSERT INTO roles (id, name, permissions, description) VALUES (@id, @name, @permissions, @description)'),
+        parameters: {
+          'id': userRole.id,
+          'name': userRole.name,
+          'permissions': userRole.permissions,
+          'description': userRole.description,
+        },
+      );
     }
 
     // Check if any users exist
-    final userCount = await _db
-        .query('SELECT COUNT(*) FROM users')
-        .then((result) => result.first[0] as int);
+    final userCountResult = await _db.execute('SELECT COUNT(*) FROM users');
+    final userCount = userCountResult.first[0] as int;
 
     // Create default admin if no users exist
     if (userCount == 0) {
       final userId = 'admin';
-      await _db.execute('''
-        INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) 
-        VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)
-        ''', substitutionValues: {
-        'id': userId,
-        'username': 'admin',
-        'email': 'admin@example.com',
-        'password_hash': _hashPassword('admin'), // Change in production!
-        'name': 'Administrator',
-        'created_at': DateTime.now().toIso8601String(),
-        'is_active': true,
-      });
+      await _db.execute(
+        Sql.named(
+            'INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)'),
+        parameters: {
+          'id': userId,
+          'username': 'admin',
+          'email': 'admin@example.com',
+          'password_hash': _hashPassword('admin'), // Change in production!
+          'name': 'Administrator',
+          'created_at': DateTime.now().toIso8601String(),
+          'is_active': true,
+        },
+      );
 
       await _db.execute(
-          'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-          substitutionValues: {'user_id': userId, 'role_id': 'admin'});
+        Sql.named(
+            'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)'),
+        parameters: {'user_id': userId, 'role_id': 'admin'},
+      );
 
       _logger.info('Created default admin user');
     }
@@ -121,12 +127,12 @@ class UserService {
   Future<User?> registerUser(
       String username, String password, String? email, String? name) async {
     try {
-      final existingUser = await _db.query(
-          'SELECT COUNT(*) FROM users WHERE username = @username OR (email = @email AND @email IS NOT NULL)',
-          substitutionValues: {
-            'username': username,
-            'email': email
-          }).then((result) => (result.first[0] as int) > 0);
+      final existingUserResult = await _db.execute(
+        Sql.named(
+            'SELECT COUNT(*) FROM users WHERE username = @username OR (email = @email AND @email IS NOT NULL)'),
+        parameters: {'username': username, 'email': email},
+      );
+      final existingUser = (existingUserResult.first[0] as int) > 0;
 
       if (existingUser) {
         _logger.warning('Username or email already exists: $username, $email');
@@ -134,22 +140,25 @@ class UserService {
       }
 
       final userId = DateTime.now().millisecondsSinceEpoch.toString();
-      await _db.execute('''
-        INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) 
-        VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)
-        ''', substitutionValues: {
-        'id': userId,
-        'username': username,
-        'email': email,
-        'password_hash': _hashPassword(password),
-        'name': name,
-        'created_at': DateTime.now().toIso8601String(),
-        'is_active': true,
-      });
+      await _db.execute(
+        Sql.named(
+            'INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) VALUES (@id, @username, @email, @password_hash, @name, @created_at::timestamp, @is_active)'),
+        parameters: {
+          'id': userId,
+          'username': username,
+          'email': email,
+          'password_hash': _hashPassword(password),
+          'name': name,
+          'created_at': DateTime.now().toIso8601String(),
+          'is_active': true,
+        },
+      );
 
       await _db.execute(
-          'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-          substitutionValues: {'user_id': userId, 'role_id': 'user'});
+        Sql.named(
+            'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)'),
+        parameters: {'user_id': userId, 'role_id': 'user'},
+      );
 
       return await getUserById(userId);
     } catch (e) {
@@ -162,9 +171,11 @@ class UserService {
   Future<User?> authenticateUser(
       String usernameOrEmail, String password) async {
     try {
-      final result = await _db.query(
-          'SELECT id, password_hash FROM users WHERE (username = @login OR email = @login) AND is_active = true',
-          substitutionValues: {'login': usernameOrEmail});
+      final result = await _db.execute(
+        Sql.named(
+            'SELECT id, password_hash FROM users WHERE (username = @login OR email = @login) AND is_active = true'),
+        parameters: {'login': usernameOrEmail},
+      );
 
       if (result.isEmpty) {
         _logger.info('User not found or inactive: $usernameOrEmail');
@@ -176,8 +187,10 @@ class UserService {
 
       if (_verifyPassword(password, storedHash)) {
         await _db.execute(
-            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = @id',
-            substitutionValues: {'id': userId});
+          Sql.named(
+              'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = @id'),
+          parameters: {'id': userId},
+        );
 
         return await getUserById(userId);
       }
@@ -193,16 +206,18 @@ class UserService {
   /// Get user by ID with roles
   Future<User?> getUserById(String userId) async {
     try {
-      final userResult = await _db.query('SELECT * FROM users WHERE id = @id',
-          substitutionValues: {'id': userId});
+      final userResult = await _db.execute(
+        Sql.named('SELECT * FROM users WHERE id = @id'),
+        parameters: {'id': userId},
+      );
 
       if (userResult.isEmpty) return null;
 
-      final rolesResult = await _db.query('''
-        SELECT r.* FROM roles r
-        JOIN user_roles ur ON r.id = ur.role_id
-        WHERE ur.user_id = @user_id
-        ''', substitutionValues: {'user_id': userId});
+      final rolesResult = await _db.execute(
+        Sql.named(
+            'SELECT r.* FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = @user_id'),
+        parameters: {'user_id': userId},
+      );
 
       final roles = rolesResult.map((row) => Role.fromRow(row)).toList();
       return User.fromRow(userResult.first, roles: roles);
@@ -215,18 +230,18 @@ class UserService {
   /// Get all users with their roles
   Future<List<User>> getUsers({int limit = 50, int offset = 0}) async {
     try {
-      final userResult = await _db.query(
+      final userResult = await _db.execute(
           'SELECT * FROM users ORDER BY created_at DESC LIMIT @limit OFFSET @offset',
-          substitutionValues: {'limit': limit, 'offset': offset});
+          parameters: {'limit': limit, 'offset': offset});
 
       final users = <User>[];
       for (final row in userResult) {
         final userId = row[0] as String;
-        final rolesResult = await _db.query('''
+        final rolesResult = await _db.execute('''
           SELECT r.* FROM roles r
           JOIN user_roles ur ON r.id = ur.role_id
           WHERE ur.user_id = @user_id
-          ''', substitutionValues: {'user_id': userId});
+          ''', parameters: {'user_id': userId});
 
         final roles =
             rolesResult.map((roleRow) => Role.fromRow(roleRow)).toList();
@@ -270,22 +285,26 @@ class UserService {
   }
 
   Future<User?> findUserById(String id) async {
-    final result = await _db.query('SELECT * FROM users WHERE id = @id',
-        substitutionValues: {'id': id});
+    final result = await _db.execute(
+      Sql.named('SELECT * FROM users WHERE id = @id'),
+      parameters: {'id': id},
+    );
     if (result.isEmpty) return null;
     return User.fromRow(result.first);
   }
 
   Future<User?> findUserByEmail(String email) async {
-    final results = await _db.query('SELECT * FROM users WHERE email = @email',
-        substitutionValues: {'email': email});
+    final results = await _db.execute(
+      Sql.named('SELECT * FROM users WHERE email = @email'),
+      parameters: {'email': email},
+    );
     if (results.isEmpty) return null;
     return User.fromRow(results.first);
   }
 
   Future<List<User>> getAllUsers() async {
     try {
-      final results = await _db.query('SELECT * FROM users');
+      final results = await _db.execute('SELECT * FROM users');
       final users = <User>[];
 
       for (final row in results) {
@@ -307,21 +326,19 @@ class UserService {
       await _db.execute('BEGIN');
 
       // Insert user
-      final result = await _db.query('''
-        INSERT INTO users (
-          id, username, email, password_hash, name, created_at, is_active
-        ) VALUES (
-          @id, @username, @email, @password_hash, @name, @created_at, @is_active
-        ) RETURNING *
-      ''', substitutionValues: {
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'password_hash': user.passwordHash,
-        'name': user.name,
-        'created_at': user.createdAt.toIso8601String(),
-        'is_active': user.isActive,
-      });
+      final result = await _db.execute(
+        Sql.named(
+            'INSERT INTO users (id, username, email, password_hash, name, created_at, is_active) VALUES (@id, @username, @email, @password_hash, @name, @created_at, @is_active) RETURNING *'),
+        parameters: {
+          'id': user.id,
+          'username': user.username,
+          'email': user.email,
+          'password_hash': user.passwordHash,
+          'name': user.name,
+          'created_at': user.createdAt.toIso8601String(),
+          'is_active': user.isActive,
+        },
+      );
 
       if (result.isEmpty) {
         await _db.execute('ROLLBACK');
@@ -331,8 +348,9 @@ class UserService {
       // Insert user roles
       for (final role in user.roles) {
         await _db.execute(
-          'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-          substitutionValues: {
+          Sql.named(
+              'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)'),
+          parameters: {
             'user_id': user.id,
             'role_id': role.id,
           },
@@ -363,7 +381,10 @@ class UserService {
         final query = 'UPDATE users SET $setClause WHERE id = @id RETURNING *';
 
         final values = {...updates, 'id': id};
-        final result = await _db.query(query, substitutionValues: values);
+        final result = await _db.execute(
+          Sql.named(query),
+          parameters: values,
+        );
 
         if (result.isEmpty) {
           await _db.execute('ROLLBACK');
@@ -375,15 +396,16 @@ class UserService {
       if (newRoles != null) {
         // Remove existing roles
         await _db.execute(
-          'DELETE FROM user_roles WHERE user_id = @user_id',
-          substitutionValues: {'user_id': id},
+          Sql.named('DELETE FROM user_roles WHERE user_id = @user_id'),
+          parameters: {'user_id': id},
         );
 
         // Add new roles
         for (final role in newRoles) {
           await _db.execute(
-            'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-            substitutionValues: {
+            Sql.named(
+                'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)'),
+            parameters: {
               'user_id': id,
               'role_id': role.id,
             },
@@ -405,10 +427,10 @@ class UserService {
   Future<bool> deleteUser(String id) async {
     try {
       final result = await _db.execute(
-        'DELETE FROM users WHERE id = @id',
-        substitutionValues: {'id': id},
+        Sql.named('DELETE FROM users WHERE id = @id'),
+        parameters: {'id': id},
       );
-      return result > 0;
+      return result.affectedRows > 0;
     } catch (e) {
       _logger.severe('Error deleting user: $e');
       return false;
@@ -417,11 +439,11 @@ class UserService {
 
   Future<List<Role>> getUserRoles(String userId) async {
     try {
-      final results = await _db.query('''
-        SELECT r.* FROM roles r
-        INNER JOIN user_roles ur ON r.id = ur.role_id
-        WHERE ur.user_id = @userId
-      ''', substitutionValues: {'userId': userId});
+      final results = await _db.execute(
+        Sql.named(
+            'SELECT r.* FROM roles r INNER JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = @userId'),
+        parameters: {'userId': userId},
+      );
 
       return results.map((row) => Role.fromRow(row)).toList();
     } catch (e) {
@@ -433,8 +455,9 @@ class UserService {
   Future<bool> addUserRole(String userId, String roleId) async {
     try {
       await _db.execute(
-        'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)',
-        substitutionValues: {
+        Sql.named(
+            'INSERT INTO user_roles (user_id, role_id) VALUES (@user_id, @role_id)'),
+        parameters: {
           'user_id': userId,
           'role_id': roleId,
         },
@@ -449,13 +472,14 @@ class UserService {
   Future<bool> removeUserRole(String userId, String roleId) async {
     try {
       final result = await _db.execute(
-        'DELETE FROM user_roles WHERE user_id = @user_id AND role_id = @role_id',
-        substitutionValues: {
+        Sql.named(
+            'DELETE FROM user_roles WHERE user_id = @user_id AND role_id = @role_id'),
+        parameters: {
           'user_id': userId,
           'role_id': roleId,
         },
       );
-      return result > 0;
+      return result.affectedRows > 0;
     } catch (e) {
       _logger.severe('Error removing user role: $e');
       return false;
