@@ -11,6 +11,7 @@
     <main class="app-main">
       <router-view />
     </main>
+    <Toast />
   </div>
 </template>
 

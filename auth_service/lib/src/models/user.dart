@@ -37,7 +37,7 @@ class User {
   /// - is_active (bool)
   ///
   /// [roles] is a list of Role objects associated with the user
-  factory User.fromRow(PostgreSQLResultRow row, {List<Role> roles = const []}) {
+  factory User.fromRow(ResultRow row, {List<Role> roles = const []}) {
     return User(
       id: row[0] as String,
       username: row[1] as String,

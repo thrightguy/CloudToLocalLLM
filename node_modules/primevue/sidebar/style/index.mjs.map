@@ -1,0 +1,1 @@
+{"version":3,"file":"index.mjs","sources":["../../../src/sidebar/style/SidebarStyle.js"],"sourcesContent":["import BaseStyle from '@primevue/core/base/style';\n\nexport default BaseStyle.extend({\n    name: 'sidebar'\n});\n"],"names":["BaseStyle","extend","name"],"mappings":";;AAEA,mBAAeA,SAAS,CAACC,MAAM,CAAC;AAC5BC,EAAAA,IAAI,EAAE;AACV,CAAC,CAAC;;;;"}

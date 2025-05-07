@@ -13,7 +13,7 @@ class Role {
     required this.description,
   });
 
-  factory Role.fromRow(PostgreSQLResultRow row) {
+  factory Role.fromRow(ResultRow row) {
     return Role(
       id: row[0] as String,
       name: row[1] as String,
@@ -50,3 +50,6 @@ class Role {
     );
   }
 }
+
+/// Note: For postgres >=3.0.0, use ResultRow instead of PostgreSQLResultRow for query results.
+/// If you see errors about undefined 'PostgreSQLResultRow', update your factory constructors to use ResultRow.
