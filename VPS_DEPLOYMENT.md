@@ -147,6 +147,33 @@ sudo certbot certonly --standalone --non-interactive --agree-tos \
 # See direct_ssl_fix.sh for a complete example
 ```
 
+## Deploying/Updating the Admin UI Portal
+
+The Admin UI (frontend portal) is deployed and updated using a specific script and Docker Compose configuration. This component is typically served via Nginx and handles the user interface for administration.
+
+**Prerequisites:**
+- Ensure SSL certificates for your domain (e.g., `cloudtolocalllm.online`) are correctly set up and available in `/opt/cloudtolocalllm/portal/certbot/conf/` on the VPS. This path is relative to where the `docker-compose.web.yml` is run, which is `/opt/cloudtolocalllm/portal/`. The `docker-compose.web.yml` mounts `./certbot/conf` from this location. This is usually handled by the SSL setup scripts (e.g., `init-ssl.sh` or `deploy_ssl_fix.ps1`).
+- The necessary tools (`git`, `node`, `npm`, `docker`) must be installed on the VPS. The `deploy_admin_ui.sh` script attempts to install them if missing.
+
+**Deployment/Update Steps:**
+1.  SSH into your VPS.
+2.  The `deploy_admin_ui.sh` script is typically located in the root of the cloned repository on the VPS, e.g., `/opt/cloudtolocalllm/portal/deploy_admin_ui.sh`.
+3.  Run the deployment script from the repository root:
+    ```bash
+    # Example: if your project is cloned to /opt/cloudtolocalllm/portal
+    cd /opt/cloudtolocalllm/portal
+    sudo ./deploy_admin_ui.sh
+    ```
+
+This script will:
+- Change to the `/opt/cloudtolocalllm/portal` directory.
+- Pull the latest changes from the `master` branch of the Git repository.
+- Install/update Node.js dependencies for the `admin-ui`.
+- Build the `admin-ui` static assets (into `admin-ui/dist`).
+- Rebuild and restart the `webapp` service using `docker-compose -f docker-compose.web.yml up -d --build`.
+
+The `webapp` service (defined in `docker-compose.web.yml`) uses `Dockerfile.web` which packages the `admin-ui/dist` build artifacts with Nginx. The Nginx configuration (`nginx.conf` copied into the Docker image) handles serving the UI and SSL termination using the certificates mounted from the host.
+
 ## Troubleshooting
 
 If you experience connectivity issues:
