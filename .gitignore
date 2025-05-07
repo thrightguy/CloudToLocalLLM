@@ -119,3 +119,7 @@ temp/
 # Build files
 build/
 dist/
+
+# Secrets
+cloudadmin_key
+secrets/
