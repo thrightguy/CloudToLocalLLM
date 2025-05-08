@@ -1,5 +1,8 @@
 FROM nginx:alpine
 
+# Use the official Flutter image for build
+FROM ghcr.io/cirruslabs/flutter:3.22.0 AS build
+
 # Create necessary directories with correct permissions
 RUN mkdir -p /var/cache/nginx/client_temp \
     /var/cache/nginx/proxy_temp \
