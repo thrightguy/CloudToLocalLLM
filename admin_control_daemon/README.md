@@ -72,4 +72,14 @@ Check logs and container status as needed:
 ```bash
 journalctl -u cloudllm-daemon -f
 docker ps
-``` 
+```
+
+## Troubleshooting: Docker Build Context and nginx.conf
+
+When deploying the webapp service, the Docker build context is set to the project root. The Dockerfile expects `config/nginx/nginx.conf` to exist relative to this root. If you see errors like:
+
+```
+failed to solve: failed to compute cache key: failed to calculate checksum ...: "/nginx.conf": not found
+```
+
+Make sure that `config/nginx/nginx.conf` exists at the correct path (e.g., `/opt/cloudtolocalllm/config/nginx/nginx.conf` on your server). If you move or rename files, update the Dockerfile or build context accordingly. 
