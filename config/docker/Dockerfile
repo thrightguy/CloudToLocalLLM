@@ -26,7 +26,7 @@ FROM nginx:alpine
 RUN mkdir -p /usr/share/nginx/html
 
 # Copy Nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 
 # Remove the default nginx config that causes user directive errors
 RUN rm -f /etc/nginx/conf.d/default.conf
