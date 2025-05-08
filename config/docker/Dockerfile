@@ -1,4 +1,5 @@
-﻿# Build stage: use popular, widely-supported cirrusci/flutter image
+﻿# Updated 2025-05-08: Use stable official Docker images
+# Build stage: use popular, widely-supported cirrusci/flutter image
 FROM cirrusci/flutter:stable AS build
 
 WORKDIR /app
