@@ -105,22 +105,30 @@ SSL_ENDPOINT="http://localhost:$ADMIN_DAEMON_PORT/admin/ssl/issue-renew"
 echo -e "${YELLOW}Attempting to trigger SSL certificate issuance/renewal via temporary root daemon: $SSL_ENDPOINT...${NC}"
 
 CURL_OUTPUT_FILE=$(mktemp)
-if curl -X POST "$SSL_ENDPOINT" --output "$CURL_OUTPUT_FILE" --silent --write-out "%{http_code}"; then
-    HTTP_CODE=$(tail -n1 "$CURL_OUTPUT_FILE")
-    RESPONSE_BODY=$(sed '$ d' "$CURL_OUTPUT_FILE") # Get all but last line (http_code)
-    rm "$CURL_OUTPUT_FILE"
+CURL_STATUS_FILE=$(mktemp)
+# Write HTTP status code to a separate file, and body to another.
+if curl -X POST "$SSL_ENDPOINT" --output "$CURL_OUTPUT_FILE" --silent --write-out "%{http_code}" > "$CURL_STATUS_FILE"; then
+    HTTP_CODE=$(cat "$CURL_STATUS_FILE")
+    RESPONSE_BODY=$(cat "$CURL_OUTPUT_FILE")
+    rm "$CURL_OUTPUT_FILE" "$CURL_STATUS_FILE"
 
     echo -e "${YELLOW}Daemon Response Body:${NC}
 $RESPONSE_BODY"
-    if [[ "$HTTP_CODE" -eq 200 ]] && echo "$RESPONSE_BODY" | grep -q '"status":"Success"'; then
+    # Check if RESPONSE_BODY contains the success marker, as HTTP_CODE might be 200 even for app-level errors if JSON is returned
+    if echo "$RESPONSE_BODY" | grep -q '"status":"Success"'; then # Grep directly on response
         echo -e "${GREEN}SSL issuance/renewal endpoint reported success (HTTP $HTTP_CODE).${NC}"
     else
         echo -e "${RED}SSL issuance/renewal endpoint reported failure or non-success status (HTTP $HTTP_CODE). Check daemon logs and Certbot logs within $PROJECT_DIR/logs/certbot/.${NC}"
         # Even if it failed, proceed to stop daemon and set permissions, then user can debug.
     fi
 else
-    rm "$CURL_OUTPUT_FILE"
-    echo -e "${RED}Failed to call the SSL issuance/renewal endpoint ($SSL_ENDPOINT). Ensure temporary daemon started correctly.${NC}"
+    # Curl command itself failed (e.g., connection refused to daemon)
+    HTTP_CODE="N/A (curl command failed)"
+    RESPONSE_BODY="$(cat "$CURL_OUTPUT_FILE")"
+    rm "$CURL_OUTPUT_FILE" "$CURL_STATUS_FILE"
+    echo -e "${RED}Failed to call the SSL issuance/renewal endpoint ($SSL_ENDPOINT). HTTP Code: $HTTP_CODE. Ensure temporary daemon started correctly.${NC}"
+    echo -e "${YELLOW}Partial output (if any):${NC}
+$RESPONSE_BODY"
 fi
 
 # 10. Stop Temporary Admin Daemon
