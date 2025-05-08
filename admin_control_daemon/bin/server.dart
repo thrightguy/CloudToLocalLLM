@@ -60,23 +60,16 @@ Future<Response> _createUserHandler(Request request) async {
 
 Future<Response> _deployAuthHandler(Request request) async {
   return await _runShellCommand(
-    'docker',
-    ['compose', '-f', 'config/docker/docker-compose.auth.yml', 'up', '-d'],
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose.auth.yml', 'up', '-d'],
     'deploy auth service',
   );
 }
 
 Future<Response> _deployWebHandler(Request request) async {
   return await _runShellCommand(
-    'docker',
-    [
-      'compose',
-      '-f',
-      'config/docker/docker-compose.web.yml',
-      'up',
-      '-d',
-      '--build'
-    ],
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose.web.yml', 'up', '-d', '--build'],
     'deploy web service',
   );
 }
