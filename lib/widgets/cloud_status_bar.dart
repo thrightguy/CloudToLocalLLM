@@ -92,24 +92,18 @@ class CloudStatusBar extends StatelessWidget {
               isActive ? activeIcon : inactiveIcon,
               size: 16,
               color: isActive
-                  ? theme.colorScheme.primary.withValues(
-                      alpha: (0.1 * 255).toDouble(),
-                    )
-                  : theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: (0.1 * 255).toDouble(),
-                    ),
+                  ? theme.colorScheme.primary.withAlpha((0.1 * 255).toInt())
+                  : theme.colorScheme.onSurfaceVariant
+                      .withAlpha((0.1 * 255).toInt()),
             ),
             const SizedBox(width: 4),
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: isActive
-                    ? theme.colorScheme.primary.withValues(
-                        alpha: (0.1 * 255).toDouble(),
-                      )
-                    : theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: (0.1 * 255).toDouble(),
-                      ),
+                    ? theme.colorScheme.primary.withAlpha((0.1 * 255).toInt())
+                    : theme.colorScheme.onSurfaceVariant
+                        .withAlpha((0.1 * 255).toInt()),
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),
             ),
