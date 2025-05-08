@@ -11,7 +11,9 @@ final _router = Router()
   ..get('/admin/health', _healthHandler)
   ..post('/admin/deploy/web', _deployWebHandler)
   ..post('/admin/deploy/fusionauth', _deployFusionAuthHandler)
-  ..post('/admin/git/pull', _gitPullHandler);
+  ..post('/admin/git/pull', _gitPullHandler)
+  ..post('/admin/stop/web', _stopWebHandler)
+  ..post('/admin/stop/fusionauth', _stopFusionAuthHandler);
 
 // === Handlers ===
 
@@ -41,6 +43,22 @@ Future<Response> _gitPullHandler(Request request) async {
     'git',
     ['pull', 'origin', 'master'],
     'git pull',
+  );
+}
+
+Future<Response> _stopWebHandler(Request request) async {
+  return await _runShellCommand(
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose.web.yml', 'down'],
+    'stop web service',
+  );
+}
+
+Future<Response> _stopFusionAuthHandler(Request request) async {
+  return await _runShellCommand(
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose-fusionauth.yml', 'down'],
+    'stop fusionauth service',
   );
 }
 
