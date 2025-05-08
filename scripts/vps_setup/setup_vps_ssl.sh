@@ -5,6 +5,7 @@ set -e
 PROJECT_DIR="/opt/cloudtolocalllm"
 ADMIN_DAEMON_PORT="9001" # Default port for your admin daemon
 NGINX_WEB_COMPOSE_FILE="config/docker/docker-compose.web.yml" # Relative to PROJECT_DIR
+DOMAIN="cloudtolocalllm.online" # Added for verification instructions
 
 # Output colors
 GREEN='\033[0;32m'
@@ -13,6 +14,7 @@ YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script ---${NC}"
+echo -e "${YELLOW}NOTE: This script avoids using 'sudo'. Ensure the user running this script has necessary permissions for git, docker, docker-compose, file operations in $PROJECT_DIR, and that Certbot is pre-installed if needed.${NC}"
 
 # 1. Navigate to Project Directory
 echo -e "${YELLOW}Navigating to project directory: $PROJECT_DIR...${NC}"
@@ -43,9 +45,9 @@ fi
 echo -e "${YELLOW}Checking if Certbot is installed...${NC}"
 if ! command -v certbot &> /dev/null; then
     echo -e "${RED}Certbot could not be found.${NC}"
-    echo -e "${YELLOW}Please install Certbot manually. For Debian/Ubuntu, use:${NC}"
-    echo -e "${YELLOW}  sudo apt update && sudo apt install certbot python3-certbot-nginx${NC}"
-    echo -e "${YELLOW}After installing Certbot, please re-run this script.${NC}"
+    echo -e "${YELLOW}Certbot needs to be installed manually by a user with appropriate privileges (e.g., sudo).${NC}"
+    echo -e "${YELLOW}Example for Debian/Ubuntu: sudo apt update && sudo apt install certbot python3-certbot-nginx${NC}"
+    echo -e "${YELLOW}After ensuring Certbot is installed, please re-run this script.${NC}"
     exit 1
 else
     echo -e "${GREEN}Certbot is installed.${NC}"
@@ -84,11 +86,12 @@ read -p "Press [Enter] to continue AFTER you have restarted the admin daemon..."
 # 7. Ensure Nginx (webapp) is Running
 echo -e "${YELLOW}Attempting to start/restart the Nginx (webapp) service...${NC}"
 echo -e "${YELLOW}This is needed for Certbot's HTTP-01 challenge.${NC}"
+# Ensure the user running this script is part of the 'docker' group or has permissions for docker-compose
 if docker-compose -f "$NGINX_WEB_COMPOSE_FILE" up -d --build; then
     echo -e "${GREEN}Nginx (webapp) service started/updated successfully.${NC}"
 else
     echo -e "${RED}Failed to start/update Nginx (webapp) service using docker-compose.${NC}"
-    echo -e "${YELLOW}Please check Docker and docker-compose setup, and ensure Nginx can start (it might fail if SSL certs are not yet present, but it should serve HTTP for the challenge).${NC}"
+    echo -e "${YELLOW}Please check Docker and docker-compose setup. Ensure the current user has Docker permissions (e.g., is in the 'docker' group).${NC}"
     # Continue, as Certbot might still work if Nginx is running correctly despite errors here.
 fi
 
@@ -114,13 +117,14 @@ echo -e "  1. ${YELLOW}Check for SSL certificate files in:${NC} $PROJECT_DIR/con
 echo -e "     (e.g., fullchain.pem, privkey.pem)"
 echo -e "  2. ${YELLOW}Access your site via HTTPS:${NC} https://$DOMAIN"
 echo -e "     Check if the browser shows a valid SSL certificate."
-echo -e "  3. ${YELLOW}Check Nginx logs if issues persist:${NC} docker logs <your_nginx_container_name>"
+echo -e "  3. ${YELLOW}Check Nginx logs if issues persist:${NC} docker logs <your_nginx_container_name> (Get name from 'docker ps')"
 echo -e ""
 echo -e "${YELLOW}Next Step: Setup Automatic Renewal (Cron Job):${NC}"
-echo -e "  For automatic renewals, set up a cron job on your VPS. Example:"
-echo -e "  1. Open crontab: ${GREEN}sudo crontab -e${NC}"
+echo -e "  For automatic renewals, set up a cron job on your VPS for the appropriate user."
+echo -e "  The user whose crontab is used MUST have permissions to run 'manage_ssl.sh' successfully (including Certbot and Docker commands)."
+echo -e "  1. Open user's crontab: ${GREEN}crontab -e${NC}"
 echo -e "  2. Add this line (runs at 2:30 AM on the 1st of every month):"
 echo -e "     ${GREEN}30 2 1 * * $PROJECT_DIR/scripts/ssl/manage_ssl.sh >> $PROJECT_DIR/logs/certbot/cron_renewal.log 2>&1${NC}"
-echo -e "  Ensure $PROJECT_DIR/logs/certbot/ directory exists and is writable."
+echo -e "  Ensure $PROJECT_DIR/logs/certbot/ directory exists and is writable by the user running the cron job."
 
 echo -e "${GREEN}Setup complete. Please perform verification and set up the cron job.${NC}" 
