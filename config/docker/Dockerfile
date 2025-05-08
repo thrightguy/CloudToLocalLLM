@@ -34,6 +34,9 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 # Copy the built Flutter web app
 COPY --from=build /home/builder/app/build/web /usr/share/nginx/html
 
+# Ensure nginx user/group exists (for Alpine)
+RUN addgroup -S nginx && adduser -S nginx -G nginx
+
 # Expose port 80
 EXPOSE 80
 
