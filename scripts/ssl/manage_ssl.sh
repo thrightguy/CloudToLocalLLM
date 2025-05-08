@@ -1,6 +1,18 @@
 #!/bin/bash
 set -e
 
+# --- IMPORTANT PERMISSIONS NOTE ---
+# This script is intended to be run by a user or process (e.g., your admin_control_daemon)
+# that has the following permissions:
+#   1. Permission to execute 'certbot' (Certbot should be in PATH or called via absolute path).
+#   2. Write permissions to the following directories (relative to PROJECT_DIR defined below):
+#      - config/docker/certbot/conf (for Certbot configurations and certificates)
+#      - config/docker/certbot/www (for ACME challenge files)
+#      - logs/certbot (for Certbot logs)
+#   3. Permissions to execute 'docker-compose' and 'docker exec' commands (e.g., user is in the 'docker' group).
+# This script does NOT use 'sudo' internally.
+# --- END PERMISSIONS NOTE ---
+
 # Configuration
 EMAIL="christopher.maltais@gmail.com"
 DOMAIN="cloudtolocalllm.online"
