@@ -19,9 +19,7 @@ class VersionInfoFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = textColor ??
-        theme.colorScheme.onSurfaceVariant.withValues(
-          alpha: (0.7 * 255).toDouble(),
-        );
+        theme.colorScheme.onSurfaceVariant.withAlpha((0.7 * 255).toInt());
 
     return Container(
       width: double.infinity,

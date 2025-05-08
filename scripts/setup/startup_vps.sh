@@ -19,28 +19,47 @@ fi
 LOGFILE="/opt/cloudtolocalllm/startup.log"
 exec > >(tee -a "$LOGFILE") 2>&1
 
-echo "==== $(date) Starting CloudToLocalLLM stack ===="
+log_status() {
+  echo -e "\033[1;34m[STATUS]\033[0m $1"
+}
+log_error() {
+  echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
+}
 
-cd /opt/cloudtolocalllm
+trap 'log_error "Script failed at line $LINENO. See $LOGFILE for details."' ERR
 
-echo "[1/4] Pulling latest code from GitHub..."
-git pull
+log_status "==== $(date) Starting CloudToLocalLLM stack ===="
 
-echo "[2/4] Stopping admin daemon..."
-systemctl stop cloudllm-daemon || true
+cd /opt/cloudtolocalllm || { log_error "Failed to cd to /opt/cloudtolocalllm"; exit 1; }
 
-echo "[3/4] Rebuilding admin daemon..."
-cd /opt/cloudtolocalllm/admin_control_daemon
-dart compile exe bin/server.dart -o daemon
+log_status "[1/4] Pulling latest code from GitHub..."
+if ! git pull; then
+  log_error "git pull failed"; exit 1;
+fi
 
-cd /opt/cloudtolocalllm
+log_status "[2/4] Stopping admin daemon..."
+if ! systemctl stop cloudllm-daemon; then
+  log_error "Failed to stop admin daemon (may not be running)";
+fi
 
-echo "[4/4] Starting admin daemon..."
-systemctl start cloudllm-daemon
-systemctl status cloudllm-daemon --no-pager
+log_status "[3/4] Rebuilding admin daemon..."
+cd /opt/cloudtolocalllm/admin_control_daemon || { log_error "Failed to cd to admin_control_daemon"; exit 1; }
+if ! dart compile exe bin/server.dart -o daemon; then
+  log_error "Failed to compile admin daemon"; exit 1;
+fi
+
+cd /opt/cloudtolocalllm || { log_error "Failed to cd to /opt/cloudtolocalllm after build"; exit 1; }
+
+log_status "[4/4] Starting admin daemon..."
+if ! systemctl start cloudllm-daemon; then
+  log_error "Failed to start admin daemon"; exit 1;
+fi
+systemctl status cloudllm-daemon --no-pager || log_error "Failed to get admin daemon status"
 
 sleep 3
-echo "Triggering full stack deployment via daemon API..."
-curl -X POST http://localhost:9001/admin/deploy/all || true
+log_status "Triggering full stack deployment via daemon API..."
+if ! curl -X POST http://localhost:9001/admin/deploy/all; then
+  log_error "Failed to trigger full stack deployment via daemon API";
+fi
 
-echo "==== $(date) Startup complete ====" 
+log_status "==== $(date) Startup complete ====" 
