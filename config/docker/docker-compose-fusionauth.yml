@@ -10,10 +10,10 @@ volumes:
 #   fusionauth_net:
 #     driver: bridge
 
-# Define the shared network (assuming it's defined elsewhere, e.g., web.yml)
+# Define the shared network
 networks:
   cloud_default_net:
-    external: true # Connect to the externally defined network
+    driver: bridge # Changed from external: true
 
 services:
   # FusionAuth Application
