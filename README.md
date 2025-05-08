@@ -375,3 +375,41 @@ This project is licensed under the terms of the [LICENSE](LICENSE) file included
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Recent Changes (May 2025)
+
+### Improved VPS Startup Script
+- The `scripts/setup/startup_vps.sh` script now prints a clear status before each step and logs all errors both to the console and the log file (`/opt/cloudtolocalllm/startup.log`).
+- If any step fails, the script prints an error and exits, making troubleshooting much easier.
+- Usage remains:
+  ```bash
+  git pull
+  bash scripts/setup/startup_vps.sh
+  ```
+
+### Flutter Color API Fixes
+- All usages of `Color.withValues` in the Flutter codebase have been replaced with `Color.withAlpha`, which is compatible with Flutter 3.22.0 and Dart 3.4.x.
+- This resolves build errors and ensures correct alpha blending.
+
+### Workflow
+- All changes are committed and pushed to GitHub after each major fix.
+- The codebase is ready for deployment after pulling the latest changes.
+
+---
+
+## Deployment Steps
+1. SSH into your VPS and navigate to the project directory:
+   ```bash
+   cd /opt/cloudtolocalllm
+   git pull
+   bash scripts/setup/startup_vps.sh
+   ```
+2. The script will show detailed status and error messages as it runs.
+3. If you encounter any new errors, copy the output and seek troubleshooting help.
+
+---
+
+## Summary for New Developers
+- The startup script now provides clear, real-time status and error logging.
+- All Flutter color API usage is compatible with the latest stable SDK.
+- The codebase is fully committed and pushed to GitHub, ready for production deployment.
