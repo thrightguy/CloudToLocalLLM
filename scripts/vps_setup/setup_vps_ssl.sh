@@ -8,13 +8,19 @@ NGINX_WEB_COMPOSE_FILE="config/docker/docker-compose.web.yml" # Relative to PROJ
 DOMAIN="cloudtolocalllm.online"
 APP_USER="cloudllm" # The non-root user that will run the application
 
+# Certbot paths - align with manage_ssl.sh and docker-compose.web.yml volume mounts
+CERT_BASE_DIR="$PROJECT_DIR/config/docker/certbot/conf"
+LIVE_CERT_DIR="$CERT_BASE_DIR/live/$DOMAIN"
+FULLCHAIN_PATH="$LIVE_CERT_DIR/fullchain.pem"
+PRIVKEY_PATH="$LIVE_CERT_DIR/privkey.pem"
+
 # Output colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script (v2) ---${NC}"
+echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script (v3) ---${NC}"
 
 # Check if running as root
 if [ "$(id -u)" -ne 0 ]; then
@@ -80,7 +86,11 @@ if [ $COMPILE_EXIT_CODE -ne 0 ]; then
 fi
 echo -e "${GREEN}Admin Daemon compiled successfully.${NC}"
 
-# 7. Ensure Nginx (webapp) is Running for Challenge
+# 7. Ensure Dummy SSL Certificates Exist (so Nginx can start before real certs are obtained)
+echo -e "${YELLOW}Ensuring SSL certificates (dummy or real) are present for Nginx...${NC}"
+ensure_dummy_certificates
+
+# 8. Ensure Nginx (webapp) is Running for Challenge
 echo -e "${YELLOW}Attempting to start/restart the Nginx (webapp) service via docker-compose...${NC}"
 echo -e "${YELLOW}This is needed for Certbot's HTTP-01 challenge.${NC}"
 # Prune docker system to avoid potential 'ContainerConfig' errors
@@ -93,14 +103,14 @@ else
     # Not exiting, as certbot might still work if HTTP is somehow available
 fi
 
-# 8. Start Temporary Admin Daemon as root to get SSL certs
+# 9. Start Temporary Admin Daemon as root to get SSL certs
 echo -e "${YELLOW}Starting temporary Admin Daemon as root to obtain SSL certificates...${NC}"
 "$PROJECT_DIR/$ADMIN_DAEMON_EXECUTABLE" &
 DAEMON_PID=$!
 echo -e "${GREEN}Temporary Admin Daemon started with PID $DAEMON_PID. Waiting a few seconds for it to initialize...${NC}"
 sleep 5 # Wait for daemon to start
 
-# 9. Trigger SSL Certificate Issuance/Renewal via the temporary root daemon
+# 10. Trigger SSL Certificate Issuance/Renewal via the temporary root daemon
 SSL_ENDPOINT="http://localhost:$ADMIN_DAEMON_PORT/admin/ssl/issue-renew"
 echo -e "${YELLOW}Attempting to trigger SSL certificate issuance/renewal via temporary root daemon: $SSL_ENDPOINT...${NC}"
 
@@ -131,13 +141,13 @@ else
 $RESPONSE_BODY"
 fi
 
-# 10. Stop Temporary Admin Daemon
+# 11. Stop Temporary Admin Daemon
 echo -e "${YELLOW}Stopping temporary Admin Daemon (PID $DAEMON_PID)...${NC}"
 kill "$DAEMON_PID" || echo -e "${YELLOW}Failed to kill temporary daemon PID $DAEMON_PID, it might have already exited or failed to start.${NC}"
 wait "$DAEMON_PID" 2>/dev/null # Wait for it to actually stop, suppress errors if already gone
 echo -e "${GREEN}Temporary Admin Daemon stopped.${NC}"
 
-# 11. Set Correct Ownership and Permissions for APP_USER
+# 12. Set Correct Ownership and Permissions for APP_USER
 echo -e "${YELLOW}Setting ownership of Certbot dirs, logs, and admin daemon executable to $APP_USER...${NC}"
 # Ensure $APP_USER user exists (informative, actual creation should be admin's task)
 if ! id "$APP_USER" &>/dev/null; then
@@ -155,7 +165,7 @@ else
     echo -e "${GREEN}Ownership set for $APP_USER.${NC}"
 fi
 
-# 12. Final Instructions & Verification Steps
+# 13. Final Instructions & Verification Steps
 echo -e ""
 echo -e "${GREEN}--- SSL Setup Script Finished ---${NC}"
 echo -e "${YELLOW}Verification Steps:${NC}"
@@ -174,4 +184,36 @@ echo -e "  3. ${YELLOW}Setup Automatic Renewal Cron Job (as $APP_USER):${NC}"
 echo -e "     Log in or 'su - $APP_USER', then run 'crontab -e' and add:"
 echo -e "     ${GREEN}30 2 1 * * $PROJECT_DIR/scripts/ssl/manage_ssl.sh >> $PROJECT_DIR/logs/certbot/cron_renewal.log 2>&1${NC}"
 echo -e ""
-echo -e "${GREEN}Setup complete. Please follow the important next steps to run the application as $APP_USER.${NC}" 
+echo -e "${GREEN}Setup complete. Please follow the important next steps to run the application as $APP_USER.${NC}"
+
+# Function to generate dummy SSL certificates
+ensure_dummy_certificates() {
+    if [ -f "$FULLCHAIN_PATH" ] && [ -f "$PRIVKEY_PATH" ]; then
+        echo -e "${GREEN}Real SSL certificates found. No need for dummy certificates.${NC}"
+        return 0
+    fi
+
+    echo -e "${YELLOW}Real SSL certificates not found. Generating dummy certificates for Nginx to start...${NC}"
+    mkdir -p "$LIVE_CERT_DIR"
+
+    # Check if openssl is installed
+    if ! command -v openssl &> /dev/null; then
+        echo -e "${RED}openssl command not found, cannot generate dummy certificates.${NC}"
+        echo -e "${YELLOW}Please install openssl (e.g., apt install openssl) and re-run.${NC}"
+        exit 1
+    fi
+
+    openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
+        -keyout "$PRIVKEY_PATH" \
+        -out "$FULLCHAIN_PATH" \
+        -subj "/CN=dummy.$DOMAIN"
+
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Dummy SSL certificates generated successfully.${NC}"
+    else
+        echo -e "${RED}Failed to generate dummy SSL certificates.${NC}"
+        exit 1
+    fi
+    # These dummy certs will be owned by root. They will be overwritten by Certbot later.
+    # If manage_ssl.sh (run by root daemon) runs certbot as root, it can overwrite them.
+} 
