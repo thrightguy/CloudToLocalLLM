@@ -3,8 +3,8 @@ version: '3.8'
 services:
   webapp:
     build:
-      context: .
-      dockerfile: Dockerfile.web
+      context: ../../
+      dockerfile: config/docker/Dockerfile.web
     ports:
       - "80:80"
       - "443:443"
