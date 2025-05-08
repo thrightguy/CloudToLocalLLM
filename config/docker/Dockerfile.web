@@ -1,45 +1,34 @@
-FROM nginx:alpine
-
-# Use the official Flutter image for build
+# Build stage: use official Flutter image
 FROM ghcr.io/cirruslabs/flutter:3.22.0 AS build
 
-# Create necessary directories with correct permissions
-RUN mkdir -p /var/cache/nginx/client_temp \
-    /var/cache/nginx/proxy_temp \
-    /var/cache/nginx/fastcgi_temp \
-    /var/cache/nginx/uwsgi_temp \
-    /var/cache/nginx/scgi_temp \
-    /var/run \
-    /etc/letsencrypt \
-    && chown -R nginx:nginx /var/cache/nginx \
-    && chown -R nginx:nginx /var/run \
-    && chown -R nginx:nginx /etc/letsencrypt \
-    && chmod -R 755 /var/cache/nginx \
-    && chmod -R 755 /var/run \
-    && chmod -R 755 /etc/letsencrypt \
-    && touch /var/run/nginx.pid \
-    && chown nginx:nginx /var/run/nginx.pid \
-    && chmod 644 /var/run/nginx.pid
+WORKDIR /home/builder/app
+COPY . .
+RUN flutter config --enable-web \
+    && flutter pub get \
+    && flutter clean \
+    && flutter pub upgrade --major-versions \
+    && flutter build web --release
 
-# Ensure nginx user/group exists (for Alpine)
-# Copy nginx configuration
+# Final stage: custom Alpine with nginx
+FROM alpine:3.19
+
+# Install nginx and any other tools you need
+RUN apk add --no-cache nginx
+
+# Set up directories
+RUN mkdir -p /usr/share/nginx/html
+
+# Copy nginx config
 COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Copy static files for Flutter Web build
-COPY build/web /usr/share/nginx/html
+# Remove default config if present
+RUN rm -f /etc/nginx/conf.d/default.conf || true
 
-# Expose ports
-EXPOSE 80 443
+# Copy built web app from build stage
+COPY --from=build /home/builder/app/build/web /usr/share/nginx/html
 
-# Switch to non-root user
-USER nginx
+# Expose port 80
+EXPOSE 80
 
 # Start nginx
-CMD ["nginx", "-g", "daemon off;"]
-
-# Build Flutter Web app
-RUN flutter config --enable-web && \
-    flutter pub get && \
-    flutter clean && \
-    flutter pub upgrade --major-versions && \
-    flutter build web --release 
+CMD ["nginx", "-g", "daemon off; error_log /dev/stderr info;"] 
