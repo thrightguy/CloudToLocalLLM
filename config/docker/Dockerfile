@@ -1,5 +1,5 @@
 ﻿# Use the official Flutter image
-FROM ghcr.io/cirruslabs/flutter:3.19.3 AS build
+FROM ghcr.io/cirruslabs/flutter:3.22.0 AS build
 
 # Create a non-root user for building
 RUN useradd -ms /bin/bash builder && \
