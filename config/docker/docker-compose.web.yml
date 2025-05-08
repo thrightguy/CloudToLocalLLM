@@ -20,10 +20,16 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - web_net
+      - cloud_default_net
 
 # We've removed the certbot service as we're now using standalone mode
 
+# Define the shared network externally (or define it here if this is the primary compose)
 networks:
-  web_net:
-    driver: bridge 
+  cloud_default_net:
+    driver: bridge # Or make external: true if defined elsewhere
+
+# Remove specific network definition if no other services use it exclusively
+# networks:
+#  web_net:
+#    driver: bridge 

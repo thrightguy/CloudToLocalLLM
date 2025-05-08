@@ -5,9 +5,15 @@ volumes:
   fusionauth_config:
   fusionauth_postgres_data:
 
+# Remove specific network definition 
+# networks:
+#   fusionauth_net:
+#     driver: bridge
+
+# Define the shared network (assuming it's defined elsewhere, e.g., web.yml)
 networks:
-  fusionauth_net:
-    driver: bridge
+  cloud_default_net:
+    external: true # Connect to the externally defined network
 
 services:
   # FusionAuth Application
@@ -27,7 +33,7 @@ services:
       DATABASE_PASSWORD: password                # Password FusionAuth will use to connect
       FUSIONAUTH_APP_MEMORY: 512M                # Adjust as needed
       FUSIONAUTH_APP_RUNTIME_MODE: production    # Use 'development' for testing if needed
-      FUSIONAUTH_APP_URL: http://localhost:9011 # URL used by FusionAuth internally/emails (Adjust if needed for VPS domain)
+      FUSIONAUTH_APP_URL: https://cloudtolocalllm.online # URL used by FusionAuth internally/emails (Adjust if needed for VPS domain)
       SEARCH_ENGINE_TYPE: database             # Use database search initially (no Elasticsearch)
       # Required for initial setup - CHANGE THIS IN PRODUCTION
       FUSIONAUTH_APP_SETUP_PASSWORD: fusionauth_setup_password 
@@ -36,7 +42,7 @@ services:
     volumes:
       - fusionauth_config:/usr/local/fusionauth/config
     networks:
-      - fusionauth_net
+      - cloud_default_net # Use the shared network
 
   # PostgreSQL Database for FusionAuth
   postgres:
@@ -56,4 +62,4 @@ services:
     volumes:
       - fusionauth_postgres_data:/var/lib/postgresql/data
     networks:
-      - fusionauth_net 
+      - cloud_default_net # Use the shared network 
