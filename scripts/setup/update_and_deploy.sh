@@ -1,58 +1,61 @@
 #!/bin/bash
 
-# Unified script for updating code, fixing Android embedding, and deploying services
-# Created to simplify VPS maintenance
+# Configure script behavior
+set -e  # Exit immediately if a command exits with a non-zero status
 
-set -e  # Exit on error
+# Set the timestamp format for logs
+TIMESTAMP=$(date)
 
-echo "[STATUS] ==== $(date) Starting CloudToLocalLLM update and deployment ===="
+echo "[STATUS] ==== $TIMESTAMP Starting CloudToLocalLLM update and deployment ===="
 
-# Log directory
-LOG_DIR="/opt/cloudtolocalllm/logs"
-mkdir -p $LOG_DIR
-
-# 1. Pull latest code
-echo "[STATUS] [1/5] Pulling latest code from GitHub..."
-git checkout -- pubspec.lock  # Discard local changes to avoid conflicts
+# Step 1: Pull latest code
+echo "[STATUS] [1/7] Pulling latest code from GitHub..."
 git pull
 
-# 2. Migrate Android embedding to V2 if needed
-echo "[STATUS] [2/5] Checking Android embedding..."
-if ! grep -q 'flutterEmbedding.*2' android/app/src/main/AndroidManifest.xml 2>/dev/null; then
-  echo "[STATUS] Android embedding V2 not found. Migrating..."
-  # Make the script executable
-  chmod +x scripts/setup/migrate_android_v2.sh
-  # Run migration script
-  ./scripts/setup/migrate_android_v2.sh
-  # Commit changes
-  git add android/
-  git commit -m "Migrate Android embedding to V2 for device_info_plus compatibility"
-  git push
+# Step 2: Check Android embedding
+echo "[STATUS] [2/7] Checking and fixing Android embedding..."
+# Run the comprehensive Android migration script
+if [ -f "./scripts/setup/migrate_android_v2.sh" ]; then
+  bash ./scripts/setup/migrate_android_v2.sh
 else
-  echo "[STATUS] Android embedding V2 already present. Skipping migration."
+  echo "[ERROR] Android migration script not found!"
+  exit 1
 fi
 
-# 3. Stop admin daemon
-echo "[STATUS] [3/5] Stopping admin daemon..."
-systemctl stop cloudllm-daemon.service || echo "No daemon was running"
+# Step 3: Fix Docker build configurations
+echo "[STATUS] [3/7] Fixing Docker build configurations..."
+if [ -f "./scripts/setup/fix_docker_build.sh" ]; then
+  bash ./scripts/setup/fix_docker_build.sh
+else
+  echo "[WARNING] Docker fix script not found, skipping..."
+fi
 
-# 4. Rebuild admin daemon
-echo "[STATUS] [4/5] Rebuilding admin daemon..."
-cd /opt/cloudtolocalllm/admin_control_daemon
+# Step 4: Clean Flutter build
+echo "[STATUS] [4/7] Cleaning Flutter build..."
+flutter clean
+
+# Step 5: Stop admin daemon
+echo "[STATUS] [5/7] Stopping admin daemon..."
+systemctl stop cloudllm-daemon.service || true
+
+# Step 6: Rebuild admin daemon
+echo "[STATUS] [6/7] Rebuilding admin daemon..."
+cd admin_control_daemon
 flutter pub get
-dart compile exe bin/server.dart -o daemon
-cd /opt/cloudtolocalllm
+dart compile exe bin/main.dart -o daemon
+cd ..
+cp -f admin_control_daemon/daemon /opt/cloudtolocalllm/admin_control_daemon/daemon
 
-# 5. Start admin daemon and deploy services
-echo "[STATUS] [5/5] Starting admin daemon and deploying services..."
+# Step 7: Start admin daemon and deploy services
+echo "[STATUS] [7/7] Starting admin daemon and deploying services..."
 systemctl start cloudllm-daemon.service
 
-# Wait for daemon to be ready
-sleep 3
+# Wait for the daemon to fully start
+sleep 5
 
-# Use the correct API endpoint for deploying all services
+# Deploy services
 echo "[STATUS] Triggering deployment of all services..."
-curl -X POST http://localhost:9001/admin/deploy/all
+curl -s -X POST http://localhost:8090/admin/deploy/all -H "Content-Type: application/json" -d '{"force": true}' | jq
 
 echo "[STATUS] ==== $(date) Update and deployment complete ===="
 echo "[STATUS] For detailed logs, use: systemctl status cloudllm-daemon.service" 

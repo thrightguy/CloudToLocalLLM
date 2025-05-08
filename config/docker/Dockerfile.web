@@ -2,6 +2,13 @@
 # Build stage: use popular, widely-supported cirrusci/flutter image
 FROM cirrusci/flutter:stable AS build
 
+# Set Flutter environment variables to suppress root user warnings
+ENV FLUTTER_ROOT=/flutter 
+ENV PUB_CACHE=/flutter/.pub-cache
+ENV FLUTTER_SUPPRESS_ANALYTICS=true
+ENV NO_COLOR=true
+ENV FLUTTER_NO_ROOT_WARNING=true
+
 WORKDIR /app
 # Copy only pubspec files first for better caching
 COPY pubspec.* ./
@@ -9,7 +16,7 @@ RUN flutter pub get
 # Now copy the rest of the source
 COPY . .
 RUN flutter config --enable-web \
-    && flutter build web --release
+    && flutter build web --release --no-tree-shake-icons
 
 # Final stage: use official nginx alpine image
 FROM nginx:alpine
