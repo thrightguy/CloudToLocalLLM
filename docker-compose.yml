@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # Web application service
+  webapp:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.web
+    image: cloudtolocalllm-webapp
+    container_name: cloudtolocalllm-webapp
+    ports:
+      - "8080:80"
+    environment:
+      - FLUTTER_ROOT=/flutter
+      - PUB_CACHE=/flutter/.pub-cache
+      - FLUTTER_SUPPRESS_ANALYTICS=true
+      - NO_COLOR=true
+      - FLUTTER_NO_ROOT_WARNING=true
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
+  # Tunnel service
+  tunnel:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.tunnel
+    image: cloudtolocalllm-tunnel
+    container_name: cloudtolocalllm-tunnel
+    environment:
+      - FLUTTER_ROOT=/flutter
+      - PUB_CACHE=/flutter/.pub-cache
+      - FLUTTER_SUPPRESS_ANALYTICS=true
+      - NO_COLOR=true
+      - FLUTTER_NO_ROOT_WARNING=true
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
+  # FusionAuth service
+  fusionauth:
+    image: fusionauth/fusionauth-app:latest
+    container_name: cloudtolocalllm-fusionauth
+    ports:
+      - "9011:9011"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://db:5432/fusionauth
+      - DATABASE_ROOT_USERNAME=postgres
+      - DATABASE_ROOT_PASSWORD=postgres
+      - DATABASE_USERNAME=fusionauth
+      - DATABASE_PASSWORD=fusionauth
+      - FUSIONAUTH_APP_MEMORY=512M
+      - FUSIONAUTH_APP_RUNTIME_MODE=development
+      - SEARCH_TYPE=database
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
+  # Database service
+  db:
+    image: postgres:13-alpine
+    container_name: cloudtolocalllm-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=fusionauth
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
+  # Admin control daemon
+  admin-daemon:
+    build:
+      context: ./admin_control_daemon
+      dockerfile: Dockerfile
+    image: cloudtolocalllm-admin-daemon
+    container_name: cloudtolocalllm-admin-daemon
+    ports:
+      - "8090:8090"
+    environment:
+      - FLUTTER_ROOT=/flutter
+      - PUB_CACHE=/flutter/.pub-cache
+      - FLUTTER_SUPPRESS_ANALYTICS=true
+      - NO_COLOR=true
+      - FLUTTER_NO_ROOT_WARNING=true
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
+  # Nginx service for routing
+  nginx:
+    image: nginx:alpine
+    container_name: cloudtolocalllm-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    depends_on:
+      - webapp
+      - fusionauth
+      - admin-daemon
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
+  # Certbot for SSL certificates
+  certbot:
+    image: certbot/certbot
+    container_name: cloudtolocalllm-certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - cloudllm-network
+
+networks:
+  cloudllm-network:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local 
