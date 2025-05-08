@@ -2,6 +2,47 @@
 
 This guide provides step-by-step instructions for deploying the CloudToLocalLLM portal to your VPS.
 
+## VPS Deployment Directory Structure
+
+It is recommended to deploy the CloudToLocalLLM application to `/opt/cloudtolocalllm/` on your VPS. After cloning the repository to this location, the structure will mirror the Git repository:
+
+```
+/opt/cloudtolocalllm/
+├── admin_control_daemon/   # New Dart daemon for admin tasks
+├── admin-ui/               # Vue.js Admin UI
+├── assets/                 # Static assets for the Flutter application
+├── auth_service/           # Dart Authentication Service
+├── backend/                # Backend services (includes tunnel_service)
+├── config/                 # Centralized configuration files
+│   ├── docker/             # Docker-compose files and service-specific Dockerfiles (e.g., Dockerfile, Dockerfile.web)
+│   ├── nginx/              # Nginx configurations
+│   └── systemd/            # Systemd service unit files
+├── docs/                   # Project documentation
+├── installers/             # Installer scripts (e.g., Inno Setup for Windows)
+├── lib/                    # Main Flutter application source code
+├── releases/               # (Gitignored) Place for release binaries like .zip, .exe
+├── scripts/                # Various utility and operational scripts
+├── secrets/                # (Gitignored) For local secrets, keys not for version control
+├── static_portal_files/    # Static HTML files for a potential simple Nginx portal root
+├── tools/                  # Developer tools, third-party installers
+├── ... (standard Flutter project directories like android/, ios/, web/, windows/, etc.)
+├── .gitignore
+├── CONTRIBUTING.md
+├── LICENSE                 # (To be created) Project License file
+├── README.md
+├── package.json
+├── pubspec.yaml
+└── ... (other root project files)
+```
+
+**Deployment Location for Key Components:**
+
+*   **Main Application Code:** `/opt/cloudtolocalllm/` (entire cloned repository)
+*   **Compiled `admin_control_daemon`:** `/opt/cloudtolocalllm/admin_control_daemon/bin/admin_daemon`
+*   **Docker Configuration:** Primarily in `/opt/cloudtolocalllm/config/docker/` (e.g., `docker-compose.auth.yml`, `docker-compose.web.yml`, `Dockerfile`).
+*   **Persistent Docker Data:** Docker volumes will be managed by Docker, typically under `/var/lib/docker/volumes/`. For example, `postgres_data` for the auth database.
+*   **SSL Certificates (Certbot):** If using Certbot, certificates are usually in `/etc/letsencrypt/`. The `certbot/` directory in the project root (`/opt/cloudtolocalllm/certbot/` on VPS) is used by `docker-compose.web.yml` which mounts `./certbot/conf:/etc/letsencrypt` and `./certbot/www:/var/www/certbot`. This implies Certbot is run such that its configuration and challenge files are placed here.
+
 ## Prerequisites
 - VPS with Ubuntu/Debian Linux
 - Domain name pointed to your VPS (cloudtolocalllm.online)
