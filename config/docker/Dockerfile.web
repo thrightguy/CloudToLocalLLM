@@ -2,9 +2,12 @@
 FROM ghcr.io/cirruslabs/flutter:3.22.0 AS build
 
 WORKDIR /home/builder/app
+# Copy only pubspec files first for better caching
+COPY pubspec.* ./
+RUN flutter pub get
+# Now copy the rest of the source
 COPY . .
 RUN flutter config --enable-web \
-    && flutter pub get \
     && flutter clean \
     && flutter pub upgrade --major-versions \
     && flutter build web --release
