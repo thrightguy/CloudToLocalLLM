@@ -3,16 +3,14 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
-import 'package:http/http.dart' as http;
 
 const String projectRoot = '/opt/cloudtolocalllm';
 
 // Configure routes
 final _router = Router()
   ..get('/admin/health', _healthHandler)
-  ..post('/admin/create-user', _createUserHandler)
-  ..post('/admin/deploy/auth', _deployAuthHandler)
   ..post('/admin/deploy/web', _deployWebHandler)
+  ..post('/admin/deploy/fusionauth', _deployFusionAuthHandler)
   ..post('/admin/git/pull', _gitPullHandler);
 
 // === Handlers ===
@@ -22,55 +20,19 @@ Response _healthHandler(Request request) {
       headers: {'Content-Type': 'application/json'});
 }
 
-Future<Response> _createUserHandler(Request request) async {
-  try {
-    final requestBody = await request.readAsString();
-    final decodedBody = jsonDecode(requestBody);
-
-    // Validate required fields (simple validation)
-    if (decodedBody['username'] == null ||
-        decodedBody['email'] == null ||
-        decodedBody['password'] == null) {
-      return Response.badRequest(
-        body: '{"error": "Missing username, email, or password"}',
-        headers: {'Content-Type': 'application/json'},
-      );
-    }
-
-    final authServiceUrl =
-        Platform.environment['AUTH_SERVICE_URL'] ?? 'http://localhost:8000';
-
-    final response = await http.post(
-      Uri.parse('$authServiceUrl/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: requestBody, // Forward the original JSON body
-    );
-
-    return Response(response.statusCode, body: response.body, headers: {
-      'Content-Type': response.headers['content-type'] ?? 'application/json'
-    });
-  } catch (e) {
-    print('Error in _createUserHandler: $e');
-    return Response.internalServerError(
-      body: '{"error": "Internal server error processing create-user request"}',
-      headers: {'Content-Type': 'application/json'},
-    );
-  }
-}
-
-Future<Response> _deployAuthHandler(Request request) async {
-  return await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose.auth.yml', 'up', '-d'],
-    'deploy auth service',
-  );
-}
-
 Future<Response> _deployWebHandler(Request request) async {
   return await _runShellCommand(
     'docker-compose',
     ['-f', 'config/docker/docker-compose.web.yml', 'up', '-d', '--build'],
     'deploy web service',
+  );
+}
+
+Future<Response> _deployFusionAuthHandler(Request request) async {
+  return await _runShellCommand(
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose-fusionauth.yml', 'up', '-d'],
+    'deploy fusionauth service',
   );
 }
 
@@ -139,7 +101,5 @@ void main(List<String> args) async {
 
   final server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
   print('Admin Control Daemon listening on port ${server.port}');
-  print(
-      'Auth Service URL target: ${Platform.environment['AUTH_SERVICE_URL'] ?? 'http://localhost:8000'}');
   print('Project Root for Commands: $projectRoot');
 }
