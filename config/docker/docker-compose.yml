@@ -25,13 +25,13 @@ services:
 
   webapp:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: config/docker/Dockerfile
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./build/web:/usr/share/nginx/html:ro
+      - ../../build/web:/usr/share/nginx/html:ro
     networks:
       - llm-network
     restart: unless-stopped
