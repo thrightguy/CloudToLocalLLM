@@ -1,44 +1,34 @@
-﻿# Use the official Flutter image
+﻿# Build stage: use official Flutter image
 FROM ghcr.io/cirruslabs/flutter:3.22.0 AS build
 
-# Create a non-root user for building
-RUN useradd -ms /bin/bash builder && \
-    chown -R builder:builder /sdks/flutter && \
-    git config --system --add safe.directory /sdks/flutter
-
-USER builder
 WORKDIR /home/builder/app
+COPY . .
+RUN flutter config --enable-web \
+    && flutter pub get \
+    && flutter clean \
+    && flutter pub upgrade --major-versions \
+    && flutter build web --release
 
-# Copy files with correct ownership
-COPY --chown=builder:builder . .
+# Final stage: custom Alpine with nginx
+FROM alpine:3.19
 
-# Enable null safety and build the app
-RUN flutter config --enable-web && \
-    flutter pub get && \
-    flutter clean && \
-    flutter pub upgrade --major-versions && \
-    flutter build web --release
+# Install nginx and any other tools you need
+RUN apk add --no-cache nginx
 
-# Use a lightweight server image to serve the web app
-FROM nginx:alpine
-
-# Create necessary directories
+# Set up directories
 RUN mkdir -p /usr/share/nginx/html
 
-# Copy Nginx configuration
+# Copy nginx config
 COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 
-# Remove the default nginx config that causes user directive errors
-RUN rm -f /etc/nginx/conf.d/default.conf
+# Remove default config if present
+RUN rm -f /etc/nginx/conf.d/default.conf || true
 
-# Copy the built Flutter web app
+# Copy built web app from build stage
 COPY --from=build /home/builder/app/build/web /usr/share/nginx/html
-
-# Ensure nginx user/group exists (for Alpine)
-RUN addgroup -S nginx && adduser -S nginx -G nginx
 
 # Expose port 80
 EXPOSE 80
 
-# Start Nginx
+# Start nginx
 CMD ["nginx", "-g", "daemon off; error_log /dev/stderr info;"]
