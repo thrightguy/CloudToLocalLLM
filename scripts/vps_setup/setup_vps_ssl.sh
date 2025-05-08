@@ -20,7 +20,39 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script (v3) ---${NC}"
+# Function to generate dummy SSL certificates
+ensure_dummy_certificates() {
+    if [ -f "$FULLCHAIN_PATH" ] && [ -f "$PRIVKEY_PATH" ]; then
+        echo -e "${GREEN}Real SSL certificates found. No need for dummy certificates.${NC}"
+        return 0
+    fi
+
+    echo -e "${YELLOW}Real SSL certificates not found. Generating dummy certificates for Nginx to start...${NC}"
+    mkdir -p "$LIVE_CERT_DIR"
+
+    # Check if openssl is installed
+    if ! command -v openssl &> /dev/null; then
+        echo -e "${RED}openssl command not found, cannot generate dummy certificates.${NC}"
+        echo -e "${YELLOW}Please install openssl (e.g., apt install openssl) and re-run.${NC}"
+        exit 1
+    fi
+
+    openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
+        -keyout "$PRIVKEY_PATH" \
+        -out "$FULLCHAIN_PATH" \
+        -subj "/CN=dummy.$DOMAIN"
+
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Dummy SSL certificates generated successfully.${NC}"
+    else
+        echo -e "${RED}Failed to generate dummy SSL certificates.${NC}"
+        exit 1
+    fi
+    # These dummy certs will be owned by root. They will be overwritten by Certbot later.
+    # If manage_ssl.sh (run by root daemon) runs certbot as root, it can overwrite them.
+}
+
+echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script (v4) ---${NC}"
 
 # Check if running as root
 if [ "$(id -u)" -ne 0 ]; then
@@ -184,36 +216,4 @@ echo -e "  3. ${YELLOW}Setup Automatic Renewal Cron Job (as $APP_USER):${NC}"
 echo -e "     Log in or 'su - $APP_USER', then run 'crontab -e' and add:"
 echo -e "     ${GREEN}30 2 1 * * $PROJECT_DIR/scripts/ssl/manage_ssl.sh >> $PROJECT_DIR/logs/certbot/cron_renewal.log 2>&1${NC}"
 echo -e ""
-echo -e "${GREEN}Setup complete. Please follow the important next steps to run the application as $APP_USER.${NC}"
-
-# Function to generate dummy SSL certificates
-ensure_dummy_certificates() {
-    if [ -f "$FULLCHAIN_PATH" ] && [ -f "$PRIVKEY_PATH" ]; then
-        echo -e "${GREEN}Real SSL certificates found. No need for dummy certificates.${NC}"
-        return 0
-    fi
-
-    echo -e "${YELLOW}Real SSL certificates not found. Generating dummy certificates for Nginx to start...${NC}"
-    mkdir -p "$LIVE_CERT_DIR"
-
-    # Check if openssl is installed
-    if ! command -v openssl &> /dev/null; then
-        echo -e "${RED}openssl command not found, cannot generate dummy certificates.${NC}"
-        echo -e "${YELLOW}Please install openssl (e.g., apt install openssl) and re-run.${NC}"
-        exit 1
-    fi
-
-    openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
-        -keyout "$PRIVKEY_PATH" \
-        -out "$FULLCHAIN_PATH" \
-        -subj "/CN=dummy.$DOMAIN"
-
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Dummy SSL certificates generated successfully.${NC}"
-    else
-        echo -e "${RED}Failed to generate dummy SSL certificates.${NC}"
-        exit 1
-    fi
-    # These dummy certs will be owned by root. They will be overwritten by Certbot later.
-    # If manage_ssl.sh (run by root daemon) runs certbot as root, it can overwrite them.
-} 
+echo -e "${GREEN}Setup complete. Please follow the important next steps to run the application as $APP_USER.${NC}" 
