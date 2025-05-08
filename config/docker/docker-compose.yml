@@ -1,19 +1,21 @@
 ﻿version: '3.8'
 
 services:
-  tunnel:
-    build:
-      context: .
-      dockerfile: Dockerfile.tunnel
-    networks:
-      - llm-network
+# The tunnel service is commented out because there is no package.json in the build context.
+# Add a valid Node.js project with package.json to enable this service.
+# tunnel:
+#   build:
+#     context: .
+#     dockerfile: Dockerfile.tunnel
+#   networks:
+#     - llm-network
 
   cloud:
     image: node:20
     working_dir: /app
-    depends_on:
-      tunnel:
-        condition: service_started
+    # depends_on:
+    #   tunnel:
+    #     condition: service_started
     networks:
       - llm-network
     volumes:
