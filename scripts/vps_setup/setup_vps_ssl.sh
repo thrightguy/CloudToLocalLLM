@@ -3,9 +3,10 @@ set -e
 
 # Configuration
 PROJECT_DIR="/opt/cloudtolocalllm"
-ADMIN_DAEMON_PORT="9001" # Default port for your admin daemon
+ADMIN_DAEMON_PORT="9001"
 NGINX_WEB_COMPOSE_FILE="config/docker/docker-compose.web.yml" # Relative to PROJECT_DIR
-DOMAIN="cloudtolocalllm.online" # Added for verification instructions
+DOMAIN="cloudtolocalllm.online"
+APP_USER="cloudllm" # The non-root user that will run the application
 
 # Output colors
 GREEN='\033[0;32m'
@@ -13,118 +14,156 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script ---${NC}"
-echo -e "${YELLOW}NOTE: This script avoids using 'sudo'. Ensure the user running this script has necessary permissions for git, docker, docker-compose, file operations in $PROJECT_DIR, and that Certbot is pre-installed if needed.${NC}"
+echo -e "${GREEN}--- VPS SSL Setup & Initial Cert Issuance Script (v2) ---${NC}"
+
+# Check if running as root
+if [ "$(id -u)" -ne 0 ]; then
+  echo -e "${RED}This script is designed to be run as root to correctly set up initial certificates and permissions for the $APP_USER user.${NC}"
+  echo -e "${RED}Please run with root privileges (e.g., sudo ./scripts/vps_setup/setup_vps_ssl.sh).${NC}"
+  exit 1
+fi
+echo -e "${GREEN}Running as root. Proceeding with setup...${NC}"
 
 # 1. Navigate to Project Directory
 echo -e "${YELLOW}Navigating to project directory: $PROJECT_DIR...${NC}"
-cd "$PROJECT_DIR" || { echo -e "${RED}Failed to navigate to $PROJECT_DIR. Please ensure it exists and the script is run from a location with access.${NC}"; exit 1; }
+cd "$PROJECT_DIR" || { echo -e "${RED}Failed to navigate to $PROJECT_DIR.${NC}"; exit 1; }
 echo -e "${GREEN}Successfully changed to $PROJECT_DIR.${NC}"
 
-# 2. Pull Latest Changes
+# 2. Stop any existing Admin Daemon instance
+echo -e "${YELLOW}Attempting to stop any running Admin Daemon instances...${NC}"
+pkill -f admin_daemon || echo -e "${YELLOW}No admin_daemon process found to stop, or failed to stop (which is okay if not running).${NC}"
+sleep 2 # Give a moment for the process to terminate
+
+# 3. Pull Latest Changes
 echo -e "${YELLOW}Pulling latest changes from Git (origin master)...${NC}"
+# Ensure safe directory for root if not already set
+git config --global --add safe.directory "$PROJECT_DIR" || echo -e "${YELLOW}Failed to set safe.directory, or already set. Continuing...${NC}"
 if git pull origin master; then
     echo -e "${GREEN}Git pull successful.${NC}"
 else
-    echo -e "${RED}Git pull failed. Please check your Git configuration and connectivity.${NC}"
-    # Decide if to exit or continue. For now, continue as other steps might still be useful.
+    echo -e "${RED}Git pull failed. Please check Git configuration/connectivity and repository ownership/permissions.${NC}"
+    exit 1
 fi
 
-# 3. Make SSL Management Script Executable
+# 4. Make SSL Management Script Executable
 SSL_SCRIPT_PATH="scripts/ssl/manage_ssl.sh"
 echo -e "${YELLOW}Making SSL management script ($SSL_SCRIPT_PATH) executable...${NC}"
-if [ -f "$SSL_SCRIPT_PATH" ]; then
-    chmod +x "$SSL_SCRIPT_PATH"
-    echo -e "${GREEN}$SSL_SCRIPT_PATH is now executable.${NC}"
-else
-    echo -e "${RED}Error: $SSL_SCRIPT_PATH not found. Git pull might have failed or the script is not at the expected location.${NC}"
-    exit 1
-fi
+chmod +x "$SSL_SCRIPT_PATH"
+echo -e "${GREEN}$SSL_SCRIPT_PATH is now executable.${NC}"
 
-# 4. Check for Certbot
+# 5. Check for Certbot (and install if missing - root can do this)
 echo -e "${YELLOW}Checking if Certbot is installed...${NC}"
 if ! command -v certbot &> /dev/null; then
-    echo -e "${RED}Certbot could not be found.${NC}"
-    echo -e "${YELLOW}Certbot needs to be installed manually by a user with appropriate privileges (e.g., sudo).${NC}"
-    echo -e "${YELLOW}Example for Debian/Ubuntu: sudo apt update && sudo apt install certbot python3-certbot-nginx${NC}"
-    echo -e "${YELLOW}After ensuring Certbot is installed, please re-run this script.${NC}"
-    exit 1
+    echo -e "${YELLOW}Certbot not found. Attempting to install...${NC}"
+    apt update && apt install certbot python3-certbot-nginx -y
+    if ! command -v certbot &> /dev/null; then
+        echo -e "${RED}Certbot installation failed. Please install it manually and re-run.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Certbot installed successfully.${NC}"
 else
     echo -e "${GREEN}Certbot is installed.${NC}"
 fi
 
-# 5. Recompile Admin Daemon
+# 6. Recompile Admin Daemon (as root, will be chowned later)
 ADMIN_DAEMON_DIR="admin_control_daemon"
 ADMIN_DAEMON_SOURCE="bin/server.dart"
-ADMIN_DAEMON_OUTPUT="bin/admin_daemon"
-echo -e "${YELLOW}Recompiling Admin Daemon...${NC}"
-if [ -d "$ADMIN_DAEMON_DIR" ] && [ -f "$ADMIN_DAEMON_DIR/$ADMIN_DAEMON_SOURCE" ]; then
-    cd "$ADMIN_DAEMON_DIR"
-    if dart compile exe "$ADMIN_DAEMON_SOURCE" -o "$ADMIN_DAEMON_OUTPUT"; then
-        echo -e "${GREEN}Admin Daemon compiled successfully ($ADMIN_DAEMON_OUTPUT).${NC}"
-    else
-        echo -e "${RED}Admin Daemon compilation failed. Please check Dart SDK and compilation errors.${NC}"
-        cd "$PROJECT_DIR" # Go back to project root
-        exit 1
-    fi
-    cd "$PROJECT_DIR" # Go back to project root
-else
-    echo -e "${RED}Admin Daemon directory or source file not found. Cannot compile.${NC}"
+ADMIN_DAEMON_EXECUTABLE="$ADMIN_DAEMON_DIR/bin/admin_daemon"
+echo -e "${YELLOW}Recompiling Admin Daemon (output: $ADMIN_DAEMON_EXECUTABLE)...${NC}"
+cd "$ADMIN_DAEMON_DIR"
+dart compile exe "$ADMIN_DAEMON_SOURCE" -o "bin/admin_daemon"
+COMPILE_EXIT_CODE=$?
+cd "$PROJECT_DIR" # Go back to project root
+if [ $COMPILE_EXIT_CODE -ne 0 ]; then
+    echo -e "${RED}Admin Daemon compilation failed. Please check Dart SDK and compilation errors.${NC}"
     exit 1
 fi
+echo -e "${GREEN}Admin Daemon compiled successfully.${NC}"
 
-# 6. Instruct to Restart Admin Daemon
-echo -e ""
-echo -e "${YELLOW}--------------------------------------------------------------------${NC}"
-echo -e "${YELLOW}IMPORTANT: You need to restart the Admin Control Daemon MANUALLY.${NC}"
-echo -e "${YELLOW}This script cannot do it safely as it may require 'sudo' and knowledge of your service setup (e.g., systemd service name).${NC}"
-echo -e "${YELLOW}Example for systemd: sudo systemctl restart your_admin_daemon_service_name${NC}"
-echo -e "${YELLOW}Please restart the daemon in another terminal before continuing with this script, or this script will try to contact it and may fail.${NC}"
-echo -e "${YELLOW}--------------------------------------------------------------------${NC}"
-read -p "Press [Enter] to continue AFTER you have restarted the admin daemon..."
-
-# 7. Ensure Nginx (webapp) is Running
-echo -e "${YELLOW}Attempting to start/restart the Nginx (webapp) service...${NC}"
+# 7. Ensure Nginx (webapp) is Running for Challenge
+echo -e "${YELLOW}Attempting to start/restart the Nginx (webapp) service via docker-compose...${NC}"
 echo -e "${YELLOW}This is needed for Certbot's HTTP-01 challenge.${NC}"
-# Ensure the user running this script is part of the 'docker' group or has permissions for docker-compose
+# Prune docker system to avoid potential 'ContainerConfig' errors
+echo -e "${YELLOW}Running docker system prune to prevent potential compose errors...${NC}"
+docker system prune -af # -a for all unused, -f for no prompt
 if docker-compose -f "$NGINX_WEB_COMPOSE_FILE" up -d --build; then
     echo -e "${GREEN}Nginx (webapp) service started/updated successfully.${NC}"
 else
-    echo -e "${RED}Failed to start/update Nginx (webapp) service using docker-compose.${NC}"
-    echo -e "${YELLOW}Please check Docker and docker-compose setup. Ensure the current user has Docker permissions (e.g., is in the 'docker' group).${NC}"
-    # Continue, as Certbot might still work if Nginx is running correctly despite errors here.
+    echo -e "${RED}Failed to start/update Nginx (webapp) service. Certbot might fail if Nginx isn't serving HTTP correctly.${NC}"
+    # Not exiting, as certbot might still work if HTTP is somehow available
 fi
 
-# 8. Trigger Initial SSL Certificate Issuance/Renewal
+# 8. Start Temporary Admin Daemon as root to get SSL certs
+echo -e "${YELLOW}Starting temporary Admin Daemon as root to obtain SSL certificates...${NC}"
+"$PROJECT_DIR/$ADMIN_DAEMON_EXECUTABLE" &
+DAEMON_PID=$!
+echo -e "${GREEN}Temporary Admin Daemon started with PID $DAEMON_PID. Waiting a few seconds for it to initialize...${NC}"
+sleep 5 # Wait for daemon to start
+
+# 9. Trigger SSL Certificate Issuance/Renewal via the temporary root daemon
 SSL_ENDPOINT="http://localhost:$ADMIN_DAEMON_PORT/admin/ssl/issue-renew"
-echo -e "${YELLOW}Attempting to trigger SSL certificate issuance/renewal via Admin Daemon endpoint: $SSL_ENDPOINT...${NC}"
-echo -e "${YELLOW}This may take a few moments.${NC}"
+echo -e "${YELLOW}Attempting to trigger SSL certificate issuance/renewal via temporary root daemon: $SSL_ENDPOINT...${NC}"
 
-if curl -X POST "$SSL_ENDPOINT"; then
-    echo -e "${GREEN}Successfully called the SSL issuance/renewal endpoint.${NC}"
-    echo -e "${YELLOW}Review the output from the endpoint above. It should indicate if Certbot was successful and if Nginx was reloaded.${NC}"
+CURL_OUTPUT_FILE=$(mktemp)
+if curl -X POST "$SSL_ENDPOINT" --output "$CURL_OUTPUT_FILE" --silent --write-out "%{http_code}"; then
+    HTTP_CODE=$(tail -n1 "$CURL_OUTPUT_FILE")
+    RESPONSE_BODY=$(sed '$ d' "$CURL_OUTPUT_FILE") # Get all but last line (http_code)
+    rm "$CURL_OUTPUT_FILE"
+
+    echo -e "${YELLOW}Daemon Response Body:${NC}
+$RESPONSE_BODY"
+    if [[ "$HTTP_CODE" -eq 200 ]] && echo "$RESPONSE_BODY" | grep -q '"status":"Success"'; then
+        echo -e "${GREEN}SSL issuance/renewal endpoint reported success (HTTP $HTTP_CODE).${NC}"
+    else
+        echo -e "${RED}SSL issuance/renewal endpoint reported failure or non-success status (HTTP $HTTP_CODE). Check daemon logs and Certbot logs within $PROJECT_DIR/logs/certbot/.${NC}"
+        # Even if it failed, proceed to stop daemon and set permissions, then user can debug.
+    fi
 else
-    echo -e "${RED}Failed to call the SSL issuance/renewal endpoint ($SSL_ENDPOINT).${NC}"
-    echo -e "${YELLOW}Ensure the Admin Daemon is running, accessible, and was restarted with the latest code.${NC}"
-    echo -e "${YELLOW}You might need to run 'scripts/ssl/manage_ssl.sh' manually if this continues to fail.${NC}"
+    rm "$CURL_OUTPUT_FILE"
+    echo -e "${RED}Failed to call the SSL issuance/renewal endpoint ($SSL_ENDPOINT). Ensure temporary daemon started correctly.${NC}"
 fi
 
-# 9. Final Instructions & Verification Steps
+# 10. Stop Temporary Admin Daemon
+echo -e "${YELLOW}Stopping temporary Admin Daemon (PID $DAEMON_PID)...${NC}"
+kill "$DAEMON_PID" || echo -e "${YELLOW}Failed to kill temporary daemon PID $DAEMON_PID, it might have already exited or failed to start.${NC}"
+wait "$DAEMON_PID" 2>/dev/null # Wait for it to actually stop, suppress errors if already gone
+echo -e "${GREEN}Temporary Admin Daemon stopped.${NC}"
+
+# 11. Set Correct Ownership and Permissions for APP_USER
+echo -e "${YELLOW}Setting ownership of Certbot dirs, logs, and admin daemon executable to $APP_USER...${NC}"
+# Ensure $APP_USER user exists (informative, actual creation should be admin's task)
+if ! id "$APP_USER" &>/dev/null; then
+    echo -e "${YELLOW}Warning: User $APP_USER does not exist. Please create it. Skipping chown for this user.${NC}"
+else
+    echo -e "${YELLOW}Ensuring certbot and log directories exist and are owned by $APP_USER...${NC}"
+    mkdir -p "$PROJECT_DIR/config/docker/certbot/conf"
+    mkdir -p "$PROJECT_DIR/config/docker/certbot/www"
+    mkdir -p "$PROJECT_DIR/logs/certbot"
+
+    chown -R "$APP_USER:$APP_USER" "$PROJECT_DIR/config/docker/certbot"
+    chown -R "$APP_USER:$APP_USER" "$PROJECT_DIR/logs/certbot"
+    chown "$APP_USER:$APP_USER" "$PROJECT_DIR/$ADMIN_DAEMON_EXECUTABLE"
+    chmod u+x "$PROJECT_DIR/$ADMIN_DAEMON_EXECUTABLE" # Ensure app_user can execute
+    echo -e "${GREEN}Ownership set for $APP_USER.${NC}"
+fi
+
+# 12. Final Instructions & Verification Steps
 echo -e ""
 echo -e "${GREEN}--- SSL Setup Script Finished ---${NC}"
 echo -e "${YELLOW}Verification Steps:${NC}"
 echo -e "  1. ${YELLOW}Check for SSL certificate files in:${NC} $PROJECT_DIR/config/docker/certbot/conf/live/$DOMAIN/"
-echo -e "     (e.g., fullchain.pem, privkey.pem)"
 echo -e "  2. ${YELLOW}Access your site via HTTPS:${NC} https://$DOMAIN"
-echo -e "     Check if the browser shows a valid SSL certificate."
-echo -e "  3. ${YELLOW}Check Nginx logs if issues persist:${NC} docker logs <your_nginx_container_name> (Get name from 'docker ps')"
+echo -e "     (You may need to deploy Nginx again: curl -X POST http://localhost:$ADMIN_DAEMON_PORT/admin/deploy/web - if daemon is running as $APP_USER)"
+echo -e "  3. ${YELLOW}Check Nginx logs:${NC} docker logs <your_nginx_container_name> (Get name from 'docker ps')"
 echo -e ""
-echo -e "${YELLOW}Next Step: Setup Automatic Renewal (Cron Job):${NC}"
-echo -e "  For automatic renewals, set up a cron job on your VPS for the appropriate user."
-echo -e "  The user whose crontab is used MUST have permissions to run 'manage_ssl.sh' successfully (including Certbot and Docker commands)."
-echo -e "  1. Open user's crontab: ${GREEN}crontab -e${NC}"
-echo -e "  2. Add this line (runs at 2:30 AM on the 1st of every month):"
+echo -e "${YELLOW}IMPORTANT NEXT STEPS:${NC}"
+echo -e "  1. ${YELLOW}Start the Admin Control Daemon AS THE '$APP_USER' USER.${NC}"
+echo -e "     Example: su - $APP_USER -c "cd $PROJECT_DIR/$ADMIN_DAEMON_DIR && ./bin/admin_daemon &""
+echo -e "     Or configure your systemd service to run as User=$APP_USER and Group=$APP_USER, then: systemctl restart your_admin_daemon.service"
+echo -e "  2. ${YELLOW}Once the daemon is running as $APP_USER, ensure Nginx is deployed:${NC}"
+echo -e "     (Run as $APP_USER or call from a system that can reach it): curl -X POST http://localhost:$ADMIN_DAEMON_PORT/admin/deploy/web"
+echo -e "  3. ${YELLOW}Setup Automatic Renewal Cron Job (as $APP_USER):${NC}"
+echo -e "     Log in or 'su - $APP_USER', then run 'crontab -e' and add:"
 echo -e "     ${GREEN}30 2 1 * * $PROJECT_DIR/scripts/ssl/manage_ssl.sh >> $PROJECT_DIR/logs/certbot/cron_renewal.log 2>&1${NC}"
-echo -e "  Ensure $PROJECT_DIR/logs/certbot/ directory exists and is writable by the user running the cron job."
-
-echo -e "${GREEN}Setup complete. Please perform verification and set up the cron job.${NC}" 
+echo -e ""
+echo -e "${GREEN}Setup complete. Please follow the important next steps to run the application as $APP_USER.${NC}" 
