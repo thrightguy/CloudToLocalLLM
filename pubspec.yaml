@@ -24,7 +24,7 @@ dependencies:
   logging: ^1.2.0
   js: ^0.6.7
   crypto: ^3.0.2
-  device_info_plus: ^11.4.0
+  device_info_plus: ^10.0.0
   package_info_plus: ^8.3.0
   flutter_secure_storage: ^9.2.4
   args: ^2.4.2
@@ -33,9 +33,6 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-
-dependency_overrides:
-  meta: ^1.16.0
 
 flutter:
   uses-material-design: true
