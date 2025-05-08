@@ -71,7 +71,7 @@ class ModelSelector extends StatelessWidget {
               value: model.id,
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.check,
                     color: Colors.transparent,
                     size: 16,
