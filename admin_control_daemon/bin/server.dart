@@ -13,7 +13,8 @@ final _router = Router()
   ..post('/admin/deploy/fusionauth', _deployFusionAuthHandler)
   ..post('/admin/git/pull', _gitPullHandler)
   ..post('/admin/stop/web', _stopWebHandler)
-  ..post('/admin/stop/fusionauth', _stopFusionAuthHandler);
+  ..post('/admin/stop/fusionauth', _stopFusionAuthHandler)
+  ..post('/admin/ssl/issue-renew', _issueRenewSslHandler);
 
 // === Handlers ===
 
@@ -59,6 +60,16 @@ Future<Response> _stopFusionAuthHandler(Request request) async {
     'docker-compose',
     ['-f', 'config/docker/docker-compose-fusionauth.yml', 'down'],
     'stop fusionauth service',
+  );
+}
+
+// New handler for SSL issuance/renewal
+Future<Response> _issueRenewSslHandler(Request request) async {
+  // Ensure the script is executable: chmod +x scripts/ssl/manage_ssl.sh on the VPS
+  return await _runShellCommand(
+    './scripts/ssl/manage_ssl.sh', // Assumes execution from projectRoot
+    [],
+    'issue or renew SSL certificate',
   );
 }
 
