@@ -1,5 +1,4 @@
 # Basic Docker Compose for FusionAuth App and PostgreSQL Database
-version: '3.8'
 
 volumes:
   fusionauth_config:

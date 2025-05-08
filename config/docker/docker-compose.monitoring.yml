@@ -1,4 +1,5 @@
-version: '3'
+# The docker-compose configuration for the CloudToLocalLLM monitoring services
+
 services:
   webapp:
     build:
