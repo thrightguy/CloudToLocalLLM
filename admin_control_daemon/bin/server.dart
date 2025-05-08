@@ -14,7 +14,8 @@ final _router = Router()
   ..post('/admin/git/pull', _gitPullHandler)
   ..post('/admin/stop/web', _stopWebHandler)
   ..post('/admin/stop/fusionauth', _stopFusionAuthHandler)
-  ..post('/admin/ssl/issue-renew', _issueRenewSslHandler);
+  ..post('/admin/ssl/issue-renew', _issueRenewSslHandler)
+  ..post('/admin/deploy/all', _deployAllHandler);
 
 // === Handlers ===
 
@@ -71,6 +72,58 @@ Future<Response> _issueRenewSslHandler(Request request) async {
     [],
     'issue or renew SSL certificate',
   );
+}
+
+Future<Response> _deployAllHandler(Request request) async {
+  // Deploy all major services in order
+  final results = <String, dynamic>{};
+
+  // 1. FusionAuth and DB
+  results['fusionauth'] = await _runShellCommand(
+    'docker-compose',
+    [
+      '-f',
+      'config/docker/docker-compose-fusionauth.yml',
+      'up',
+      '-d',
+      '--build'
+    ],
+    'deploy fusionauth service',
+  );
+
+  // 2. Webapp
+  results['webapp'] = await _runShellCommand(
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose.web.yml', 'up', '-d', '--build'],
+    'deploy web service',
+  );
+
+  // 3. Monitoring (if present)
+  results['monitoring'] = await _runShellCommand(
+    'docker-compose',
+    [
+      '-f',
+      'config/docker/docker-compose.monitoring.yml',
+      'up',
+      '-d',
+      '--build'
+    ],
+    'deploy monitoring service',
+  );
+
+  // 4. Tunnel (if present)
+  results['tunnel'] = await _runShellCommand(
+    'docker-compose',
+    ['-f', 'config/docker/docker-compose.yml', 'up', '-d', '--build'],
+    'deploy tunnel/cloud service',
+  );
+
+  return Response.ok(
+      jsonEncode({
+        'status': 'All deploy commands issued',
+        'results': results,
+      }),
+      headers: {'Content-Type': 'application/json'});
 }
 
 // === Helper to run shell commands ===
