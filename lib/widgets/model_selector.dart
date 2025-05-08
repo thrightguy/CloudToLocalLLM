@@ -71,25 +71,26 @@ class ModelSelector extends StatelessWidget {
               value: model.id,
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.check,
                     color: Colors.transparent,
                     size: 16,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(model.name),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: _getProviderColor(model.provider),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       model.provider,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
                       ),
