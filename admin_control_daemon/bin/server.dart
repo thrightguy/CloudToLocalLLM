@@ -91,8 +91,18 @@ Future<Response> _deployAllHandler(Request request) async {
   // Deploy all major services in order
   final results = <String, dynamic>{};
 
+  // Helper to extract serializable body from Response
+  Future<dynamic> extractBody(Response resp) async {
+    final body = await resp.readAsString();
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return body;
+    }
+  }
+
   // 1. FusionAuth and DB
-  results['fusionauth'] = await _runShellCommand(
+  final fusionauthResp = await _runShellCommand(
     'docker',
     [
       'compose',
@@ -104,9 +114,10 @@ Future<Response> _deployAllHandler(Request request) async {
     ],
     'deploy fusionauth service',
   );
+  results['fusionauth'] = await extractBody(fusionauthResp);
 
   // 2. Webapp
-  results['webapp'] = await _runShellCommand(
+  final webappResp = await _runShellCommand(
     'docker',
     [
       'compose',
@@ -118,9 +129,10 @@ Future<Response> _deployAllHandler(Request request) async {
     ],
     'deploy web service',
   );
+  results['webapp'] = await extractBody(webappResp);
 
   // 3. Monitoring (if present)
-  results['monitoring'] = await _runShellCommand(
+  final monitoringResp = await _runShellCommand(
     'docker',
     [
       'compose',
@@ -132,9 +144,10 @@ Future<Response> _deployAllHandler(Request request) async {
     ],
     'deploy monitoring service',
   );
+  results['monitoring'] = await extractBody(monitoringResp);
 
   // 4. Tunnel (if present)
-  results['tunnel'] = await _runShellCommand(
+  final tunnelResp = await _runShellCommand(
     'docker',
     [
       'compose',
@@ -146,6 +159,7 @@ Future<Response> _deployAllHandler(Request request) async {
     ],
     'deploy tunnel/cloud service',
   );
+  results['tunnel'] = await extractBody(tunnelResp);
 
   return Response.ok(
       jsonEncode({
