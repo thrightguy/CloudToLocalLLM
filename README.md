@@ -211,6 +211,16 @@ The application follows a provider-based state management approach with a clear 
 - **Services**: Core business logic and API interactions
 - **Screens**: UI components
 
+### Dependencies and Compatibility
+
+The project uses specific dependency versions to ensure compatibility across all platforms:
+
+- **win32**: ^2.7.0 (must be kept under 3.0.0 for compatibility with device_info_plus)
+- **device_info_plus**: ^8.2.2 (requires win32 <3.0.0)
+- **path**: >=1.8.2 <2.0.0
+
+When updating dependencies, ensure version constraints are maintained to avoid conflicts, especially between win32 and device_info_plus packages.
+
 ### Adding a New LLM Provider
 
 1. Create a new service in `lib/services/`
