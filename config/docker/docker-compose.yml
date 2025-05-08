@@ -1,4 +1,4 @@
-﻿version: '3.8'
+﻿# The docker-compose configuration for the CloudToLocalLLM services
 
 services:
 # The tunnel service is commented out because there is no package.json in the build context.
