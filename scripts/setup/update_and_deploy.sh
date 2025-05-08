@@ -50,12 +50,9 @@ systemctl start cloudllm-daemon.service
 # Wait for daemon to be ready
 sleep 3
 
-# Trigger services deployment one by one using the correct API endpoints
-echo "[STATUS] Triggering deployment of individual services..."
-curl -X POST http://localhost:9001/deploy/webapp
-curl -X POST http://localhost:9001/deploy/fusionauth
-curl -X POST http://localhost:9001/deploy/tunnel
-curl -X POST http://localhost:9001/deploy/monitoring
+# Use the correct API endpoint for deploying all services
+echo "[STATUS] Triggering deployment of all services..."
+curl -X POST http://localhost:9001/admin/deploy/all
 
 echo "[STATUS] ==== $(date) Update and deployment complete ===="
 echo "[STATUS] For detailed logs, use: systemctl status cloudllm-daemon.service" 
