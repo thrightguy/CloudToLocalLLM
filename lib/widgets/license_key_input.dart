@@ -157,10 +157,10 @@ class _LicenseKeyInputState extends State<LicenseKeyInput> {
               errorText: _errorMessage,
               border: const OutlineInputBorder(),
               suffixIcon: _isLoading
-                  ? SizedBox(
+                  ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: const CircularProgressIndicator(
+                      child: CircularProgressIndicator(
                         strokeWidth: 2.0,
                       ),
                     )

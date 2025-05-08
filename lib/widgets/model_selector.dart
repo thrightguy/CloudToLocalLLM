@@ -71,11 +71,9 @@ class ModelSelector extends StatelessWidget {
               value: model.id,
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.check,
-                    color: model.id == currentModelId
-                        ? Colors.green
-                        : Colors.transparent,
+                    color: Colors.transparent,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -110,8 +108,8 @@ class ModelSelector extends StatelessWidget {
           // Manage models action
           PopupMenuItem<String>(
             value: 'manage_models',
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Icon(Icons.settings),
                 SizedBox(width: 8),
                 Text('Manage Models'),
