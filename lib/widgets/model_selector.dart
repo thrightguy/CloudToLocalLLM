@@ -110,8 +110,8 @@ class ModelSelector extends StatelessWidget {
           // Manage models action
           PopupMenuItem<String>(
             value: 'manage_models',
-            child: const Row(
-              children: [
+            child: Row(
+              children: const [
                 Icon(Icons.settings),
                 SizedBox(width: 8),
                 Text('Manage Models'),
