@@ -4,10 +4,18 @@
 # This script pulls the latest code, rebuilds and restarts the admin daemon,
 # and triggers a full stack deployment via the daemon API.
 #
-# Usage: sudo bash scripts/setup/startup_vps.sh
+# Usage: Run as root (su - or sudo -i), then:
+#   git pull
+#   bash scripts/setup/startup_vps.sh
 # Logs are written to /opt/cloudtolocalllm/startup.log
 
 set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "This script must be run as root. Use 'su -' or 'sudo -i' to become root, then run the script." >&2
+  exit 1
+fi
+
 LOGFILE="/opt/cloudtolocalllm/startup.log"
 exec > >(tee -a "$LOGFILE") 2>&1
 
