@@ -1,0 +1,9 @@
+CloudToLocalLLM - Internal Assistant Summary (May 2025)
+
+- Startup script (scripts/setup/startup_vps.sh) now prints status before each step, logs errors to both console and /opt/cloudtolocalllm/startup.log, and exits on failure.
+- All Color.withValues usages in Flutter code replaced with Color.withAlpha for compatibility with Flutter 3.22.0/Dart 3.4.x.
+- All changes committed and pushed to GitHub after each major fix.
+- Codebase is ready for deployment; users should git pull and run the startup script on the VPS.
+- Documentation (README.md) updated to reflect these changes and deployment steps.
+- No critical linter errors remain; only minor warnings.
+- Next step: If new errors occur on deployment, review logs and output for troubleshooting. 
