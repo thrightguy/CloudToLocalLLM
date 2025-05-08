@@ -35,4 +35,11 @@ EXPOSE 80 443
 USER nginx
 
 # Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]
+
+# Build Flutter Web app
+RUN flutter config --enable-web && \
+    flutter pub get && \
+    flutter clean && \
+    flutter pub upgrade --major-versions && \
+    flutter build web --release 
