@@ -185,9 +185,9 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
   }
 
   Widget _buildWelcomeStep() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Welcome to CloudToLocalLLM Setup',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -436,9 +436,9 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
   }
 
   Widget _buildCompleteStep() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Setup Complete!',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
