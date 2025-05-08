@@ -17,7 +17,7 @@ RUN flutter config --enable-web && \
     flutter pub get && \
     flutter clean && \
     flutter pub upgrade --major-versions && \
-    flutter build web --release --no-sound-null-safety
+    flutter build web --release
 
 # Use a lightweight server image to serve the web app
 FROM nginx:alpine
