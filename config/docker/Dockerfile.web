@@ -4,6 +4,10 @@ FROM ghcr.io/cirruslabs/flutter:latest AS build
 # Create a non-root user for the build
 RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bin/bash flutteruser
 
+# As root, ensure the Flutter SDK cache directory is writable by flutteruser
+USER root
+RUN mkdir -p /sdks/flutter/bin/cache && chown -R flutteruser:flutteruser /sdks/flutter/bin/cache
+
 # Switch to flutteruser
 USER flutteruser
 WORKDIR /app
