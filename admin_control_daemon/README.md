@@ -162,4 +162,27 @@ When deploying the webapp service, the Docker build context is set to the projec
 failed to solve: failed to compute cache key: failed to calculate checksum ...: "/nginx.conf": not found
 ```
 
-Make sure that `config/nginx/nginx.conf` exists at the correct path (e.g., `/opt/cloudtolocalllm/config/nginx/nginx.conf` on your server). If you move or rename files, update the Dockerfile or build context accordingly. 
+Make sure that `config/nginx/nginx.conf` exists at the correct path (e.g., `/opt/cloudtolocalllm/config/nginx/nginx.conf` on your server). If you move or rename files, update the Dockerfile or build context accordingly.
+
+## Troubleshooting: Docker Compose Flag Error
+
+If you see an error like:
+
+```
+unknown shorthand flag: 'f' in -f
+See 'docker --help'.
+```
+
+This means the daemon is running `docker -f ...` instead of `docker compose -f ...`. **You must use `docker compose` (with a space), not `docker` alone, for service management.**
+
+The code should always invoke:
+
+```
+docker compose -f ...
+```
+
+and never:
+
+```
+docker -f ...
+``` 
