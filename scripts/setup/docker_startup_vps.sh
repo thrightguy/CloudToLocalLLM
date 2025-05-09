@@ -78,7 +78,19 @@ done
 
 # Step 4: Deploy all services through admin daemon API
 log_status "[4/4] Triggering full stack deployment via daemon API..."
-curl -X POST http://localhost:9001/admin/deploy/all
+DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9001/admin/deploy/all)
+DEPLOY_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
+DEPLOY_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
+
+if [[ "$DEPLOY_CODE" != "200" ]]; then
+  log_error "Deployment failed with status $DEPLOY_CODE."
+  echo "$DEPLOY_BODY"
+  log_error "Check the admin daemon logs with: docker logs docker-admin-daemon-1"
+  exit 1
+else
+  log_success "Deployment succeeded."
+  echo "$DEPLOY_BODY"
+fi
 
 log_status "==== $(date) Docker-based startup complete ===="
 log_success "System is now running in Docker containers" 

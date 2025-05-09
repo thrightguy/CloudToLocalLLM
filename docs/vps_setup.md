@@ -63,49 +63,26 @@ There are two approaches to setting up the CloudToLocalLLM stack:
 
 **Note:** All containers are built from the same Flutter image for consistency and easier management.
 
-## Troubleshooting
+## Improved Error Handling and Troubleshooting
 
-### Common Issues
+- The startup script now waits for the admin daemon to be healthy before deploying services.
+- If any service fails to start or is unhealthy, the admin daemon will return detailed error messages and recent logs in the API response.
+- The startup script will print these errors and suggest how to get further logs.
 
-#### Permission Problems
+## Troubleshooting Deployment Failures
 
-If you encounter permission issues with Dart or Flutter:
+If the deployment fails:
+- The script will print the error and the relevant logs for unhealthy containers.
+- You can also check the admin daemon logs with:
+  ```bash
+  docker logs docker-admin-daemon-1
+  ```
+- For individual service logs, use:
+  ```bash
+  docker logs <container-name>
+  ```
 
-```bash
-# Fix ownership of the installation directory
-chown -R cloudllm:cloudllm /opt/cloudtolocalllm
-
-# Fix permissions for the pub cache
-mkdir -p /home/cloudllm/.pub-cache
-chown -R cloudllm:cloudllm /home/cloudllm/.pub-cache
-```
-
-#### Flutter Not Initialized
-
-If Flutter is not initialized for the cloudllm user:
-
-```bash
-# Switch to the cloudllm user
-su - cloudllm
-
-# Initialize Flutter
-flutter --version
-
-# Exit back to root
-exit
-```
-
-#### Admin Daemon Not Responding
-
-Check the admin daemon logs:
-
-```bash
-# For daemon-based approach
-journalctl -u cloudllm-daemon
-
-# For Docker-based approach
-docker logs cloudtolocalllm-admin-daemon-1
-```
+If you need to provide errors for support, copy the output from the script and the relevant logs.
 
 ## API Endpoints
 

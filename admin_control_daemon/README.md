@@ -196,4 +196,19 @@ and never:
 
 ```
 docker -f ...
-``` 
+```
+
+## Improved Error Handling and Troubleshooting
+
+- The admin daemon and startup script now provide detailed error output and logs if any service fails to start or is unhealthy.
+- If a deployment fails, the API and script will print the error and recent logs for the affected containers.
+- You can check the admin daemon logs with:
+  ```bash
+  docker logs docker-admin-daemon-1
+  ```
+- For individual service logs, use:
+  ```bash
+  docker logs <container-name>
+  ```
+
+If you need to provide errors for support, copy the output from the script and the relevant logs. 
