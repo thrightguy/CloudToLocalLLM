@@ -99,4 +99,6 @@ Regular maintenance tasks:
 2. Check logs with `systemctl status cloudllm-daemon.service`
 3. Monitor Docker containers with `docker-compose ps`
 
-For more detailed documentation, see the main project README. 
+For more detailed documentation, see the main project README.
+
+**Note:** As of May 2025, Android and APK build steps are not required for server or web deployment. All Docker and deployment scripts have been updated to only build and deploy the web and server components. The `docker_android_fix.sh` script and any APK build steps have been removed. If you need to build an Android APK, do so locally on your development machine, not on the server or in production Docker builds. 

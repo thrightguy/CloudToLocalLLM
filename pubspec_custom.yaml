@@ -1,0 +1,40 @@
+name: cloudtolocalllm
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.3.1+202405051630
+
+environment:
+  sdk: '>=2.19.4 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  provider: ^6.0.5
+  uuid: ^3.0.7
+  path_provider: ^2.0.15
+  shared_preferences: ^2.0.15
+  url_launcher: ^6.1.11
+  http: ^0.13.6
+  path: '>=1.8.2 <2.0.0'
+  process_run: ^0.13.0
+  system_tray: ^0.1.0
+  window_manager: ^0.3.5
+  win32: ^2.7.0
+  logging: ^1.2.0 # Used by admin_control_daemon Dart server
+  js: '>=0.6.5 <0.7.0'
+  crypto: ^3.0.2
+  device_info_plus: ^8.2.2
+  package_info_plus: ^3.1.2
+  flutter_secure_storage: ^8.0.0
+  args: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/CloudToLocalLLM_logo.jpg
