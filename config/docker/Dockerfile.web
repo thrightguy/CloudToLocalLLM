@@ -5,6 +5,11 @@ COPY . .
 RUN flutter pub get && flutter build web --release
 
 FROM nginx:alpine
+# Copy built web app from build stage
 COPY --from=build /app/build/web /usr/share/nginx/html
+
+# Copy custom Nginx configuration
+COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"] 
