@@ -175,7 +175,6 @@ Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
   final composeFilesToDown = [
     'config/docker/docker-compose-fusionauth.yml',
-    'config/docker/docker-compose.web.yml',
     'config/docker/docker-compose.monitoring.yml',
     'config/docker/docker-compose.yml',
   ];
@@ -183,9 +182,11 @@ Future<Response> _deployAllHandler(Request request) async {
   final serviceNames = [
     'cloudtolocalllm-fusionauth-app',
     'cloudtolocalllm-fusionauth-postgres',
-    'docker-webapp-1',
+    'cloudtolocalllm-webapp',
+    'cloudtolocalllm-nginx',
+    'cloudtolocalllm-tunnel',
     'cloudtolocalllm_monitor',
-    // Add more as needed
+    'cloudtolocalllm-certbot'
   ];
   final unhealthy = <String, dynamic>{};
 

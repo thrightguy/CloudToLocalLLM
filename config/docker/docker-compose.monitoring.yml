@@ -1,40 +1,6 @@
 # The docker-compose configuration for the CloudToLocalLLM monitoring services
 
 services:
-  webapp:
-    build:
-      context: ../..
-      dockerfile: config/docker/Dockerfile.web
-    ports:
-      - "80:80"
-      - "443:443"
-    restart: unless-stopped
-    volumes:
-      - ./certbot/www:/var/www/certbot:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./.htpasswd:/etc/nginx/.htpasswd:ro
-    environment:
-      - NGINX_HOST=cloudtolocalllm.online
-      - NGINX_SSL_CERT=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem
-      - NGINX_SSL_KEY=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
-      - CHOWN
-      - SETGID
-      - SETUID
-    depends_on:
-      - netdata
-    networks:
-      - webnet
-      
   netdata:
     image: netdata/netdata:latest
     container_name: cloudtolocalllm_monitor
