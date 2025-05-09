@@ -1,5 +1,5 @@
-# Use a recent stable Flutter image from ghcr.io (supports Dart 3.x)
-FROM ghcr.io/cirruslabs/flutter:3.19.6 AS build
+# Use a very recent stable Flutter image from ghcr.io (supports Dart >= 3.7.x)
+FROM ghcr.io/cirruslabs/flutter:3.22.2 AS build
 WORKDIR /app
 COPY . .
 RUN flutter pub get && flutter build web --release
