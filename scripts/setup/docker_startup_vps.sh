@@ -46,9 +46,9 @@ log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
 
 # Step 1: Ensure Docker is installed and running
 log_status "[1/4] Checking Docker installation..."
-if ! command -v docker &> /dev/null; then
-    log_error "Docker is not installed. Please install Docker first."
-    exit 1
+if ! command -v docker &>/dev/null; then
+  echo -e "${RED}Docker is not installed. Aborting.${NC}" >&2
+  exit 1
 fi
 
 if ! systemctl is-active --quiet docker; then
@@ -66,19 +66,19 @@ log_status "[3/4] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
 docker compose -f config/docker/docker-compose.admin.yml up -d --build
 
-# Wait for admin daemon to start
+# Wait for the admin daemon to be ready
 log_status "Waiting for admin daemon to be ready..."
-sleep 5
-
-# Check if admin daemon is running
-if ! curl -s http://localhost:9001/admin/health &> /dev/null; then
-    log_error "Admin daemon is not responding. Check docker logs with 'docker logs cloudtolocalllm-admin-daemon-1'"
-    exit 1
-fi
+for i in {1..60}; do
+  if curl -s http://localhost:9001/admin/health | grep -q '"status": "OK"'; then
+    log_status "Admin daemon is ready."
+    break
+  fi
+  sleep 2
+done
 
 # Step 4: Deploy all services through admin daemon API
 log_status "[4/4] Triggering full stack deployment via daemon API..."
-curl -X POST http://localhost:9001/admin/deploy/all --max-time 180
+curl -X POST http://localhost:9001/admin/deploy/all
 
 log_status "==== $(date) Docker-based startup complete ===="
 log_success "System is now running in Docker containers" 
