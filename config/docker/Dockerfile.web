@@ -19,9 +19,8 @@ WORKDIR /app
 # This ensures the config is applied to flutteruser's git environment
 RUN git config --global --add safe.directory /sdks/flutter
 
-# Copy application code (now as flutteruser, into flutteruser's WORKDIR /app)
-# Files will be owned by flutteruser.
-COPY . .
+# Copy application code with explicit ownership to ensure it's writable
+COPY --chown=flutteruser:flutteruser . .
 
 # Run the build as flutteruser
 # Flutter should use a user-writable cache for pub get.
