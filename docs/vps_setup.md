@@ -9,6 +9,13 @@ This document provides instructions for setting up the CloudToLocalLLM stack on 
 - Docker and Docker Compose installed
 - Git installed
 
+## Container Base Image
+
+**All containers, including the admin daemon, web, and tunnel services, use the [ghcr.io/cirruslabs/flutter:latest](https://github.com/cirruslabs/docker-images-flutter) image as the base.**
+
+- This ensures full Flutter and Dart support everywhere.
+- The admin daemon container also installs the Docker CLI and Compose plugin for service management.
+
 ## Installation Options
 
 There are two approaches to setting up the CloudToLocalLLM stack:
@@ -51,6 +58,10 @@ There are two approaches to setting up the CloudToLocalLLM stack:
    systemctl enable cloudllm-docker
    systemctl start cloudllm-docker
    ```
+
+---
+
+**Note:** All containers are built from the same Flutter image for consistency and easier management.
 
 ## Troubleshooting
 

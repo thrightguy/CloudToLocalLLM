@@ -1,5 +1,5 @@
 # Dockerfile for the Admin Control Daemon
-FROM dart:stable AS build
+FROM ghcr.io/cirruslabs/flutter:latest AS build
 
 WORKDIR /app
 
@@ -16,11 +16,21 @@ COPY admin_control_daemon .
 # Build the admin daemon
 RUN dart compile exe bin/server.dart -o /app/daemon
 
-# Final stage - use the latest Docker CLI image (as of 2024-06)
-FROM docker:24.0.9-cli
+# Final stage: Use the same Flutter image for runtime
+FROM ghcr.io/cirruslabs/flutter:latest
 
-# Install any extra tools you need (e.g., curl, git)
-RUN apk add --no-cache curl git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Docker CLI (latest)
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.9.tgz | tar xz -C /usr/local/bin --strip-components=1 docker/docker
+# Install Docker Compose plugin (latest)
+RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
+    curl -SL https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 COPY --from=build /app/daemon /app/daemon
 

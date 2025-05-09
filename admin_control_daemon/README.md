@@ -2,6 +2,12 @@
 
 This daemon manages and monitors the CloudToLocalLLM stack.
 
+## Container Base Image
+
+- The admin daemon container uses the [ghcr.io/cirruslabs/flutter:latest](https://github.com/cirruslabs/docker-images-flutter) image as its base.
+- **Flutter and Dart are available everywhere** in the stack for maximum compatibility.
+- The admin daemon container also installs the Docker CLI and Compose plugin for service management.
+
 ## Running as a systemd Service
 
 1. **Build the daemon executable:**
@@ -33,15 +39,20 @@ This daemon manages and monitors the CloudToLocalLLM stack.
 
 3. **Enable and start the service:**
    ```bash
-   systemctl daemon-reload
-   systemctl enable --now cloudllm-daemon
-   systemctl status cloudllm-daemon
+   systemctl enable cloudllm-daemon
+   systemctl start cloudllm-daemon
    ```
 
-4. **Monitor logs:**
-   ```bash
-   journalctl -u cloudllm-daemon -f
-   ```
+## Running with Docker (Recommended)
+
+- The Docker container is built from the same Flutter image as the rest of the stack.
+- The container includes Docker CLI and Compose for managing other services.
+
+See the main documentation for details on Docker-based deployment.
+
+## Troubleshooting
+
+- If you see errors about `docker compose` or `docker-compose` not found, ensure the container is built from the latest code and the CLI plugins are installed (see Dockerfile).
 
 ## Using the cloudctl Command (Recommended)
 
