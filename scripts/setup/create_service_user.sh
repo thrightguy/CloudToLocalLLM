@@ -35,14 +35,35 @@ else
     echo -e "${GREEN}Created user $SERVICE_USER${NC}"
 fi
 
-# Add user to necessary groups (docker, sudo)
+# Add user to necessary groups (docker)
 usermod -aG docker "$SERVICE_USER" || echo -e "${YELLOW}Failed to add $SERVICE_USER to docker group${NC}"
-usermod -aG sudo "$SERVICE_USER" || echo -e "${YELLOW}Failed to add $SERVICE_USER to sudo group${NC}"
+# Try to add to sudo group if it exists
+if getent group sudo >/dev/null; then
+    usermod -aG sudo "$SERVICE_USER" || echo -e "${YELLOW}Failed to add $SERVICE_USER to sudo group${NC}"
+else
+    echo -e "${YELLOW}Group 'sudo' does not exist, can't add user to it${NC}"
+fi
 
 # Set correct permissions on installation directory
 echo -e "${YELLOW}Setting correct permissions on $INSTALL_DIR...${NC}"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 chmod -R 755 "$INSTALL_DIR"
+
+# Create or update .bashrc for the service user to include Flutter and Dart in PATH
+echo -e "${YELLOW}Setting up environment for $SERVICE_USER...${NC}"
+cat >> "/home/$SERVICE_USER/.bashrc" << EOL
+
+# CloudToLocalLLM environment setup
+export PATH="\$HOME/.pub-cache/bin:\$PATH"
+# If Flutter is installed globally, make sure it's in the path
+if [ -d "/opt/flutter/bin" ]; then
+  export PATH="/opt/flutter/bin:\$PATH"
+fi
+EOL
+
+# Create necessary directories
+mkdir -p "/home/$SERVICE_USER/.pub-cache"
+chown -R "$SERVICE_USER:$SERVICE_USER" "/home/$SERVICE_USER/.pub-cache"
 
 # Update systemd service files to use the non-root user
 echo -e "${YELLOW}Updating systemd service to use non-root user...${NC}"
@@ -60,6 +81,7 @@ ExecStart=$INSTALL_DIR/admin_control_daemon/daemon
 Restart=on-failure
 User=$SERVICE_USER
 Group=$SERVICE_USER
+Environment=HOME=/home/$SERVICE_USER
 
 [Install]
 WantedBy=multi-user.target

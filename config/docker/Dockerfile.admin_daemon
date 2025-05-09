@@ -1,0 +1,36 @@
+# Dockerfile for the Admin Control Daemon
+FROM dart:stable AS build
+
+WORKDIR /app
+
+# Copy pubspec files
+COPY admin_control_daemon/pubspec.yaml ./
+COPY admin_control_daemon/pubspec.lock ./
+
+# Get dependencies
+RUN dart pub get
+
+# Copy the rest of the code
+COPY admin_control_daemon .
+
+# Build the admin daemon
+RUN dart compile exe bin/server.dart -o /app/daemon
+
+# Final stage - minimal image
+FROM debian:bullseye-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
+    docker.io \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /app/daemon /app/daemon
+
+# Expose port for the admin daemon
+EXPOSE 9001
+
+WORKDIR /opt/cloudtolocalllm
+
+ENTRYPOINT ["/app/daemon"] 

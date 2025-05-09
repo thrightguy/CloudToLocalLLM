@@ -62,11 +62,21 @@ if ! systemctl stop cloudllm-daemon; then
   log_error "Failed to stop admin daemon (may not be running)";
 fi
 
-# Step 3: Rebuilding admin daemon
-log_status "[3/5] Rebuilding admin daemon..."
+# Step 3: Install dependencies for admin daemon (as root, then give correct permissions)
+log_status "[3/5] Installing dependencies and rebuilding admin daemon..."
 cd "$INSTALL_DIR/admin_control_daemon" || { log_error "Failed to cd to admin_control_daemon"; exit 1; }
 
-# Switch to service user for Flutter/Dart commands
+# First, install dependencies as root so they're available system-wide
+dart pub get
+
+# Make sure pub cache is accessible
+mkdir -p /home/$SERVICE_USER/.pub-cache
+chown -R $SERVICE_USER:$SERVICE_USER /home/$SERVICE_USER/.pub-cache
+
+# Fix permissions on admin control daemon directory
+chown -R $SERVICE_USER:$SERVICE_USER "$INSTALL_DIR/admin_control_daemon"
+
+# Switch to service user for compilation
 su - "$SERVICE_USER" -c "cd '$INSTALL_DIR/admin_control_daemon' && dart compile exe bin/server.dart -o daemon"
 if [ ! -f "$INSTALL_DIR/admin_control_daemon/daemon" ]; then
   log_error "Failed to compile admin daemon"; exit 1;
@@ -84,7 +94,7 @@ systemctl status cloudllm-daemon --no-pager || log_error "Failed to get admin da
 # Step 5: Deploy all services
 sleep 3
 log_status "[5/5] Triggering full stack deployment via daemon API..."
-curl -X POST http://localhost:9001/admin/deploy/all
+curl -X POST http://localhost:9001/admin/deploy/all --max-time 180
 
 log_status "==== $(date) Startup complete ===="
 log_success "System is now running as the $SERVICE_USER user" 
