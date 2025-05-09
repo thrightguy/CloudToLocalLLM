@@ -136,16 +136,23 @@ Future<String> _listContainers() async {
   return result.stdout.toString();
 }
 
+Future<String> _getContainerLogs(String containerName, {int lines = 50}) async {
+  final result = await Process.run(
+    'docker',
+    ['logs', '--tail', lines.toString(), containerName],
+    runInShell: true,
+  );
+  return result.stdout.toString();
+}
+
 Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
-  // Exclude the admin daemon compose file from being brought down
   final composeFilesToDown = [
     'config/docker/docker-compose-fusionauth.yml',
     'config/docker/docker-compose.web.yml',
     'config/docker/docker-compose.monitoring.yml',
     'config/docker/docker-compose.yml',
   ];
-  // Only bring up the admin daemon if needed (not in this handler)
   final composeFilesToUp = composeFilesToDown;
   final serviceNames = [
     'cloudtolocalllm-fusionauth-app',
@@ -154,6 +161,7 @@ Future<Response> _deployAllHandler(Request request) async {
     'cloudtolocalllm_monitor',
     // Add more as needed
   ];
+  final unhealthy = <String, dynamic>{};
 
   // 1. Stop and remove all service containers (not admin daemon)
   for (final file in composeFilesToDown) {
@@ -165,13 +173,30 @@ Future<Response> _deployAllHandler(Request request) async {
     await _composeUp(file);
     // Wait for health if possible (for known services)
     for (final name in serviceNames) {
-      await _waitForHealthy(name);
+      final healthy = await _waitForHealthy(name);
+      if (!healthy) {
+        final logs = await _getContainerLogs(name);
+        unhealthy[name] = {
+          'status': 'unhealthy',
+          'logs': logs,
+        };
+      }
     }
   }
 
   // 3. List all running containers
   final containers = await _listContainers();
   results['containers'] = containers;
+  if (unhealthy.isNotEmpty) {
+    results['unhealthy'] = unhealthy;
+    return Response.internalServerError(
+      body: jsonEncode({
+        'status': 'Some services failed to start or are unhealthy',
+        'results': results,
+      }),
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
 
   return Response.ok(
     jsonEncode({
