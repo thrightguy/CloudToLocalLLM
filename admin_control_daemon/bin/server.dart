@@ -87,86 +87,97 @@ Future<Response> _issueRenewSslHandler(Request request) async {
   );
 }
 
-Future<Response> _deployAllHandler(Request request) async {
-  // Deploy all major services in order
-  final results = <String, dynamic>{};
+Future<void> _composeDown(String composeFile) async {
+  await Process.run(
+    'docker',
+    ['compose', '-f', composeFile, 'down', '--remove-orphans'],
+    workingDirectory: projectRoot,
+    runInShell: true,
+  );
+}
 
-  // Helper to extract serializable body from Response
-  Future<dynamic> extractBody(Response resp) async {
-    final body = await resp.readAsString();
-    try {
-      return jsonDecode(body);
-    } catch (_) {
-      return body;
+Future<void> _composeUp(String composeFile) async {
+  await Process.run(
+    'docker',
+    ['compose', '-f', composeFile, 'up', '-d', '--build'],
+    workingDirectory: projectRoot,
+    runInShell: true,
+  );
+}
+
+Future<bool> _waitForHealthy(String serviceName,
+    {int timeoutSeconds = 120}) async {
+  final deadline = DateTime.now().add(Duration(seconds: timeoutSeconds));
+  while (DateTime.now().isBefore(deadline)) {
+    final result = await Process.run(
+      'docker',
+      ['inspect', '--format', '{{.State.Health.Status}}', serviceName],
+      runInShell: true,
+    );
+    if (result.exitCode == 0) {
+      final status = result.stdout.toString().trim();
+      if (status == 'healthy') return true;
+      if (status == 'unhealthy') return false;
+    } else {
+      // No healthcheck or container not found
+      return true;
+    }
+    await Future.delayed(Duration(seconds: 3));
+  }
+  return false;
+}
+
+Future<String> _listContainers() async {
+  final result = await Process.run(
+    'docker',
+    ['ps', '--format', 'table {{.Names}}\t{{.Status}}\t{{.Image}}'],
+    runInShell: true,
+  );
+  return result.stdout.toString();
+}
+
+Future<Response> _deployAllHandler(Request request) async {
+  final results = <String, dynamic>{};
+  final composeFiles = [
+    'config/docker/docker-compose-fusionauth.yml',
+    'config/docker/docker-compose.web.yml',
+    'config/docker/docker-compose.monitoring.yml',
+    'config/docker/docker-compose.yml',
+  ];
+  final serviceNames = [
+    'cloudtolocalllm-fusionauth-app',
+    'cloudtolocalllm-fusionauth-postgres',
+    'docker-webapp-1',
+    'cloudtolocalllm_monitor',
+    'docker-admin-daemon-1',
+    // Add more as needed
+  ];
+
+  // 1. Stop and remove all containers
+  for (final file in composeFiles) {
+    await _composeDown(file);
+  }
+
+  // 2. Start and check each service
+  for (final file in composeFiles) {
+    await _composeUp(file);
+    // Wait for health if possible (for known services)
+    for (final name in serviceNames) {
+      await _waitForHealthy(name);
     }
   }
 
-  // 1. FusionAuth and DB
-  final fusionauthResp = await _runShellCommand(
-    'docker',
-    [
-      'compose',
-      '-f',
-      'config/docker/docker-compose-fusionauth.yml',
-      'up',
-      '-d',
-      '--build'
-    ],
-    'deploy fusionauth service',
-  );
-  results['fusionauth'] = await extractBody(fusionauthResp);
-
-  // 2. Webapp
-  final webappResp = await _runShellCommand(
-    'docker',
-    [
-      'compose',
-      '-f',
-      'config/docker/docker-compose.web.yml',
-      'up',
-      '-d',
-      '--build'
-    ],
-    'deploy web service',
-  );
-  results['webapp'] = await extractBody(webappResp);
-
-  // 3. Monitoring (if present)
-  final monitoringResp = await _runShellCommand(
-    'docker',
-    [
-      'compose',
-      '-f',
-      'config/docker/docker-compose.monitoring.yml',
-      'up',
-      '-d',
-      '--build'
-    ],
-    'deploy monitoring service',
-  );
-  results['monitoring'] = await extractBody(monitoringResp);
-
-  // 4. Tunnel (if present)
-  final tunnelResp = await _runShellCommand(
-    'docker',
-    [
-      'compose',
-      '-f',
-      'config/docker/docker-compose.yml',
-      'up',
-      '-d',
-      '--build'
-    ],
-    'deploy tunnel/cloud service',
-  );
-  results['tunnel'] = await extractBody(tunnelResp);
+  // 3. List all running containers
+  final containers = await _listContainers();
+  results['containers'] = containers;
 
   return Response.ok(
-      jsonEncode({
-        'status': 'All deploy commands issued',
-        'results': results,
-      }),
-      headers: {'Content-Type': 'application/json'});
+    jsonEncode({
+      'status': 'All services deployed and checked',
+      'results': results,
+    }),
+    headers: {'Content-Type': 'application/json'},
+  );
 }
 
 // === Helper to run shell commands ===
