@@ -1,5 +1,5 @@
-# Official minimal Flutter web Dockerfile (per Flutter documentation)
-FROM cirrusci/flutter:stable AS build
+# Use a recent stable Flutter image that supports Dart 3.x
+FROM cirrusci/flutter:3.19.6 AS build
 WORKDIR /app
 COPY . .
 RUN flutter pub get && flutter build web --release
