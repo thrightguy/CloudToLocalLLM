@@ -1,16 +1,16 @@
 # Stage 1: Build the Flutter web app
 FROM ghcr.io/cirruslabs/flutter:latest AS build
 
-# As root, allow git to operate on the SDK directory even if later commands are by a different user
-USER root
-RUN git config --global --add safe.directory /sdks/flutter
-
 # Create a non-root user for the build
 RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bin/bash flutteruser
 
-# Switch to flutteruser for all subsequent app-related operations
+# Switch to flutteruser
 USER flutteruser
 WORKDIR /app
+
+# As flutteruser, mark the root-owned SDK directory as safe for git operations
+# This ensures the config is applied to flutteruser's git environment
+RUN git config --global --add safe.directory /sdks/flutter
 
 # Copy application code (now as flutteruser, into flutteruser's WORKDIR /app)
 # Files will be owned by flutteruser.
