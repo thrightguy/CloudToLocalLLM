@@ -138,28 +138,30 @@ Future<String> _listContainers() async {
 
 Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
-  final composeFiles = [
+  // Exclude the admin daemon compose file from being brought down
+  final composeFilesToDown = [
     'config/docker/docker-compose-fusionauth.yml',
     'config/docker/docker-compose.web.yml',
     'config/docker/docker-compose.monitoring.yml',
     'config/docker/docker-compose.yml',
   ];
+  // Only bring up the admin daemon if needed (not in this handler)
+  final composeFilesToUp = composeFilesToDown;
   final serviceNames = [
     'cloudtolocalllm-fusionauth-app',
     'cloudtolocalllm-fusionauth-postgres',
     'docker-webapp-1',
     'cloudtolocalllm_monitor',
-    'docker-admin-daemon-1',
     // Add more as needed
   ];
 
-  // 1. Stop and remove all containers
-  for (final file in composeFiles) {
+  // 1. Stop and remove all service containers (not admin daemon)
+  for (final file in composeFilesToDown) {
     await _composeDown(file);
   }
 
   // 2. Start and check each service
-  for (final file in composeFiles) {
+  for (final file in composeFilesToUp) {
     await _composeUp(file);
     // Wait for health if possible (for known services)
     for (final name in serviceNames) {
