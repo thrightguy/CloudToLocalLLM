@@ -6,12 +6,11 @@ RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bi
 
 WORKDIR /app
 
-# Copy pubspec files and get dependencies
-# Copy source and change ownership
+# Copy necessary source code and change ownership
 COPY --chown=flutteruser:flutteruser pubspec.* ./
 COPY --chown=flutteruser:flutteruser bin/ ./bin/
+COPY --chown=flutteruser:flutteruser lib/ ./lib/ 
 # Add other necessary source code directories for the tunnel service here, e.g.:
-# COPY --chown=flutteruser:flutteruser lib/ ./lib/ 
 # COPY --chown=flutteruser:flutteruser cloud/ ./cloud/ 
 
 # Switch to non-root user for build
@@ -19,6 +18,11 @@ USER flutteruser
 
 # Mark Flutter SDK directory as safe for git operations by non-root user
 RUN git config --global --add safe.directory /sdks/flutter
+
+# Give flutteruser write access to the Flutter SDK cache
+USER root
+RUN mkdir -p /sdks/flutter/bin/cache && chown -R flutteruser:flutteruser /sdks/flutter/bin/cache
+USER flutteruser
 
 RUN flutter pub get
 
