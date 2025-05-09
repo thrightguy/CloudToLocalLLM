@@ -1,16 +1,25 @@
 # Stage 1: Build the Flutter web app
 FROM ghcr.io/cirruslabs/flutter:latest AS build
 
+# Create a non-root user
+RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bin/bash flutteruser
+
+# As root, make flutteruser own the SDK. This is crucial.
+USER root
+RUN chown -R flutteruser:flutteruser /sdks/flutter
+
+# Switch to flutteruser for all subsequent app-related operations
+USER flutteruser
 WORKDIR /app
 
-# Attempt simplest COPY to debug lstat error
+# Copy application code (now as flutteruser, into flutteruser's WORKDIR /app)
 COPY . .
 
-# List contents to verify copy
-RUN ls -la
+# Mark Flutter SDK as safe (as flutteruser, who now owns it)
+RUN git config --global --add safe.directory /sdks/flutter
 
-# Placeholder for actual build command - this stage might fail if COPY fails
-# RUN flutter pub get && flutter build web --release
+# Run the build
+RUN flutter pub get && flutter build web --release
 
 # Stage 2: Serve the app with Nginx
 FROM nginx:alpine
