@@ -12,6 +12,9 @@ COPY --chown=flutteruser:flutteruser . .
 # Switch to non-root user for build
 USER flutteruser
 
+# Mark Flutter SDK directory as safe for git operations by non-root user
+RUN git config --global --add safe.directory /sdks/flutter
+
 RUN flutter pub get && flutter build web --release
 
 # Final stage with Nginx

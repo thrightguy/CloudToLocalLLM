@@ -1,14 +1,26 @@
 # Dockerfile for the Tunnel Service (Flutter-based)
 FROM ghcr.io/cirruslabs/flutter:latest AS build
 
+# Create a non-root user and group
+RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bin/bash flutteruser
+
 WORKDIR /app
 
 # Copy pubspec files and get dependencies
-COPY pubspec.* ./
-RUN flutter pub get
+# Copy source and change ownership
+COPY --chown=flutteruser:flutteruser pubspec.* ./
+COPY --chown=flutteruser:flutteruser bin/ ./bin/
+# Add other necessary source code directories for the tunnel service here, e.g.:
+# COPY --chown=flutteruser:flutteruser lib/ ./lib/ 
+# COPY --chown=flutteruser:flutteruser cloud/ ./cloud/ 
 
-# Copy the rest of the app
-COPY . .
+# Switch to non-root user for build
+USER flutteruser
+
+# Mark Flutter SDK directory as safe for git operations by non-root user
+RUN git config --global --add safe.directory /sdks/flutter
+
+RUN flutter pub get
 
 # Build the Dart server/CLI app (bin/server.dart)
 # Ensure this path is correct for your tunnel service entry point
