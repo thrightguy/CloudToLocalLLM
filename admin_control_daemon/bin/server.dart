@@ -26,16 +26,29 @@ Response _healthHandler(Request request) {
 
 Future<Response> _deployWebHandler(Request request) async {
   return await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose.web.yml', 'up', '-d', '--build'],
+    'docker',
+    [
+      'compose',
+      '-f',
+      'config/docker/docker-compose.web.yml',
+      'up',
+      '-d',
+      '--build'
+    ],
     'deploy web service',
   );
 }
 
 Future<Response> _deployFusionAuthHandler(Request request) async {
   return await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose-fusionauth.yml', 'up', '-d'],
+    'docker',
+    [
+      'compose',
+      '-f',
+      'config/docker/docker-compose-fusionauth.yml',
+      'up',
+      '-d'
+    ],
     'deploy fusionauth service',
   );
 }
@@ -50,16 +63,16 @@ Future<Response> _gitPullHandler(Request request) async {
 
 Future<Response> _stopWebHandler(Request request) async {
   return await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose.web.yml', 'down'],
+    'docker',
+    ['compose', '-f', 'config/docker/docker-compose.web.yml', 'down'],
     'stop web service',
   );
 }
 
 Future<Response> _stopFusionAuthHandler(Request request) async {
   return await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose-fusionauth.yml', 'down'],
+    'docker',
+    ['compose', '-f', 'config/docker/docker-compose-fusionauth.yml', 'down'],
     'stop fusionauth service',
   );
 }
@@ -90,8 +103,9 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 1. FusionAuth and DB
   final fusionauthResp = await _runShellCommand(
-    'docker-compose',
+    'docker',
     [
+      'compose',
       '-f',
       'config/docker/docker-compose-fusionauth.yml',
       'up',
@@ -104,16 +118,24 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 2. Webapp
   final webappResp = await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose.web.yml', 'up', '-d', '--build'],
+    'docker',
+    [
+      'compose',
+      '-f',
+      'config/docker/docker-compose.web.yml',
+      'up',
+      '-d',
+      '--build'
+    ],
     'deploy web service',
   );
   results['webapp'] = await extractBody(webappResp);
 
   // 3. Monitoring (if present)
   final monitoringResp = await _runShellCommand(
-    'docker-compose',
+    'docker',
     [
+      'compose',
       '-f',
       'config/docker/docker-compose.monitoring.yml',
       'up',
@@ -126,8 +148,15 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 4. Tunnel (if present)
   final tunnelResp = await _runShellCommand(
-    'docker-compose',
-    ['-f', 'config/docker/docker-compose.yml', 'up', '-d', '--build'],
+    'docker',
+    [
+      'compose',
+      '-f',
+      'config/docker/docker-compose.yml',
+      'up',
+      '-d',
+      '--build'
+    ],
     'deploy tunnel/cloud service',
   );
   results['tunnel'] = await extractBody(tunnelResp);
