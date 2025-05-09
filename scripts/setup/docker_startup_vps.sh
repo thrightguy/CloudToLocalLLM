@@ -6,7 +6,7 @@
 # Usage: Run as root (su - or sudo -i), then:
 #   bash scripts/setup/docker_startup_vps.sh
 
-set -euo pipefail
+set -uo pipefail # Removed -e to allow script to continue on curl errors
 
 # Configuration
 INSTALL_DIR="/opt/cloudtolocalllm"
@@ -68,29 +68,43 @@ docker compose -f config/docker/docker-compose.admin.yml up -d --build
 
 # Wait for the admin daemon to be ready
 log_status "Waiting for admin daemon to be ready..."
+ADMIN_READY=false
 for i in {1..60}; do
-  if curl -s http://localhost:9001/admin/health | grep -q '"status": "OK"'; then
+  if curl -s --fail http://localhost:9001/admin/health | grep -q '"status": "OK"'; then
     log_status "Admin daemon is ready."
+    ADMIN_READY=true
     break
   fi
   sleep 2
 done
 
+if [ "$ADMIN_READY" = false ]; then
+  log_error "Admin daemon failed to start or is not healthy."
+  log_error "Check admin daemon logs with: docker logs docker-admin-daemon-1"
+  exit 1
+fi
+
 # Step 4: Deploy all services through admin daemon API
 log_status "[4/4] Triggering full stack deployment via daemon API..."
-DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9001/admin/deploy/all)
+DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9001/admin/deploy/all || true)
 DEPLOY_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
 DEPLOY_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
 
 if [[ "$DEPLOY_CODE" != "200" ]]; then
-  log_error "Deployment failed with status $DEPLOY_CODE."
+  log_error "Deployment API call failed or services are unhealthy (HTTP status: $DEPLOY_CODE)."
+  echo "API Response Body:"
   echo "$DEPLOY_BODY"
-  log_error "Check the admin daemon logs with: docker logs docker-admin-daemon-1"
-  exit 1
+  log_error "For more details, check the admin daemon logs: docker logs docker-admin-daemon-1"
+  # Optionally, exit here if preferred: exit 1
 else
-  log_success "Deployment succeeded."
+  log_success "Deployment API call succeeded (HTTP status: $DEPLOY_CODE)."
+  echo "API Response Body:"
   echo "$DEPLOY_BODY"
 fi
 
 log_status "==== $(date) Docker-based startup complete ===="
-log_success "System is now running in Docker containers" 
+if [[ "$DEPLOY_CODE" == "200" ]]; then
+  log_success "System is now running in Docker containers (or attempting to)."
+else
+  log_error "Some services may not be running correctly. Please review the logs above."
+fi 
