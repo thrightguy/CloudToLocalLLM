@@ -90,7 +90,7 @@ Future<Response> _issueRenewSslHandler(Request request) async {
 Future<void> _composeDown(String composeFile) async {
   await Process.run(
     'docker',
-    ['compose', '-f', composeFile, 'down', '--remove-orphans'],
+    ['compose', '-f', composeFile, 'down'],
     workingDirectory: projectRoot,
     runInShell: true,
   );
@@ -145,6 +145,32 @@ Future<String> _getContainerLogs(String containerName, {int lines = 50}) async {
   return result.stdout.toString();
 }
 
+Future<void> _removeUnhealthyOrExitedContainers() async {
+  // List all containers that are unhealthy or exited
+  final result = await Process.run(
+    'docker',
+    [
+      'ps',
+      '-a',
+      '--filter',
+      'status=exited',
+      '--filter',
+      'health=unhealthy',
+      '--format',
+      '{{.ID}}'
+    ],
+    runInShell: true,
+  );
+  final ids = result.stdout
+      .toString()
+      .split('\n')
+      .where((id) => id.trim().isNotEmpty)
+      .toList();
+  for (final id in ids) {
+    await Process.run('docker', ['rm', '-f', id], runInShell: true);
+  }
+}
+
 Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
   final composeFilesToDown = [
@@ -182,6 +208,8 @@ Future<Response> _deployAllHandler(Request request) async {
         };
       }
     }
+    // Remove any containers that are unhealthy or exited
+    await _removeUnhealthyOrExitedContainers();
   }
 
   // 3. List all running containers
