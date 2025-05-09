@@ -23,7 +23,7 @@ COPY --chown=flutteruser:flutteruser . .
 RUN dart compile exe bin/server.dart -o /output/server
 
 # Final stage - slim image to run the server
-FROM debian:slim
+FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
