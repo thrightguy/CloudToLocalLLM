@@ -8,12 +8,19 @@ RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bi
 RUN mkdir -p /sdks/flutter/bin/cache && \
     mkdir -p /sdks/flutter/packages/flutter_tools && \
     chown -R flutteruser:flutteruser /sdks/flutter/bin/cache && \
-    chown -R flutteruser:flutteruser /sdks/flutter/packages/flutter_tools
-RUN git config --global --add safe.directory /sdks/flutter
+    chown -R flutteruser:flutteruser /sdks/flutter/packages/flutter_tools && \
+    chown -R flutteruser:flutteruser /sdks/flutter
 
 # Copy pubspec files and get dependencies
 COPY --chown=flutteruser:flutteruser pubspec.* ./
+
+# Switch to flutteruser before running flutter/git commands
 USER flutteruser
+
+# Configure git to trust the flutter directory
+RUN git config --global --add safe.directory /sdks/flutter
+
+# Run flutter pub get
 RUN flutter pub get
 
 # Copy the rest of the app
