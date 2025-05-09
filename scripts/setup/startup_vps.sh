@@ -33,8 +33,20 @@ log_status "==== $(date) Starting CloudToLocalLLM stack ===="
 cd /opt/cloudtolocalllm || { log_error "Failed to cd to /opt/cloudtolocalllm"; exit 1; }
 
 log_status "[1/4] Pulling latest code from GitHub..."
+# Stash local changes before pulling, then pop after
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  log_status "Stashing local changes before git pull..."
+  git stash --include-untracked
+  STASHED=1
+else
+  STASHED=0
+fi
 if ! git pull; then
   log_error "git pull failed"; exit 1;
+fi
+if [[ $STASHED -eq 1 ]]; then
+  log_status "Popping stashed changes after git pull..."
+  git stash pop || log_status "No stashed changes to pop or merge conflicts occurred."
 fi
 
 log_status "[2/4] Stopping admin daemon..."

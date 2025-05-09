@@ -1,43 +1,24 @@
-﻿# Updated 2025-05-08: Modern Docker image for Flutter app
-FROM cirrusci/flutter:stable AS build
-
-# Set Flutter environment variables to suppress root user warnings
-ENV FLUTTER_ROOT=/flutter 
-ENV PUB_CACHE=/flutter/.pub-cache
-ENV FLUTTER_SUPPRESS_ANALYTICS=true
-ENV NO_COLOR=true
-ENV FLUTTER_NO_ROOT_WARNING=true
+﻿# Updated 2025-05-08: Modern Docker image for Flutter/Dart server app
+FROM dart:stable AS build
 
 WORKDIR /app
 
-# Copy scripts first
-COPY scripts/setup/docker_android_fix.sh /app/docker_android_fix.sh
-RUN chmod +x /app/docker_android_fix.sh
-
-# Copy pubspec files
+# Copy pubspec files and get dependencies
 COPY pubspec.* ./
-RUN flutter pub get
+RUN dart pub get
 
 # Copy the rest of the app
 COPY . .
 
-# Fix Android embedding issues
-RUN /app/docker_android_fix.sh
+# Build the Dart server/CLI app (example: bin/server.dart)
+RUN dart compile exe bin/server.dart -o /output/server
 
-# Build the app
-RUN flutter clean && flutter build apk --release
+# Final stage - slim image to run the server
+FROM scratch
+COPY --from=build /output/server /app/server
 
-# Copy the built app to a known location
-RUN mkdir -p /output && cp build/app/outputs/flutter-apk/app-release.apk /output/app-release.apk
+# Expose port if needed (example: 9001 for admin daemon)
+EXPOSE 9001
 
-# Final stage - slim image to serve the app
-FROM alpine:latest
-
-WORKDIR /app
-COPY --from=build /output/app-release.apk /app/app-release.apk
-
-# Expose port if needed for download server
-EXPOSE 8080
-
-# Use a simple HTTP server to serve the APK if needed
-CMD ["echo", "APK build complete. Use Docker cp to extract the APK."]
+# Default command to run the server
+ENTRYPOINT ["/app/server"]
