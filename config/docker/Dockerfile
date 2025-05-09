@@ -3,28 +3,12 @@ FROM ghcr.io/cirruslabs/flutter:latest AS build
 
 WORKDIR /app
 
-# Setup Flutter user for permission management
-RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bin/bash flutteruser
-RUN mkdir -p /sdks/flutter/bin/cache && \
-    mkdir -p /sdks/flutter/packages/flutter_tools && \
-    chown -R flutteruser:flutteruser /sdks/flutter/bin/cache && \
-    chown -R flutteruser:flutteruser /sdks/flutter/packages/flutter_tools && \
-    chown -R flutteruser:flutteruser /sdks/flutter
-
 # Copy pubspec files and get dependencies
-COPY --chown=flutteruser:flutteruser pubspec.* ./
-
-# Switch to flutteruser before running flutter/git commands
-USER flutteruser
-
-# Configure git to trust the flutter directory
-RUN git config --global --add safe.directory /sdks/flutter
-
-# Run flutter pub get
+COPY pubspec.* ./
 RUN flutter pub get
 
 # Copy the rest of the app
-COPY --chown=flutteruser:flutteruser . .
+COPY . .
 
 # Build the server/CLI app (example: bin/server.dart)
 RUN dart compile exe bin/server.dart -o /output/server
