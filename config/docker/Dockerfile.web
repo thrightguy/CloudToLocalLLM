@@ -4,21 +4,23 @@ FROM ghcr.io/cirruslabs/flutter:latest AS build
 # Create a non-root user and group
 RUN groupadd -r flutteruser && useradd --no-log-init -r -g flutteruser -m -s /bin/bash flutteruser
 
-WORKDIR /app
+# Give flutteruser write access to the ENTIRE Flutter SDK directory for the build
+USER root
+RUN chown -R flutteruser:flutteruser /sdks/flutter
 
-# Copy source and change ownership
-COPY --chown=flutteruser:flutteruser . .
+# Set up the app directory and copy source code
+USER root 
+RUN mkdir -p /app
+WORKDIR /app 
+COPY . ./ # Copy project files to /app, ensuring destination is treated as a directory
+RUN chown -R flutteruser:flutteruser /app # Change ownership of all app files
 
-# Switch to non-root user for build
+# Switch to non-root user for subsequent operations
 USER flutteruser
 
 # Mark Flutter SDK directory as safe for git operations by non-root user
+# This is now owned by flutteruser, but doesn't hurt to keep for clarity
 RUN git config --global --add safe.directory /sdks/flutter
-
-# Give flutteruser write access to the Flutter SDK cache
-USER root
-RUN mkdir -p /sdks/flutter/bin/cache && chown -R flutteruser:flutteruser /sdks/flutter/bin/cache
-USER flutteruser
 
 RUN flutter pub get && flutter build web --release
 
