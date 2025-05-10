@@ -44,8 +44,27 @@ trap 'log_error "Script interrupted."' ERR SIGINT SIGTERM
 # ==============================================================================
 log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
 
-# Step 1: Ensure Docker is installed and running
-log_status "[1/4] Checking Docker installation..."
+# Step 0: Clean up previous Docker environment
+log_status "[0/5] Cleaning up previous Docker environment..."
+log_status "Stopping and removing existing CloudToLocalLLM containers..."
+EXISTING_CONTAINERS=$(docker ps -aq --filter "name=cloudtolocalllm")
+if [ -n "$EXISTING_CONTAINERS" ]; then
+    docker stop $EXISTING_CONTAINERS || true
+    docker rm $EXISTING_CONTAINERS || true
+fi
+docker stop docker-admin-daemon-1 || true
+docker rm docker-admin-daemon-1 || true
+
+log_status "Pruning Docker system (unused containers, networks, images, build cache)..."
+docker system prune -af
+# CAUTION: Uncomment the line below to also prune VOLUMES. This is destructive if other apps use Docker volumes.
+# docker system prune -af --volumes
+
+# Optional: Restart Docker daemon if issues persist (manual step recommended)
+# log_status "Consider restarting the Docker daemon if problems continue: sudo systemctl restart docker"
+
+# Step 1: Ensure Docker is installed and running (renumbered)
+log_status "[1/5] Checking Docker installation..."
 if ! command -v docker &>/dev/null; then
   echo -e "${RED}Docker is not installed. Aborting.${NC}" >&2
   exit 1
@@ -57,12 +76,12 @@ if ! systemctl is-active --quiet docker; then
 fi
 
 # Log content of Dockerfile.web for debugging
-log_status "Content of /opt/cloudtolocalllm/config/docker/Dockerfile.web:"
+log_status "Content of $INSTALL_DIR/config/docker/Dockerfile.web:"
 cat "$INSTALL_DIR/config/docker/Dockerfile.web" || log_error "Could not display Dockerfile.web"
 log_status "-----------------------------------------------------"
 
-# Step 3: Start the admin daemon using Docker Compose
-log_status "[3/4] Starting admin daemon via Docker Compose..."
+# Step 2: Start the admin daemon using Docker Compose (renumbered from 3/4)
+log_status "[2/5] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
 docker compose -f config/docker/docker-compose.admin.yml up -d --build
 
@@ -84,8 +103,8 @@ if [ "$ADMIN_READY" = false ]; then
   exit 1
 fi
 
-# Step 4: Deploy all services through admin daemon API
-log_status "[4/4] Triggering full stack deployment via daemon API..."
+# Step 3: Deploy all services through admin daemon API (renumbered from 4/4)
+log_status "[3/5] Triggering full stack deployment via daemon API..."
 DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9001/admin/deploy/all || true)
 DEPLOY_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
 DEPLOY_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
