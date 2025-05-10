@@ -35,7 +35,7 @@ CloudToLocalLLM automatically detects your hardware capabilities and recommends 
 > - Your data is encrypted but stored on our servers
 > - If you lose your access code, we CANNOT recover your data
 > - We recommend keeping a secure backup of your access code
-> - Cloud storage is subject to our [Privacy Policy](PRIVACY.md) and [Terms of Service](TERMS.md)
+> - Cloud storage is subject to our [Privacy Policy](docs/PRIVACY.md) and [Terms of Service](docs/TERMS.md)
 
 ## Window and System Tray Behavior
 
@@ -52,67 +52,20 @@ The application implements a user-friendly window management system:
   - Minimize button minimizes to system tray
   - System tray icon restores the window when clicked
 
-## Premium Features (Currently Free During Testing)
+## Planned Premium Features
 
-During development, all premium features are available for free to facilitate testing:
+The following premium features are planned for future releases. Some aspects may be available during development for testing purposes:
 
-- **Cloud LLM Access**: OpenAI (GPT-4o, GPT-4 Turbo) and Anthropic (Claude 3) models
-- **Cloud Synchronization**: Sync conversations across devices
-- **Remote Access**: Access your local LLM from anywhere
-- **Advanced Model Management**: Tools for optimizing model performance
+- **Cloud LLM Access**: Access to leading models like OpenAI (GPT-4o, GPT-4 Turbo) and Anthropic (Claude 3). *(Planned)*
+- **Cloud Synchronization**: Sync conversations across devices. *(Partially available for testing)*
+- **Remote Access**: Access your local LLM from anywhere. *(Partially available for testing)*
+- **Advanced Model Management**: Tools for optimizing model performance. *(Partially available for testing)*
 
-> For more details about premium features, see [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md)
+> For more details about upcoming premium features and their development status, see [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md)
 
-## SSL Configuration
-
-The CloudToLocalLLM VPS deployment, specifically the `webapp` service, handles SSL termination. Here's an overview of the SSL strategy (see `docs/DEPLOYMENT.MD` for full details):
-
-1.  **Self-Signed Certificates (Initial Default for `webapp` container)**:
-    *   For ease of initial setup, the `webapp` Docker image is configured to generate and use self-signed SSL certificates by default.
-    *   This allows the service to start up with HTTPS immediately without external dependencies.
-    *   Browsers will show a warning for self-signed certificates; this is expected for local development or if you haven't configured a public certificate yet.
-
-2.  **Let's Encrypt (Recommended for Public Servers)**:
-    *   Free, automated certificates from Let's Encrypt.
-    *   Requires your domain to be correctly pointed to your VPS.
-    *   The `docs/DEPLOYMENT.MD` guide explains how to configure the system to use Let's Encrypt, typically involving the `certbot-service`.
-
-3.  **Commercial/Wildcard SSL Certificates**: 
-    *   Suitable for production environments, especially with multiple subdomains.
-    *   Covers all subdomains (e.g., `*.cloudtolocalllm.online`).
-    *   Requires purchasing a certificate and configuring Nginx to use it (see `docs/DEPLOYMENT.MD`).
-
-See [DEPLOYMENT.MD](docs/DEPLOYMENT.md) for detailed SSL configuration instructions.
-
-## 🛠️ Prerequisites
-
-- Flutter SDK (3.0.0 or higher recommended)
-- Dart SDK (3.0.0 or higher recommended)
-- (Optional) Ollama or LM Studio installed locally. Ollama can be installed via its desktop application (Windows, macOS, Linux) or run via Docker. For server/VPS deployments, ensure Ollama is not directly exposed to the internet without proper security measures.
+For instructions on self-hosting CloudToLocalLLM, including SSL setup, prerequisites, and advanced deployment, please see our [Self-Hosting Guide](docs/SELF_HOSTING.md).
 
 ## 🚀 Getting Started
-
-### Installation
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/thrightguy/CloudToLocalLLM.git
-   ```
-
-2. Navigate to the project directory:
-   ```
-   cd CloudToLocalLLM
-   ```
-
-3. Install dependencies:
-   ```
-   flutter pub get
-   ```
-
-4. Run the application:
-   ```
-   flutter run
-   ```
 
 ### Connecting to Local LLM
 
@@ -181,9 +134,9 @@ Refer to the `docs/` directory for detailed documentation. Key documents include
 
 **Deployment & Operations:**
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md): General deployment and infrastructure setup.
-- [VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md): Specific guide for VPS deployments (REVIEW for current accuracy, especially regarding `docker_startup_vps.sh`).
-- [DEPLOYMENT_INSTRUCTIONS.md](docs/DEPLOYMENT_INSTRUCTIONS.md): Step-by-step deployment instructions (REVIEW for redundancy with other deployment docs).
-- [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render (REVIEW for current relevance).
+- [VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md): Specific guide for VPS deployments.
+- [DEPLOYMENT_INSTRUCTIONS.md](docs/DEPLOYMENT_INSTRUCTIONS.md): Step-by-step deployment instructions.
+- [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render.
 - [MAINTENANCE_SCRIPTS.md](docs/MAINTENANCE_SCRIPTS.md): Information on available maintenance scripts.
 
 **Release & Windows Specific:**
@@ -216,78 +169,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Flutter](https://flutter.dev/)
 - [Ollama](https://ollama.ai/)
 - [LM Studio](https://lmstudio.ai/)
-
-## Static Portal Files (REVIEW: Is this still the process, or are all static assets part of the Flutter web build in the webapp container?)
-
-To update the static portal files (e.g., `index.html`, `login.html`, `theme.css`):
-
-1.  **Upload changed files to the VPS:**
-    Replace `~/.ssh/id_rsa` with the path to your SSH key if different.
-    ```bash
-    scp -i ~/.ssh/id_rsa index.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/index.html
-    scp -i ~/.ssh/id_rsa login.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/login.html
-    scp -i ~/.ssh/id_rsa css/theme.css root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/css/theme.css
-    ```
-
-    > ⚠️ **Do NOT copy files directly into the container.**
-    > Any files placed in `/usr/share/nginx/html` inside the container will be overwritten by the contents of `/opt/cloudtolocalllm/portal/` on the host.
-
-    No container restart is needed for static file changes.
-
-## Deployment (REVIEW: Consolidate with /docs/DEPLOYMENT.md and ensure VPS script `scripts/setup/docker_startup_vps.sh` is the primary documented method for VPS)
-
-### Dart Deployment Tool (REVIEW: Is this tool (`tools/deploy.dart`) still maintained/used or replaced by `admin_control_daemon` + `docker_startup_vps.sh`?)
-
-We provide a unified Dart-based tool for deploying and managing the CloudToLocalLLM portal:
-
-```bash
-# Install dependencies
-dart pub add args path
-
-# Deploy with default configuration
-dart tools/deploy.dart deploy
-# ... (other commands from original README) ...
-dart tools/deploy.dart --help
-```
-
-Using this tool eliminates the need for multiple shell scripts and provides a consistent deployment process.
-
-## System Daemon Management (REVIEW: Ensure this aligns with `admin_control_daemon` and `docker_startup_vps.sh`. Is `cloudctl` still a thing?)
-
-After deployment, you can manage the system using the `cloudctl` command:
-
-```
-cloudctl {start|stop|restart|status|logs|update}
-```
-
-### Available Commands
-- `cloudctl start`: Start all services
-- `cloudctl stop`: Stop all services
-- `cloudctl restart`: Restart all services
-- `cloudctl status`: Check service status
-- `cloudctl logs [service]`: View logs (available services: auth, web, admin, db)
-- `cloudctl update`: Pull latest changes and restart services
-
-### Service Configuration
-The system uses systemd for service management. The service files are located at:
-- `/etc/systemd/system/cloudtolocalllm.service`: Main service (REVIEW: How does this relate to the Dockerized setup managed by `admin_control_daemon`?)
-- `/etc/systemd/system/cloudtolocalllm-monitor.service`: Monitoring service (if enabled)
-
-## Updating Live Site Files (Nginx Container) (REVIEW: This seems to refer to a generic nginx setup. For this project, the `webapp` container serves the Flutter web build. Is this section still relevant, or does it describe an old process?)
-
-All live HTML, CSS, and static files for your site are served from:
-
-```
-/opt/cloudtolocalllm/portal/
-```
-**on the host**. This directory is bind-mounted into the running `nginx-proxy` container at `/usr/share/nginx/html`.
-
-**To update your site:**
-1. Edit your HTML or CSS files locally.
-2. Upload them to `/opt/cloudtolocalllm/portal/` on your VPS.
-   Example using `scp`:
-   ```bash
-   scp -i ~/.ssh/your_ssh_key localfile.html user@your_vps_ip:/opt/cloudtolocalllm/portal/localfile.html
-   ```
-   (Replace `~/.ssh/your_ssh_key`, `localfile.html`, `user@your_vps_ip` accordingly)
-3. Nginx will automatically serve the updated files. No container restart is needed.
+- [FusionAuth](https://fusionauth.io/)
