@@ -96,35 +96,65 @@ Future<void> _composeDown(String composeFile) async {
   );
 }
 
-Future<void> _composeUp(String composeFile) async {
-  await Process.run(
+Future<ProcessResult> _composeUp(String composeFile) async {
+  print('Attempting to bring up services from: $composeFile');
+  final result = await Process.run(
     'docker',
     ['compose', '-f', composeFile, 'up', '-d', '--build'],
     workingDirectory: projectRoot,
     runInShell: true,
   );
+  print('docker compose up for $composeFile exited with ${result.exitCode}');
+  if (result.stdout.toString().isNotEmpty) {
+    print('STDOUT for $composeFile up:\n${result.stdout}');
+  }
+  if (result.stderr.toString().isNotEmpty) {
+    print('STDERR for $composeFile up:\n${result.stderr}');
+  }
+  return result;
 }
 
 Future<bool> _waitForHealthy(String serviceName,
     {int timeoutSeconds = 120}) async {
+  print('Checking health for $serviceName...');
   final deadline = DateTime.now().add(Duration(seconds: timeoutSeconds));
   while (DateTime.now().isBefore(deadline)) {
     final result = await Process.run(
       'docker',
-      ['inspect', '--format', '{{.State.Health.Status}}', serviceName],
+      ['inspect', '--format', '{{if .State.Health}}{{.State.Health.Status}}{{else}}nohealthcheck{{end}}', serviceName],
       runInShell: true,
     );
+
     if (result.exitCode == 0) {
       final status = result.stdout.toString().trim();
+      print('Health status for $serviceName: $status');
       if (status == 'healthy') return true;
       if (status == 'unhealthy') return false;
+      if (status == 'nohealthcheck') {
+        // If no healthcheck, check if container is simply running
+        // Use exact name matching for ps filter
+        final psResult = await Process.run('docker', ['ps', '-q', '--filter', 'name=^/${serviceName}$'], runInShell: true);
+        if (psResult.stdout.toString().trim().isNotEmpty) {
+          print('$serviceName has no healthcheck but is running.');
+          return true; // Container exists and is running
+        } else {
+          print('$serviceName has no healthcheck and is NOT running (or not found by name).');
+          return false; // Container with no healthcheck is not running or doesn't exist by this name
+        }
+      }
+      // If status is 'starting' or empty, the loop will continue after the delay.
     } else {
-      // No healthcheck or container not found
-      return true;
+      // Container not found by inspect, or inspect command failed.
+      print('Failed to inspect $serviceName (exit code ${result.exitCode}), assuming not healthy or not found.');
+      if (result.stderr.toString().isNotEmpty) {
+        print('Inspect stderr for $serviceName: ${result.stderr}');
+      }
+      return false; // Could not inspect, so not healthy.
     }
     await Future.delayed(Duration(seconds: 3));
   }
-  return false;
+  print('Timeout waiting for $serviceName to become healthy.');
+  return false; // Timeout
 }
 
 Future<String> _listContainers() async {
@@ -189,6 +219,7 @@ Future<Response> _deployAllHandler(Request request) async {
     'cloudtolocalllm-certbot'
   ];
   final unhealthy = <String, dynamic>{};
+  final failedComposeFiles = <String, String>{}; // To store stderr of failed compose up
 
   // 1. Stop and remove all service containers (not admin daemon)
   for (final file in composeFilesToDown) {
@@ -197,30 +228,43 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 2. Start and check each service
   for (final file in composeFilesToUp) {
-    await _composeUp(file);
-    // Wait for health if possible (for known services)
+    final composeUpResult = await _composeUp(file); 
+    if (composeUpResult.exitCode != 0) {
+      print('ERROR: docker compose up for $file failed with exit code ${composeUpResult.exitCode}');
+      failedComposeFiles[file] = composeUpResult.stderr.toString();
+    }
+
     for (final name in serviceNames) {
+      if (unhealthy.containsKey(name)) continue;
+
       final healthy = await _waitForHealthy(name);
       if (!healthy) {
-        final logs = await _getContainerLogs(name);
-        unhealthy[name] = {
-          'status': 'unhealthy',
-          'logs': logs,
-        };
+        if (!unhealthy.containsKey(name)) {
+           final logs = await _getContainerLogs(name, lines: 20);
+            unhealthy[name] = {
+                'status': 'unhealthy_or_not_found',
+                'logs': logs,
+                'checked_after_compose_file': file 
+            };
+        }
       }
     }
-    // Remove any containers that are unhealthy or exited
     await _removeUnhealthyOrExitedContainers();
   }
 
   // 3. List all running containers
   final containers = await _listContainers();
   results['containers'] = containers;
-  if (unhealthy.isNotEmpty) {
-    results['unhealthy'] = unhealthy;
+
+  if (failedComposeFiles.isNotEmpty) {
+    results['failed_compose_files'] = failedComposeFiles;
+  }
+
+  if (unhealthy.isNotEmpty || failedComposeFiles.isNotEmpty) {
+    results['unhealthy_services'] = unhealthy;
     return Response.internalServerError(
       body: jsonEncode({
-        'status': 'Some services failed to start or are unhealthy',
+        'status': 'Some services failed to start, compose files failed, or services are unhealthy/not_found',
         'results': results,
       }),
       headers: {'Content-Type': 'application/json'},
