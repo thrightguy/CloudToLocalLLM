@@ -1,3 +1,10 @@
+x-flutter-env: &flutter-env
+  FLUTTER_ROOT: /flutter
+  PUB_CACHE: /flutter/.pub-cache
+  FLUTTER_SUPPRESS_ANALYTICS: true
+  NO_COLOR: true
+  FLUTTER_NO_ROOT_WARNING: true
+
 services:
   # Web application service
   webapp:
@@ -9,11 +16,7 @@ services:
     ports:
       - "8080:80"
     environment:
-      - FLUTTER_ROOT=/flutter
-      - PUB_CACHE=/flutter/.pub-cache
-      - FLUTTER_SUPPRESS_ANALYTICS=true
-      - NO_COLOR=true
-      - FLUTTER_NO_ROOT_WARNING=true
+      <<: *flutter-env
     restart: unless-stopped
     networks:
       - cloudllm-network
@@ -32,11 +35,7 @@ services:
     image: cloudtolocalllm-tunnel
     container_name: cloudtolocalllm-tunnel
     environment:
-      - FLUTTER_ROOT=/flutter
-      - PUB_CACHE=/flutter/.pub-cache
-      - FLUTTER_SUPPRESS_ANALYTICS=true
-      - NO_COLOR=true
-      - FLUTTER_NO_ROOT_WARNING=true
+      <<: *flutter-env
     restart: unless-stopped
     networks:
       - cloudllm-network
@@ -89,11 +88,7 @@ services:
     ports:
       - "8090:8090"
     environment:
-      - FLUTTER_ROOT=/flutter
-      - PUB_CACHE=/flutter/.pub-cache
-      - FLUTTER_SUPPRESS_ANALYTICS=true
-      - NO_COLOR=true
-      - FLUTTER_NO_ROOT_WARNING=true
+      <<: *flutter-env
     restart: unless-stopped
     networks:
       - cloudllm-network
