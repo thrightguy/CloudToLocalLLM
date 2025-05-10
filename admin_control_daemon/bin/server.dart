@@ -270,7 +270,6 @@ Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
   final composeFilesToUp = [
     'config/docker/docker-compose.yml',
-    'config/docker/docker-compose-fusionauth.yml',
     'config/docker/docker-compose.monitoring.yml',
   ];
 
@@ -278,26 +277,11 @@ Future<Response> _deployAllHandler(Request request) async {
   final Map<String, ({List<String> services, String? projectName})>
       orderedServices = {
     'config/docker/docker-compose.yml': (
-      services: [
-        'webapp',
-        // 'cloud', // Cloud service runs a script, might not need explicit health wait
-        // Add other services from this file if they have healthchecks to monitor
-      ],
+      services: ['webapp', 'cloudtolocalllm-fusionauth-app'],
       projectName: mainProjectName
     ),
-    'config/docker/docker-compose-fusionauth.yml': (
-      services: [
-        // FusionAuth DB might not have an explicit healthcheck in compose, but app depends on it.
-        // The app's healthcheck will cover DB readiness implicitly.
-        'cloudtolocalllm-fusionauth-app' // Actual service name for the app
-      ],
-      projectName:
-          null // Uses default Docker Compose project naming (e.g., 'docker')
-    ),
     'config/docker/docker-compose.monitoring.yml': (
-      services: [
-        'cloudtolocalllm_monitor'
-      ], // Assuming this is the correct service name
+      services: ['cloudtolocalllm_monitor'],
       projectName: null
     ),
   };
