@@ -88,9 +88,13 @@ Future<Response> _issueRenewSslHandler(Request request) async {
   );
 }
 
-Future<void> _composeDown(String composeFile) async {
-  final baseArgs = ['compose', '-p', mainProjectName];
-  print('Attempting to bring down services from: $composeFile');
+Future<void> _composeDown(String composeFile, {String? projectName}) async {
+  final List<String> baseArgs = ['compose'];
+  if (projectName != null && projectName.isNotEmpty) {
+    baseArgs.addAll(['-p', projectName]);
+  }
+  print(
+      'Attempting to bring down services from: $composeFile using project name: ${projectName ?? 'default'}');
   final result = await Process.run(
     'docker',
     [...baseArgs, '-f', composeFile, 'down', '--remove-orphans'],
@@ -106,9 +110,14 @@ Future<void> _composeDown(String composeFile) async {
   }
 }
 
-Future<ProcessResult> _composeUp(String composeFile) async {
-  final baseArgs = ['compose', '-p', mainProjectName];
-  print('Attempting to bring up services from: $composeFile');
+Future<ProcessResult> _composeUp(String composeFile,
+    {String? projectName}) async {
+  final List<String> baseArgs = ['compose'];
+  if (projectName != null && projectName.isNotEmpty) {
+    baseArgs.addAll(['-p', projectName]);
+  }
+  print(
+      'Attempting to bring up services from: $composeFile using project name: ${projectName ?? 'default'}');
   final result = await Process.run(
     'docker',
     [...baseArgs, '-f', composeFile, 'up', '-d', '--build', '--remove-orphans'],
@@ -233,13 +242,13 @@ Future<Response> _deployAllHandler(Request request) async {
   // final composeFilesToDown = composeFilesToUp.reversed.toList(); // Removed for less aggressive cleanup
 
   final serviceNames = [
-    'cloudtolocalllm-fusionauth-app',
-    'cloudtolocalllm-fusionauth-postgres',
-    'cloudtolocalllm-webapp',
-    'cloudtolocalllm-nginx',
-    'cloudtolocalllm-tunnel',
-    'cloudtolocalllm_monitor',
-    'cloudtolocalllm-certbot'
+    'cloudtolocalllm-fusionauth-app', // NO Prefix: from separate compose file without project name
+    'cloudtolocalllm-fusionauth-postgres', // NO Prefix: from separate compose file without project name
+    'ctl_services-webapp',
+    'ctl_services-nginx',
+    'ctl_services-tunnel',
+    'cloudtolocalllm_monitor', // NO Prefix: from separate compose file without project name
+    'ctl_services-certbot'
   ];
   final unhealthy = <String, dynamic>{};
   final failedComposeFiles =
@@ -283,23 +292,26 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 2. Start and check each service
   for (final file in composeFilesToUp) {
-    // Specific pre-up step for main compose file to ensure webapp is rebuilt cleanly
+    String? currentProjectName;
     if (file == 'config/docker/docker-compose.yml') {
+      currentProjectName = mainProjectName;
       print(
-          'Attempting to remove existing cloudtolocalllm-webapp image to ensure fresh build...');
-      final rmiResult = await Process.run(
-          'docker', ['rmi', '-f', 'cloudtolocalllm-webapp'],
-          workingDirectory: projectRoot, runInShell: true);
+          'Attempting to remove existing ${mainProjectName}-webapp image to ensure fresh build...');
+      final rmiResult = await Process.run('docker',
+          ['rmi', '-f', '${mainProjectName}-webapp'], // Use prefixed image name
+          workingDirectory: projectRoot,
+          runInShell: true);
       if (rmiResult.exitCode == 0) {
         print(
-            'Successfully removed cloudtolocalllm-webapp image (or it did not exist).');
+            'Successfully removed ${mainProjectName}-webapp image (or it did not exist).');
       } else {
         print(
-            'Warning: Failed to remove cloudtolocalllm-webapp image. Stderr: ${rmiResult.stderr}');
+            'Warning: Failed to remove ${mainProjectName}-webapp image. Stderr: ${rmiResult.stderr}');
       }
     }
 
-    final composeUpResult = await _composeUp(file);
+    final composeUpResult =
+        await _composeUp(file, projectName: currentProjectName);
     if (composeUpResult.exitCode != 0) {
       print(
           'ERROR: docker compose up for $file failed with exit code ${composeUpResult.exitCode}');
