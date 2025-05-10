@@ -88,11 +88,66 @@ log_status "-----------------------------------------------------"
 # Step 2: Start the admin daemon using Docker Compose (renumbered from 3/4)
 log_status "[2/5] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
+
+# Define paths for admin daemon source and hash file
+ADMIN_DAEMON_SRC_DIR="$INSTALL_DIR/admin_control_daemon"
+ADMIN_DAEMON_HASH_FILE="$INSTALL_DIR/.admin_daemon_hash"
+SHOULD_REBUILD_ADMIN_DAEMON=false
+
+# Function to calculate hash of the admin daemon source directory
+calculate_admin_daemon_hash() {
+  if [ -d "$ADMIN_DAEMON_SRC_DIR" ]; then
+    # Create a hash of all files and their names, then hash that list
+    # This is robust to file additions, deletions, and modifications.
+    # Exclude .git directory if it exists within admin_control_daemon
+    find "$ADMIN_DAEMON_SRC_DIR" -type f -not -path "*/.git/*" -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
+  else
+    echo "" # Return empty if source dir doesn't exist
+  fi
+}
+
+CURRENT_ADMIN_DAEMON_HASH=$(calculate_admin_daemon_hash)
+log_status "Current admin_daemon source hash: $CURRENT_ADMIN_DAEMON_HASH"
+
+if [ -f "$ADMIN_DAEMON_HASH_FILE" ]; then
+  OLD_ADMIN_DAEMON_HASH=$(cat "$ADMIN_DAEMON_HASH_FILE")
+  log_status "Old admin_daemon source hash: $OLD_ADMIN_DAEMON_HASH"
+  if [ "$CURRENT_ADMIN_DAEMON_HASH" != "$OLD_ADMIN_DAEMON_HASH" ]; then
+    log_status "Admin daemon source code has changed. Rebuild will be triggered."
+    SHOULD_REBUILD_ADMIN_DAEMON=true
+  else
+    log_status "Admin daemon source code has not changed."
+    SHOULD_REBUILD_ADMIN_DAEMON=false
+  fi
+else
+  log_status "No old admin_daemon hash file found. Rebuild will be triggered."
+  SHOULD_REBUILD_ADMIN_DAEMON=true
+fi
+
 # Rebuild webapp container with --no-cache to ensure latest config
 log_status "Rebuilding webapp container with --no-cache..."
 docker compose -f config/docker/docker-compose.yml build --no-cache webapp
 
-docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d
+ADMIN_DAEMON_COMPOSE_CMD="docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d"
+
+if [ "$SHOULD_REBUILD_ADMIN_DAEMON" = true ]; then
+  log_status "Executing admin daemon compose with --build..."
+  $ADMIN_DAEMON_COMPOSE_CMD --build admin-daemon # Target only admin-daemon for build
+else
+  log_status "Executing admin daemon compose without --build..."
+  $ADMIN_DAEMON_COMPOSE_CMD admin-daemon # Target only admin-daemon
+fi
+
+# After successful compose up, if a rebuild happened, update the hash file
+if [ "$SHOULD_REBUILD_ADMIN_DAEMON" = true ]; then
+  # Check if admin daemon started successfully before updating hash
+  # We'll infer this by checking if the /admin/health endpoint becomes ready later.
+  # For now, we optimistically assume success if compose up doesn't fail immediately.
+  # A more robust check would be after the health check loop.
+  # However, if compose up fails, this part won't be reached due to "set -e" or manual exits.
+  echo "$CURRENT_ADMIN_DAEMON_HASH" > "$ADMIN_DAEMON_HASH_FILE"
+  log_status "Updated admin_daemon hash file with new hash: $CURRENT_ADMIN_DAEMON_HASH"
+fi
 
 # Wait for the admin daemon to be ready
 log_status "Waiting for admin daemon to be ready..."
