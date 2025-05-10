@@ -13,8 +13,9 @@ RUN echo "Build version: $(date +%s)"
 COPY pubspec.yaml ./
 COPY pubspec.lock ./
 
-# Change ownership of /app to flutteruser before running flutter commands
-RUN chown -R flutteruser:fluttergroup /app
+# Change ownership of /app and /sdks/flutter to flutteruser before running flutter commands
+RUN chown -R flutteruser:fluttergroup /app && \
+    chown -R flutteruser:fluttergroup /sdks/flutter
 
 # Switch to non-root user for flutter commands
 USER flutteruser
