@@ -42,6 +42,55 @@ services:
       timeout: 3s
       retries: 5
 
+  cloudtolocalllm-fusionauth-db:
+    image: postgres:13-alpine
+    container_name: cloudtolocalllm-fusionauth-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=2b7e4f8c-6e2a-4b2e-8c1d-7f3e2a1b9c4d
+      - POSTGRES_DB=fusionauth
+    volumes:
+      - fusionauth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - cloudllm-network
+
+  cloudtolocalllm-fusionauth-app:
+    image: fusionauth/fusionauth-app:latest
+    container_name: cloudtolocalllm-fusionauth-app
+    restart: unless-stopped
+    ports:
+      - "9011:9011"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://cloudtolocalllm-fusionauth-db:5432/fusionauth
+      - DATABASE_ROOT_USERNAME=postgres
+      - DATABASE_ROOT_PASSWORD=2b7e4f8c-6e2a-4b2e-8c1d-7f3e2a1b9c4d
+      - DATABASE_USERNAME=fusionauth
+      - DATABASE_PASSWORD=7c9d2e1a-5b4f-4c3e-9a2d-8e1b7c6d5f4a
+      - FUSIONAUTH_APP_MEMORY=512M
+      - FUSIONAUTH_APP_RUNTIME_MODE=production
+      - FUSIONAUTH_APP_URL=https://cloudtolocalllm.online
+      - SEARCH_ENGINE_TYPE=database
+      - FUSIONAUTH_APP_SETUP_PASSWORD=1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+    depends_on:
+      - cloudtolocalllm-fusionauth-db
+    volumes:
+      - fusionauth_config:/usr/local/fusionauth/config
+    networks:
+      - cloudllm-network
+
+volumes:
+  fusionauth_postgres_data:
+    driver: local
+  fusionauth_config:
+    driver: local
+# Admin reference (not for production):
+# POSTGRES_PASSWORD: 2b7e4f8c-6e2a-4b2e-8c1d-7f3e2a1b9c4d
+# DATABASE_PASSWORD: 7c9d2e1a-5b4f-4c3e-9a2d-8e1b7c6d5f4a
+# FUSIONAUTH_APP_SETUP_PASSWORD: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+
 networks:
   cloudllm-network:
     driver: bridge

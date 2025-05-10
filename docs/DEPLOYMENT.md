@@ -166,12 +166,28 @@ For wildcard SSL certificates:
 2. Follow the installation instructions for your certificate provider
 3. Update the Nginx configuration to use the new certificate 
 
-## [2025-05-10] Nginx Upstream Proxy Block Disabled
+## [2025-05-10] FusionAuth Integration Enabled
 
-- The `/auth/` proxy block in `config/nginx/nginx.conf` was commented out because the referenced upstream service (`cloudtolocalllm-fusionauth-app`) does not exist in `docker-compose.yml`.
-- This was causing the webapp container to crash in a restart loop with the error: `host not found in upstream`.
-- If you need FusionAuth or another backend in the future, add the service to your Compose file and update the Nginx config accordingly.
+- FusionAuth and its dedicated Postgres database are now included in the main Compose file (`config/docker/docker-compose.yml`).
+- The `/auth/` proxy block in `config/nginx/nginx.conf` is enabled by default, routing `/auth/` requests to the FusionAuth service.
+- Service names are consistent: `cloudtolocalllm-fusionauth-app` (FusionAuth) and `cloudtolocalllm-fusionauth-db` (Postgres).
+- Strong random passwords are generated for all secrets (see Compose file for admin reference; change for production).
+- Persistent named volumes are used for both FusionAuth config and database data.
 
-### Troubleshooting: Nginx Upstream Errors
-- If you see errors like `host not found in upstream ...` in your container logs, check that the upstream name in your Nginx config matches a service name in your Docker Compose file and that both are on the same network.
-- If the backend is not needed, comment out or remove the relevant location block in the Nginx config. 
+### Accessing FusionAuth
+- After deployment, access the FusionAuth admin UI at: `https://cloudtolocalllm.online/auth/`
+- The initial setup password is set via the `FUSIONAUTH_APP_SETUP_PASSWORD` environment variable (see Compose file for value).
+- You can log in and create your first FusionAuth application and admin user.
+
+### Troubleshooting
+- If you see errors about the FusionAuth service or database, check that both containers are running and healthy:
+  ```bash
+  docker compose -f config/docker/docker-compose.yml ps
+  ```
+- If you need to reset the database or config, remove the named volumes `fusionauth_postgres_data` and `fusionauth_config` (data loss!).
+
+### Security Note
+- The generated passwords are for demonstration and initial deployment. **Change them in production!**
+- Use Docker secrets or environment variable management for sensitive values in a real deployment.
+
+--- 
