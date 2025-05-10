@@ -55,12 +55,18 @@ fi
 docker stop docker-admin-daemon-1 || true
 docker rm docker-admin-daemon-1 || true
 
-log_status "Pruning Docker system (unused containers, networks, images, build cache)..."
-# docker system prune -af # Commented out to avoid aggressive pruning
-# CAUTION: Uncomment the line below to also prune VOLUMES. This is destructive if other apps use Docker volumes.
+# Remove unused 'cloudllm-network' if not in use
+if docker network ls | grep -q 'cloudllm-network'; then
+  if ! docker network inspect cloudllm-network | grep -q '"Containers": {}'; then
+    log_status "'cloudllm-network' is still in use, not removing."
+  else
+    log_status "Removing unused 'cloudllm-network'..."
+    docker network rm cloudllm-network || true
+  fi
+fi
 
-# Optional: Restart Docker daemon if issues persist (manual step recommended)
-# log_status "Consider restarting the Docker daemon if problems continue: sudo systemctl restart docker"
+# Do NOT prune volumes or images
+# docker system prune -af # Commented out to avoid aggressive pruning
 
 # Step 1: Ensure Docker is installed and running (renumbered)
 log_status "[1/5] Checking Docker installation..."
@@ -82,6 +88,10 @@ log_status "-----------------------------------------------------"
 # Step 2: Start the admin daemon using Docker Compose (renumbered from 3/4)
 log_status "[2/5] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
+# Rebuild webapp container with --no-cache to ensure latest config
+log_status "Rebuilding webapp container with --no-cache..."
+docker compose -f config/docker/docker-compose.yml build --no-cache webapp
+
 docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d --build
 
 # Wait for the admin daemon to be ready
@@ -118,6 +128,15 @@ else
   log_success "Deployment API call succeeded (HTTP status: $DEPLOY_CODE)."
   echo "API Response Body:"
   echo "$DEPLOY_BODY"
+fi
+
+# After deployment, check that all containers are on the 'cloudllm-network'
+log_status "Checking that all containers are on the 'cloudllm-network'..."
+NETWORK_INSPECT=$(docker network inspect cloudllm-network 2>/dev/null || true)
+if [[ "$NETWORK_INSPECT" == *'"Containers": {}'* ]]; then
+  log_error "No containers found on 'cloudllm-network'. Please check your Compose configuration."
+else
+  log_success "Containers are attached to 'cloudllm-network'."
 fi
 
 log_status "==== $(date) Docker-based startup complete ===="
