@@ -1,159 +1,61 @@
 # CloudToLocalLLM Containerized Architecture
 
-This document outlines the containerized architecture for the CloudToLocalLLM platform deployed on VPS.
+This document outlines the current containerized architecture for the CloudToLocalLLM platform deployed on a VPS, managed by the `admin_control_daemon`.
 
 ## Overview
 
-The CloudToLocalLLM system uses a multi-container architecture with the following components:
+The system utilizes Docker and Docker Compose for service orchestration. The key components are:
 
-1. **Nginx Proxy** - Front-facing reverse proxy that handles all incoming traffic
-2. **Portal** - Main Flutter web application 
-3. **API Service** - Backend API for the platform
-4. **Database** - PostgreSQL database for user data
-5. **User Manager** - Service that handles user container creation and management
-6. **User Containers** - Individual containers for each user (dynamically created)
+1.  **Admin Control Daemon (`admin_control_daemon`)**: A Dart-based application running in its own Docker container. It acts as the primary manager for the rest of the application stack. It exposes an API (default port 9001) to control deployment, status, and logs of other services.
+    *   **Dockerfile**: `config/docker/Dockerfile.admin_daemon`
+    *   **Compose File**: `config/docker/docker-compose.admin.yml` (used by `scripts/setup/docker_startup_vps.sh` to launch the daemon itself)
 
-## Architecture Diagram
+2.  **Main Application Services**: These are defined in `config/docker/docker-compose.yml` and managed by the `admin_control_daemon`.
+    *   **Web Application (`webapp`)**:
+        *   **Purpose**: Serves the main Flutter web application and handles user-facing HTTP/HTTPS traffic.
+        *   **Components**: Contains Nginx acting as a reverse proxy and web server for the Flutter web build.
+        *   **Dockerfile**: `config/docker/Dockerfile.web` (builds Flutter web app and configures Nginx).
+        *   **SSL**: Configured for self-signed certificates by default (generated in `Dockerfile.web`). Can be configured for Let's Encrypt or commercial certificates (see `docs/DEPLOYMENT.MD`).
 
-```
-                                    +-------------------+
-                                    |                   |
-                                    |  DNS (Subdomains) |
-                                    |                   |
-                                    +-------------------+
-                                             |
-                                             v
-+----------------------------------------------------------------------+
-|                         VPS Host (Docker Environment)                |
-|                                                                      |
-|  +--------------+      +--------------+      +--------------+        |
-|  |              |      |              |      |              |        |
-|  | Nginx Proxy  |----->|    Portal    |      | API Service  |        |
-|  |  Container   |      |  Container   |      |  Container   |        |
-|  |              |      |              |      |              |        |
-|  +--------------+      +--------------+      +--------------+        |
-|         |                                            |               |
-|         |                                            v               |
-|         |                                    +--------------+        |
-|         |                                    |              |        |
-|         |                                    |  Database    |        |
-|         |                                    |  Container   |        |
-|         |                                    |              |        |
-|         |                                    +--------------+        |
-|         |                                            ^               |
-|         v                                            |               |
-|  +--------------+                           +--------------+         |
-|  |              |                           |              |         |
-|  | User Manager |-------------------------->| User         |         |
-|  |  Container   |                           | Containers   |         |
-|  |              |                           |              |         |
-|  +--------------+                           +--------------+         |
-|                                                                      |
-+----------------------------------------------------------------------+
-```
+    *   **FusionAuth (`cloudtolocalllm-fusionauth-app`)**:
+        *   **Purpose**: Provides identity and access management (IAM).
+        *   **Image**: `fusionauth/fusionauth-app` (official image).
+        *   **Configuration**: Managed via environment variables in `config/docker/docker-compose.yml` and persistent data in a Docker volume (`fusionauth_config`).
+
+    *   **FusionAuth Database (`cloudtolocalllm-fusionauth-db`)**:
+        *   **Purpose**: PostgreSQL database for FusionAuth.
+        *   **Image**: `postgres` (official image).
+        *   **Configuration**: Managed via environment variables and persistent data in a Docker volume (`fusionauth_postgres_data`).
+
+    *   **Tunnel Service (`tunnel_service`)** (Optional - REVIEW if actively integrated and deployed):
+        *   **Purpose**: Potentially provides ngrok-like tunneling capabilities for remote access to local LLMs.
+        *   **Location**: `backend/tunnel_service/`
+        *   **Dockerfile**: `backend/tunnel_service/Dockerfile` (if it exists and is used).
+        *   **Note**: Its integration into the main `docker-compose.yml` and deployment flow needs to be confirmed.
 
 ## Network Configuration
 
-The system uses two Docker networks:
+-   A primary Docker network, typically named `cloudllm-network` (as created by `docker-compose.yml` with project name `ctl_services`), connects the main application services (`webapp`, `fusionauth-app`, `fusionauth-db`, etc.).
+-   The `admin_control_daemon` container also attaches to this network (or a relevant one) to communicate with the Docker daemon and manage other containers.
 
-1. **proxy-network** - Connects the front-facing services (nginx, portal, api)
-2. **user-network** - Connects the nginx proxy to user containers
+## Deployment Flow Summary
 
-## Container Details
+1.  The `scripts/setup/docker_startup_vps.sh` script is run on the VPS.
+2.  This script starts the `admin_control_daemon` container using `config/docker/docker-compose.admin.yml`.
+3.  The script then calls an API endpoint on the `admin_control_daemon`.
+4.  The `admin_control_daemon` uses `config/docker/docker-compose.yml` to bring up (build if necessary, then run) the `webapp`, FusionAuth services, and any other defined application services.
 
-### 1. Nginx Proxy Container
+## Domain and SSL
 
-- **Image**: nginx:alpine
-- **Purpose**: Handles all HTTP/HTTPS traffic and routes to appropriate services
-- **Features**:
-  - SSL termination
-  - Domain/subdomain routing
-  - Static file serving
-  - Reverse proxy to services
-
-### 2. Portal Container
-
-- **Purpose**: Serves the main Flutter web application
-- **Features**:
-  - User authentication and dashboard
-  - Management interface
-
-### 3. API Service Container
-
-- **Image**: node:18-alpine
-- **Purpose**: Provides RESTful API for the platform
-- **Features**:
-  - User management endpoints
-  - Container provisioning via User Manager
-  - Data persistence via Database
-
-### 4. Database Container
-
-- **Image**: postgres:14-alpine
-- **Purpose**: Stores all platform data
-- **Features**:
-  - User authentication data
-  - Container metadata
-  - User settings and preferences
-
-### 5. User Manager Container
-
-- **Image**: node:18-alpine
-- **Purpose**: Manages user containers
-- **Features**:
-  - Creates containers on demand
-  - Monitors container health
-  - Resource allocation
-  - Lifecycle management
-
-### 6. User Containers
-
-- **Purpose**: Individual environments for each user
-- **Features**:
-  - Isolated user environment
-  - User-specific LLM configuration
-  - Accessible via subdomain (username.users.cloudtolocalllm.online)
-
-## Domain and Subdomain Structure
-
-The platform uses the following domain structure:
-
-- **cloudtolocalllm.online** - Main portal
-- **api.cloudtolocalllm.online** - API service
-- **users.cloudtolocalllm.online** - User landing page
-- **{username}.users.cloudtolocalllm.online** - User-specific environments
-
-## SSL Configuration
-
-SSL certificates are managed through Certbot with automatic renewal:
-
-1. Wildcard certificate covers all subdomains
-2. Certificate renewal handled via cron jobs
-3. Renewal hooks automatically update certificates in Nginx
-
-## Deployment
-
-The entire architecture can be deployed using:
-
-```powershell
-.\containers_setup.ps1 "user@your-vps-ip"
-```
-
-This script:
-1. Builds the Flutter web app locally
-2. Sets up the containerized environment on the VPS
-3. Configures SSL certificates
-4. Creates the Docker networks and containers
+-   The primary domain (e.g., `cloudtolocalllm.online`) points to the `webapp` service (Nginx).
+-   SSL is handled by Nginx within the `webapp` container. See `docs/DEPLOYMENT.MD` for SSL configuration options (self-signed, Let's Encrypt, commercial).
 
 ## Security Considerations
 
-The architecture incorporates several security measures:
-
-1. **Network Isolation** - Containers only have access to required networks
-2. **SSL Everywhere** - All traffic encrypted with HTTPS
-3. **Container Isolation** - Users isolated in separate containers
-4. **Principle of Least Privilege** - Containers run with minimal permissions
-5. **Automatic Updates** - SSL certificates auto-renew
+-   **Network Segregation**: Services are on a defined Docker network.
+-   **Admin Daemon**: Access to the admin daemon's API should be restricted (e.g., firewall rules on the VPS, though it currently listens on localhost by default as per `docker_startup_vps.sh` interaction).
+-   **Secrets Management**: Passwords and sensitive data (e.g., for FusionAuth DB) are currently in `docker-compose.yml`. For production, consider using Docker secrets or environment variable injection through more secure means.
+-   **Regular Updates**: Keep base Docker images and application dependencies updated.
 
 ## Future Enhancements
 
