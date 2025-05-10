@@ -6,7 +6,7 @@ A Flutter application that allows you to run LLMs locally and sync your conversa
 
 ## Features
 
-- Run LLMs locally using Ollama (desktop Linux or WSL2 only) or LM Studio
+- Run LLMs locally using Ollama or LM Studio
 - Hardware detection for optimal model recommendations
 - Support for latest models (Llama 3, Gemma 3, Phi-3, Mistral, etc.)
 - Optional cloud synchronization of conversations (premium feature)
@@ -84,46 +84,9 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed SSL configuration instructi
 
 ## Prerequisites
 
-- Flutter SDK (2.10.0 or higher)
-- Dart SDK (2.16.0 or higher)
-- (Optional) Ollama or LM Studio installed locally
-  - Note: Ollama should only be run on desktop Linux or Docker in WSL2, not on VPS or cloud servers
-
-## Current Project Status
-
-### Services Status (as of latest update)
-
-#### Running Services
-- **Tunnel Service**: 
-  - Successfully built and running
-  - Node.js Express server running on port 8080
-  - Handles remote access to local LLMs
-
-- **Auth Service**:
-  - Successfully built and running
-  - Handles user authentication and authorization
-
-#### Pending Services
-- **Webapp Service**:
-  - Build currently failing
-  - Issue: Dart/Flutter SDK version mismatch (null safety compatibility)
-  - Status: Under investigation for SDK version alignment
-
-### Next Steps
-1. Resolve webapp build issues:
-   - Update Dart/Flutter SDK versions
-   - Ensure null safety compatibility
-   - Review and update dependencies
-
-2. Integration Testing:
-   - Test tunnel service endpoints
-   - Verify auth service functionality
-   - Complete webapp integration once build is fixed
-
-### Server Information
-- Production Server: 162.254.34.115
-- Access: SSH available for both root and cloudllm users
-- Deployment: Docker Compose based deployment
+- Flutter SDK (3.0.0 or higher recommended)
+- Dart SDK (3.0.0 or higher recommended)
+- (Optional) Ollama or LM Studio installed locally. Ollama can be installed via its desktop application (Windows, macOS, Linux) or run via Docker. For server/VPS deployments, ensure Ollama is not directly exposed to the internet without proper security measures.
 
 ## Getting Started
 
@@ -131,7 +94,7 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed SSL configuration instructi
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/CloudToLocalLLM.git
+   git clone https://github.com/thrightguy/CloudToLocalLLM.git
    ```
 
 2. Navigate to the project directory:
@@ -188,21 +151,27 @@ CloudToLocalLLM provides comprehensive model management features:
 
 ## Project Structure
 
-- `lib/`: Main application code
-  - `config/`: Application configuration
-  - `models/`: Data models
-  - `providers/`: State management providers
-  - `screens/`: UI screens
-  - `services/`: Business logic services
-  - `utils/`: Utility classes
-  - `widgets/`: Reusable UI components
-
-- `cloud/`: Cloud service components
-  - Similar structure to `lib/`
+- `lib/`: Main Flutter application code (client-side UI and logic).
+- `admin_control_daemon/`: Dart-based daemon for managing the application stack on a server.
+  - `bin/server.dart`: Entrypoint for the admin daemon.
+- `admin-ui/`: Vue.js based admin interface for interacting with the `admin_control_daemon`. (REVIEW: Is this still actively used and maintained, or has it been superseded by direct API calls or other UIs?)
+- `assets/`: Global assets for the Flutter application (e.g., images, icons).
+- `config/`: Configuration files for various parts of the stack.
+  - `docker/`: Contains Dockerfiles (e.g., `Dockerfile.admin_daemon`, `Dockerfile.web`) and Docker Compose files (e.g., `docker-compose.yml`, `docker-compose.admin.yml`) for defining and orchestrating services.
+  - `nginx/`: Nginx configuration templates (e.g., `nginx.conf`) used by the `webapp` service.
+  - `systemd/`: Example systemd service files. (REVIEW: Are these still relevant with the Docker-centric deployment via `admin_control_daemon`?)
+- `scripts/`: Shell scripts for various tasks.
+  - `setup/`: Scripts like `docker_startup_vps.sh` for initializing the VPS environment.
+  - `release/`, `build/`, `deploy/`: Other utility scripts. (REVIEW: Consolidate or document purpose clearly).
+- `docs/`: Detailed documentation for different aspects of the project.
+- `android/`, `ios/`, `web/`, `windows/`, `macos/`, `linux/`: Platform-specific code and build configurations for the Flutter application.
+- `tunnel_service/`: (Appears to be a separate Dart project for ngrok-like tunneling. REVIEW: Document its role and integration, or remove if deprecated). Found in `backend/tunnel_service/`.
+- `auth_service/`: (Appears to be a separate Dart project. REVIEW: Document its role, likely related to FusionAuth, or remove if deprecated).
+- `backend/`: Contains backend services like `tunnel_service`.
 
 ## Development
 
-### Architecture
+### Setting Up Development Environment
 
 The application follows a provider-based state management approach with a clear separation of concerns:
 
@@ -240,9 +209,9 @@ Refer to the `docs/` directory for detailed documentation. Key documents include
 
 **Deployment & Operations:**
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md): General deployment and infrastructure setup.
-- [VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md): Specific guide for VPS deployments.
-- [DEPLOYMENT_INSTRUCTIONS.md](docs/DEPLOYMENT_INSTRUCTIONS.md): Step-by-step deployment instructions.
-- [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render.
+- [VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md): Specific guide for VPS deployments (REVIEW for current accuracy, especially regarding `docker_startup_vps.sh`).
+- [DEPLOYMENT_INSTRUCTIONS.md](docs/DEPLOYMENT_INSTRUCTIONS.md): Step-by-step deployment instructions (REVIEW for redundancy with other deployment docs).
+- [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render (REVIEW for current relevance).
 - [MAINTENANCE_SCRIPTS.md](docs/MAINTENANCE_SCRIPTS.md): Information on available maintenance scripts.
 
 **Release & Windows Specific:**
@@ -272,7 +241,63 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Ollama](https://ollama.ai/)
 - [LM Studio](https://lmstudio.ai/)
 
-## Updating Live Site Files (Nginx Container)
+## Static Portal Files (REVIEW: Is this still the process, or are all static assets part of the Flutter web build in the webapp container?)
+
+To update the static portal files (e.g., `index.html`, `login.html`, `theme.css`):
+
+1.  **Upload changed files to the VPS:**
+    Replace `~/.ssh/id_rsa` with the path to your SSH key if different.
+    ```bash
+    scp -i ~/.ssh/id_rsa index.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/index.html
+    scp -i ~/.ssh/id_rsa login.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/login.html
+    scp -i ~/.ssh/id_rsa css/theme.css root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/css/theme.css
+    ```
+
+    > ⚠️ **Do NOT copy files directly into the container.**
+    > Any files placed in `/usr/share/nginx/html` inside the container will be overwritten by the contents of `/opt/cloudtolocalllm/portal/` on the host.
+
+    No container restart is needed for static file changes.
+
+## Deployment (REVIEW: Consolidate with /docs/DEPLOYMENT.md and ensure VPS script `scripts/setup/docker_startup_vps.sh` is the primary documented method for VPS)
+
+### Dart Deployment Tool (REVIEW: Is this tool (`tools/deploy.dart`) still maintained/used or replaced by `admin_control_daemon` + `docker_startup_vps.sh`?)
+
+We provide a unified Dart-based tool for deploying and managing the CloudToLocalLLM portal:
+
+```bash
+# Install dependencies
+dart pub add args path
+
+# Deploy with default configuration
+dart tools/deploy.dart deploy
+# ... (other commands from original README) ...
+dart tools/deploy.dart --help
+```
+
+Using this tool eliminates the need for multiple shell scripts and provides a consistent deployment process.
+
+## System Daemon Management (REVIEW: Ensure this aligns with `admin_control_daemon` and `docker_startup_vps.sh`. Is `cloudctl` still a thing?)
+
+After deployment, you can manage the system using the `cloudctl` command:
+
+```
+cloudctl {start|stop|restart|status|logs|update}
+```
+
+### Available Commands
+- `cloudctl start`: Start all services
+- `cloudctl stop`: Stop all services
+- `cloudctl restart`: Restart all services
+- `cloudctl status`: Check service status
+- `cloudctl logs [service]`: View logs (available services: auth, web, admin, db)
+- `cloudctl update`: Pull latest changes and restart services
+
+### Service Configuration
+The system uses systemd for service management. The service files are located at:
+- `/etc/systemd/system/cloudtolocalllm.service`: Main service (REVIEW: How does this relate to the Dockerized setup managed by `admin_control_daemon`?)
+- `/etc/systemd/system/cloudtolocalllm-monitor.service`: Monitoring service (if enabled)
+
+## Updating Live Site Files (Nginx Container) (REVIEW: This seems to refer to a generic nginx setup. For this project, the `webapp` container serves the Flutter web build. Is this section still relevant, or does it describe an old process?)
 
 All live HTML, CSS, and static files for your site are served from:
 
@@ -283,143 +308,10 @@ All live HTML, CSS, and static files for your site are served from:
 
 **To update your site:**
 1. Edit your HTML or CSS files locally.
-2. Upload them to `/opt/cloudtolocalllm/portal/` on the host server.
-
-**Example commands:**
-
-```
-scp -i ~/.ssh/id_rsa index.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/index.html
-scp -i ~/.ssh/id_rsa login.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/login.html
-scp -i ~/.ssh/id_rsa css/theme.css root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/css/theme.css
-```
-
-> ⚠️ **Do NOT copy files directly into the container.**
-> Any files placed in `/usr/share/nginx/html` inside the container will be overwritten by the contents of `/opt/cloudtolocalllm/portal/` on the host.
-
-No container restart is needed for static file changes.
-
-## Deployment
-
-### Dart Deployment Tool
-
-We provide a unified Dart-based tool for deploying and managing the CloudToLocalLLM portal:
-
-```bash
-# Install dependencies
-dart pub add args path
-
-# Deploy with default configuration
-dart tools/deploy.dart deploy
-
-# Deploy with beta subdomain support
-dart tools/deploy.dart deploy -b
-
-# Deploy with monitoring
-dart tools/deploy.dart deploy -m
-
-# Deploy with custom domain
-dart tools/deploy.dart deploy -d example.com
-
-# Add monitoring to existing deployment
-dart tools/deploy.dart monitor
-
-# Verify deployment
-dart tools/deploy.dart verify
-
-# Update existing deployment
-dart tools/deploy.dart update
-
-# Show help
-dart tools/deploy.dart --help
-```
-
-Using this tool eliminates the need for multiple shell scripts and provides a consistent deployment process.
-
-## System Daemon Management
-
-After deployment, you can manage the system using the `cloudctl` command:
-
-```
-cloudctl {start|stop|restart|status|logs|update}
-```
-
-### Available Commands
-
-- `cloudctl start`: Start all services
-- `cloudctl stop`: Stop all services
-- `cloudctl restart`: Restart all services
-- `cloudctl status`: Check service status
-- `cloudctl logs [service]`: View logs (available services: auth, web, admin, db)
-- `cloudctl update`: Pull latest changes and restart services
-
-### Service Configuration
-
-The system uses systemd for service management. The service files are located at:
-
-- `/etc/systemd/system/cloudtolocalllm.service`: Main service
-- `/etc/systemd/system/cloudtolocalllm-monitor.service`: Monitoring service (if enabled)
-
-## Development
-
-### Setting Up Development Environment
-
-1. Install Flutter SDK
-2. Clone the repository
-3. Run `flutter pub get` to fetch dependencies
-4. Run `flutter run` to launch the application in debug mode
-
-### Building for Production
-
-To build the application for production:
-
-```
-flutter build <platform>
-```
-
-Where `<platform>` is one of: `apk`, `ios`, `web`, `windows`, `macos`, `linux`
-
-## License
-
-This project is licensed under the terms of the [LICENSE](LICENSE) file included in the repository.
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## Recent Changes (May 2025)
-
-### Improved VPS Startup Script
-- The `scripts/setup/startup_vps.sh` script now prints a clear status before each step and logs all errors both to the console and the log file (`/opt/cloudtolocalllm/startup.log`).
-- If any step fails, the script prints an error and exits, making troubleshooting much easier.
-- Usage remains:
-  ```bash
-  git pull
-  bash scripts/setup/startup_vps.sh
-  ```
-
-### Flutter Color API Fixes
-- All usages of `Color.withValues` in the Flutter codebase have been replaced with `Color.withAlpha`, which is compatible with Flutter 3.22.0 and Dart 3.4.x.
-- This resolves build errors and ensures correct alpha blending.
-
-### Workflow
-- All changes are committed and pushed to GitHub after each major fix.
-- The codebase is ready for deployment after pulling the latest changes.
-
----
-
-## Deployment Steps
-1. SSH into your VPS and navigate to the project directory:
+2. Upload them to `/opt/cloudtolocalllm/portal/` on your VPS.
+   Example using `scp`:
    ```bash
-   cd /opt/cloudtolocalllm
-   git pull
-   bash scripts/setup/startup_vps.sh
+   scp -i ~/.ssh/your_ssh_key localfile.html user@your_vps_ip:/opt/cloudtolocalllm/portal/localfile.html
    ```
-2. The script will show detailed status and error messages as it runs.
-3. If you encounter any new errors, copy the output and seek troubleshooting help.
-
----
-
-## Summary for New Developers
-- The startup script now provides clear, real-time status and error logging.
-- All Flutter color API usage is compatible with the latest stable SDK.
-- The codebase is fully committed and pushed to GitHub, ready for production deployment.
+   (Replace `~/.ssh/your_ssh_key`, `localfile.html`, `user@your_vps_ip` accordingly)
+3. Nginx will automatically serve the updated files. No container restart is needed.
