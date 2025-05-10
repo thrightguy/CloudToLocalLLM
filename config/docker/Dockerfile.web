@@ -19,6 +19,9 @@ RUN chown -R flutteruser:fluttergroup /app
 # Switch to non-root user for flutter commands
 USER flutteruser
 
+# Add Flutter SDK directory as a safe directory for git
+RUN git config --global --add safe.directory /sdks/flutter
+
 # Get dependencies
 RUN flutter pub get
 
