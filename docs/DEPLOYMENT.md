@@ -165,3 +165,13 @@ For wildcard SSL certificates:
 1. Purchase a wildcard certificate (*.cloudtolocalllm.online)
 2. Follow the installation instructions for your certificate provider
 3. Update the Nginx configuration to use the new certificate 
+
+## [2025-05-10] Nginx Upstream Proxy Block Disabled
+
+- The `/auth/` proxy block in `config/nginx/nginx.conf` was commented out because the referenced upstream service (`cloudtolocalllm-fusionauth-app`) does not exist in `docker-compose.yml`.
+- This was causing the webapp container to crash in a restart loop with the error: `host not found in upstream`.
+- If you need FusionAuth or another backend in the future, add the service to your Compose file and update the Nginx config accordingly.
+
+### Troubleshooting: Nginx Upstream Errors
+- If you see errors like `host not found in upstream ...` in your container logs, check that the upstream name in your Nginx config matches a service name in your Docker Compose file and that both are on the same network.
+- If the backend is not needed, comment out or remove the relevant location block in the Nginx config. 
