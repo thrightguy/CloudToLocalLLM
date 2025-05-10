@@ -56,9 +56,8 @@ docker stop docker-admin-daemon-1 || true
 docker rm docker-admin-daemon-1 || true
 
 log_status "Pruning Docker system (unused containers, networks, images, build cache)..."
-docker system prune -af
+# docker system prune -af # Commented out to avoid aggressive pruning
 # CAUTION: Uncomment the line below to also prune VOLUMES. This is destructive if other apps use Docker volumes.
-# docker system prune -af --volumes
 
 # Optional: Restart Docker daemon if issues persist (manual step recommended)
 # log_status "Consider restarting the Docker daemon if problems continue: sudo systemctl restart docker"
