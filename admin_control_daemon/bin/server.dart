@@ -279,23 +279,26 @@ Future<Response> _deployAllHandler(Request request) async {
       orderedServices = {
     'config/docker/docker-compose.yml': (
       services: [
-        'ctl_services-webapp',
-        'ctl_services-nginx',
-        'ctl_services-tunnel',
-        'ctl_services-certbot' // Certbot may exit quickly, _waitForHealthy handles nohealthcheck
+        'webapp',
+        // 'cloud', // Cloud service runs a script, might not need explicit health wait
+        // Add other services from this file if they have healthchecks to monitor
       ],
       projectName: mainProjectName
     ),
     'config/docker/docker-compose-fusionauth.yml': (
       services: [
-        'cloudtolocalllm-fusionauth-postgres',
-        'cloudtolocalllm-fusionauth-app'
+        // FusionAuth DB might not have an explicit healthcheck in compose, but app depends on it.
+        // The app's healthcheck will cover DB readiness implicitly.
+        'cloudtolocalllm-fusionauth-app' // Actual service name for the app
       ],
-      projectName: null // Uses default Docker Compose project naming
+      projectName:
+          null // Uses default Docker Compose project naming (e.g., 'docker')
     ),
     'config/docker/docker-compose.monitoring.yml': (
-      services: ['cloudtolocalllm_monitor'],
-      projectName: null // Uses default Docker Compose project naming
+      services: [
+        'cloudtolocalllm_monitor'
+      ], // Assuming this is the correct service name
+      projectName: null
     ),
   };
 
