@@ -100,7 +100,7 @@ Future<ProcessResult> _composeUp(String composeFile) async {
   print('Attempting to bring up services from: $composeFile');
   final result = await Process.run(
     'docker',
-    ['compose', '-f', composeFile, 'up', '-d', '--build'],
+    ['compose', '-f', composeFile, 'up', '-d', '--build', '--remove-orphans'],
     workingDirectory: projectRoot,
     runInShell: true,
   );
@@ -219,7 +219,7 @@ Future<Response> _deployAllHandler(Request request) async {
     'config/docker/docker-compose.monitoring.yml', // Uses cloudllm-network
   ];
   // Order for 'down': reverse of 'up' is a safe default
-  final composeFilesToDown = composeFilesToUp.reversed.toList();
+  // final composeFilesToDown = composeFilesToUp.reversed.toList(); // Removed for less aggressive cleanup
 
   final serviceNames = [
     'cloudtolocalllm-fusionauth-app',
@@ -234,10 +234,17 @@ Future<Response> _deployAllHandler(Request request) async {
   final failedComposeFiles =
       <String, String>{}; // To store stderr of failed compose up
 
-  // 1. Stop and remove all service containers (not admin daemon)
-  for (final file in composeFilesToDown) {
-    await _composeDown(file);
-  }
+  // 1. Remove any unhealthy or exited containers from previous runs.
+  print(
+      'Attempting to remove any unhealthy or exited containers from previous runs...');
+  await _removeUnhealthyOrExitedContainers();
+  print('Finished removing unhealthy/exited containers.');
+
+  // Removed initial loop that called _composeDown for all files.
+  // // 1. Stop and remove all service containers (not admin daemon)
+  // for (final file in composeFilesToDown) {
+  //   await _composeDown(file);
+  // }
 
   // 2. Start and check each service
   for (final file in composeFilesToUp) {
