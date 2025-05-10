@@ -49,11 +49,8 @@ RUN mkdir -p /etc/nginx/ssl
 # Generate self-signed SSL certificate and key if they don't exist
 # These are for temporary use if Let's Encrypt certs are not available
 # Adjust subject as needed, or make it configurable via build args if necessary
-RUN if [ ! -f /etc/nginx/ssl/selfsigned.crt ] || [ ! -f /etc/nginx/ssl/selfsigned.key ]; then \\
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\
-    -keyout /etc/nginx/ssl/selfsigned.key \\
-    -out /etc/nginx/ssl/selfsigned.crt \\
-    -subj "/C=US/ST=California/L=MountainView/O=CloudToLocalLLM/OU=Dev/CN=cloudtolocalllm.online"; \\
+RUN if [ ! -f /etc/nginx/ssl/selfsigned.crt ] || [ ! -f /etc/nginx/ssl/selfsigned.key ]; then \
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/selfsigned.key -out /etc/nginx/ssl/selfsigned.crt -subj "/C=US/ST=California/L=MountainView/O=CloudToLocalLLM/OU=Dev/CN=cloudtolocalllm.online"; \
     fi
 
 # Copy the built web app from the build stage
