@@ -92,7 +92,7 @@ cd "$INSTALL_DIR"
 log_status "Rebuilding webapp container with --no-cache..."
 docker compose -f config/docker/docker-compose.yml build --no-cache webapp
 
-docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d --build
+docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d
 
 # Wait for the admin daemon to be ready
 log_status "Waiting for admin daemon to be ready..."
