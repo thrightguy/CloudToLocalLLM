@@ -251,11 +251,35 @@ Future<Response> _deployAllHandler(Request request) async {
   await _removeUnhealthyOrExitedContainers();
   print('Finished removing unhealthy/exited containers.');
 
-  // Removed initial loop that called _composeDown for all files.
-  // // 1. Stop and remove all service containers (not admin daemon)
-  // for (final file in composeFilesToDown) {
-  //   await _composeDown(file);
-  // }
+  // Attempt to free up port 80 by stopping containers using it
+  print('Attempting to free port 80...');
+  try {
+    final pidsResult = await Process.run(
+      'docker',
+      ['ps', '-q', '--filter', 'publish=80'],
+      workingDirectory: projectRoot,
+      runInShell: true,
+    );
+    if (pidsResult.exitCode == 0 &&
+        pidsResult.stdout.toString().trim().isNotEmpty) {
+      final containerIds = pidsResult.stdout.toString().trim().split('\n');
+      for (final id in containerIds) {
+        if (id.isEmpty) continue;
+        print('Stopping container $id using port 80...');
+        await Process.run('docker', ['stop', id],
+            workingDirectory: projectRoot, runInShell: true);
+        print('Removing container $id using port 80...');
+        await Process.run('docker', ['rm', id],
+            workingDirectory: projectRoot, runInShell: true);
+      }
+      print('Finished attempting to free port 80.');
+    } else {
+      print(
+          'No containers found publishing port 80, or an error occurred listing them.');
+    }
+  } catch (e) {
+    print('Error trying to free port 80: $e');
+  }
 
   // 2. Start and check each service
   for (final file in composeFilesToUp) {
