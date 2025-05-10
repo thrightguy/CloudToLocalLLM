@@ -1,0 +1,27 @@
+# Flutter/Dart build artifacts
+build/
+.dart_tool/
+.packages
+.pub/
+
+# Node/npm
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# IDE/editor
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Other
+secrets/
+logs/
+releases/
+Output/ 
