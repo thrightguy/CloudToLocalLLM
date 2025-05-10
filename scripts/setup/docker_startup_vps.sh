@@ -56,6 +56,11 @@ if ! systemctl is-active --quiet docker; then
     systemctl start docker
 fi
 
+# Log content of Dockerfile.web for debugging
+log_status "Content of /opt/cloudtolocalllm/config/docker/Dockerfile.web:"
+cat "$INSTALL_DIR/config/docker/Dockerfile.web" || log_error "Could not display Dockerfile.web"
+log_status "-----------------------------------------------------"
+
 # Step 3: Start the admin daemon using Docker Compose
 log_status "[3/4] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
