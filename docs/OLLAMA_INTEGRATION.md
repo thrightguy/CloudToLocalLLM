@@ -1,5 +1,15 @@
 # Ollama Integration Guide
 
+## Installing Ollama
+
+To use Ollama with CloudToLocalLLM, you first need to have Ollama installed and running on your system.
+
+- **Desktop Users (Windows, macOS, Linux):** The recommended way to install Ollama is by downloading the official desktop application from the [Ollama website](https://ollama.com/). This provides a user-friendly interface for managing models and running the Ollama server.
+- **Linux (Server/Advanced Users):** You can also install Ollama using the command-line instructions provided on their website, typically involving a `curl` script.
+- **Docker:** Ollama can be run as a Docker container. Refer to the [Ollama Docker Hub page](https://hub.docker.com/r/ollama/ollama) for instructions.
+
+Once Ollama is installed and running, CloudToLocalLLM should be able to connect to it (by default at `http://localhost:11434`).
+
 ## Overview
 
 This guide provides information about the CloudToLocalLLM integration with Ollama, including hardware detection, model recommendations, and model naming conventions.
