@@ -1,10 +1,10 @@
-# CloudToLocalLLM
+# CloudToLocalLLM: Your Personal AI Powerhouse 🌩️💻
 
-> **Note:** The `cloud` folder is now deprecated. All development, documentation, and deployment for the cloud and local apps is now managed from the main project root. The main application is a Flutter/Dart project. For any cloud-related code or deployment, refer to the main project and this README.
+> **Note:** The `cloud` folder is now deprecated. All development, documentation, and deployment for cloud-related features and the local application are now managed from this main project root. The core application is a Flutter/Dart project. For any cloud-related code or deployment details, refer to the main project and this README.
 
-A Flutter application that allows you to run LLMs locally and sync your conversations with the cloud.
+Run powerful Large Language Models (LLMs) directly on your machine and seamlessly sync your conversations to the cloud. Experience the best of local control and cloud convenience.
 
-## Features
+## ✨ Features
 
 - Run LLMs locally using Ollama or LM Studio
 - Hardware detection for optimal model recommendations
@@ -67,28 +67,32 @@ During development, all premium features are available for free to facilitate te
 
 ## SSL Configuration
 
-The CloudToLocalLLM deployment supports two SSL certificate options:
+The CloudToLocalLLM VPS deployment, specifically the `webapp` service, handles SSL termination. Here's an overview of the SSL strategy (see `docs/DEPLOYMENT.MD` for full details):
 
-1. **Let's Encrypt (Default)**: Automatically configured free certificates
-   - Requires renewal every 90 days (automatic)
-   - Each subdomain must be explicitly specified
-   
-2. **Wildcard SSL Certificate**: Recommended for production with multiple user subdomains
-   - Covers all subdomains (*.cloudtolocalllm.online)
-   - Ideal for dynamic user environments
-   - Simplified maintenance
-   - Available from providers like Namecheap
-   - Use `wildcard_ssl_setup.ps1` for easy installation
+1.  **Self-Signed Certificates (Initial Default for `webapp` container)**:
+    *   For ease of initial setup, the `webapp` Docker image is configured to generate and use self-signed SSL certificates by default.
+    *   This allows the service to start up with HTTPS immediately without external dependencies.
+    *   Browsers will show a warning for self-signed certificates; this is expected for local development or if you haven't configured a public certificate yet.
 
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed SSL configuration instructions.
+2.  **Let's Encrypt (Recommended for Public Servers)**:
+    *   Free, automated certificates from Let's Encrypt.
+    *   Requires your domain to be correctly pointed to your VPS.
+    *   The `docs/DEPLOYMENT.MD` guide explains how to configure the system to use Let's Encrypt, typically involving the `certbot-service`.
 
-## Prerequisites
+3.  **Commercial/Wildcard SSL Certificates**: 
+    *   Suitable for production environments, especially with multiple subdomains.
+    *   Covers all subdomains (e.g., `*.cloudtolocalllm.online`).
+    *   Requires purchasing a certificate and configuring Nginx to use it (see `docs/DEPLOYMENT.MD`).
+
+See [DEPLOYMENT.MD](docs/DEPLOYMENT.md) for detailed SSL configuration instructions.
+
+## 🛠️ Prerequisites
 
 - Flutter SDK (3.0.0 or higher recommended)
 - Dart SDK (3.0.0 or higher recommended)
 - (Optional) Ollama or LM Studio installed locally. Ollama can be installed via its desktop application (Windows, macOS, Linux) or run via Docker. For server/VPS deployments, ensure Ollama is not directly exposed to the internet without proper security measures.
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Installation
 
@@ -111,8 +115,6 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed SSL configuration instructi
    ```
    flutter run
    ```
-
-## Usage
 
 ### Connecting to Local LLM
 
@@ -149,7 +151,7 @@ CloudToLocalLLM provides comprehensive model management features:
 2. Enable tunnel in Settings
 3. Your local LLM will be accessible via the provided URL
 
-## Project Structure
+## 🏗️ Project Structure
 
 - `lib/`: Main Flutter application code (client-side UI and logic).
 - `admin_control_daemon/`: Dart-based daemon for managing the application stack on a server.
@@ -169,35 +171,7 @@ CloudToLocalLLM provides comprehensive model management features:
 - `auth_service/`: (Appears to be a separate Dart project. REVIEW: Document its role, likely related to FusionAuth, or remove if deprecated).
 - `backend/`: Contains backend services like `tunnel_service`.
 
-## Development
-
-### Setting Up Development Environment
-
-The application follows a provider-based state management approach with a clear separation of concerns:
-
-- **Models**: Data structures
-- **Providers**: State management and business logic coordination
-- **Services**: Core business logic and API interactions
-- **Screens**: UI components
-
-### Dependencies and Compatibility
-
-The project uses specific dependency versions to ensure compatibility across all platforms:
-
-- **win32**: ^2.7.0 (must be kept under 3.0.0 for compatibility with device_info_plus)
-- **device_info_plus**: ^8.2.2 (requires win32 <3.0.0)
-- **path**: >=1.8.2 <2.0.0
-
-When updating dependencies, ensure version constraints are maintained to avoid conflicts, especially between win32 and device_info_plus packages.
-
-### Adding a New LLM Provider
-
-1. Create a new service in `lib/services/`
-2. Implement the required methods for model management and response generation
-3. Update the `SettingsProvider` to include the new provider option
-4. Add UI settings for the new provider in `settings_screen.dart`
-
-## Documentation
+## 📚 Documentation
 
 Refer to the `docs/` directory for detailed documentation. Key documents include:
 
@@ -227,7 +201,7 @@ Refer to the `docs/` directory for detailed documentation. Key documents include
 - [PRIVACY.md](docs/PRIVACY.md): Privacy Policy. *(Ensure this file exists in docs/ or is created)*
 - [TERMS.md](docs/TERMS.md): Terms of Service. *(Ensure this file exists in docs/ or is created)*
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
