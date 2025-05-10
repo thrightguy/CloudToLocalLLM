@@ -212,12 +212,15 @@ Future<void> _removeUnhealthyOrExitedContainers() async {
 
 Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
-  final composeFilesToDown = [
+  // Order for 'up': main (defines network), then fusionauth, then monitoring (uses network)
+  final composeFilesToUp = [
+    'config/docker/docker-compose.yml', // Defines cloudllm-network
     'config/docker/docker-compose-fusionauth.yml',
-    'config/docker/docker-compose.monitoring.yml',
-    'config/docker/docker-compose.yml',
+    'config/docker/docker-compose.monitoring.yml', // Uses cloudllm-network
   ];
-  final composeFilesToUp = composeFilesToDown;
+  // Order for 'down': reverse of 'up' is a safe default
+  final composeFilesToDown = composeFilesToUp.reversed.toList();
+
   final serviceNames = [
     'cloudtolocalllm-fusionauth-app',
     'cloudtolocalllm-fusionauth-postgres',
