@@ -17,22 +17,22 @@ dependencies:
   url_launcher: ^6.2.2
   http: ^1.1.0
   path: '>=1.8.2 <2.0.0'
-  process_run: ^0.13.3+1
-  system_tray: ^0.1.1
-  window_manager: ^0.3.9
+  process_run: ^1.2.4
+  system_tray: ^2.0.3
+  window_manager: ^0.4.3
   win32: ^5.0.9
   logging: ^1.2.0 # Used by admin_control_daemon Dart server
-  js: '>=0.6.7 <0.7.0'
+  js: ^0.7.2
   crypto: ^3.0.3
-  device_info_plus: ^9.1.0
-  package_info_plus: ^4.2.0
-  flutter_secure_storage: ^9.0.0
+  device_info_plus: ^11.4.0
+  package_info_plus: ^8.3.0
+  flutter_secure_storage: ^10.0.0-beta.4
   args: ^2.4.2
 
 dev_dependencies:
   # flutter_test:
   #   sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
