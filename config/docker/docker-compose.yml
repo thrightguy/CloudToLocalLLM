@@ -31,8 +31,12 @@ services:
       dockerfile: config/docker/Dockerfile.web
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem:/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem:ro
+      - /etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem:/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem:ro
+      - ../../certbot/www:/var/www/certbot:ro
     networks:
       - cloudllm-network
     restart: unless-stopped
@@ -50,7 +54,7 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=2b7e4f8c-6e2a-4b2e-8c1d-7f3e2a1b9c4d
+      - POSTGRES_PASSWORD=your_strong_postgres_password
       - POSTGRES_DB=fusionauth
     volumes:
       - fusionauth_postgres_data:/var/lib/postgresql/data
@@ -66,9 +70,9 @@ services:
     environment:
       - DATABASE_URL=jdbc:postgresql://cloudtolocalllm-fusionauth-db:5432/fusionauth
       - DATABASE_ROOT_USERNAME=postgres
-      - DATABASE_ROOT_PASSWORD=2b7e4f8c-6e2a-4b2e-8c1d-7f3e2a1b9c4d
+      - DATABASE_ROOT_PASSWORD=your_strong_postgres_password
       - DATABASE_USERNAME=fusionauth
-      - DATABASE_PASSWORD=7c9d2e1a-5b4f-4c3e-9a2d-8e1b7c6d5f4a
+      - DATABASE_PASSWORD=your_strong_fusionauth_user_password
       - FUSIONAUTH_APP_MEMORY=512M
       - FUSIONAUTH_APP_RUNTIME_MODE=production
       - FUSIONAUTH_APP_URL=https://cloudtolocalllm.online
@@ -87,8 +91,8 @@ volumes:
   fusionauth_config:
     driver: local
 # Admin reference (not for production):
-# POSTGRES_PASSWORD: 2b7e4f8c-6e2a-4b2e-8c1d-7f3e2a1b9c4d
-# DATABASE_PASSWORD: 7c9d2e1a-5b4f-4c3e-9a2d-8e1b7c6d5f4a
+# POSTGRES_PASSWORD: your_strong_postgres_password
+# DATABASE_PASSWORD: your_strong_fusionauth_user_password
 # FUSIONAUTH_APP_SETUP_PASSWORD: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
 
 networks:
