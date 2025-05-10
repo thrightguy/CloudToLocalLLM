@@ -83,6 +83,9 @@ services:
 
   # Admin control daemon
   admin-daemon:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.admin_daemon
     image: cloudtolocalllm-admin-daemon
     container_name: cloudtolocalllm-admin-daemon
     ports:
