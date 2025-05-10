@@ -9,11 +9,13 @@ RUN groupadd -r fluttergroup && useradd -r -g fluttergroup -m -s /sbin/nologin f
 # Cache-busting echo
 RUN echo "Build version: $(date +%s)"
 
-# Change ownership of /app itself and /sdks/flutter to flutteruser early on (as root)
+# Change ownership of /app and /sdks/flutter to flutteruser before running flutter commands
+# This is done as root, as USER flutteruser is set later
 RUN chown -R flutteruser:fluttergroup /app && \
     chown -R flutteruser:fluttergroup /sdks/flutter
 
-# Copy pubspec files first to leverage Docker cache for dependencies, ensuring flutteruser ownership
+# Copy pubspec files first to leverage Docker cache for dependencies
+# Ensure these are copied with correct ownership from the start
 COPY --chown=flutteruser:fluttergroup pubspec.yaml ./
 COPY --chown=flutteruser:fluttergroup pubspec.lock ./
 
@@ -26,7 +28,8 @@ RUN git config --global --add safe.directory /sdks/flutter
 # Get dependencies
 RUN flutter pub get
 
-# Copy the rest of the application source code (as flutteruser), ensuring flutteruser ownership
+# Copy the rest of the application source code (as flutteruser)
+# Ensure correct ownership using --chown with COPY
 COPY --chown=flutteruser:fluttergroup . .
 
 # Build the Flutter web application
