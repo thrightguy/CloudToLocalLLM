@@ -80,6 +80,4 @@ RUN mkdir -p /var/run/nginx && \
 EXPOSE 80
 # USER nginx is already specified in nginx:alpine base image and Nginx will run as nginx user by default.
 # Explicitly setting it here for clarity.
-USER nginx
-
 CMD ["nginx", "-g", "daemon off;"] 
