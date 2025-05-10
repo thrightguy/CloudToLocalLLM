@@ -11,7 +11,7 @@ RUN flutter pub get
 COPY . .
 
 # Build the server/CLI app (example: bin/server.dart)
-RUN dart compile exe bin/tunnel_server.dart -o /output/server
+RUN mkdir -p /output && dart compile exe bin/tunnel_server.dart -o /output/server
 
 # Final stage - slim image to run the server
 FROM debian:bullseye-slim
