@@ -98,7 +98,7 @@ done
 
 if [ "$ADMIN_READY" = false ]; then
   log_error "Admin daemon failed to start or is not healthy."
-  log_error "Check admin daemon logs with: docker logs docker-admin-daemon-1"
+  log_error "Check admin daemon logs with: docker logs ctl_admin-admin-daemon-1"
   exit 1
 fi
 
@@ -112,7 +112,7 @@ if [[ "$DEPLOY_CODE" != "200" ]]; then
   log_error "Deployment API call failed or services are unhealthy (HTTP status: $DEPLOY_CODE)."
   echo "API Response Body:"
   echo "$DEPLOY_BODY"
-  log_error "For more details, check the admin daemon logs: docker logs docker-admin-daemon-1"
+  log_error "For more details, check the admin daemon logs: docker logs ctl_admin-admin-daemon-1"
   # Optionally, exit here if preferred: exit 1
 else
   log_success "Deployment API call succeeded (HTTP status: $DEPLOY_CODE)."
