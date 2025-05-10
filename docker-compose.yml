@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Web application service
   webapp:
@@ -86,9 +84,6 @@ services:
 
   # Admin control daemon
   admin-daemon:
-    build:
-      context: ./admin_control_daemon
-      dockerfile: Dockerfile
     image: cloudtolocalllm-admin-daemon
     container_name: cloudtolocalllm-admin-daemon
     ports:
