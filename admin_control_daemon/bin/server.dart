@@ -134,52 +134,87 @@ Future<ProcessResult> _composeUp(String composeFile,
   return result;
 }
 
-Future<bool> _waitForHealthy(String serviceName,
-    {int timeoutSeconds = 120}) async {
-  print('Checking health for $serviceName...');
-  const String inspectFormat =
-      '{{if .State}}{{if .State.Health}}{{.State.Health.Status}}{{else}}nohealthcheck{{end}}{{else}}notavailable{{end}}';
-  final deadline = DateTime.now().add(Duration(seconds: timeoutSeconds));
-  while (DateTime.now().isBefore(deadline)) {
-    final result = await Process.run(
-      'docker',
-      ['inspect', '--format', inspectFormat, serviceName],
-      runInShell: true,
-    );
-
-    if (result.exitCode == 0) {
-      final status = result.stdout.toString().trim();
-      print('Health status for $serviceName: $status');
-      if (status == 'healthy') return true;
-      if (status == 'unhealthy') return false;
-      if (status == 'nohealthcheck' || status == 'notavailable') {
-        // If no healthcheck or state not available, check if container is simply running
-        final psResult = await Process.run(
-            'docker', ['ps', '-q', '--filter', 'name=^/${serviceName}\$'],
-            runInShell: true);
-        if (psResult.stdout.toString().trim().isNotEmpty) {
-          print('$serviceName has no healthcheck but is running.');
-          return true; // Container exists and is running
-        } else {
-          print(
-              '$serviceName has no healthcheck and is NOT running (or not found by name).');
-          return false; // Container with no healthcheck is not running or doesn't exist by this name
+Future<Map<String, dynamic>> _getContainerHealth(
+    String containerNameOrId) async {
+  // Try to get the specific health status first
+  // Uses Go template to extract health status. Docker inspect might return an array of containers.
+  // Format: {{json .State.Health}} will give the Health sub-object as JSON.
+  // If no health check is defined, .State.Health might be null.
+  final result = await Process.run('docker', [
+    'inspect',
+    '--format={{json .State.Health}}',
+    containerNameOrId
+  ]); // MODIFIED: Removed extra single quotes from --format argument
+  if (result.exitCode == 0) {
+    try {
+      // The output from {{json .State.Health}} might be 'null' (a string) if no health check,
+      // or a JSON string like '{"Status":"starting","FailingStreak":0,"Log":[]}'
+      final healthJson = result.stdout.toString().trim();
+      if (healthJson.isNotEmpty && healthJson != "null") {
+        return jsonDecode(healthJson) as Map<String, dynamic>;
+      } else if (healthJson == "null") {
+        // If healthJson is "null", it means .State.Health was null (e.g. no healthcheck defined).
+        // We treat this as 'unknown' or implicitly 'healthy' if the container is running.
+        // For _waitForHealthy, we need a definite 'healthy' status.
+        // Let's check basic running state if health status is null.
+        final runningCheck = await Process.run('docker',
+            ['inspect', '--format={{.State.Running}}', containerNameOrId]);
+        if (runningCheck.exitCode == 0 &&
+            runningCheck.stdout.toString().trim() == 'true') {
+          // If no healthcheck but container is running, consider it healthy for basic checks.
+          // However, our _waitForHealthy specifically looks for Docker's health status.
+          // So, returning 'unknown' here is more accurate if .State.Health was null.
+          return {
+            'Status': 'healthy_but_no_check'
+          }; // Special status if running but no healthcheck configured
         }
       }
-      // If status is 'starting' or empty, the loop will continue after the delay.
-    } else {
-      // Container not found by inspect, or inspect command failed.
+    } catch (e) {
       print(
-          'Failed to inspect $serviceName (exit code ${result.exitCode}), assuming not healthy or not found.');
-      if (result.stderr.toString().isNotEmpty) {
-        print('Inspect stderr for $serviceName: ${result.stderr}');
-      }
-      return false; // Could not inspect, so not healthy.
+          'Error decoding health status for $containerNameOrId: $e. stdout: "${result.stdout}"');
     }
-    await Future.delayed(Duration(seconds: 3));
+  } else {
+    print(
+        'Docker inspect failed for $containerNameOrId with exit code ${result.exitCode}. stderr: ${result.stderr}');
   }
-  print('Timeout waiting for $serviceName to become healthy.');
-  return false; // Timeout
+  return {'Status': 'unknown'}; // Default if inspect fails or no health info
+}
+
+Future<bool> _waitForHealthy(
+    String serviceName, String composeFilePath, String projectName,
+    {int retries = 18, Duration interval = const Duration(seconds: 10)}) async {
+  // Increased retries
+  final containerName = '${projectName}-${serviceName}-1';
+  print('Waiting for $containerName to become healthy...');
+
+  for (int i = 0; i < retries; i++) {
+    await Future.delayed(interval);
+    final health = await _getContainerHealth(containerName);
+    final status = health['Status'];
+    print(
+        'Attempt ${i + 1}/${retries}: Health status for $containerName is "$status".');
+
+    if (status == 'healthy') {
+      print('$containerName is healthy.');
+      return true;
+    }
+    // Added 'healthy_but_no_check' as a success, if the container's own healthcheck isn't defined
+    // but the compose file expects it to eventually be "healthy" via Nginx /health
+    // This might not be the right place for this logic if the daemon strictly relies on Docker's own health status.
+    // For now, let's keep it strict to 'healthy' from Docker's perspective.
+  }
+
+  print(
+      '$containerName did not become healthy after ${retries * interval.inSeconds} seconds.');
+  final logsResult =
+      await Process.run('docker', ['logs', '--tail', '50', containerName]);
+  if (logsResult.exitCode == 0) {
+    print(
+        'Last 50 log lines for $containerName:\n${logsResult.stdout}\n${logsResult.stderr}');
+  } else {
+    print('Could not retrieve logs for $containerName.');
+  }
+  return false;
 }
 
 Future<String> _listContainers() async {
@@ -191,7 +226,12 @@ Future<String> _listContainers() async {
   return result.stdout.toString();
 }
 
-Future<String> _getContainerLogs(String containerName, {int lines = 50}) async {
+Future<String> _getContainerLogs(String? containerName,
+    {int lines = 50}) async {
+  if (containerName == null) {
+    print('Error: Attempted to get logs for a null container name.');
+    return Future.value('Error: Container name was null.');
+  }
   final result = await Process.run(
     'docker',
     ['logs', '--tail', lines.toString(), containerName],
@@ -345,7 +385,14 @@ Future<Response> _deployAllHandler(Request request) async {
       if (unhealthy.containsKey(name))
         continue; // Already marked by a previous group (should not happen with this loop structure)
 
-      final healthy = await _waitForHealthy(name);
+      String effectiveProjectName;
+      if (currentProjectName != null && currentProjectName.isNotEmpty) {
+        effectiveProjectName = currentProjectName;
+      } else {
+        // Default project name for compose files in config/docker/ when not specified
+        effectiveProjectName = "docker";
+      }
+      final healthy = await _waitForHealthy(name, file, effectiveProjectName);
       if (!healthy) {
         final logs = await _getContainerLogs(name, lines: 20);
         unhealthy[name] = {
