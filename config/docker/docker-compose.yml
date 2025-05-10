@@ -28,15 +28,19 @@ services:
   webapp:
     build:
       context: ../..
-      dockerfile: config/docker/Dockerfile
+      dockerfile: config/docker/Dockerfile.web
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../../build/web:/usr/share/nginx/html:ro
     networks:
       - cloudllm-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 networks:
   cloudllm-network:
