@@ -1,6 +1,8 @@
 # VPS Deployment Guide for CloudToLocalLLM
 
-This guide explains how to deploy CloudToLocalLLM to a VPS (Virtual Private Server).
+**This document is outdated.**
+
+Please refer to the main [VPS Deployment Guide](DEPLOYMENT.MD) for the current and recommended deployment procedures, which utilize the `scripts/setup/docker_startup_vps.sh` script and the `admin_control_daemon`.
 
 ## Quick Setup
 

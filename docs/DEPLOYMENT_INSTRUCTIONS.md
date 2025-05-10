@@ -1,6 +1,8 @@
 # CloudToLocalLLM Deployment Instructions
 
-This document provides step-by-step instructions for deploying the CloudToLocalLLM portal to your VPS.
+**This document is outdated.**
+
+Please refer to the main [VPS Deployment Guide](DEPLOYMENT.MD) for the current and recommended deployment procedures, which utilize the `scripts/setup/docker_startup_vps.sh` script and the `admin_control_daemon`.
 
 ## Server Requirements
 - Linux VPS (tested on Ubuntu/Debian)

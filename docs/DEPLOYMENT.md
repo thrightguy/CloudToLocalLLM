@@ -1,193 +1,143 @@
 # CloudToLocalLLM VPS Deployment Guide
 
-This guide provides step-by-step instructions for deploying the CloudToLocalLLM portal to your VPS.
+This guide provides step-by-step instructions for deploying the CloudToLocalLLM stack to your Virtual Private Server (VPS) using Docker and the provided setup scripts.
 
-## VPS Deployment Directory Structure
+## Core Deployment Strategy
 
-It is recommended to deploy the CloudToLocalLLM application to `/opt/cloudtolocalllm/` on your VPS. After cloning the repository to this location, the structure will mirror the Git repository:
+The deployment relies on Docker and Docker Compose, orchestrated by an `admin_control_daemon` (also running in Docker). A primary setup script, `scripts/setup/docker_startup_vps.sh`, automates the initial server preparation and launch of the `admin_control_daemon`. Once the daemon is running, it handles the deployment and management of the main application services.
 
-```
-/opt/cloudtolocalllm/
-├── admin_control_daemon/   # New Dart daemon for admin tasks
-├── admin-ui/               # Vue.js Admin UI
-├── assets/                 # Static assets for the Flutter application
-├── auth_service/           # Dart Authentication Service
-├── backend/                # Backend services (includes tunnel_service)
-├── config/                 # Centralized configuration files
-│   ├── docker/             # Docker-compose files and service-specific Dockerfiles (e.g., Dockerfile, Dockerfile.web)
-│   ├── nginx/              # Nginx configurations
-│   └── systemd/            # Systemd service unit files
-├── docs/                   # Project documentation
-├── installers/             # Installer scripts (e.g., Inno Setup for Windows)
-├── lib/                    # Main Flutter application source code
-├── releases/               # (Gitignored) Place for release binaries like .zip, .exe
-├── scripts/                # Various utility and operational scripts
-├── secrets/                # (Gitignored) For local secrets, keys not for version control
-├── static_portal_files/    # Static HTML files for a potential simple Nginx portal root
-├── tools/                  # Developer tools, third-party installers
-├── ... (standard Flutter project directories like android/, ios/, web/, windows/, etc.)
-├── .gitignore
-├── CONTRIBUTING.md
-├── LICENSE                 # (To be created) Project License file
-├── README.md
-├── package.json
-├── pubspec.yaml
-└── ... (other root project files)
+## VPS Deployment Directory
+
+It is recommended to clone the CloudToLocalLLM repository to `/opt/cloudtolocalllm/` on your VPS.
+
+```bash
+sudo mkdir -p /opt/cloudtolocalllm
+sudo chown $USER:$USER /opt/cloudtolocalllm # Or your non-root user
+cd /opt/cloudtolocalllm
+git clone https://github.com/thrightguy/CloudToLocalLLM.git .
 ```
 
-**Deployment Location for Key Components:**
-
-*   **Main Application Code:** `/opt/cloudtolocalllm/` (entire cloned repository)
-*   **Compiled `admin_control_daemon`:** `/opt/cloudtolocalllm/admin_control_daemon/bin/admin_daemon`
-*   **Docker Configuration:** Primarily in `/opt/cloudtolocalllm/config/docker/` (e.g., `docker-compose.auth.yml`, `docker-compose.web.yml`, `Dockerfile`).
-*   **Persistent Docker Data:** Docker volumes will be managed by Docker, typically under `/var/lib/docker/volumes/`. For example, `postgres_data` for the auth database.
-*   **SSL Certificates (Certbot):** If using Certbot, certificates are usually in `/etc/letsencrypt/`. The `certbot/` directory in the project root (`/opt/cloudtolocalllm/certbot/` on VPS) is used by `docker-compose.web.yml` which mounts `./certbot/conf:/etc/letsencrypt` and `./certbot/www:/var/www/certbot`. This implies Certbot is run such that its configuration and challenge files are placed here.
+The directory structure on the VPS will then mirror the Git repository.
 
 ## Prerequisites
-- VPS with Ubuntu/Debian Linux
-- Domain name pointed to your VPS (cloudtolocalllm.online)
-- SSH access to your VPS
-- Ports 80 & 443 open in your firewall
+
+- A VPS running a recent version of Ubuntu or Debian.
+- Root or sudo access to the VPS.
+- A domain name (e.g., `cloudtolocalllm.online`) pointed to your VPS's IP address.
+- Ports 80 (HTTP) and 443 (HTTPS) open in your VPS firewall.
+- Git installed (`sudo apt update && sudo apt install -y git`).
 
 ## Deployment Steps
 
-### 1. Initial Server Setup
+The primary script for setting up and deploying to a VPS is `scripts/setup/docker_startup_vps.sh`.
+
+**Run this script as root or with sudo privileges.**
 
 ```bash
-# SSH into your server
-ssh root@your-server-ip
-
-# Update the system
-apt update && apt upgrade -y
-
-# Install basic tools if needed
-apt install -y curl git
+cd /opt/cloudtolocalllm
+sudo bash scripts/setup/docker_startup_vps.sh
 ```
 
-### 2. Deploy the Application
+### What the `docker_startup_vps.sh` Script Does:
 
-```bash
-# Create deployment directory
-mkdir -p /opt/cloudtolocalllm/portal
-cd /opt/cloudtolocalllm/portal
+1.  **Environment Cleanup**: Stops and removes relevant existing Docker containers and networks to ensure a clean start.
+2.  **Docker Check**: Ensures Docker is installed and the service is running.
+3.  **Admin Daemon Startup**:
+    *   Builds the `webapp` Docker image defined in `config/docker/Dockerfile.web` using `config/docker/docker-compose.yml` with `--no-cache` to ensure the latest configuration is used.
+    *   Starts the `admin_control_daemon` using `config/docker/docker-compose.admin.yml`. The daemon is built from `config/docker/Dockerfile.admin_daemon`.
+    *   Waits for the `admin_control_daemon` to become healthy by checking its `/admin/health` endpoint (defaulting to `http://localhost:9001`).
+4.  **Full Stack Deployment via Admin Daemon**:
+    *   Once the admin daemon is ready, the script makes a POST request to the daemon's `/admin/deploy/all` endpoint.
+    *   The `admin_control_daemon` then uses `config/docker/docker-compose.yml` to bring up all main application services (e.g., `webapp`, `fusionauth-app`, `fusionauth-db`, etc.).
+5.  **Network Check**: Verifies that containers are attached to the `cloudllm-network`.
 
-# Clone the repository
-git clone https://github.com/thrightguy/CloudToLocalLLM.git .
+Refer to the script's output and its log file (`/opt/cloudtolocalllm/startup_docker.log`) for detailed status and troubleshooting.
 
-# Make scripts executable
-chmod +x *.sh
+## Service Configuration Files
 
-# Run the deploy script
-./deploy_commands.sh
-```
+-   **Admin Daemon**:
+    -   Compose file: `config/docker/docker-compose.admin.yml`
+    -   Dockerfile: `config/docker/Dockerfile.admin_daemon`
+    -   Listens on port 9001 by default.
+-   **Main Application Services**:
+    -   Compose file: `config/docker/docker-compose.yml`
+    -   Services include:
+        -   `webapp`: The Flutter web application served by Nginx. Built from `config/docker/Dockerfile.web`.
+        -   `cloudtolocalllm-fusionauth-app`: FusionAuth identity server.
+        -   `cloudtolocalllm-fusionauth-db`: PostgreSQL database for FusionAuth.
+        -   (Other services as defined in the compose file)
 
-The deployment script will:
-1. Pull the latest changes from GitHub
-2. Install Docker and Docker Compose (if not present)
-3. Create necessary directories
-4. Deploy the application with Docker Compose
-5. Set up SSL certificates automatically
+## SSL Configuration
 
-### 3. Verify Deployment
+### Default: Self-Signed Certificates for `webapp`
 
-After the deployment completes successfully:
+-   The `webapp` service (Nginx) is configured by default to use **self-signed SSL certificates**.
+-   These certificates are generated *within the `webapp` Docker image* during its build process (see `config/docker/Dockerfile.web`).
+-   The Nginx configuration (`config/nginx/nginx.conf`, copied into the image and also mounted from `config/docker/nginx.conf`) is set up to use these self-signed certificates located at `/etc/nginx/ssl/selfsigned.crt` and `/etc/nginx/ssl/selfsigned.key`.
+-   This approach simplifies initial deployment and avoids immediate dependencies on external certificate authorities or DNS propagation.
+-   **Note**: Browsers will show a warning for self-signed certificates. This is expected for development or internal use. For public-facing sites, use Let's Encrypt or a commercial SSL certificate.
 
-1. Check that containers are running:
-   ```bash
-   docker-compose -f docker-compose.web.yml ps
-   ```
+### Option: Let's Encrypt
 
-2. Visit your domain in a browser:
-   ```
-   https://cloudtolocalllm.online
-   ```
+-   To use Let's Encrypt:
+    1.  **Modify `config/docker/docker-compose.yml`**:
+        *   Uncomment the Certbot service (`certbot-service`).
+        *   Uncomment the Certbot-related volume mounts for the `webapp` service (e.g., `certbot_conf:/etc/letsencrypt/` and `certbot_www:/var/www/certbot/`).
+        *   You might need to comment out or adjust the self-signed certificate generation in `config/docker/Dockerfile.web` if it conflicts.
+    2.  **Update Nginx Configuration**:
+        *   Modify `config/nginx/nginx.conf` (and ensure `config/docker/nginx.conf` is consistent if you keep the mount) to point to the Let's Encrypt certificate paths (e.g., `/etc/letsencrypt/live/yourdomain.com/fullchain.pem`).
+    3.  **Initial Certificate Issuance**: You will need to run the Certbot service initially to obtain the certificates. This typically involves a command like:
+        ```bash
+        docker compose -f config/docker/docker-compose.yml run --rm certbot-service certonly --webroot --webroot-path=/var/www/certbot -d yourdomain.com --email your@email.com --agree-tos --no-eff-email
+        ```
+        Ensure the `webapp` (Nginx) container is running and accessible for the HTTP-01 challenge.
+    4.  **Automatic Renewal**: The `certbot-service` in the Compose file is typically configured to attempt renewal periodically.
 
-3. Verify SSL certificate is working properly:
-   ```bash
-   docker run --rm -v "$(pwd)/certbot/conf:/etc/letsencrypt" certbot/certbot certificates
-   ```
+### Option: Commercial Wildcard SSL
 
-### 4. Troubleshooting
+1.  Purchase a wildcard certificate (e.g., `*.yourdomain.com`).
+2.  Upload the certificate files (private key, full chain) to a secure location on your VPS, for example, in a new directory like `/opt/cloudtolocalllm/ssl/commercial/`.
+3.  Modify `config/docker/docker-compose.yml`:
+    *   Add volume mounts to the `webapp` service to make these certificate files available inside the container (e.g., mounting `/opt/cloudtolocalllm/ssl/commercial/` to `/etc/nginx/commercial_ssl/`).
+4.  Modify `config/nginx/nginx.conf` (and `config/docker/nginx.conf`) to use these commercial certificate paths.
+5.  Rebuild and redeploy the `webapp` service: `docker compose -f config/docker/docker-compose.yml up -d --build webapp` (or trigger via admin daemon).
 
-#### Fix Nginx Configuration
-If you encounter issues with the Nginx configuration:
-```bash
-./fix_nginx.sh
-```
+## FusionAuth Integration
 
-#### Fix Permission Issues
-If there are permission issues with the Docker containers:
-```bash
-./fix_user_permissions.sh
-```
+-   FusionAuth and its PostgreSQL database are included in `config/docker/docker-compose.yml`.
+-   Access the FusionAuth admin UI at `https://yourdomain.com/auth/`.
+-   The initial setup password is set via the `FUSIONAUTH_APP_SETUP_PASSWORD` environment variable in the Compose file.
+-   **Security**: Change default passwords and manage secrets appropriately for production. The provided passwords in the compose file are for initial setup and development.
 
-#### Rebuild and Redeploy
-For a complete rebuild and redeploy:
-```bash
-./fix_and_deploy.sh
-```
+## Troubleshooting and Maintenance
 
-### 5. Maintaining Your Deployment
+-   **View Logs**:
+    -   Admin Daemon: `docker logs ctl_admin-admin-daemon-1` (or the actual container name/ID)
+    -   Application Services: Use `docker compose -f config/docker/docker-compose.yml logs <service_name>` (e.g., `webapp`, `cloudtolocalllm-fusionauth-app`).
+-   **Restarting Services**:
+    -   To restart all application services (after admin daemon is up):
+        ```bash
+        curl -X POST http://localhost:9001/admin/deploy/all
+        ```
+    -   To restart specific services: `docker compose -f config/docker/docker-compose.yml restart <service_name>`
+-   **Updating the Application**:
+    1.  Pull the latest changes from Git:
+        ```bash
+        cd /opt/cloudtolocalllm
+        git pull
+        ```
+    2.  Re-run the main setup script if there are changes to the admin daemon or its Docker setup. This script will also rebuild the webapp image with no cache.
+        ```bash
+        sudo bash scripts/setup/docker_startup_vps.sh
+        ```
+        This will trigger the `admin_control_daemon` to redeploy other services as needed based on the updated compose files and Dockerfiles.
+-   **Data Persistence**:
+    -   PostgreSQL data for FusionAuth is stored in a Docker named volume (`fusionauth_postgres_data`).
+    -   FusionAuth configuration is stored in a Docker named volume (`fusionauth_config`).
+    -   To backup, consider Docker volume backup strategies or standard PostgreSQL backup procedures for the database.
 
-#### Update the Application
-```bash
-# Pull latest changes and restart
-cd /opt/cloudtolocalllm/portal
-git pull origin master
-./deploy_commands.sh
-```
+## Old Scripts (For Reference/Review - Likely Deprecated)
 
-#### Manual SSL Certificate Renewal
-SSL certificates will auto-renew, but you can trigger manually:
-```bash
-./renew-ssl.sh
-```
-
-#### Backup Your Data
-Backup critical files and directories:
-```bash
-mkdir -p /backups
-tar -czf /backups/cloudtolocalllm-$(date +%Y%m%d).tar.gz \
-    /opt/cloudtolocalllm/portal/certbot \
-    /opt/cloudtolocalllm/portal/auth_service/data
-```
-
-## Advanced Configuration
-
-### Adding Subdomains
-To add subdomains (like beta.cloudtolocalllm.online):
-```bash
-./update_ssl_fixed.sh
-```
-
-### Using Wildcard SSL
-For wildcard SSL certificates:
-1. Purchase a wildcard certificate (*.cloudtolocalllm.online)
-2. Follow the installation instructions for your certificate provider
-3. Update the Nginx configuration to use the new certificate 
-
-## [2025-05-10] FusionAuth Integration Enabled
-
-- FusionAuth and its dedicated Postgres database are now included in the main Compose file (`config/docker/docker-compose.yml`).
-- The `/auth/` proxy block in `config/nginx/nginx.conf` is enabled by default, routing `/auth/` requests to the FusionAuth service.
-- Service names are consistent: `cloudtolocalllm-fusionauth-app` (FusionAuth) and `cloudtolocalllm-fusionauth-db` (Postgres).
-- Strong random passwords are generated for all secrets (see Compose file for admin reference; change for production).
-- Persistent named volumes are used for both FusionAuth config and database data.
-
-### Accessing FusionAuth
-- After deployment, access the FusionAuth admin UI at: `https://cloudtolocalllm.online/auth/`
-- The initial setup password is set via the `FUSIONAUTH_APP_SETUP_PASSWORD` environment variable (see Compose file for value).
-- You can log in and create your first FusionAuth application and admin user.
-
-### Troubleshooting
-- If you see errors about the FusionAuth service or database, check that both containers are running and healthy:
-  ```bash
-  docker compose -f config/docker/docker-compose.yml ps
-  ```
-- If you need to reset the database or config, remove the named volumes `fusionauth_postgres_data` and `fusionauth_config` (data loss!).
-
-### Security Note
-- The generated passwords are for demonstration and initial deployment. **Change them in production!**
-- Use Docker secrets or environment variable management for sensitive values in a real deployment.
+The repository may contain older scripts in `scripts/` or mentioned in previous documentation versions (e.g., `deploy_commands.sh`, `fix_nginx.sh`, `renew-ssl.sh`). These are likely superseded by the `docker_startup_vps.sh` script and the `admin_control_daemon`. Review them before use, as they may not align with the current Dockerized architecture.
 
 --- 
