@@ -22,7 +22,7 @@ dependencies:
   window_manager: ^0.4.3
   win32: ^5.0.9
   logging: ^1.2.0 # Used by admin_control_daemon Dart server
-  js: ^0.7.2
+  js: ^0.6.7
   crypto: ^3.0.3
   device_info_plus: ^11.4.0
   package_info_plus: ^8.3.0
