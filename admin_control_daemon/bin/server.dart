@@ -232,24 +232,37 @@ Future<void> _removeUnhealthyOrExitedContainers() async {
 
 Future<Response> _deployAllHandler(Request request) async {
   final results = <String, dynamic>{};
-  // Order for 'up': main (defines network), then fusionauth, then monitoring (uses network)
   final composeFilesToUp = [
-    'config/docker/docker-compose.yml', // Defines cloudllm-network
+    'config/docker/docker-compose.yml',
     'config/docker/docker-compose-fusionauth.yml',
-    'config/docker/docker-compose.monitoring.yml', // Uses cloudllm-network
+    'config/docker/docker-compose.monitoring.yml',
   ];
-  // Order for 'down': reverse of 'up' is a safe default
-  // final composeFilesToDown = composeFilesToUp.reversed.toList(); // Removed for less aggressive cleanup
 
-  final serviceNames = [
-    'cloudtolocalllm-fusionauth-app', // NO Prefix: from separate compose file without project name
-    'cloudtolocalllm-fusionauth-postgres', // NO Prefix: from separate compose file without project name
-    'ctl_services-webapp',
-    'ctl_services-nginx',
-    'ctl_services-tunnel',
-    'cloudtolocalllm_monitor', // NO Prefix: from separate compose file without project name
-    'ctl_services-certbot'
-  ];
+  // Map compose files to their key services and any specific project name
+  final Map<String, ({List<String> services, String? projectName})>
+      orderedServices = {
+    'config/docker/docker-compose.yml': (
+      services: [
+        'ctl_services-webapp',
+        'ctl_services-nginx',
+        'ctl_services-tunnel',
+        'ctl_services-certbot' // Certbot may exit quickly, _waitForHealthy handles nohealthcheck
+      ],
+      projectName: mainProjectName
+    ),
+    'config/docker/docker-compose-fusionauth.yml': (
+      services: [
+        'cloudtolocalllm-fusionauth-postgres',
+        'cloudtolocalllm-fusionauth-app'
+      ],
+      projectName: null // Uses default Docker Compose project naming
+    ),
+    'config/docker/docker-compose.monitoring.yml': (
+      services: ['cloudtolocalllm_monitor'],
+      projectName: null // Uses default Docker Compose project naming
+    ),
+  };
+
   final unhealthy = <String, dynamic>{};
   final failedComposeFiles =
       <String, String>{}; // To store stderr of failed compose up
@@ -290,17 +303,17 @@ Future<Response> _deployAllHandler(Request request) async {
     print('Error trying to free port 80: $e');
   }
 
-  // 2. Start and check each service
-  for (final file in composeFilesToUp) {
-    String? currentProjectName;
+  // 2. Start and check each service group by compose file
+  for (final file in orderedServices.keys) {
+    final serviceGroup = orderedServices[file]!;
+    final currentProjectName = serviceGroup.projectName;
+
     if (file == 'config/docker/docker-compose.yml') {
-      currentProjectName = mainProjectName;
       print(
           'Attempting to remove existing ${mainProjectName}-webapp image to ensure fresh build...');
-      final rmiResult = await Process.run('docker',
-          ['rmi', '-f', '${mainProjectName}-webapp'], // Use prefixed image name
-          workingDirectory: projectRoot,
-          runInShell: true);
+      final rmiResult = await Process.run(
+          'docker', ['rmi', '-f', '${mainProjectName}-webapp'],
+          workingDirectory: projectRoot, runInShell: true);
       if (rmiResult.exitCode == 0) {
         print(
             'Successfully removed ${mainProjectName}-webapp image (or it did not exist).');
@@ -316,25 +329,55 @@ Future<Response> _deployAllHandler(Request request) async {
       print(
           'ERROR: docker compose up for $file failed with exit code ${composeUpResult.exitCode}');
       failedComposeFiles[file] = composeUpResult.stderr.toString();
+      // If compose up fails, we should probably stop deploying further
+      results['failed_compose_files'] = failedComposeFiles;
+      results['unhealthy_services'] =
+          unhealthy; // Include any already found unhealthy services
+      return Response.internalServerError(
+        body: jsonEncode({
+          'status':
+              'A critical docker compose up command failed. Halting deployment.',
+          'failed_compose_file': file,
+          'results': results,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
     }
 
-    for (final name in serviceNames) {
-      if (unhealthy.containsKey(name)) continue;
+    // Check health for services in this group
+    for (final name in serviceGroup.services) {
+      if (unhealthy.containsKey(name))
+        continue; // Already marked by a previous group (should not happen with this loop structure)
 
       final healthy = await _waitForHealthy(name);
       if (!healthy) {
-        if (!unhealthy.containsKey(name)) {
-          final logs = await _getContainerLogs(name, lines: 20);
-          unhealthy[name] = {
-            'status': 'unhealthy_or_not_found',
-            'logs': logs,
-            'checked_after_compose_file': file
-          };
-        }
+        final logs = await _getContainerLogs(name, lines: 20);
+        unhealthy[name] = {
+          'status': 'unhealthy_or_not_found',
+          'logs': logs,
+          'checked_after_compose_file': file
+        };
+        // If a key service in this group is unhealthy, stop and report.
+        results['failed_compose_files'] = failedComposeFiles;
+        results['unhealthy_services'] = unhealthy;
+        return Response.internalServerError(
+          body: jsonEncode({
+            'status':
+                'A key service from $file did not become healthy. Halting deployment.',
+            'unhealthy_service': name,
+            'results': results,
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
       }
     }
-    await _removeUnhealthyOrExitedContainers();
+    // Optional: Small delay between service groups if needed
+    // await Future.delayed(Duration(seconds: 5));
   }
+
+  // No need for the old serviceNames list or the loop that iterated through it
+  // final serviceNames = [ ... ];
+  // for (final name in serviceNames) { ... }
 
   // 3. List all running containers
   final containers = await _listContainers();
