@@ -5,6 +5,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 
 const String projectRoot = '/opt/cloudtolocalllm';
+const String mainProjectName = 'ctl_services';
 
 // Configure routes
 final _router = Router()
@@ -88,19 +89,29 @@ Future<Response> _issueRenewSslHandler(Request request) async {
 }
 
 Future<void> _composeDown(String composeFile) async {
-  await Process.run(
+  final baseArgs = ['compose', '-p', mainProjectName];
+  print('Attempting to bring down services from: $composeFile');
+  final result = await Process.run(
     'docker',
-    ['compose', '-f', composeFile, 'down'],
+    [...baseArgs, '-f', composeFile, 'down', '--remove-orphans'],
     workingDirectory: projectRoot,
     runInShell: true,
   );
+  print('docker compose down for $composeFile exited with ${result.exitCode}');
+  if (result.stdout.toString().isNotEmpty) {
+    print('STDOUT for $composeFile down:\n${result.stdout}');
+  }
+  if (result.stderr.toString().isNotEmpty) {
+    print('STDERR for $composeFile down:\n${result.stderr}');
+  }
 }
 
 Future<ProcessResult> _composeUp(String composeFile) async {
+  final baseArgs = ['compose', '-p', mainProjectName];
   print('Attempting to bring up services from: $composeFile');
   final result = await Process.run(
     'docker',
-    ['compose', '-f', composeFile, 'up', '-d', '--build', '--remove-orphans'],
+    [...baseArgs, '-f', composeFile, 'up', '-d', '--build', '--remove-orphans'],
     workingDirectory: projectRoot,
     runInShell: true,
   );
