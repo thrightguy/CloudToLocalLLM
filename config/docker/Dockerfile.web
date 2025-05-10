@@ -3,6 +3,9 @@ FROM ghcr.io/cirruslabs/flutter:latest AS build
 
 WORKDIR /app
 
+# Create a non-root user and group
+RUN groupadd -r fluttergroup && useradd -r -g fluttergroup -m -s /sbin/nologin flutteruser
+
 # Cache-busting echo
 RUN echo "Build version: $(date +%s)"
 
@@ -10,11 +13,19 @@ RUN echo "Build version: $(date +%s)"
 COPY pubspec.yaml ./
 COPY pubspec.lock ./
 
+# Change ownership of /app to flutteruser before running flutter commands
+RUN chown -R flutteruser:fluttergroup /app
+
+# Switch to non-root user for flutter commands
+USER flutteruser
+
 # Get dependencies
 RUN flutter pub get
 
-# Copy the rest of the application source code
+# Copy the rest of the application source code (as flutteruser)
+# Ensure correct ownership if copying as root later or use USER root before COPY if needed
 COPY . .
+RUN chown -R flutteruser:fluttergroup /app
 
 # Build the Flutter web application
 # The output will be in /app/build/web
@@ -23,22 +34,23 @@ RUN flutter build web --release
 # Stage 2: Serve the app with Nginx
 FROM nginx:alpine
 
-# Install curl for healthcheck
+# Install curl for healthcheck (as root)
 USER root
 RUN apk add --no-cache curl
 
 # Copy the built web app from the build stage
 COPY --from=build /app/build/web /usr/share/nginx/html
 
-# Set permissions for nginx user
-RUN chown -R nginx:nginx /usr/share/nginx/html
+# Set permissions for nginx user (as root)
+RUN chown -R nginx:nginx /usr/share/nginx/html && chmod -R 755 /usr/share/nginx/html
 
 # Copy the Nginx configuration
 # This assumes nginx.conf is located at config/nginx/nginx.conf relative to the build context (project root)
 COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
-
+# USER nginx is already specified in nginx:alpine base image and Nginx will run as nginx user by default.
+# Explicitly setting it here for clarity.
 USER nginx
 
 CMD ["nginx", "-g", "daemon off;"] 
