@@ -49,7 +49,7 @@ services:
   # FusionAuth service
   fusionauth:
     image: fusionauth/fusionauth-app:latest
-    container_name: cloudtolocalllm-fusionauth
+    container_name: cloudtolocalllm-fusionauth-app
     ports:
       - "9011:9011"
     environment:
