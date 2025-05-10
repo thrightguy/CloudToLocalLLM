@@ -73,6 +73,10 @@ RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache
     chown -R nginx:nginx /var/cache/nginx && \
     chmod -R 700 /var/cache/nginx
 
+# Create and set permissions for Nginx PID directory
+RUN mkdir -p /var/run/nginx && \
+    chown -R nginx:nginx /var/run/nginx
+
 EXPOSE 80
 # USER nginx is already specified in nginx:alpine base image and Nginx will run as nginx user by default.
 # Explicitly setting it here for clarity.
