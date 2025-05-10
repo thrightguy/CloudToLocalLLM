@@ -1,5 +1,6 @@
 # The docker-compose configuration for the CloudToLocalLLM monitoring services
 
+version: '3.8'
 services:
   netdata:
     image: netdata/netdata:latest
@@ -18,12 +19,16 @@ services:
       - netdata-config:/etc/netdata
       - netdata-lib:/var/lib/netdata
       - netdata-cache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/os-release:/host/etc/os-release:ro
     environment:
       - NETDATA_CLAIM_TOKEN=${NETDATA_CLAIM_TOKEN:-}
       - NETDATA_CLAIM_URL=https://app.netdata.cloud
       - NETDATA_CLAIM_ROOMS=${NETDATA_CLAIM_ROOMS:-}
     networks:
-      - cloudllm-network
+      - cloudllm_mon_network
+      - cloudllm_external_network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:19999/api/v1/info"]
       interval: 30s
@@ -37,7 +42,10 @@ volumes:
   netdata-cache:
 
 networks:
-  cloudllm-network:
+  cloudllm_mon_network:
+    driver: bridge
+  cloudllm_external_network:
     external: true
+    name: ctl_services_cloudllm-network
   # webnet:
   #   driver: bridge 
