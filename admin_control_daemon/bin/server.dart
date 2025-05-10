@@ -137,16 +137,13 @@ Future<ProcessResult> _composeUp(String composeFile,
 Future<bool> _waitForHealthy(String serviceName,
     {int timeoutSeconds = 120}) async {
   print('Checking health for $serviceName...');
+  const String inspectFormat =
+      '{{if .State}}{{if .State.Health}}{{.State.Health.Status}}{{else}}nohealthcheck{{end}}{{else}}notavailable{{end}}';
   final deadline = DateTime.now().add(Duration(seconds: timeoutSeconds));
   while (DateTime.now().isBefore(deadline)) {
     final result = await Process.run(
       'docker',
-      [
-        'inspect',
-        '--format',
-        '{{if .State.Health}}{{.State.Health.Status}}{{else}}nohealthcheck{{end}}',
-        serviceName
-      ],
+      ['inspect', '--format', inspectFormat, serviceName],
       runInShell: true,
     );
 
@@ -155,9 +152,8 @@ Future<bool> _waitForHealthy(String serviceName,
       print('Health status for $serviceName: $status');
       if (status == 'healthy') return true;
       if (status == 'unhealthy') return false;
-      if (status == 'nohealthcheck') {
-        // If no healthcheck, check if container is simply running
-        // Use exact name matching for ps filter
+      if (status == 'nohealthcheck' || status == 'notavailable') {
+        // If no healthcheck or state not available, check if container is simply running
         final psResult = await Process.run(
             'docker', ['ps', '-q', '--filter', 'name=^/${serviceName}\$'],
             runInShell: true);
