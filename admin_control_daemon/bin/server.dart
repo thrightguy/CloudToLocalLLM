@@ -121,7 +121,12 @@ Future<bool> _waitForHealthy(String serviceName,
   while (DateTime.now().isBefore(deadline)) {
     final result = await Process.run(
       'docker',
-      ['inspect', '--format', '{{if .State.Health}}{{.State.Health.Status}}{{else}}nohealthcheck{{end}}', serviceName],
+      [
+        'inspect',
+        '--format',
+        '{{if .State.Health}}{{.State.Health.Status}}{{else}}nohealthcheck{{end}}',
+        serviceName
+      ],
       runInShell: true,
     );
 
@@ -133,19 +138,23 @@ Future<bool> _waitForHealthy(String serviceName,
       if (status == 'nohealthcheck') {
         // If no healthcheck, check if container is simply running
         // Use exact name matching for ps filter
-        final psResult = await Process.run('docker', ['ps', '-q', '--filter', 'name=^/${serviceName}$'], runInShell: true);
+        final psResult = await Process.run(
+            'docker', ['ps', '-q', '--filter', 'name=^/${serviceName}\$'],
+            runInShell: true);
         if (psResult.stdout.toString().trim().isNotEmpty) {
           print('$serviceName has no healthcheck but is running.');
           return true; // Container exists and is running
         } else {
-          print('$serviceName has no healthcheck and is NOT running (or not found by name).');
+          print(
+              '$serviceName has no healthcheck and is NOT running (or not found by name).');
           return false; // Container with no healthcheck is not running or doesn't exist by this name
         }
       }
       // If status is 'starting' or empty, the loop will continue after the delay.
     } else {
       // Container not found by inspect, or inspect command failed.
-      print('Failed to inspect $serviceName (exit code ${result.exitCode}), assuming not healthy or not found.');
+      print(
+          'Failed to inspect $serviceName (exit code ${result.exitCode}), assuming not healthy or not found.');
       if (result.stderr.toString().isNotEmpty) {
         print('Inspect stderr for $serviceName: ${result.stderr}');
       }
@@ -219,7 +228,8 @@ Future<Response> _deployAllHandler(Request request) async {
     'cloudtolocalllm-certbot'
   ];
   final unhealthy = <String, dynamic>{};
-  final failedComposeFiles = <String, String>{}; // To store stderr of failed compose up
+  final failedComposeFiles =
+      <String, String>{}; // To store stderr of failed compose up
 
   // 1. Stop and remove all service containers (not admin daemon)
   for (final file in composeFilesToDown) {
@@ -228,9 +238,10 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 2. Start and check each service
   for (final file in composeFilesToUp) {
-    final composeUpResult = await _composeUp(file); 
+    final composeUpResult = await _composeUp(file);
     if (composeUpResult.exitCode != 0) {
-      print('ERROR: docker compose up for $file failed with exit code ${composeUpResult.exitCode}');
+      print(
+          'ERROR: docker compose up for $file failed with exit code ${composeUpResult.exitCode}');
       failedComposeFiles[file] = composeUpResult.stderr.toString();
     }
 
@@ -240,12 +251,12 @@ Future<Response> _deployAllHandler(Request request) async {
       final healthy = await _waitForHealthy(name);
       if (!healthy) {
         if (!unhealthy.containsKey(name)) {
-           final logs = await _getContainerLogs(name, lines: 20);
-            unhealthy[name] = {
-                'status': 'unhealthy_or_not_found',
-                'logs': logs,
-                'checked_after_compose_file': file 
-            };
+          final logs = await _getContainerLogs(name, lines: 20);
+          unhealthy[name] = {
+            'status': 'unhealthy_or_not_found',
+            'logs': logs,
+            'checked_after_compose_file': file
+          };
         }
       }
     }
@@ -264,7 +275,8 @@ Future<Response> _deployAllHandler(Request request) async {
     results['unhealthy_services'] = unhealthy;
     return Response.internalServerError(
       body: jsonEncode({
-        'status': 'Some services failed to start, compose files failed, or services are unhealthy/not_found',
+        'status':
+            'Some services failed to start, compose files failed, or services are unhealthy/not_found',
         'results': results,
       }),
       headers: {'Content-Type': 'application/json'},
