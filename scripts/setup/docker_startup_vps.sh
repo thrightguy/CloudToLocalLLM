@@ -82,7 +82,7 @@ log_status "-----------------------------------------------------"
 # Step 2: Start the admin daemon using Docker Compose (renumbered from 3/4)
 log_status "[2/5] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
-docker compose -f config/docker/docker-compose.admin.yml up -d --build
+docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d --build
 
 # Wait for the admin daemon to be ready
 log_status "Waiting for admin daemon to be ready..."
