@@ -56,11 +56,6 @@ if ! systemctl is-active --quiet docker; then
     systemctl start docker
 fi
 
-# Step a: Pull the latest code
-log_status "[2/4] Pulling latest code from repository..."
-cd "$INSTALL_DIR"
-git pull
-
 # Step 3: Start the admin daemon using Docker Compose
 log_status "[3/4] Starting admin daemon via Docker Compose..."
 cd "$INSTALL_DIR"
