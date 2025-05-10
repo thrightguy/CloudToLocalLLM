@@ -241,6 +241,22 @@ Future<Response> _deployAllHandler(Request request) async {
 
   // 2. Start and check each service
   for (final file in composeFilesToUp) {
+    // Specific pre-up step for main compose file to ensure webapp is rebuilt cleanly
+    if (file == 'config/docker/docker-compose.yml') {
+      print(
+          'Attempting to remove existing cloudtolocalllm-webapp image to ensure fresh build...');
+      final rmiResult = await Process.run(
+          'docker', ['rmi', '-f', 'cloudtolocalllm-webapp'],
+          workingDirectory: projectRoot, runInShell: true);
+      if (rmiResult.exitCode == 0) {
+        print(
+            'Successfully removed cloudtolocalllm-webapp image (or it did not exist).');
+      } else {
+        print(
+            'Warning: Failed to remove cloudtolocalllm-webapp image. Stderr: ${rmiResult.stderr}');
+      }
+    }
+
     final composeUpResult = await _composeUp(file);
     if (composeUpResult.exitCode != 0) {
       print(
