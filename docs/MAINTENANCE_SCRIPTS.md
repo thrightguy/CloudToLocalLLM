@@ -1,22 +1,25 @@
 # CloudToLocalLLM Maintenance Scripts
 
-This document provides an overview of all the maintenance scripts available for the CloudToLocalLLM portal.
+**[IMPORTANT NOTE] This document is likely outdated. The primary method for VPS deployment and initial setup is now the `scripts/setup/docker_startup_vps.sh` script, which utilizes the `admin_control_daemon` for service management. Many of the scripts listed below may be deprecated or their functionality incorporated into the new workflow. Please refer to `docs/DEPLOYMENT.MD` for the current deployment strategy.**
 
-## Quick Reference
+This document provides an overview of various maintenance scripts that have been part of the CloudToLocalLLM portal. Review each script's relevance before use.
 
-| Script | Purpose |
+## Quick Reference (Review for Currency)
+
+| Script | Purpose (Verify if still current) |
 |--------|---------|
-| `fix_and_deploy.sh` | Main deployment script - fixes nginx configuration and deploys the portal |
-| `git_pull.sh` | Pulls the latest changes from GitHub |
-| `fix_nginx.sh` | Fixes nginx configuration issues |
-| `update_ssl_fixed.sh` | Updates SSL certificates to include subdomains and configures auth service |
-| `verify_beta_auth.sh` | Verifies the beta authentication setup is properly configured |
-| `deploy_with_monitoring.sh` | Comprehensive deployment script with Netdata monitoring |
-| `setup_monitoring.sh` | Sets up Netdata monitoring only (for existing deployments) |
-| `renew-ssl.sh` | Manually renews SSL certificates |
-| `deploy_commands.sh` | Original deployment script (deprecated) |
+| `scripts/setup/docker_startup_vps.sh` | **Current primary script for initial VPS setup and deployment.** |
+| `fix_and_deploy.sh` | (Likely Deprecated) Main deployment script - fixes nginx configuration and deploys the portal |
+| `git_pull.sh` | (Likely Deprecated by `docker_startup_vps.sh` which includes git pull) Pulls the latest changes from GitHub |
+| `fix_nginx.sh` | (Likely Deprecated) Fixes nginx configuration issues |
+| `update_ssl_fixed.sh` | (Likely Deprecated) Updates SSL certificates to include subdomains and configures auth service |
+| `verify_beta_auth.sh` | (Likely Deprecated) Verifies the beta authentication setup |
+| `deploy_with_monitoring.sh` | (Review) Comprehensive deployment script with Netdata monitoring |
+| `setup_monitoring.sh` | (Review) Sets up Netdata monitoring only |
+| `renew-ssl.sh` | (Review, Certbot service aims for auto-renewal) Manually renews SSL certificates |
+| `deploy_commands.sh` | (Deprecated) Original deployment script |
 
-## Detailed Usage
+## Detailed Usage (Review Individual Scripts for Relevance)
 
 ### fix_and_deploy.sh
 Comprehensive script that handles everything from pulling the latest changes to fixing configuration issues and deploying:

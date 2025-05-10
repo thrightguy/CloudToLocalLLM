@@ -45,24 +45,16 @@ The README.md file already contains instructions for downloading the app from th
 
 ## Building a New Release
 
-Follow the instructions in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md) for creating a new release. The process includes:
+Follow the instructions in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md) for creating a new release. The process generally includes:
 
-1. **Update Version Numbers**
-   - Update version numbers in all relevant files (ISS installers, pubspec.yaml)
-
-2. **Build Both Installer Types**
-   - Build the regular installer with `scripts\build\build_windows_with_license.ps1`
-   - Build the admin installer with `scripts\build\build_windows_admin_installer.ps1`
-
-3. **Test Builds Thoroughly**
-   - Test both installer types to verify functionality
-
-4. **Select Release Candidate**
-   - Identify the build that will become the release candidate
-   - Clean up older builds using `scripts\release\clean_releases.ps1 -KeepLatestBuild`
-
-5. **Create GitHub Release**
-   - Upload the final installer and ZIP files to GitHub as described above
+1.  **Update Version Numbers**: In `pubspec.yaml` and any platform-specific files or installer scripts (e.g., Inno Setup `.iss` files).
+2.  **Build Installers**: Use the provided build scripts for consistency and to include necessary steps like licensing or specific installer configurations.
+    *   Example for regular installer: `scripts\build\build_windows_with_license.ps1`
+    *   Example for admin installer: `scripts\build\build_windows_admin_installer.ps1` (If applicable)
+    *   These scripts typically handle the `flutter build windows` command along with packaging, versioning, and creating the final installer/ZIP files in the `releases/` directory.
+3.  **Test Builds Thoroughly**: On target platforms.
+4.  **Select Release Candidate**: And clean up older builds if necessary (e.g., using `scripts\release\clean_releases.ps1 -KeepLatestBuild`).
+5.  **Create GitHub Release**: Upload the final installer and ZIP files to GitHub as described in the sections above.
 
 ## Release File Naming Conventions
 
@@ -75,9 +67,9 @@ Release files should follow these naming conventions:
 
 For more details on the release process including automated cleanup, see [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md).
 
-## Building the Windows App (for future releases)
+## Building the Windows App (Manual Steps for Reference / Troubleshooting)
 
-If you need to build a new version of the Windows app in the future:
+While the build scripts mentioned in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md) (and summarized above) are the **recommended way to create official release builds**, the following outlines the basic manual steps involved if you need to build directly for testing or troubleshooting:
 
 1. Make sure all dependencies are up to date:
    ```
