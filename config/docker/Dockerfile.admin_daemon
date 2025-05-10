@@ -3,9 +3,6 @@ FROM ghcr.io/cirruslabs/flutter:latest AS build
 
 WORKDIR /app
 
-# Add a cache-busting label
-LABEL cache_buster_timestamp="$(date +%s)"
-
 # Copy pubspec files
 COPY admin_control_daemon/pubspec.yaml ./
 COPY admin_control_daemon/pubspec.lock ./
