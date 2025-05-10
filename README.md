@@ -1,7 +1,5 @@
 # CloudToLocalLLM: Your Personal AI Powerhouse 🌩️💻
 
-> **Note:** The `cloud` folder is now deprecated. All development, documentation, and deployment for cloud-related features and the local application are now managed from this main project root. The core application is a Flutter/Dart project. For any cloud-related code or deployment details, refer to the main project and this README.
-
 Run powerful Large Language Models (LLMs) directly on your machine and seamlessly sync your conversations to the cloud. Experience the best of local control and cloud convenience.
 
 ## ✨ Features
@@ -208,6 +206,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+*Historical Note: The `cloud` folder, previously used for separate cloud service components, is now deprecated. All development, documentation, and deployment for cloud-related features and the local application are managed from this main project root. The core application is a Flutter/Dart project. For any cloud-related code or deployment details, refer to the main project and this README.*
+---
 
 ## Acknowledgements
 
