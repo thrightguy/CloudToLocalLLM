@@ -114,7 +114,6 @@ services:
     depends_on:
       - webapp
       - fusionauth
-      - admin-daemon
     restart: unless-stopped
     networks:
       - cloudllm-network
