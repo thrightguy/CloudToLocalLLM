@@ -62,7 +62,6 @@ services:
 
   cloudtolocalllm-fusionauth-app:
     image: fusionauth/fusionauth-app:latest
-    container_name: cloudtolocalllm-fusionauth-app
     restart: unless-stopped
     ports:
       - "9011:9011"
