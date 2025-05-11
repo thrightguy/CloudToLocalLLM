@@ -6,6 +6,8 @@ services:
     image: netdata/netdata:latest
     container_name: cloudtolocalllm_monitor
     hostname: cloudtolocalllm
+    ports:
+      - "19999:19999"
     restart: unless-stopped
     cap_add:
       - SYS_PTRACE
@@ -27,6 +29,7 @@ services:
       - NETDATA_CLAIM_TOKEN=${NETDATA_CLAIM_TOKEN:-}
       - NETDATA_CLAIM_URL=https://app.netdata.cloud
       - NETDATA_CLAIM_ROOMS=${NETDATA_CLAIM_ROOMS:-}
+      - DISABLE_PLUGINS=cgroups
     networks:
       - cloudllm_mon_network
       - cloudllm_external_network
