@@ -34,6 +34,13 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}--- SSL Certificate Management Script ---${NC}"
 
+# Debug: Check file existence and permissions
+echo -e "${YELLOW}Debug: Checking /usr/bin/certbot details...${NC}"
+ls -l /usr/bin/certbot || echo -e "${RED}Debug: ls -l /usr/bin/certbot failed${NC}"
+
+# Debug: Check what command -v outputs
+echo -e "${YELLOW}Debug: Output of 'command -v /usr/bin/certbot': $(command -v /usr/bin/certbot || echo 'command -v failed')${NC}"
+
 # Check if Certbot is installed
 if ! command -v /usr/bin/certbot &> /dev/null; then
     echo -e "${RED}Certbot could not be found at /usr/bin/certbot. Please check installation.${NC}"
