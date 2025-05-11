@@ -148,7 +148,7 @@ Future<Map<String, dynamic>> _getContainerHealth(
   if (result.exitCode == 0) {
     try {
       // The output from {{json .State.Health}} might be 'null' (a string) if no health check,
-      // or a JSON string like '{"Status":"starting","FailingStreak":0,"Log":[]}'
+      // or a JSON string like '{\"Status\":\"starting\",\"FailingStreak\":0,\"Log\":[]}'
       final healthJson = result.stdout.toString().trim();
       if (healthJson.isNotEmpty && healthJson != "null") {
         return jsonDecode(healthJson) as Map<String, dynamic>;
@@ -156,14 +156,14 @@ Future<Map<String, dynamic>> _getContainerHealth(
         // If healthJson is "null", it means .State.Health was null (e.g. no healthcheck defined).
         // We treat this as 'unknown' or implicitly 'healthy' if the container is running.
         // For _waitForHealthy, we need a definite 'healthy' status.
-        // Let's check basic running state if health status is null.
+        // Let\'s check basic running state if health status is null.
         final runningCheck = await Process.run('docker',
             ['inspect', '--format={{.State.Running}}', containerNameOrId]);
         if (runningCheck.exitCode == 0 &&
             runningCheck.stdout.toString().trim() == 'true') {
           // If no healthcheck but container is running, consider it healthy for basic checks.
-          // However, our _waitForHealthy specifically looks for Docker's health status.
-          // So, returning 'unknown' here is more accurate if .State.Health was null.
+          // However, our _waitForHealthy specifically looks for Docker\'s health status.
+          // So, returning \'unknown\' here is more accurate if .State.Health was null.
           return {
             'Status': 'healthy_but_no_check'
           }; // Special status if running but no healthcheck configured
@@ -181,38 +181,52 @@ Future<Map<String, dynamic>> _getContainerHealth(
 }
 
 Future<bool> _waitForHealthy(
-    String serviceName, String composeFilePath, String projectName,
-    {int retries = 18, Duration interval = const Duration(seconds: 10)}) async {
-  // Increased retries
-  final containerName = '${projectName}-${serviceName}-1';
-  print('Waiting for $containerName to become healthy...');
+    String serviceKey, // Renamed from serviceName to serviceKey for clarity
+    String composeFilePath,
+    String projectName,
+    Map<String, dynamic> serviceData, // Added serviceData parameter
+    {int retries = 18,
+    Duration interval = const Duration(seconds: 10)}) async {
+  String containerNameToInspect;
+
+  if (serviceData.containsKey('container_name')) {
+    containerNameToInspect = serviceData['container_name'] as String;
+    print(
+        'Using explicit container_name for $serviceKey: $containerNameToInspect');
+  } else {
+    containerNameToInspect = '${projectName}-${serviceKey}-1';
+    print('Using default pattern for $serviceKey: $containerNameToInspect');
+  }
+
+  print('Waiting for $containerNameToInspect to become healthy...');
 
   for (int i = 0; i < retries; i++) {
     await Future.delayed(interval);
-    final health = await _getContainerHealth(containerName);
+    final health = await _getContainerHealth(containerNameToInspect);
     final status = health['Status'];
     print(
-        'Attempt ${i + 1}/${retries}: Health status for $containerName is "$status".');
+        'Attempt ${i + 1}/${retries}: Health status for $containerNameToInspect is "$status".');
 
     if (status == 'healthy') {
-      print('$containerName is healthy.');
+      print('$containerNameToInspect is healthy.');
       return true;
     }
-    // Added 'healthy_but_no_check' as a success, if the container's own healthcheck isn't defined
-    // but the compose file expects it to eventually be "healthy" via Nginx /health
-    // This might not be the right place for this logic if the daemon strictly relies on Docker's own health status.
-    // For now, let's keep it strict to 'healthy' from Docker's perspective.
+    // Optional: Treat 'healthy_but_no_check' as success if applicable
+    // if (status == 'healthy_but_no_check') {
+    //   print('$containerNameToInspect is running (no Docker health check, considered healthy).');
+    //   return true;
+    // }
   }
 
   print(
-      '$containerName did not become healthy after ${retries * interval.inSeconds} seconds.');
-  final logsResult =
-      await Process.run('docker', ['logs', '--tail', '50', containerName]);
+      '$containerNameToInspect did not become healthy after ${retries * interval.inSeconds} seconds.');
+  final logsResult = await Process.run(
+      'docker', ['logs', '--tail', '50', containerNameToInspect]);
   if (logsResult.exitCode == 0) {
     print(
-        'Last 50 log lines for $containerName:\n${logsResult.stdout}\n${logsResult.stderr}');
+        'Last 50 log lines for $containerNameToInspect:\\n${logsResult.stdout}\\n${logsResult.stderr}');
   } else {
-    print('Could not retrieve logs for $containerName.');
+    print('Could not retrieve logs for $containerNameToInspect.');
   }
   return false;
 }
@@ -280,10 +294,10 @@ Future<Response> _deployAllHandler(Request request) async {
       services: ['webapp', 'cloudtolocalllm-fusionauth-app'],
       projectName: mainProjectName
     ),
-    'config/docker/docker-compose.monitoring.yml': (
-      services: ['cloudtolocalllm_monitor'],
-      projectName: null
-    ),
+    // 'config/docker/docker-compose.monitoring.yml': (
+    //   services: ['cloudtolocalllm_monitor'],
+    //   projectName: null
+    // ),
   };
 
   final unhealthy = <String, dynamic>{};
@@ -379,7 +393,8 @@ Future<Response> _deployAllHandler(Request request) async {
         // Default project name for compose files in config/docker/ when not specified
         effectiveProjectName = "docker";
       }
-      final healthy = await _waitForHealthy(name, file, effectiveProjectName);
+      final healthy =
+          await _waitForHealthy(name, file, effectiveProjectName, {});
       if (!healthy) {
         final logs = await _getContainerLogs(name, lines: 20);
         unhealthy[name] = {
