@@ -1,15 +1,6 @@
 #!/bin/bash
 set -e
 
-# --- BEGIN SCRIPT DEBUG ---
-echo -e "DEBUG: ----- Environment Snapshot -----"
-echo -e "DEBUG: Running as user: $(whoami || echo 'whoami failed')"
-echo -e "DEBUG: PATH is: $PATH"
-echo -e "DEBUG: Testing direct execution of /usr/bin/certbot --version..."
-/usr/bin/certbot --version || echo -e "DEBUG: /usr/bin/certbot --version failed"
-echo -e "DEBUG: ----- End Environment Snapshot -----"
-# --- END SCRIPT DEBUG ---
-
 # --- IMPORTANT PERMISSIONS NOTE ---
 # This script is intended to be run by a user or process (e.g., your admin_control_daemon)
 # that has the following permissions:
@@ -43,42 +34,28 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}--- SSL Certificate Management Script ---${NC}"
 
-# Remove older, less informative debugs
-# echo -e "${YELLOW}Debug: Checking /usr/bin/certbot details...${NC}"
-# ls -l /usr/bin/certbot || echo -e "${RED}Debug: ls -l /usr/bin/certbot failed${NC}"
-# 
-# echo -e "${YELLOW}Debug: Output of 'command -v /usr/bin/certbot': $(command -v /usr/bin/certbot || echo 'command -v failed')${NC}"
-
-# Check if Certbot is installed by trying to run it
-if ! /usr/bin/certbot --version &> /dev/null; then
-    echo -e "${RED}Certbot at /usr/bin/certbot --version failed or was not found. Please check installation.${NC}"
+# Check if Certbot is installed
+if ! command -v certbot &> /dev/null; then
+    echo -e "${RED}Certbot could not be found. Please check installation within the admin_daemon container.${NC}"
     exit 1
 fi
-echo -e "${GREEN}Certbot invocation via /usr/bin/certbot --version successful.${NC}"
+echo -e "${GREEN}Certbot found (expected in admin_daemon container PATH).${NC}"
 
-# Create directories if they don't exist
-echo -e "${YELLOW}Ensuring directories exist...${NC}"
+# Create directories if they don't exist (these are host paths, ensure daemon has mount access)
+echo -e "${YELLOW}Ensuring directories exist on host (mounted into containers):${NC}"
+echo -e "${YELLOW}  Config: $CERT_CONFIG_DIR${NC}"
+echo -e "${YELLOW}  Webroot: $WEBROOT_PATH/.well-known/acme-challenge${NC}"
+echo -e "${YELLOW}  Logs: $CERTBOT_LOG_DIR${NC}"
 mkdir -p "$CERT_CONFIG_DIR"
-mkdir -p "$WEBROOT_PATH/.well-known/acme-challenge" # Certbot webroot needs .well-known/acme-challenge
+mkdir -p "$WEBROOT_PATH/.well-known/acme-challenge"
 mkdir -p "$CERTBOT_LOG_DIR"
-# Ensure correct permissions if running as non-root and certbot needs to write here
-# For simplicity, this script assumes it's run with sufficient permissions or certbot is configured to handle it.
 
 echo -e "${YELLOW}Directories checked/created.${NC}"
 
 echo -e "${YELLOW}Attempting to obtain/renew certificate for $DOMAIN...${NC}"
-echo -e "${YELLOW}Webroot: $WEBROOT_PATH${NC}"
-echo -e "${YELLOW}Config dir: $CERT_CONFIG_DIR${NC}"
-echo -e "${YELLOW}Logs dir: $CERTBOT_LOG_DIR${NC}"
 
 # Run Certbot
-# --webroot: uses a webroot directory to place challenge files. Nginx must serve these.
-# --agree-tos: Agrees to Let's Encrypt's Terms of Service.
-# --non-interactive: Runs Certbot without user interaction.
-# --keep-until-expiring: Tells Certbot to renew if the cert is nearing expiry.
-#   For initial issuance, Certbot will obtain a new cert if one doesn't exist.
-# --preferred-challenges http-01: Explicitly use HTTP-01 challenge.
-/usr/bin/certbot certonly \
+certbot certonly \
     --webroot \
     -w "$WEBROOT_PATH" \
     -d "$DOMAIN" \
@@ -96,7 +73,6 @@ CERTBOT_EXIT_CODE=$?
 if [ $CERTBOT_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}Certbot process completed successfully.${NC}"
 
-    # Find the Nginx container ID using docker-compose
     echo -e "${YELLOW}Attempting to find Nginx container ($NGINX_SERVICE_NAME service)...${NC}"
     NGINX_CONTAINER_ID=$(docker-compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null)
 
@@ -115,7 +91,7 @@ if [ $CERTBOT_EXIT_CODE -eq 0 ]; then
     fi
 else
     echo -e "${RED}Certbot process failed with exit code $CERTBOT_EXIT_CODE.${NC}"
-    echo -e "${RED}Check logs in $CERTBOT_LOG_DIR for details.${NC}"
+    echo -e "${RED}Check logs in $CERTBOT_LOG_DIR for details (these logs are on the host).${NC}"
     exit 1
 fi
 

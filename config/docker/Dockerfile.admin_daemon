@@ -25,6 +25,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Certbot and its Nginx plugin
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    certbot \
+    python3-certbot-nginx \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Docker CLI (latest)
 RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.9.tgz | tar xz -C /usr/local/bin --strip-components=1 docker/docker
 # Install Docker Compose plugin (latest)
