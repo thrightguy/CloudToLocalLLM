@@ -12,7 +12,7 @@
 # !!! EDIT THESE VALUES BELOW !!!
 YOUR_EMAIL="christopher.maltais@gmail.com"
 # List your domains with -d for each. e.g., "-d example.com -d www.example.com"
-DOMAINS_REQUESTED="-d cloudtolocalllm.online -d www.cloudtolocalllm.online"
+DOMAINS_REQUESTED="-d *.cloudtolocalllm.online -d cloudtolocalllm.online"
 # --- End Configuration ---
 
 # Path to your docker-compose.yml file
@@ -70,7 +70,7 @@ log_info "Attempting to obtain certificates..."
 # For initial setup, or if you suspect a problem with the current cert, '--force-renewal' can be useful.
 # We will use --keep-until-expiring by default as it's generally safer.
 # If you specifically need to force it, you can change it or add '--force-renewal'
-CERTBOT_COMMAND_OPTIONS="--webroot -w $WEBROOT_PATH --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --keep-until-expiring"
+CERTBOT_COMMAND_OPTIONS="--manual --preferred-challenges dns --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --keep-until-expiring --manual-public-ip-logging-ok"
 # To force renewal, uncomment the line below and comment out the one above
 # CERTBOT_COMMAND_OPTIONS="--webroot -w $WEBROOT_PATH --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --force-renewal"
 
