@@ -57,8 +57,8 @@ docker stop ctl_admin-admin-daemon-1 || true
 docker rm ctl_admin-admin-daemon-1 || true
 
 # Remove the PostgreSQL data volume to ensure a fresh start
-log_status "Removing PostgreSQL data volume ctl_services_db_data..."
-docker volume rm ctl_services_db_data || true
+log_status "Removing PostgreSQL data volume ctl_services_fusionauth_postgres_data..."
+docker volume rm ctl_services_fusionauth_postgres_data || true
 
 # Remove unused 'cloudllm-network' if not in use
 if docker network ls | grep -q 'cloudllm-network'; then
