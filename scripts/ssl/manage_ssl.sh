@@ -35,12 +35,11 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}--- SSL Certificate Management Script ---${NC}"
 
 # Check if Certbot is installed
-if ! command -v certbot &> /dev/null; then
-    echo -e "${RED}Certbot could not be found. Please install Certbot.${NC}"
-    echo -e "${YELLOW}On Debian/Ubuntu: sudo apt update && sudo apt install certbot${NC}"
+if ! command -v /usr/bin/certbot &> /dev/null; then
+    echo -e "${RED}Certbot could not be found at /usr/bin/certbot. Please check installation.${NC}"
     exit 1
 fi
-echo -e "${GREEN}Certbot found.${NC}"
+echo -e "${GREEN}Certbot found at /usr/bin/certbot.${NC}"
 
 # Create directories if they don't exist
 echo -e "${YELLOW}Ensuring directories exist...${NC}"
@@ -64,7 +63,7 @@ echo -e "${YELLOW}Logs dir: $CERTBOT_LOG_DIR${NC}"
 # --keep-until-expiring: Tells Certbot to renew if the cert is nearing expiry.
 #   For initial issuance, Certbot will obtain a new cert if one doesn't exist.
 # --preferred-challenges http-01: Explicitly use HTTP-01 challenge.
-certbot certonly \
+/usr/bin/certbot certonly \
     --webroot \
     -w "$WEBROOT_PATH" \
     -d "$DOMAIN" \
