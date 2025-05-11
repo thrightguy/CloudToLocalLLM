@@ -44,37 +44,29 @@ trap 'log_error "Script interrupted."' ERR SIGINT SIGTERM
 # ==============================================================================
 log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
 
-# Step 0: Clean up previous Docker environment
-log_status "[0/5] Cleaning up previous Docker environment..."
-log_status "Stopping and removing existing CloudToLocalLLM containers..."
-EXISTING_CONTAINERS=$(docker ps -aq --filter "name=cloudtolocalllm")
-if [ -n "$EXISTING_CONTAINERS" ]; then
-    docker stop $EXISTING_CONTAINERS || true
-    docker rm $EXISTING_CONTAINERS || true
-fi
-# Corrected admin daemon container name
-docker stop ctl_admin-admin-daemon-1 || true
-docker rm ctl_admin-admin-daemon-1 || true
+# Step 0: Clean up previous Docker environment using Docker Compose
+log_status "[0/3] Cleaning up previous Docker environment..."
+cd "$INSTALL_DIR" # Ensure we are in the correct directory for compose
+docker compose -f config/docker/docker-compose.yml down --volumes --remove-orphans || log_status "No existing services to clean up or cleanup already performed."
 
-# Remove the PostgreSQL data volume to ensure a fresh start
-log_status "Removing PostgreSQL data volume ctl_services_fusionauth_postgres_data..."
-docker volume rm ctl_services_fusionauth_postgres_data || true
-
-# Remove unused 'cloudllm-network' if not in use
+# Remove unused 'cloudllm-network' if not in use by other projects (optional, can be kept if managed by compose)
+# This might be handled by 'docker compose down --remove-orphans' if the network is exclusive to this compose project.
+# For safety, we can leave the more specific check, or rely on compose.
 if docker network ls | grep -q 'cloudllm-network'; then
-  if ! docker network inspect cloudllm-network | grep -q '"Containers": {}'; then
-    log_status "'cloudllm-network' is still in use, not removing."
+  if ! docker network inspect cloudllm-network | grep -q '"Containers": {}' && ! docker network inspect cloudllm-network | grep -q '"Containers": null'; then
+    log_status "'cloudllm-network' is still in use by some containers, not removing."
   else
-    log_status "Removing unused 'cloudllm-network'..."
-    docker network rm cloudllm-network || true
+    # Check if the network is managed by any docker-compose project.
+    # This is a heuristic; a network might be externally created.
+    # If `com.docker.compose.project` label is present, and it's not for *our* project (if we knew its name), we'd skip.
+    # For now, if it appears empty or only has null containers, attempt removal.
+    log_status "Attempting to remove 'cloudllm-network' if it is unused..."
+    docker network rm cloudllm-network || log_status "'cloudllm-network' could not be removed (may be in use or already gone)."
   fi
 fi
 
-# Do NOT prune volumes or images
-# docker system prune -af # Commented out to avoid aggressive pruning
-
-# Step 1: Ensure Docker is installed and running (renumbered)
-log_status "[1/5] Checking Docker installation..."
+# Step 1: Ensure Docker is installed and running
+log_status "[1/3] Checking Docker installation..."
 if ! command -v docker &>/dev/null; then
   echo -e "${RED}Docker is not installed. Aborting.${NC}" >&2
   exit 1
@@ -85,128 +77,47 @@ if ! systemctl is-active --quiet docker; then
     systemctl start docker
 fi
 
-# Log content of Dockerfile.web for debugging
-log_status "Content of $INSTALL_DIR/config/docker/Dockerfile.web:"
-cat "$INSTALL_DIR/config/docker/Dockerfile.web" || log_error "Could not display Dockerfile.web"
-log_status "-----------------------------------------------------"
+# Log content of Dockerfile.web for debugging (optional, can be removed if too verbose)
+# log_status "Content of $INSTALL_DIR/config/docker/Dockerfile.web:"
+# cat "$INSTALL_DIR/config/docker/Dockerfile.web" || log_error "Could not display Dockerfile.web"
+# log_status "-----------------------------------------------------"
 
-# Step 2: Start the admin daemon using Docker Compose (renumbered from 3/4)
-log_status "[2/5] Starting admin daemon via Docker Compose..."
+# Step 2: Build/Rebuild all services from docker-compose.yml
+log_status "[2/3] Building/Rebuilding services with --no-cache..."
 cd "$INSTALL_DIR"
-
-# Define paths for admin daemon source and hash file
-ADMIN_DAEMON_SRC_DIR="$INSTALL_DIR/admin_control_daemon"
-ADMIN_DAEMON_HASH_FILE="$INSTALL_DIR/.admin_daemon_hash"
-SHOULD_REBUILD_ADMIN_DAEMON=false
-
-# Function to calculate hash of the admin daemon source directory
-calculate_admin_daemon_hash() {
-  if [ -d "$ADMIN_DAEMON_SRC_DIR" ]; then
-    # Create a hash of all files and their names, then hash that list
-    # This is robust to file additions, deletions, and modifications.
-    # Exclude .git directory if it exists within admin_control_daemon
-    find "$ADMIN_DAEMON_SRC_DIR" -type f -not -path "*/.git/*" -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
-  else
-    echo "" # Return empty if source dir doesn't exist
-  fi
-}
-
-CURRENT_ADMIN_DAEMON_HASH=$(calculate_admin_daemon_hash)
-log_status "Current admin_daemon source hash: $CURRENT_ADMIN_DAEMON_HASH"
-
-if [ -f "$ADMIN_DAEMON_HASH_FILE" ]; then
-  OLD_ADMIN_DAEMON_HASH=$(cat "$ADMIN_DAEMON_HASH_FILE")
-  log_status "Old admin_daemon source hash: $OLD_ADMIN_DAEMON_HASH"
-  if [ "$CURRENT_ADMIN_DAEMON_HASH" != "$OLD_ADMIN_DAEMON_HASH" ]; then
-    log_status "Admin daemon source code has changed. Rebuild will be triggered."
-    SHOULD_REBUILD_ADMIN_DAEMON=true
-  else
-    log_status "Admin daemon source code has not changed."
-    SHOULD_REBUILD_ADMIN_DAEMON=false
-  fi
-else
-  log_status "No old admin_daemon hash file found. Rebuild will be triggered."
-  SHOULD_REBUILD_ADMIN_DAEMON=true
+docker compose -f config/docker/docker-compose.yml build --no-cache
+if [ $? -ne 0 ]; then
+  log_error "Docker compose build failed. Please check the output above."
+  exit 1
 fi
+log_success "All services built successfully."
 
-# Rebuild webapp container with --no-cache to ensure latest config
-log_status "Rebuilding webapp container with --no-cache..."
-docker compose -f config/docker/docker-compose.yml build --no-cache webapp
-
-ADMIN_DAEMON_COMPOSE_CMD="docker compose -p ctl_admin -f config/docker/docker-compose.admin.yml up -d"
-
-if [ "$SHOULD_REBUILD_ADMIN_DAEMON" = true ]; then
-  log_status "Executing admin daemon compose with --build..."
-  $ADMIN_DAEMON_COMPOSE_CMD --build admin-daemon # Target only admin-daemon for build
-else
-  log_status "Executing admin daemon compose without --build..."
-  $ADMIN_DAEMON_COMPOSE_CMD admin-daemon # Target only admin-daemon
-fi
-
-# After successful compose up, if a rebuild happened, update the hash file
-if [ "$SHOULD_REBUILD_ADMIN_DAEMON" = true ]; then
-  # Check if admin daemon started successfully before updating hash
-  # We'll infer this by checking if the /admin/health endpoint becomes ready later.
-  # For now, we optimistically assume success if compose up doesn't fail immediately.
-  # A more robust check would be after the health check loop.
-  # However, if compose up fails, this part won't be reached due to "set -e" or manual exits.
-  echo "$CURRENT_ADMIN_DAEMON_HASH" > "$ADMIN_DAEMON_HASH_FILE"
-  log_status "Updated admin_daemon hash file with new hash: $CURRENT_ADMIN_DAEMON_HASH"
-fi
-
-# Wait for the admin daemon to be ready
-log_status "Waiting for admin daemon to be ready..."
-ADMIN_READY=false
-echo -n "Attempting to connect: " # -n to keep cursor on the same line
-for i in {1..60}; do
-  if curl -s --fail http://localhost:9001/admin/health | grep -q '"status": "OK"'; then
-    echo # Newline
-    log_success "Admin daemon is ready."
-    ADMIN_READY=true
-    break
-  fi
-  echo -n "." # Print a dot for each attempt
-  sleep 2
-done
-
-if [ "$ADMIN_READY" = false ]; then
-  echo # Newline if loop finished without success
-  log_error "Admin daemon failed to start or is not healthy."
-  log_error "Check admin daemon logs with: docker logs ctl_admin-admin-daemon-1"
+# Step 3: Start all services
+log_status "[3/3] Starting all services..."
+docker compose -f config/docker/docker-compose.yml up -d
+if [ $? -ne 0 ]; then
+  log_error "Docker compose up failed. Please check the output above and container logs."
+  log_error "You can check logs using: docker compose -f config/docker/docker-compose.yml logs"
   exit 1
 fi
 
-# Step 3: Deploy all services through admin daemon API (renumbered from 4/4)
-log_status "[3/5] Triggering full stack deployment via daemon API..."
-log_status "Deployment initiated. Waiting for services to become healthy (this may take several minutes)..."
-DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9001/admin/deploy/all || true)
-DEPLOY_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
-DEPLOY_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
-
-if [[ "$DEPLOY_CODE" != "200" ]]; then
-  log_error "Deployment API call failed or services are unhealthy (HTTP status: $DEPLOY_CODE)."
-  echo "API Response Body:"
-  echo "$DEPLOY_BODY"
-  log_error "For more details, check the admin daemon logs: docker logs ctl_admin-admin-daemon-1"
-  # Optionally, exit here if preferred: exit 1
-else
-  log_success "Deployment API call succeeded (HTTP status: $DEPLOY_CODE)."
-  echo "API Response Body:"
-  echo "$DEPLOY_BODY"
-fi
-
 # After deployment, check that all containers are on the 'cloudllm-network'
-log_status "Checking that all containers are on the 'cloudllm-network'..."
-NETWORK_INSPECT=$(docker network inspect cloudllm-network 2>/dev/null || true)
-if [[ "$NETWORK_INSPECT" == *'"Containers": {}'* ]]; then
-  log_error "No containers found on 'cloudllm-network'. Please check your Compose configuration."
+# This check might need adjustment if your main docker-compose.yml defines a different network name
+# or if the project name prefix changes the effective network name.
+# The default network name is usually <project_name>_default.
+# 'cloudllm-network' is explicitly defined in the provided docker-compose.yml, so this check should be okay.
+log_status "Checking that containers are attached to 'cloudllm-network'..."
+# Give services a moment to attach to the network
+sleep 5 
+NETWORK_INSPECT=$(docker network inspect cloudllm-network 2>/dev/null || echo "Network not found")
+if [[ "$NETWORK_INSPECT" == "Network not found" ]] || [[ "$NETWORK_INSPECT" == *'"Containers": {}'* ]] || [[ "$NETWORK_INSPECT" == *'"Containers": null'* ]]; then
+  log_warning "No containers actively found on 'cloudllm-network', or network doesn't exist. This might be okay if services are still starting or if a different network is primary."
+  log_warning "Check 'docker ps' and 'docker network ls'. Also inspect services: docker compose -f config/docker/docker-compose.yml ps"
 else
-  log_success "Containers are attached to 'cloudllm-network'."
+  log_success "Containers appear to be attached to 'cloudllm-network'."
 fi
 
-log_status "==== $(date) Docker-based startup complete ===="
-if [[ "$DEPLOY_CODE" == "200" ]]; then
-  log_success "System is now running in Docker containers (or attempting to)."
-else
-  log_error "Some services may not be running correctly. Please review the logs above."
-fi 
+log_status "==== $(date) Docker-based startup/restart complete ===="
+log_success "System services are now starting up in Docker containers."
+log_status "Use 'docker compose -f config/docker/docker-compose.yml ps' to see running services."
+log_status "Use 'docker compose -f config/docker/docker-compose.yml logs -f' to tail logs." 
