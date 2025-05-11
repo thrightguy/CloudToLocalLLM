@@ -90,7 +90,12 @@ ensure_certbot_dirs() {
     # For webroot, Nginx (inside container) needs to read, Certbot (this script) needs to write.
     # Host permissions for $WEBROOT_PATH should allow certbot (as root or via sudo) to write.
     # Nginx container user (usually nginx) will need read access via the volume mount.
-    sudo chmod -R 755 "$WEBROOT_PATH" # Ensure nginx can read, certbot (as root/sudo) can write.
+    sudo chmod -R 755 "$WEBROOT_PATH"
+
+    echo_color "$BLUE" "DEBUG: Listing contents of host webroot after mkdir/chmod: $WEBROOT_PATH"
+    sudo ls -la "$WEBROOT_PATH"
+    echo_color "$BLUE" "DEBUG: Listing contents of host ACME challenge dir after mkdir/chmod: $WEBROOT_PATH/.well-known/acme-challenge"
+    sudo ls -la "$WEBROOT_PATH/.well-known/acme-challenge"
 
     echo_color "$GREEN" "Certbot directories checked/created."
 }
