@@ -207,12 +207,23 @@ main() {
 
     ensure_dependencies "certbot" "docker" "docker compose"
     ensure_certbot_dirs
-    ensure_nginx_running # Critical step to ensure Nginx is ready for webroot challenge
+    ensure_nginx_running # Critical step to ensure Nginx is ready
+
+    # Attempt to reload Nginx *before* running Certbot to ensure latest config is loaded
+    # especially the ACME challenge location block.
+    echo_color "$BLUE" "Attempting to reload Nginx to ensure latest configuration for ACME challenge..."
+    if ! reload_nginx_config; then
+        echo_color "$YELLOW" "Nginx reload before Certbot attempt failed or was skipped. Proceeding with Certbot, but this might be an issue."
+        # Depending on strictness, you might choose to exit here if Nginx reload fails.
+    else
+        echo_color "$GREEN" "Nginx reloaded successfully before Certbot attempt."
+    fi
 
     if run_certbot_command; then
         echo_color "$GREEN" "Certbot process completed successfully for $DOMAIN_NAME."
+        echo_color "$BLUE" "Attempting final Nginx reload after successful Certbot run..."
         if ! reload_nginx_config; then
-            echo_color "$YELLOW" "Nginx reload failed or was skipped. Please check Nginx status and configuration."
+            echo_color "$YELLOW" "Nginx reload after successful Certbot run failed or was skipped. Please check Nginx status and configuration manually."
         fi
     else
         local certbot_exit_code=$?
