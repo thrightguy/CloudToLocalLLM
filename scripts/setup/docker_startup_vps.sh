@@ -102,6 +102,23 @@ log_status "Verifying running services (this may take a moment for services to i
 sleep 10 # Give services a moment to start
 docker compose -f "$COMPOSE_FILE" ps
 
+log_status "Attempting to obtain/renew SSL certificates via Let's Encrypt..."
+# Ensure the script is executable if it's not already
+if [ -f "scripts/ssl/obtain_initial_certs.sh" ]; then
+    chmod +x "scripts/ssl/obtain_initial_certs.sh"
+    # Note: obtain_initial_certs.sh is interactive and requires user input.
+    # It also has its own checks for existing email configuration.
+    bash "scripts/ssl/obtain_initial_certs.sh"
+    if [ $? -eq 0 ]; then
+        log_success "SSL certificate script completed. Nginx might need a restart if new certs were obtained."
+        log_status "You might need to run: docker compose restart nginx"
+    else
+        log_error "SSL certificate script encountered an error. Please check its output."
+    fi
+else
+    log_error "SSL certificate script (scripts/ssl/obtain_initial_certs.sh) not found."
+fi
+
 log_status "==== $(date) Docker-based startup/restart complete ===="
 log_success "System services are now starting up in Docker containers."
 log_status "Use 'docker compose -f $COMPOSE_FILE ps' to see running services."
