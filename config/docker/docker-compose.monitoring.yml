@@ -29,6 +29,7 @@ services:
       - NETDATA_CLAIM_URL=https://app.netdata.cloud
       - NETDATA_CLAIM_ROOMS=${NETDATA_CLAIM_ROOMS:-}
       - DISABLE_PLUGINS=cgroups
+      - NETDATA_DISABLE_CGROUP_NETWORK_HELPER=1
     networks:
       - cloudllm_mon_network
       - cloudllm_external_network
