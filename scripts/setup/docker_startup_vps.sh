@@ -39,33 +39,56 @@ trap 'log_error "Script interrupted."' ERR SIGINT SIGTERM
 log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
 
 # Step 0: Clean up previous Docker environment
-log_status "[0/3] Aggressively cleaning up entire Docker environment (all unused containers, networks, volumes, images)..."
 cd "$INSTALL_DIR" # Ensure we are in the correct directory
 
-# Stop all running containers first to avoid conflicts with pruning
-if [ "$(docker ps -q)" ]; then
-    log_status "Stopping all running containers..."
-    docker stop $(docker ps -q) || log_status "No running containers to stop or already stopped."
+log_status "[0/3] Docker Environment Cleanup Options"
+echo -e "${YELLOW}Do you want to perform a FULL Docker flush? (Deletes ALL unused containers, networks, volumes, images, build cache)${NC}"
+echo -e "  - Type 'yes' for a full flush."
+echo -e "  - Type 'no' for a standard restart (stops and removes project containers, then rebuilds and starts)."
+read -r -p "Perform full Docker flush? (yes/no): " FLUSH_CHOICE
+
+if [[ "$FLUSH_CHOICE" == "yes" ]]; then
+    log_status "User selected: FULL Docker flush."
+    log_status "Aggressively cleaning up entire Docker environment..."
+
+    # Stop all running containers first to avoid conflicts with pruning
+    if [ "$(docker ps -q)" ]; then
+        log_status "Stopping all running containers..."
+        docker stop $(docker ps -q) || log_status "No running containers to stop or already stopped."
+    fi
+
+    # Remove all containers (stopped or running)
+    if [ "$(docker ps -aq)" ]; then
+        log_status "Removing all containers..."
+        docker rm -f $(docker ps -aq) || log_status "No containers to remove or already removed."
+    fi
+
+    # Prune everything: containers, networks, volumes, images (both dangling and unreferenced), build cache
+    log_status "Pruning Docker system: containers, networks, volumes, images, build cache..."
+    docker system prune -a -f --volumes || log_status "Docker system prune completed or nothing to prune."
+
+    # Specific cleanup for old fusionauth DB container if it somehow survived prune -a
+    log_status "Attempting to stop and remove potentially conflicting old DB container (cloudtolocalllm-fusionauth-db)..."
+    docker stop cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
+    docker rm cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
+    log_status "Done attempting to remove old DB container."
+
+    # Bring down any services defined in $COMPOSE_FILE, removing volumes and orphans.
+    # This is somewhat redundant after prune -a --volumes, but ensures project-specific cleanup.
+    log_status "Bringing down any project services defined in $COMPOSE_FILE, removing volumes and orphans..."
+    docker compose -f "$COMPOSE_FILE" down --volumes --remove-orphans || log_status "No existing project services to clean up or cleanup already performed for $COMPOSE_FILE."
+    log_success "Full Docker flush completed."
+elif [[ "$FLUSH_CHOICE" == "no" ]]; then
+    log_status "User selected: Standard restart."
+    log_status "Bringing down existing services defined in $COMPOSE_FILE (if any)..."
+    docker compose -f "$COMPOSE_FILE" down --remove-orphans || log_status "No existing services to bring down or already down for $COMPOSE_FILE."
+    # Note: We don't remove volumes here with '--volumes' for a standard restart,
+    # allowing data in named volumes (like databases) to persist.
+    log_success "Standard Docker shutdown completed."
+else
+    log_error "Invalid choice: '$FLUSH_CHOICE'. Please type 'yes' or 'no'. Aborting."
+    exit 1
 fi
-
-# Remove all containers (stopped or running)
-if [ "$(docker ps -aq)" ]; then
-    log_status "Removing all containers..."
-    docker rm -f $(docker ps -aq) || log_status "No containers to remove or already removed."
-fi
-
-# Prune everything: containers, networks, volumes, images (both dangling and unreferenced), build cache
-log_status "Pruning Docker system: containers, networks, volumes, images, build cache..."
-docker system prune -a -f --volumes || log_status "Docker system prune completed or nothing to prune."
-
-
-log_status "Attempting to stop and remove potentially conflicting old DB container (cloudtolocalllm-fusionauth-db)..."
-docker stop cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
-docker rm cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
-log_status "Done attempting to remove old DB container."
-
-log_status "Bringing down any services defined in $COMPOSE_FILE, removing volumes and orphans..."
-docker compose -f "$COMPOSE_FILE" down --volumes --remove-orphans || log_status "No existing services to clean up or cleanup already performed for project using $COMPOSE_FILE."
 
 # Step 1: Ensure Docker is installed and running
 log_status "[1/3] Checking Docker installation..."
