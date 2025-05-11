@@ -144,6 +144,17 @@ run_certbot_command() {
     # Note: Certbot is run with sudo because it needs to write to $CERT_CONFIG_DIR and potentially
     # other system paths depending on its plugins and hooks.
     # The webroot path ($WEBROOT_PATH) must be writable by root (or user running sudo certbot).
+    
+    # Temporary: Add a small delay BEFORE certbot tells LE to verify, to allow inspection of the challenge file
+    # This is not ideal as certbot might create the file just as it calls LE, but it's a point to try.
+    # A better way would be to modify certbot's webroot plugin or use a manual hook,
+    # but for now, let's try a simple pre-sleep before the main certbot command that triggers verification.
+    # Actually, certbot creates the file THEN asks for verification. So we need a way to pause it *during* perform.
+    # For now, the script will run certbot, and you'll have to be quick to check during its "Waiting for verification..." phase.
+    # Let's add a log here that points to the challenge file path to make it easier to check.
+    echo_color "$YELLOW" "Certbot will attempt to place a challenge file in: $WEBROOT_PATH/.well-known/acme-challenge/"
+    echo_color "$YELLOW" "Please monitor this directory and inside the Nginx container at /var/www/certbot/.well-known/acme-challenge/ during the 'Waiting for verification...' step."
+
     sudo certbot certonly \
         --webroot \
         -w "$WEBROOT_PATH" \
