@@ -52,8 +52,13 @@ if [ -n "$EXISTING_CONTAINERS" ]; then
     docker stop $EXISTING_CONTAINERS || true
     docker rm $EXISTING_CONTAINERS || true
 fi
-docker stop docker-admin-daemon-1 || true
-docker rm docker-admin-daemon-1 || true
+# Corrected admin daemon container name
+docker stop ctl_admin-admin-daemon-1 || true
+docker rm ctl_admin-admin-daemon-1 || true
+
+# Remove the PostgreSQL data volume to ensure a fresh start
+log_status "Removing PostgreSQL data volume ctl_services_db_data..."
+docker volume rm ctl_services_db_data || true
 
 # Remove unused 'cloudllm-network' if not in use
 if docker network ls | grep -q 'cloudllm-network'; then
