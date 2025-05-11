@@ -10,7 +10,7 @@
 
 # --- Configuration ---
 # !!! EDIT THESE VALUES BELOW !!!
-YOUR_EMAIL="your_email@example.com"
+YOUR_EMAIL="christopher.maltais@gmail.com"
 # List your domains with -d for each. e.g., "-d example.com -d www.example.com"
 DOMAINS_REQUESTED="-d cloudtolocalllm.online -d www.cloudtolocalllm.online"
 # --- End Configuration ---
