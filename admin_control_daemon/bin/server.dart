@@ -81,6 +81,13 @@ Future<Response> _stopFusionAuthHandler(Request request) async {
 // New handler for SSL issuance/renewal
 Future<Response> _issueRenewSslHandler(Request request) async {
   // Ensure the script is executable: chmod +x scripts/ssl/manage_ssl.sh on the VPS
+
+  // --- BEGIN DEBUG ---
+  final certbotFile = File('/usr/bin/certbot');
+  final bool certbotExists = await certbotFile.exists();
+  print('DEBUG: Dart check: /usr/bin/certbot exists? $certbotExists');
+  // --- END DEBUG ---
+
   return await _runShellCommand(
     './scripts/ssl/manage_ssl.sh', // Assumes execution from projectRoot
     [],
