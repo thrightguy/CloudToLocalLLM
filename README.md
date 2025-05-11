@@ -161,8 +161,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
-*Historical Note: The `cloud` folder, previously used for separate cloud service components, is now deprecated. All development, documentation, and deployment for cloud-related features and the local application are managed from this main project root. The core application is a Flutter/Dart project. For any cloud-related code or deployment details, refer to the main project and this README.*
----
 
 ## Acknowledgements
 
