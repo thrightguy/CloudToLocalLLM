@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# --- BEGIN SCRIPT DEBUG ---
+echo -e "DEBUG: ----- Environment Snapshot -----"
+echo -e "DEBUG: Running as user: $(whoami || echo 'whoami failed')"
+echo -e "DEBUG: PATH is: $PATH"
+echo -e "DEBUG: Testing /bin/ls -l /usr/bin/certbot..."
+/bin/ls -l /usr/bin/certbot || echo -e "DEBUG: /bin/ls -l /usr/bin/certbot failed (or file does not exist)"
+echo -e "DEBUG: ----- End Environment Snapshot -----"
+# --- END SCRIPT DEBUG ---
+
 # --- IMPORTANT PERMISSIONS NOTE ---
 # This script is intended to be run by a user or process (e.g., your admin_control_daemon)
 # that has the following permissions:
