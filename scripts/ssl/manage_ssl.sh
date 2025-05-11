@@ -171,9 +171,8 @@ run_certbot_command() {
         --agree-tos \
         --non-interactive \
         --keep-until-expiring \
-        --preferred-challenges http-01
-        # Add --staging for testing to avoid hitting rate limits:
-        # --staging
+        --preferred-challenges http-01 \
+        --staging # Use Let's Encrypt staging server to avoid rate limits during debugging
 
     # Return Certbot's exit code
     return $?
