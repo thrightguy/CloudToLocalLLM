@@ -59,6 +59,12 @@ services:
       - fusionauth_postgres_data:/var/lib/postgresql/data
     networks:
       - cloudllm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fusionauth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   cloudtolocalllm-fusionauth-app:
     image: fusionauth/fusionauth-app:latest
@@ -77,7 +83,8 @@ services:
       - SEARCH_ENGINE_TYPE=database
       - FUSIONAUTH_APP_SETUP_PASSWORD=%%26!Human!Burn!Ring!94%%
     depends_on:
-      - cloudtolocalllm-fusionauth-db
+      cloudtolocalllm-fusionauth-db:
+        condition: service_healthy
     volumes:
       - fusionauth_config:/usr/local/fusionauth/config
     networks:
