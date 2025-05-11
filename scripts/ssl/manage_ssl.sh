@@ -5,8 +5,8 @@ set -e
 echo -e "DEBUG: ----- Environment Snapshot -----"
 echo -e "DEBUG: Running as user: $(whoami || echo 'whoami failed')"
 echo -e "DEBUG: PATH is: $PATH"
-echo -e "DEBUG: Testing /bin/ls -l /usr/bin/certbot..."
-/bin/ls -l /usr/bin/certbot || echo -e "DEBUG: /bin/ls -l /usr/bin/certbot failed (or file does not exist)"
+echo -e "DEBUG: Testing direct execution of /usr/bin/certbot --version..."
+/usr/bin/certbot --version || echo -e "DEBUG: /usr/bin/certbot --version failed"
 echo -e "DEBUG: ----- End Environment Snapshot -----"
 # --- END SCRIPT DEBUG ---
 
@@ -43,19 +43,18 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}--- SSL Certificate Management Script ---${NC}"
 
-# Debug: Check file existence and permissions
-echo -e "${YELLOW}Debug: Checking /usr/bin/certbot details...${NC}"
-ls -l /usr/bin/certbot || echo -e "${RED}Debug: ls -l /usr/bin/certbot failed${NC}"
+# Remove older, less informative debugs
+# echo -e "${YELLOW}Debug: Checking /usr/bin/certbot details...${NC}"
+# ls -l /usr/bin/certbot || echo -e "${RED}Debug: ls -l /usr/bin/certbot failed${NC}"
+# 
+# echo -e "${YELLOW}Debug: Output of 'command -v /usr/bin/certbot': $(command -v /usr/bin/certbot || echo 'command -v failed')${NC}"
 
-# Debug: Check what command -v outputs
-echo -e "${YELLOW}Debug: Output of 'command -v /usr/bin/certbot': $(command -v /usr/bin/certbot || echo 'command -v failed')${NC}"
-
-# Check if Certbot is installed
-if ! command -v /usr/bin/certbot &> /dev/null; then
-    echo -e "${RED}Certbot could not be found at /usr/bin/certbot. Please check installation.${NC}"
+# Check if Certbot is installed by trying to run it
+if ! /usr/bin/certbot --version &> /dev/null; then
+    echo -e "${RED}Certbot at /usr/bin/certbot --version failed or was not found. Please check installation.${NC}"
     exit 1
 fi
-echo -e "${GREEN}Certbot found at /usr/bin/certbot.${NC}"
+echo -e "${GREEN}Certbot invocation via /usr/bin/certbot --version successful.${NC}"
 
 # Create directories if they don't exist
 echo -e "${YELLOW}Ensuring directories exist...${NC}"
