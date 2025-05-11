@@ -52,7 +52,14 @@ echo_color() {
 ensure_dependencies() {
     local missing_deps=0
     for dep in "$@"; do
-        if ! command -v "$dep" &>/dev/null; then
+        if [[ "$dep" == "docker compose" ]]; then # Special check for docker compose
+            if ! docker compose version &>/dev/null; then
+                echo_color "$RED" "Error: Dependency 'docker compose' not found or not working."
+                missing_deps=$((missing_deps + 1))
+            else
+                echo_color "$GREEN" "Dependency 'docker compose' found."
+            fi
+        elif ! command -v "$dep" &>/dev/null; then
             echo_color "$RED" "Error: Dependency '$dep' not found."
             missing_deps=$((missing_deps + 1))
         else
@@ -89,15 +96,15 @@ ensure_certbot_dirs() {
 
 ensure_nginx_running() {
     echo_color "$BLUE" "Checking if Nginx service ('$NGINX_SERVICE_NAME') is running..."
-    # No sudo needed for docker-compose as admin_control_daemon has docker.sock mounted
-    if ! docker-compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null | grep -q .; then
+    # No sudo needed for docker compose as admin_control_daemon has docker.sock mounted
+    if ! docker compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null | grep -q .; then
         echo_color "$YELLOW" "Nginx service ('$NGINX_SERVICE_NAME') is not running. Attempting to start it..."
-        docker-compose -f "$COMPOSE_FILE_WEB" up -d --remove-orphans "$NGINX_SERVICE_NAME"
+        docker compose -f "$COMPOSE_FILE_WEB" up -d --remove-orphans "$NGINX_SERVICE_NAME"
         sleep 5 # Give it a moment to start
-        if ! docker-compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null | grep -q .; then
+        if ! docker compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null | grep -q .; then
             echo_color "$RED" "Failed to start Nginx service ('$NGINX_SERVICE_NAME') from $COMPOSE_FILE_WEB."
             echo_color "$RED" "Attempting to get Nginx service logs (last 50 lines):"
-            docker-compose -f "$COMPOSE_FILE_WEB" logs --tail="50" "$NGINX_SERVICE_NAME" || echo_color "$YELLOW" "Could not retrieve logs for $NGINX_SERVICE_NAME."
+            docker compose -f "$COMPOSE_FILE_WEB" logs --tail="50" "$NGINX_SERVICE_NAME" || echo_color "$YELLOW" "Could not retrieve logs for $NGINX_SERVICE_NAME."
             echo_color "$RED" "Aborting SSL issuance."
             exit 1
         else
@@ -138,8 +145,8 @@ run_certbot_command() {
 reload_nginx_config() {
     echo_color "$BLUE" "Attempting to reload Nginx configuration for service '$NGINX_SERVICE_NAME'..."
     local nginx_container_id
-    # No sudo needed for docker-compose
-    nginx_container_id=$(docker-compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null)
+    # No sudo needed for docker compose
+    nginx_container_id=$(docker compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME" 2>/dev/null)
 
     if [ -z "$nginx_container_id" ]; then
         echo_color "$RED" "Could not find the Nginx container for service '$NGINX_SERVICE_NAME'."
@@ -168,7 +175,7 @@ reload_nginx_config() {
 main() {
     echo_color "$GREEN" "--- SSL Certificate Management Script ---"
 
-    ensure_dependencies "certbot" "docker" "docker-compose"
+    ensure_dependencies "certbot" "docker" "docker compose"
     ensure_certbot_dirs
     ensure_nginx_running # Critical step to ensure Nginx is ready for webroot challenge
 
