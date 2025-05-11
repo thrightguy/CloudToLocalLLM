@@ -53,7 +53,7 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=your_strong_postgres_password
+      - POSTGRES_PASSWORD=~~26^Loss^Bell^Came^45~~
       - POSTGRES_DB=fusionauth
     volumes:
       - fusionauth_postgres_data:/var/lib/postgresql/data
@@ -69,14 +69,14 @@ services:
     environment:
       - DATABASE_URL=jdbc:postgresql://cloudtolocalllm-fusionauth-db:5432/fusionauth
       - DATABASE_ROOT_USERNAME=postgres
-      - DATABASE_ROOT_PASSWORD=your_strong_postgres_password
+      - DATABASE_ROOT_PASSWORD=~~26^Loss^Bell^Came^45~~
       - DATABASE_USERNAME=fusionauth
-      - DATABASE_PASSWORD=your_strong_fusionauth_user_password
+      - DATABASE_PASSWORD=..21_Noise_Than_Other_21..
       - FUSIONAUTH_APP_MEMORY=512M
       - FUSIONAUTH_APP_RUNTIME_MODE=production
       - FUSIONAUTH_APP_URL=https://cloudtolocalllm.online
       - SEARCH_ENGINE_TYPE=database
-      - FUSIONAUTH_APP_SETUP_PASSWORD=1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+      - FUSIONAUTH_APP_SETUP_PASSWORD=%%26!Human!Burn!Ring!94%%
     depends_on:
       - cloudtolocalllm-fusionauth-db
     volumes:
