@@ -14,7 +14,12 @@ services:
     image: cloudtolocalllm-webapp
     container_name: cloudtolocalllm-webapp
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+      - ./ssl:/etc/nginx/ssl
     environment:
       <<: *flutter-env
     restart: unless-stopped
