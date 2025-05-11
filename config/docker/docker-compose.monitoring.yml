@@ -19,7 +19,6 @@ services:
       - /sys:/host/sys:ro
       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ../../config/netdata/netdata.conf:/etc/netdata/netdata.conf:ro
       - netdata-lib:/var/lib/netdata
       - netdata-cache:/var/cache/netdata
       - /etc/passwd:/host/etc/passwd:ro
