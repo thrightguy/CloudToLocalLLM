@@ -18,12 +18,6 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Ensure running as root
-if [[ $EUID -ne 0 ]]; then
-  echo -e "${RED}This script must be run as root. Use 'su -' or 'sudo -i' to become root, then run the script.${NC}" >&2
-  exit 1
-fi
-
 # Create log directory if it doesn't exist
 mkdir -p "$(dirname "$LOGFILE")"
 exec > >(tee -a "$LOGFILE") 2>&1
@@ -44,32 +38,34 @@ trap 'log_error "Script interrupted."' ERR SIGINT SIGTERM
 # ==============================================================================
 log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
 
-# Step 0: Clean up previous Docker environment using Docker Compose
-log_status "[0/3] Cleaning up previous Docker environment..."
-cd "$INSTALL_DIR" # Ensure we are in the correct directory for compose
+# Step 0: Clean up previous Docker environment
+log_status "[0/3] Aggressively cleaning up entire Docker environment (all unused containers, networks, volumes, images)..."
+cd "$INSTALL_DIR" # Ensure we are in the correct directory
+
+# Stop all running containers first to avoid conflicts with pruning
+if [ "$(docker ps -q)" ]; then
+    log_status "Stopping all running containers..."
+    docker stop $(docker ps -q) || log_status "No running containers to stop or already stopped."
+fi
+
+# Remove all containers (stopped or running)
+if [ "$(docker ps -aq)" ]; then
+    log_status "Removing all containers..."
+    docker rm -f $(docker ps -aq) || log_status "No containers to remove or already removed."
+fi
+
+# Prune everything: containers, networks, volumes, images (both dangling and unreferenced), build cache
+log_status "Pruning Docker system: containers, networks, volumes, images, build cache..."
+docker system prune -a -f --volumes || log_status "Docker system prune completed or nothing to prune."
+
 
 log_status "Attempting to stop and remove potentially conflicting old DB container (cloudtolocalllm-fusionauth-db)..."
 docker stop cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
 docker rm cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
 log_status "Done attempting to remove old DB container."
 
+log_status "Bringing down any services defined in $COMPOSE_FILE, removing volumes and orphans..."
 docker compose -f "$COMPOSE_FILE" down --volumes --remove-orphans || log_status "No existing services to clean up or cleanup already performed for project using $COMPOSE_FILE."
-
-# Optional: Remove unused 'cloudllm-network' if not managed by compose and truly unused
-# This part can be tricky if other applications might use it.
-# If 'cloudllm-network' is defined *within* your main docker-compose.yml and set to external:false (default),
-# 'docker compose down' should handle it if it's not in use by other containers of the same project.
-# If it's an external network, manual cleanup might be needed if desired and safe.
-# log_status "Checking 'cloudllm-network'..."
-# if docker network inspect cloudllm-network >/dev/null 2>&1; then
-#   if [[ -z $(docker ps -q --filter network=cloudllm-network) ]]; then
-#     log_status "'cloudllm-network' exists and appears unused. Consider manual removal if it's not managed by your compose project: docker network rm cloudllm-network"
-#   else
-#     log_status "'cloudllm-network' is still in use."
-#   fi
-# else
-#   log_status "'cloudllm-network' does not exist."
-# fi
 
 # Step 1: Ensure Docker is installed and running
 log_status "[1/3] Checking Docker installation..."
@@ -109,4 +105,4 @@ docker compose -f "$COMPOSE_FILE" ps
 log_status "==== $(date) Docker-based startup/restart complete ===="
 log_success "System services are now starting up in Docker containers."
 log_status "Use 'docker compose -f $COMPOSE_FILE ps' to see running services."
-log_status "Use 'docker compose -f $COMPOSE_FILE logs -f' to tail logs." 
+log_status "Use 'docker compose -f $COMPOSE_FILE logs -f' to tail logs."
