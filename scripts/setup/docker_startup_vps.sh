@@ -157,16 +157,20 @@ fi
 # Wait for the admin daemon to be ready
 log_status "Waiting for admin daemon to be ready..."
 ADMIN_READY=false
+echo -n "Attempting to connect: " # -n to keep cursor on the same line
 for i in {1..60}; do
   if curl -s --fail http://localhost:9001/admin/health | grep -q '"status": "OK"'; then
-    log_status "Admin daemon is ready."
+    echo # Newline
+    log_success "Admin daemon is ready."
     ADMIN_READY=true
     break
   fi
+  echo -n "." # Print a dot for each attempt
   sleep 2
 done
 
 if [ "$ADMIN_READY" = false ]; then
+  echo # Newline if loop finished without success
   log_error "Admin daemon failed to start or is not healthy."
   log_error "Check admin daemon logs with: docker logs ctl_admin-admin-daemon-1"
   exit 1
@@ -174,6 +178,7 @@ fi
 
 # Step 3: Deploy all services through admin daemon API (renumbered from 4/4)
 log_status "[3/5] Triggering full stack deployment via daemon API..."
+log_status "Deployment initiated. Waiting for services to become healthy (this may take several minutes)..."
 DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:9001/admin/deploy/all || true)
 DEPLOY_BODY=$(echo "$DEPLOY_RESPONSE" | head -n -1)
 DEPLOY_CODE=$(echo "$DEPLOY_RESPONSE" | tail -n1)
