@@ -33,7 +33,7 @@ class AppConfig {
   static const int maxOfflineDays = 7;
 
   /// Flag to enable/disable license verification (for development)
-  static final bool enableLicenseVerification = !kDebugMode;
+  static bool get enableLicenseVerification => !kDebugMode;
 
   /// Trial license key
   static const String trialLicenseKey = 'FREE-TRIAL-KEY-123456';

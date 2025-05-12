@@ -1,104 +1,59 @@
-# CloudToLocalLLM Setup and Maintenance Scripts
+# CloudToLocalLLM VPS Setup & Management
 
-This directory contains scripts for setting up, maintaining, and deploying the CloudToLocalLLM application.
+This directory contains scripts for setting up, deploying, and maintaining the CloudToLocalLLM application on a VPS or server. The workflow is now unified and Docker-centric, with a single entry point for most operations.
 
-## Key Scripts
+---
 
-### `update_and_deploy.sh`
+## 🚀 Main Script: `main_vps.sh`
 
-The main deployment script that handles:
-- Pulling the latest code from GitHub
-- Fixing Android embedding issues
-- Fixing Docker build configuration issues
-- Cleaning the Flutter build
-- Stopping, rebuilding, and restarting the admin daemon
-- Deploying all services
-
-Usage:
+**Usage:**
 ```bash
-./scripts/setup/update_and_deploy.sh
+cd scripts/setup
+bash main_vps.sh [option]
 ```
 
-### `migrate_android_v2.sh`
+**Options:**
+- `deploy`      — Build and deploy the Docker stack (with prompt for full flush)
+- `ssl-dns`     — Run DNS-based SSL certbot (interactive, wildcard, for advanced users)
+- `ssl-webroot` — Run webroot-based SSL certbot (automated, for Nginx)
+- `monitor`     — Setup Netdata monitoring
+- `fix-docker`  — Run Docker/Flutter build fixes
+- `clean`       — Aggressively prune Docker system (all unused containers, images, volumes, build cache)
+- `help`        — Show help/usage
 
-A comprehensive script to migrate Android embedding to V2, which is required for compatibility with plugins like `device_info_plus`. This script:
-- Updates AndroidManifest.xml
-- Updates MainActivity.kt
-- Configures build.gradle with appropriate SDK versions
-
-Usage:
+**Example:**
 ```bash
-./scripts/setup/migrate_android_v2.sh
+bash main_vps.sh deploy
 ```
 
-### `fix_docker_build.sh`
+---
 
-A script to fix Flutter Docker build issues related to running as root. It:
-- Adds environment variables to suppress root user warnings
-- Updates Docker Compose configurations
-- Modifies build commands to improve compatibility
+## 🗂️ Remaining Scripts
+- `docker_startup_vps.sh` — Handles Docker stack build/start/flush (called by main_vps.sh)
+- `fix_docker_build.sh`   — Utility for fixing Docker/Flutter build issues
+- `setup_cloud.sh`, `setup_ollama.sh`, `setup_monitoring.sh` — Entrypoint/setup scripts for containers/monitoring
+- `../ssl/obtain_initial_certs.sh` — DNS/manual SSL certbot (for wildcard certs)
+- `../ssl/manage_ssl.sh`           — Webroot/automated SSL certbot (for Nginx)
 
-Usage:
-```bash
-./scripts/setup/fix_docker_build.sh
-```
+---
 
-### `docker_android_fix.sh`
+## 🛠️ For Maintainers & AI Assistants
 
-A script designed to run inside Docker containers during build to fix Android embedding issues:
-- Creates necessary directory structure
-- Updates AndroidManifest.xml
-- Creates MainActivity files
-- Updates build.gradle
+- **Script Trails:**
+  - All main operations are routed through `main_vps.sh` for easy automation and future extension.
+  - If you add new scripts, document them here and consider integrating them as options in `main_vps.sh`.
+  - For future automation, use the comments in `main_vps.sh` as anchor points for code search and script discovery.
 
-This script is automatically called by the Dockerfile and should not need to be run manually.
+- **AI/Automation Notes:**
+  - If you are an AI assistant or maintainer, leave breadcrumbs in this section for future maintainers or AI agents.
+  - Example: If you add a new monitoring tool, add a section here and a new option in `main_vps.sh`.
+  - If you automate documentation or script discovery, use this README as your index.
 
-## Docker Compose Setup
+---
 
-A comprehensive `docker-compose.yml` file is included in the root directory that sets up all services:
-- Web application
-- Tunnel service
-- FusionAuth
-- Database
-- Admin daemon
-- Nginx for routing
-- Certbot for SSL
+## 📝 Changelog
+- **2025-05:** Unified all VPS/Docker/SSL/monitoring scripts under `main_vps.sh`. Removed legacy admin daemon and redundant scripts. This README and script system are now the canonical entry point for server management.
 
-Usage:
-```bash
-docker-compose up -d
-```
+---
 
-## Troubleshooting
-
-### Flutter Root User Warnings
-
-If you see warnings about running Flutter as root, this is normal in Docker containers. Our scripts add environment variables to suppress these warnings:
-```
-FLUTTER_NO_ROOT_WARNING=true
-```
-
-### Android Embedding Issues
-
-If you encounter errors related to Android embedding or plugin compatibility, try running the migration script:
-```bash
-./scripts/setup/migrate_android_v2.sh
-```
-
-### Docker Build Failures
-
-If Docker builds fail, try:
-1. Running the fix script: `./scripts/setup/fix_docker_build.sh`
-2. Cleaning Docker: `docker system prune -a`
-3. Rebuilding: `docker-compose build --no-cache`
-
-## Maintenance
-
-Regular maintenance tasks:
-1. Run `./scripts/setup/update_and_deploy.sh` to get the latest code and deploy
-2. Check logs with `systemctl status cloudllm-daemon.service`
-3. Monitor Docker containers with `docker-compose ps`
-
-For more detailed documentation, see the main project README.
-
-**Note:** As of May 2025, Android and APK build steps are not required for server or web deployment. All Docker and deployment scripts have been updated to only build and deploy the web and server components. The `docker_android_fix.sh` script and any APK build steps have been removed. If you need to build an Android APK, do so locally on your development machine, not on the server or in production Docker builds. 
+**For more details, see the main project README.** 

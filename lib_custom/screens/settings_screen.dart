@@ -302,7 +302,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.info),
                 title: const Text('CloudToLocalLLM'),
-                subtitle: VersionInfoFooter(
+                subtitle: const VersionInfoFooter(
                   showBuild: true,
                   isDiscrete: false,
                   padding: EdgeInsets.zero,
