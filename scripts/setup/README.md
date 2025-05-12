@@ -56,4 +56,19 @@ bash main_vps.sh deploy
 
 ---
 
+## 🔒 SSL/HTTPS Certificates (Let's Encrypt)
+
+- SSL is automatically managed for:
+  - `cloudtolocalllm.online` (production)
+  - `beta.cloudtolocalllm.online` (dev/beta)
+- Uses Certbot with webroot (HTTP-01) via Docker for fully automated certificate issuance and renewal.
+- **No manual DNS or TXT records required.**
+- To add more subdomains in the future:
+  1. Add the subdomain to your DNS (A/AAAA record pointing to your server).
+  2. Edit the `DOMAINS` variable in `scripts/ssl/manage_ssl.sh` to include `-d newsub.cloudtolocalllm.online`.
+  3. Re-run the SSL script.
+- **Rule:** Avoid using subdomains unless necessary for infrastructure separation (e.g., `beta`). Prefer using paths for user or feature separation.
+
+---
+
 **For more details, see the main project README.** 
