@@ -4,6 +4,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -24,19 +26,19 @@ show_help() {
 
 case "${1:-}" in
   deploy)
-    bash "$(dirname "$0")/docker_startup_vps.sh"
+    bash "$SCRIPT_DIR/docker_startup_vps.sh"
     ;;
   ssl-dns)
-    bash "$(dirname "$0")/../ssl/obtain_initial_certs.sh"
+    bash "$SCRIPT_DIR/../ssl/obtain_initial_certs.sh"
     ;;
   ssl-webroot)
-    bash "$(dirname "$0")/../ssl/manage_ssl.sh"
+    bash "$SCRIPT_DIR/../ssl/manage_ssl.sh"
     ;;
   monitor)
-    bash "$(dirname "$0")/setup_monitoring.sh"
+    bash "$SCRIPT_DIR/setup_monitoring.sh"
     ;;
   fix-docker)
-    bash "$(dirname "$0")/fix_docker_build.sh"
+    bash "$SCRIPT_DIR/fix_docker_build.sh"
     ;;
   clean)
     echo -e "${YELLOW}Pruning Docker system (all unused containers, images, volumes, build cache)...${NC}"
