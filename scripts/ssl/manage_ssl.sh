@@ -26,8 +26,8 @@ CERTBOT_CONFIG_SUBDIR="certbot/conf" # Align with docker-compose.yml volume for 
 CERTBOT_WEBROOT_SUBDIR="certbot/www" # Align with docker-compose.yml volume
 CERTBOT_LOGS_SUBDIR="logs/certbot"
 NGINX_COMPOSE_FILE_SUBDIR="config/docker/docker-compose.web.yml"
-NGINX_SERVICE_NAME_IN_WEB_COMPOSE="nginx" # Service name in docker-compose.web.yml
-EXPECTED_NGINX_CONTAINER_NAME="cloudtolocalllm-nginx" # Actual running Nginx container from docker ps
+NGINX_SERVICE_NAME_IN_WEB_COMPOSE="webapp" # Service name in docker-compose.web.yml
+EXPECTED_NGINX_CONTAINER_NAME="cloudtolocalllm-webapp" # Actual running Nginx/webapp container from docker ps
 
 # Construct full paths
 CERT_CONFIG_DIR="$PROJECT_DIR/$CERTBOT_CONFIG_SUBDIR"
