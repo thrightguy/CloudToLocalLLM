@@ -23,7 +23,7 @@ docker run -it --rm \
   -v "$(pwd)/config/docker/certbot/www:/var/www/certbot" \
   certbot/certbot certonly --manual --preferred-challenges dns \
   --email "$EMAIL" $DOMAINS \
-  --agree-tos --no-eff-email --keep-until-expiring --manual-public-ip-logging-ok
+  --agree-tos --no-eff-email --keep-until-expiring
 
 CODE=$?
 
