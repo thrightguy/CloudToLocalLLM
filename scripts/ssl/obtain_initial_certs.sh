@@ -52,28 +52,22 @@ fi
 log_info "Domains to request certificates for: $DOMAINS_REQUESTED"
 log_info "Email for registration and recovery: $YOUR_EMAIL"
 log_info "Using Certbot service: $CERTBOT_SERVICE_NAME"
-log_info "Using webroot path: $WEBROOT_PATH"
 log_info "Using Docker Compose file: $COMPOSE_FILE"
 
 echo ""
 log_info "Before proceeding, please ensure:"
 log_info "  1. DNS records for the domain(s) above point to this server's public IP address."
-log_info "  2. Port 80 is open on this server and accessible from the internet."
-log_info "  3. The Nginx service ('cloudtolocalllm-nginx') is running and configured to serve ACME challenges from '$WEBROOT_PATH'."
+log_info "  2. You are ready to add TXT records to your DNS for domain validation."
 echo ""
 read -r -p "Press Enter to continue, or Ctrl+C to abort..."
 
 log_info "Attempting to obtain certificates..."
 
-# The '--force-renewal' flag will request a new certificate even if one already exists and is not yet due for renewal.
-# Use '--keep-until-expiring' if you want to avoid unnecessary renewals if a valid cert already exists.
-# For initial setup, or if you suspect a problem with the current cert, '--force-renewal' can be useful.
-# We will use --keep-until-expiring by default as it's generally safer.
-# If you specifically need to force it, you can change it or add '--force-renewal'
+# Using DNS challenge for wildcard certificates
 CERTBOT_COMMAND_OPTIONS="--manual --preferred-challenges dns --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --keep-until-expiring --manual-public-ip-logging-ok"
-# To force renewal, uncomment the line below and comment out the one above
-# CERTBOT_COMMAND_OPTIONS="--webroot -w $WEBROOT_PATH --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --force-renewal"
 
+# The old webroot method (does not work for wildcards)
+# CERTBOT_COMMAND_OPTIONS="--webroot -w $WEBROOT_PATH --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --force-renewal"
 
 docker compose -f "$COMPOSE_FILE" run --rm "$CERTBOT_SERVICE_NAME" certonly $CERTBOT_COMMAND_OPTIONS
 
@@ -86,9 +80,8 @@ else
     log_error "Certbot process failed. Please check the output above for detailed error messages."
     log_error "Common troubleshooting steps:"
     log_error "  - Verify DNS propagation for your domain(s)."
-    log_error "  - Ensure Nginx is correctly configured to serve the ACME challenge via HTTP on port 80 from '$WEBROOT_PATH'."
-    log_error "  - Check your firewall rules to ensure port 80 is open."
-    log_error "  - Review Certbot logs if available (may be within the container or Docker logs for the temporary 'run' container)."
+    log_error "  - Ensure the TXT records were correctly added with the values provided."
+    log_error "  - You can use online DNS checking tools to verify TXT record propagation."
     exit 1
 fi
 
