@@ -9,9 +9,9 @@ NC='\033[0m'
 
 echo -e "${YELLOW}Updating SSL certificate to include beta subdomain...${NC}"
 
-# Check if docker-compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo -e "${RED}Error: docker-compose is not installed. Please install it first.${NC}"
+# Check if docker compose is installed
+if ! docker compose version &> /dev/null; then
+    echo -e "${RED}Error: docker compose is not installed. Please install it first.${NC}"
     exit 1
 fi
 
@@ -23,7 +23,7 @@ fi
 
 # Stop containers to free port 80
 echo -e "${YELLOW}Stopping containers...${NC}"
-docker-compose -f docker-compose.web.yml down || {
+docker compose -f docker-compose.web.yml down || {
     echo -e "${RED}Failed to stop containers${NC}"
     exit 1
 }
@@ -292,12 +292,12 @@ fi
 
 # Rebuild and restart containers
 echo -e "${YELLOW}Rebuilding and restarting containers...${NC}"
-docker-compose -f docker-compose.web.yml build webapp || {
+docker compose -f docker-compose.web.yml build webapp || {
     echo -e "${RED}Failed to build webapp container${NC}"
     exit 1
 }
 
-docker-compose -f docker-compose.web.yml up -d || {
+docker compose -f docker-compose.web.yml up -d || {
     echo -e "${RED}Failed to start containers${NC}"
     exit 1
 }
