@@ -29,7 +29,7 @@ case "${1:-}" in
     bash "$SCRIPT_DIR/docker_startup_vps.sh"
     ;;
   ssl-dns)
-    bash "$SCRIPT_DIR/../ssl/obtain_initial_certs.sh"
+    # bash "$SCRIPT_DIR/../ssl/obtain_initial_certs.sh"
     ;;
   ssl-webroot)
     bash "$SCRIPT_DIR/../ssl/manage_ssl.sh"
