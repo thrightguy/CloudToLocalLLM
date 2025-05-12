@@ -26,8 +26,8 @@ CERTBOT_CONFIG_SUBDIR="certbot/conf" # Align with docker-compose.yml volume for 
 CERTBOT_WEBROOT_SUBDIR="certbot/www" # Align with docker-compose.yml volume
 CERTBOT_LOGS_SUBDIR="logs/certbot"
 NGINX_COMPOSE_FILE_SUBDIR="config/docker/docker-compose.web.yml"
-NGINX_SERVICE_NAME_IN_WEB_COMPOSE="webapp" # Service name in docker-compose.web.yml
-EXPECTED_NGINX_CONTAINER_NAME="ctl_services-webapp-1" # Actual running Nginx container from docker ps
+NGINX_SERVICE_NAME_IN_WEB_COMPOSE="nginx" # Service name in docker-compose.web.yml
+EXPECTED_NGINX_CONTAINER_NAME="cloudtolocalllm-nginx" # Actual running Nginx container from docker ps
 
 # Construct full paths
 CERT_CONFIG_DIR="$PROJECT_DIR/$CERTBOT_CONFIG_SUBDIR"
@@ -106,41 +106,13 @@ ensure_nginx_running() {
     primary_nginx_container_id=$(docker ps -q --filter "name=^/${EXPECTED_NGINX_CONTAINER_NAME}$")
 
     if [ -n "$primary_nginx_container_id" ]; then
-        # Check if it's healthy (simple check: is it running? more complex: docker inspect health status)
-        # For now, if it exists, assume it's the one we want and it should be healthy or getting there.
         echo_color "$GREEN" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') found and is running (ID: $primary_nginx_container_id)."
         echo_color "$BLUE" "Assuming it is configured for ACME challenges. Skipping attempt to start a new Nginx instance."
-        # Optionally, wait a few seconds if we think it might be in the process of starting up from another command
-        # sleep 3 
-        return 0 # Indicate success, primary Nginx is running
+        return 0
     fi
 
-    echo_color "$YELLOW" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') not found or not running."
-    echo_color "$YELLOW" "Attempting to start Nginx service ('$NGINX_SERVICE_NAME_IN_WEB_COMPOSE') using $COMPOSE_FILE_WEB as a fallback..."
-    echo_color "$YELLOW" "WARNING: This might conflict if another Nginx is supposed to be running on standard ports."
-
-    # Fallback logic (original logic, attempt to start Nginx using docker-compose.web.yml)
-    # This might still cause port conflicts if the main `ctl_services-webapp-1` was just temporarily down but not removed.
-    if ! docker compose -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME_IN_WEB_COMPOSE" 2>/dev/null | grep -q .; then
-        echo_color "$YELLOW" "Nginx service ('$NGINX_SERVICE_NAME_IN_WEB_COMPOSE') from $COMPOSE_FILE_WEB is not running. Attempting to start it..."
-        # Critical: Ensure this doesn't use a conflicting project name that also maps ports 80/443.
-        # For now, we proceed with the original command, but this is a known risk area.
-        docker compose -p ctl_temp_web_for_ssl -f "$COMPOSE_FILE_WEB" up -d --remove-orphans "$NGINX_SERVICE_NAME_IN_WEB_COMPOSE"
-        sleep 5 # Give it a moment to start
-        if ! docker compose -p ctl_temp_web_for_ssl -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME_IN_WEB_COMPOSE" 2>/dev/null | grep -q .; then
-            echo_color "$RED" "Failed to start Nginx service ('$NGINX_SERVICE_NAME_IN_WEB_COMPOSE') from $COMPOSE_FILE_WEB."
-            echo_color "$RED" "Attempting to get Nginx service logs (last 50 lines):"
-            docker compose -p ctl_temp_web_for_ssl -f "$COMPOSE_FILE_WEB" logs --tail="50" "$NGINX_SERVICE_NAME_IN_WEB_COMPOSE" || echo_color "$YELLOW" "Could not retrieve logs for $NGINX_SERVICE_NAME_IN_WEB_COMPOSE."
-            echo_color "$RED" "Aborting SSL issuance."
-            exit 1
-        else
-            echo_color "$GREEN" "Fallback Nginx service ('$NGINX_SERVICE_NAME_IN_WEB_COMPOSE') started successfully."
-            echo_color "$BLUE" "Waiting a few more seconds for Nginx to initialize..."
-            sleep 5 # Allow Nginx to fully initialize
-        fi
-    else
-        echo_color "$GREEN" "Fallback Nginx service ('$NGINX_SERVICE_NAME_IN_WEB_COMPOSE') from $COMPOSE_FILE_WEB is already running."
-    fi
+    echo_color "$RED" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') not found or not running. Please start it using your main compose file."
+    exit 1
 }
 
 run_certbot_command() {
@@ -182,25 +154,14 @@ reload_nginx_config() {
     echo_color "$BLUE" "Attempting to reload Nginx configuration..."
     local nginx_container_id_to_reload
 
-    # First, try to find the primary expected Nginx container
     nginx_container_id_to_reload=$(docker ps -q --filter "name=^/${EXPECTED_NGINX_CONTAINER_NAME}$")
 
     if [ -z "$nginx_container_id_to_reload" ]; then
-        echo_color "$YELLOW" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') not found."
-        echo_color "$YELLOW" "Attempting to find Nginx container from fallback compose file ($COMPOSE_FILE_WEB service '$NGINX_SERVICE_NAME_IN_WEB_COMPOSE')..."
-        # This assumes the fallback might be running if the primary isn't.
-        # The project name for the fallback needs to be consistent if we want to find it this way.
-        nginx_container_id_to_reload=$(docker compose -p ctl_temp_web_for_ssl -f "$COMPOSE_FILE_WEB" ps -q "$NGINX_SERVICE_NAME_IN_WEB_COMPOSE" 2>/dev/null)
-    fi
-
-    if [ -z "$nginx_container_id_to_reload" ]; then
-        echo_color "$RED" "Could not find any suitable Nginx container to reload (checked for '$EXPECTED_NGINX_CONTAINER_NAME' and fallback)."
-        echo_color "$YELLOW" "Nginx reload skipped. You may need to do this manually if a certificate was issued."
+        echo_color "$RED" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') not found. Nginx reload skipped. Please start the container and try again."
         return 1
     fi
 
     echo_color "$GREEN" "Found Nginx container to reload: $nginx_container_id_to_reload. Testing configuration..."
-    # No sudo needed for docker exec
     if docker exec "$nginx_container_id_to_reload" nginx -t; then
         echo_color "$GREEN" "Nginx configuration test successful. Reloading Nginx..."
         if docker exec "$nginx_container_id_to_reload" nginx -s reload; then
