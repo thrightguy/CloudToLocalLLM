@@ -7,6 +7,25 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# --- Certbot Symlink Structure Cleanup ---
+DOMAIN="cloudtolocalllm.online"
+LIVE_DIR="/etc/letsencrypt/live/$DOMAIN"
+ARCHIVE_DIR="/etc/letsencrypt/archive/$DOMAIN"
+RENEWAL_CONF="/etc/letsencrypt/renewal/$DOMAIN.conf"
+
+if [ -d "$LIVE_DIR" ] && [ ! -L "$LIVE_DIR/cert.pem" ]; then
+  echo -e "${RED}Detected broken cert.pem (not a symlink) in $LIVE_DIR. Backing up and removing broken certbot data...${NC}"
+  BACKUP_SUFFIX="backup_$(date +%Y%m%d_%H%M%S)"
+  mv "$LIVE_DIR" "${LIVE_DIR}_$BACKUP_SUFFIX" || true
+  if [ -d "$ARCHIVE_DIR" ]; then
+    mv "$ARCHIVE_DIR" "${ARCHIVE_DIR}_$BACKUP_SUFFIX" || true
+  fi
+  if [ -f "$RENEWAL_CONF" ]; then
+    mv "$RENEWAL_CONF" "${RENEWAL_CONF}_$BACKUP_SUFFIX" || true
+  fi
+  echo -e "${GREEN}Backed up and removed broken certbot data. Will proceed to obtain a fresh certificate.${NC}"
+fi
+
 echo -e "${YELLOW}Starting SSL fix...${NC}"
 
 # Install Certbot
