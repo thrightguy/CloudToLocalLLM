@@ -4,7 +4,7 @@ import 'dart:convert';
 // Simple server that forwards requests to a local LLM
 void main() async {
   final server = await HttpServer.bind(InternetAddress.anyIPv4, 8080);
-  print('Tunnel server listening on port ${server.port}');
+  // print('Tunnel server listening on port ${server.port}');
 
   await for (HttpRequest request in server) {
     try {
@@ -21,14 +21,13 @@ void main() async {
             {'status': 'ok', 'timestamp': DateTime.now().toIso8601String()}));
         await request.response.close();
       } else if (request.uri.path == '/api/v1/tunnel') {
-        final body = await utf8.decoder.bind(request).join();
-        final Map<String, dynamic> requestData = jsonDecode(body);
+        // final body = await utf8.decoder.bind(request).join(); // Unused variable removed
 
         // Log the request
-        print('Received tunnel request: ${requestData['prompt']}');
+        // print('Received tunnel request: \\${requestData['prompt']}');
 
         // Simulate processing time
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
 
         // Return a sample response
         final Map<String, dynamic> responseData = {
@@ -46,7 +45,7 @@ void main() async {
         await request.response.close();
       }
     } catch (e) {
-      print('Error handling request: $e');
+      // print('Error handling request: $e');
       request.response.statusCode = 500;
       request.response.write('Internal server error');
       await request.response.close();
