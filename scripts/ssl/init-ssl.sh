@@ -31,7 +31,7 @@ fi
 echo -e "${YELLOW}Initializing SSL certificates for $DOMAIN...${NC}"
 
 # Stop the web server temporarily
-docker-compose -f docker-compose.web.yml down
+docker compose -f docker-compose.web.yml down
 
 # Install certbot if not present
 if ! command -v certbot &> /dev/null; then
@@ -62,6 +62,6 @@ echo -e "${YELLOW}Setting up auto-renewal...${NC}"
 
 # Restart the web server
 echo -e "${YELLOW}Restarting web server...${NC}"
-docker-compose -f docker-compose.web.yml up -d
+docker compose -f docker-compose.web.yml up -d
 
 echo -e "${GREEN}SSL certificates initialized successfully!${NC}" 

@@ -160,8 +160,8 @@ EOF
 # Start the web server with SSL
 echo -e "${YELLOW}Starting web server with SSL...${NC}"
 cd /var/www/html
-docker-compose down || true
-docker-compose up -d
+docker compose down || true
+docker compose up -d
 
 # Create a certbot renewal hook
 echo -e "${YELLOW}Creating Certbot renewal hook...${NC}"
