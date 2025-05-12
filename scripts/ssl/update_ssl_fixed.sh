@@ -28,6 +28,24 @@ docker-compose -f docker-compose.web.yml down || {
     exit 1
 }
 
+echo -e "${YELLOW}Checking for broken Certbot symlink structure for cloudtolocalllm.online...${NC}"
+LIVE_DIR="$(pwd)/certbot/conf/live/cloudtolocalllm.online"
+ARCHIVE_DIR="$(pwd)/certbot/conf/archive/cloudtolocalllm.online"
+RENEWAL_CONF="$(pwd)/certbot/conf/renewal/cloudtolocalllm.online.conf"
+
+if [ -d "$LIVE_DIR" ] && [ ! -L "$LIVE_DIR/cert.pem" ]; then
+  echo -e "${RED}Detected broken cert.pem (not a symlink) in $LIVE_DIR. Backing up and removing broken certbot data...${NC}"
+  BACKUP_SUFFIX="backup_$(date +%Y%m%d_%H%M%S)"
+  mv "$LIVE_DIR" "${LIVE_DIR}_$BACKUP_SUFFIX" || true
+  if [ -d "$ARCHIVE_DIR" ]; then
+    mv "$ARCHIVE_DIR" "${ARCHIVE_DIR}_$BACKUP_SUFFIX" || true
+  fi
+  if [ -f "$RENEWAL_CONF" ]; then
+    mv "$RENEWAL_CONF" "${RENEWAL_CONF}_$BACKUP_SUFFIX" || true
+  fi
+  echo -e "${GREEN}Backed up and removed broken certbot data. Will proceed to obtain a fresh certificate.${NC}"
+fi
+
 # Get new certificate with beta subdomain included
 # Using --expand flag to automatically expand the certificate
 echo -e "${YELLOW}Requesting SSL certificate...${NC}"
