@@ -1,4 +1,8 @@
 #!/bin/bash
+# DEPRECATED: Use scripts/ssl/manage_ssl.sh (webroot, automatic) instead.
+echo -e "\033[1;31m[ERROR] This script is deprecated. Use scripts/ssl/manage_ssl.sh (webroot, automatic) instead.\033[0m"
+exit 1
+
 # Let's Encrypt Certbot DNS-01 (manual) script, following official documentation
 set -e
 trap 'echo -e "\033[1;31m[ERROR] Script interrupted or failed. Please check logs.\033[0m"; exit 1' INT TERM ERR
