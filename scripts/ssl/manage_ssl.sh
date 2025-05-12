@@ -181,6 +181,24 @@ reload_nginx_config() {
 main() {
     echo_color "$GREEN" "--- SSL Certificate Management Script ---"
 
+    # --- Certbot Symlink Structure Cleanup ---
+    LIVE_DIR="$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
+    ARCHIVE_DIR="$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"
+    RENEWAL_CONF="$CERT_CONFIG_DIR/../renewal/$DOMAIN_NAME.conf"
+
+    if [ -d "$LIVE_DIR" ] && [ ! -L "$LIVE_DIR/cert.pem" ]; then
+        echo_color "$RED" "Detected broken cert.pem (not a symlink) in $LIVE_DIR. Backing up and removing broken certbot data..."
+        BACKUP_SUFFIX="backup_$(date +%Y%m%d_%H%M%S)"
+        mv "$LIVE_DIR" "${LIVE_DIR}_$BACKUP_SUFFIX" || true
+        if [ -d "$ARCHIVE_DIR" ]; then
+            mv "$ARCHIVE_DIR" "${ARCHIVE_DIR}_$BACKUP_SUFFIX" || true
+        fi
+        if [ -f "$RENEWAL_CONF" ]; then
+            mv "$RENEWAL_CONF" "${RENEWAL_CONF}_$BACKUP_SUFFIX" || true
+        fi
+        echo_color "$GREEN" "Backed up and removed broken certbot data. Will proceed to obtain a fresh certificate."
+    fi
+
     ensure_dependencies "certbot" "docker" "docker compose"
     ensure_certbot_dirs
     ensure_nginx_running # Critical step to ensure Nginx is ready
