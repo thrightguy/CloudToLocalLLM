@@ -25,18 +25,20 @@ WEBROOT_PATH="/var/www/certbot"
 # --- Script Logic ---
 set -e # Exit immediately if a command exits with a non-zero status.
 set -x  # Enable bash debug output
-trap 'echo "[ERROR] Script interrupted or failed. Please check logs."; exit 1' INT TERM ERR
+trap 'echo -e "\033[1;31m[ERROR] Script interrupted or failed. Please check logs.\033[0m"; exit 1' INT TERM ERR
+
+# Color helpers
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+NC='\033[0m' # No Color
 
 # Function to log messages
-log_info() {
-    echo "[INFO] $1"
-}
-log_error() {
-    echo "[ERROR] $1" >&2
-}
-log_success() {
-    echo "[SUCCESS] $1"
-}
+log_info() { echo -e "${CYAN}[INFO] $1${NC}"; }
+log_error() { echo -e "${RED}[ERROR] $1${NC}" >&2; }
+log_success() { echo -e "${GREEN}[SUCCESS] $1${NC}"; }
+log_warn() { echo -e "${YELLOW}[WARN] $1${NC}"; }
 
 log_info "Starting Let's Encrypt certificate acquisition process..."
 
@@ -60,23 +62,22 @@ log_info "Before proceeding, please ensure:"
 log_info "  1. DNS records for the domain(s) above point to this server's public IP address."
 log_info "  2. You are ready to add TXT records to your DNS for domain validation."
 echo ""
-read -r -p "Press Enter to continue, or Ctrl+C to abort..."
+read -r -p "$(echo -e "${YELLOW}Press Enter to continue, or Ctrl+C to abort...${NC}")"
 
-log_info "Attempting to obtain certificates..."
+log_info "Attempting to obtain certificates using DNS challenge for wildcards."
+log_warn "You will be prompted by Certbot to add TXT records to your DNS."
+log_warn "Open your DNS provider (e.g., Namecheap) and be ready to add or update TXT records."
+log_warn "After adding each record, use a tool like https://dnschecker.org to confirm propagation before continuing."
 
-# Using DNS challenge for wildcard certificates
 CERTBOT_COMMAND_OPTIONS="--manual --preferred-challenges dns --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --keep-until-expiring --manual-public-ip-logging-ok"
 
-# The old webroot method (does not work for wildcards)
-# CERTBOT_COMMAND_OPTIONS="--webroot -w $WEBROOT_PATH --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --force-renewal"
-
-echo "[DEBUG] docker compose -f \"$COMPOSE_FILE\" run --rm \"$CERTBOT_SERVICE_NAME\" certonly $CERTBOT_COMMAND_OPTIONS"
+echo -e "${CYAN}[DEBUG] docker compose -f \"$COMPOSE_FILE\" run --rm \"$CERTBOT_SERVICE_NAME\" certonly $CERTBOT_COMMAND_OPTIONS${NC}"
 log_info "Running Certbot via Docker Compose..."
 
 docker compose -f "$COMPOSE_FILE" run --rm "$CERTBOT_SERVICE_NAME" certonly $CERTBOT_COMMAND_OPTIONS
 CERTBOT_EXIT_CODE=$?
 
-echo "[DEBUG] Certbot exit code: $CERTBOT_EXIT_CODE"
+echo -e "${CYAN}[DEBUG] Certbot exit code: $CERTBOT_EXIT_CODE${NC}"
 
 if [ $CERTBOT_EXIT_CODE -eq 0 ]; then
     log_success "Certbot process completed successfully!"
@@ -92,4 +93,5 @@ else
     exit 1
 fi
 
+log_info "All done! If you need to renew, just run this script again."
 exit 0 
