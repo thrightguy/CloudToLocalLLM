@@ -24,6 +24,7 @@ WEBROOT_PATH="/var/www/certbot"
 
 # --- Script Logic ---
 set -e # Exit immediately if a command exits with a non-zero status.
+set -x  # Enable bash debug output
 trap 'echo "[ERROR] Script interrupted or failed. Please check logs."; exit 1' INT TERM ERR
 
 # Function to log messages
@@ -69,9 +70,15 @@ CERTBOT_COMMAND_OPTIONS="--manual --preferred-challenges dns --email $YOUR_EMAIL
 # The old webroot method (does not work for wildcards)
 # CERTBOT_COMMAND_OPTIONS="--webroot -w $WEBROOT_PATH --email $YOUR_EMAIL $DOMAINS_REQUESTED --agree-tos --no-eff-email --force-renewal"
 
-docker compose -f "$COMPOSE_FILE" run --rm "$CERTBOT_SERVICE_NAME" certonly $CERTBOT_COMMAND_OPTIONS
+echo "[DEBUG] docker compose -f \"$COMPOSE_FILE\" run --rm \"$CERTBOT_SERVICE_NAME\" certonly $CERTBOT_COMMAND_OPTIONS"
+log_info "Running Certbot via Docker Compose..."
 
-if [ $? -eq 0 ]; then
+docker compose -f "$COMPOSE_FILE" run --rm "$CERTBOT_SERVICE_NAME" certonly $CERTBOT_COMMAND_OPTIONS
+CERTBOT_EXIT_CODE=$?
+
+echo "[DEBUG] Certbot exit code: $CERTBOT_EXIT_CODE"
+
+if [ $CERTBOT_EXIT_CODE -eq 0 ]; then
     log_success "Certbot process completed successfully!"
     log_info "Certificates should now be available in the volume mounted to '/etc/letsencrypt' by the Certbot container (typically './certbot/conf/live/YOUR_DOMAIN')."
     log_info "To make Nginx use the new certificates, you should restart it."
