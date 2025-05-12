@@ -73,8 +73,7 @@ bash main_vps.sh deploy
 
 ## 🐳 Canonical Docker Container Names
 
-- **cloudtolocalllm-nginx** — Nginx (serves web and SSL)
-- **cloudtolocalllm-webapp** — Flutter web app
+- **cloudtolocalllm-webapp** — Nginx + Flutter web app (serves web and SSL)
 - **cloudtolocalllm-certbot** — Certbot (SSL management)
 - **cloudtolocalllm-fusionauth-app** — FusionAuth (auth service)
 - **cloudtolocalllm-db** — Postgres (database)
@@ -83,7 +82,7 @@ bash main_vps.sh deploy
 
 ## 🛠 Troubleshooting
 
-- If a script fails with a message about a missing container (e.g., Nginx), make sure the container is running and named as above.
+- If a script fails with a message about a missing container (e.g., webapp), make sure the container is running and named as above.
 - Do **not** use fallback or temp containers (like `ctl_temp_web_for_ssl-webapp-1`).
 - Always use the main compose file for starting/stopping services.
 
