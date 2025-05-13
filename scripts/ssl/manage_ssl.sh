@@ -187,21 +187,11 @@ main() {
     ARCHIVE_DIR="$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"
     RENEWAL_CONF="$CERT_CONFIG_DIR/../renewal/$DOMAIN_NAME.conf"
 
-    # --- Staging Certificate Auto-Removal ---
-    if [ -f "$LIVE_DIR/fullchain.pem" ]; then
-        if openssl x509 -in "$LIVE_DIR/fullchain.pem" -noout -issuer | grep -q "(STAGING)"; then
-            echo_color "$YELLOW" "[AUTO-FIX] Detected a staging certificate. Removing old certbot data to force production certificate issuance."
-            BACKUP_SUFFIX="backup_$(date +%Y%m%d_%H%M%S)"
-            mv "$LIVE_DIR" "${LIVE_DIR}_$BACKUP_SUFFIX" || true
-            if [ -d "$ARCHIVE_DIR" ]; then
-                mv "$ARCHIVE_DIR" "${ARCHIVE_DIR}_$BACKUP_SUFFIX" || true
-            fi
-            if [ -f "$RENEWAL_CONF" ]; then
-                mv "$RENEWAL_CONF" "${RENEWAL_CONF}_$BACKUP_SUFFIX" || true
-            fi
-            echo_color "$GREEN" "Staging certificate data removed. Will proceed to obtain a fresh production certificate."
-        fi
-    fi
+    # --- Remove ALL existing certificates before doing anything ---
+    echo_color "$YELLOW" "[CLEANUP] Removing all existing cert, archive, and renewal files for $DOMAIN_NAME before requesting a new certificate."
+    rm -rf "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"*
+    rm -rf "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"*
+    rm -f "$CERT_CONFIG_DIR/../renewal/$DOMAIN_NAME"*.conf
 
     ensure_dependencies "certbot" "docker" "docker compose"
     ensure_certbot_dirs
