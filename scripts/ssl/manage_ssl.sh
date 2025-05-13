@@ -181,6 +181,7 @@ reload_nginx_config() {
 # --- Main Script Logic ---
 main() {
     echo_color "$GREEN" "--- SSL Certificate Management Script ---"
+    echo_color "$YELLOW" "[DEBUG] This is the latest manage_ssl.sh version: $(date)"
 
     # --- Certbot Symlink Structure Cleanup ---
     LIVE_DIR="$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
