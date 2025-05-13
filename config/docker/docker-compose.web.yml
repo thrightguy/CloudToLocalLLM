@@ -14,6 +14,7 @@ services:
     environment:
       - SSL_CERT_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem
       - SSL_KEY_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem
+    user: "1000:1000" # Run as non-root user for security and compatibility
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s

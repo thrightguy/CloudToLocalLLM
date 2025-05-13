@@ -30,6 +30,7 @@ services:
       - NETDATA_CLAIM_ROOMS=${NETDATA_CLAIM_ROOMS:-}
       - DISABLE_PLUGINS=cgroups
       - NETDATA_DISABLE_CGROUP_NETWORK_HELPER=1
+    user: "1000:1000"
     networks:
       - cloudllm_mon_network
       - cloudllm_external_network
