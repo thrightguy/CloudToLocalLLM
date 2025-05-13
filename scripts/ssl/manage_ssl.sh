@@ -79,23 +79,15 @@ ensure_certbot_dirs() {
     echo_color "$YELLOW" "  Webroot dir: $WEBROOT_PATH/.well-known/acme-challenge"
     echo_color "$YELLOW" "  Logs dir: $CERTBOT_LOG_DIR"
 
-    # Create directories with sudo to ensure they are owned by root,
-    # which is typical for system-level configurations.
-    # Docker volumes will handle permissions for containers.
-    sudo mkdir -p "$CERT_CONFIG_DIR"
-    sudo mkdir -p "$WEBROOT_PATH/.well-known/acme-challenge" # Certbot needs to write here via webroot plugin
-    sudo mkdir -p "$CERTBOT_LOG_DIR"
-    
-    # Set appropriate permissions if needed, though Docker volume mounts often handle this.
-    # For webroot, Nginx (inside container) needs to read, Certbot (this script) needs to write.
-    # Host permissions for $WEBROOT_PATH should allow certbot (as root or via sudo) to write.
-    # Nginx container user (usually nginx) will need read access via the volume mount.
-    sudo chmod -R 755 "$WEBROOT_PATH"
+    mkdir -p "$CERT_CONFIG_DIR"
+    mkdir -p "$WEBROOT_PATH/.well-known/acme-challenge" # Certbot needs to write here via webroot plugin
+    mkdir -p "$CERTBOT_LOG_DIR"
+    chmod -R 755 "$WEBROOT_PATH"
 
     echo_color "$BLUE" "DEBUG: Listing contents of host webroot after mkdir/chmod: $WEBROOT_PATH"
-    sudo ls -la "$WEBROOT_PATH"
+    ls -la "$WEBROOT_PATH"
     echo_color "$BLUE" "DEBUG: Listing contents of host ACME challenge dir after mkdir/chmod: $WEBROOT_PATH/.well-known/acme-challenge"
-    sudo ls -la "$WEBROOT_PATH/.well-known/acme-challenge"
+    ls -la "$WEBROOT_PATH/.well-known/acme-challenge"
 
     echo_color "$GREEN" "Certbot directories checked/created."
 }
@@ -259,6 +251,14 @@ main() {
 
     echo_color "$GREEN" "--- SSL Script Finished Successfully ---"
 }
+
+# --- Prevent running as root unless --allow-root is passed ---
+if [ "$(id -u)" -eq 0 ]; then
+    if [[ "$*" != *--allow-root* ]]; then
+        echo -e "\033[0;31m[ERROR] This script should NOT be run as root. Please run as a regular user with the correct permissions. If you really want to run as root, pass --allow-root.\033[0m"
+        exit 1
+    fi
+fi
 
 # Execute main function with all script arguments
 main "$@" 
