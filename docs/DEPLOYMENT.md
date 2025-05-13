@@ -31,7 +31,8 @@ The directory structure on the VPS will then mirror the Git repository.
 
 The primary script for setting up and deploying to a VPS is `scripts/setup/docker_startup_vps.sh`.
 
-**Run this script as root or with sudo privileges.**
+- **You must run this script as root or with sudo privileges.**
+- All orchestration and SSL scripts now require root and will fail if not run as root.
 
 ```bash
 cd /opt/cloudtolocalllm

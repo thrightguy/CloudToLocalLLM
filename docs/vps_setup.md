@@ -9,6 +9,8 @@ This document provides instructions for setting up the CloudToLocalLLM stack on 
 - Docker and Docker Compose installed
 - Git installed
 
+**All setup and orchestration scripts must be run as root (sudo or su -). The scripts will fail if not run as root.**
+
 ## Container Base Image
 
 **All containers, including the admin daemon, web, and tunnel services, use the [ghcr.io/cirruslabs/flutter:latest](https://github.com/cirruslabs/docker-images-flutter) image as the base.**

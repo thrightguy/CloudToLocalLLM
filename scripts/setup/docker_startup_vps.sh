@@ -7,6 +7,12 @@
 
 set -uo pipefail
 
+# --- Enforce running as root ---
+if [[ $EUID -ne 0 ]]; then
+  echo -e "\033[0;31m[ERROR] This script must be run as root. Please run with sudo or as root.\033[0m"
+  exit 1
+fi
+
 # Configuration
 INSTALL_DIR="/opt/cloudtolocalllm"
 LOGFILE="$INSTALL_DIR/startup_docker.log"
