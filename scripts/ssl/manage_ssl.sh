@@ -144,7 +144,6 @@ run_certbot_command() {
         --non-interactive \
         --keep-until-expiring \
         --preferred-challenges http-01 \
-        --staging \
         "$@" # Forward all script arguments to certbot
 
     # Return Certbot's exit code
