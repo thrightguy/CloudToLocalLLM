@@ -217,7 +217,23 @@ main() {
         echo_color "$GREEN" "Nginx reloaded successfully before Certbot attempt."
     fi
 
-    if run_certbot_command; then
+    if run_certbot_command "$@"; then
+        # --- Normalize Cert Directory Name ---
+        # Find the latest cert directory (with -0001, -0002, etc. if present)
+        LATEST_CERT_DIR=$(ls -d $CERT_CONFIG_DIR/live/${DOMAIN_NAME}* | sort | tail -n 1)
+        if [[ "$LATEST_CERT_DIR" != "$CERT_CONFIG_DIR/live/$DOMAIN_NAME" ]]; then
+            echo_color "$YELLOW" "[AUTO-FIX] Moving new certs from $LATEST_CERT_DIR to $CERT_CONFIG_DIR/live/$DOMAIN_NAME for Nginx compatibility."
+            rm -rf "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
+            mv "$LATEST_CERT_DIR" "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
+            # Also move archive and renewal if needed
+            LATEST_ARCHIVE_DIR=$(ls -d $CERT_CONFIG_DIR/archive/${DOMAIN_NAME}* | sort | tail -n 1)
+            rm -rf "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"
+            mv "$LATEST_ARCHIVE_DIR" "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"
+            LATEST_RENEWAL_CONF=$(ls $CERT_CONFIG_DIR/../renewal/${DOMAIN_NAME}*.conf 2>/dev/null | sort | tail -n 1)
+            if [ -f "$LATEST_RENEWAL_CONF" ]; then
+                mv "$LATEST_RENEWAL_CONF" "$CERT_CONFIG_DIR/../renewal/$DOMAIN_NAME.conf"
+            fi
+        fi
         echo_color "$GREEN" "Certbot process completed successfully for $DOMAIN_NAME."
         echo_color "$BLUE" "Attempting final Nginx reload after successful Certbot run..."
         if ! reload_nginx_config; then
