@@ -1,8 +1,15 @@
 #!/bin/bash
 # Unified CloudToLocalLLM VPS Management Script
 # Usage: ./scripts/setup/main_vps.sh [deploy|ssl-dns|ssl-webroot|monitor|fix-docker|clean|help]
+#
+# NOTE: This script must be run as root (sudo or su -).
 
 set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo -e "\033[0;31m[ERROR] This script must be run as root. Please run with sudo or as root.\033[0m"
+  exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

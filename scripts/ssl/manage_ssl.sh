@@ -252,13 +252,5 @@ main() {
     echo_color "$GREEN" "--- SSL Script Finished Successfully ---"
 }
 
-# --- Prevent running as root unless --allow-root is passed ---
-if [ "$(id -u)" -eq 0 ]; then
-    if [[ "$*" != *--allow-root* ]]; then
-        echo -e "\033[0;31m[ERROR] This script should NOT be run as root. Please run as a regular user with the correct permissions. If you really want to run as root, pass --allow-root.\033[0m"
-        exit 1
-    fi
-fi
-
 # Execute main function with all script arguments
 main "$@" 
