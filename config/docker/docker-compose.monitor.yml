@@ -24,6 +24,7 @@ services:
       - NETDATA_CLAIM_TOKEN=${NETDATA_CLAIM_TOKEN:-}
       - NETDATA_CLAIM_URL=https://app.netdata.cloud
       - NETDATA_CLAIM_ROOMS=${NETDATA_CLAIM_ROOMS:-}
+    user: "1000:1000" # Run as non-root user for security and compatibility
     networks:
       - webnet
 

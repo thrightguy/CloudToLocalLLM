@@ -12,4 +12,5 @@ services:
       - ../../:/opt/cloudtolocalllm
     restart: unless-stopped
     environment:
-      - PORT=9001 
+      - PORT=9001
+    user: "1000:1000" # Run as non-root user for security and compatibility 

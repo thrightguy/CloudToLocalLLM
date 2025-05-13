@@ -24,6 +24,7 @@ services:
     command: /bin/bash /app/setup_cloud.sh
     ports:
       - "3456:3456"
+    user: "1000:1000" # Run as non-root user for security and compatibility
 
   webapp:
     build:

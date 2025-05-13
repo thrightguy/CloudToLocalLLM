@@ -168,3 +168,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Ollama](https://ollama.ai/)
 - [LM Studio](https://lmstudio.ai/)
 - [FusionAuth](https://fusionauth.io/)
+
+## Security: Running Containers as Non-Root
+
+All custom containers (webapp, admin-daemon, cloud, netdata, etc.) are configured to run as a non-root user by default using `user: "1000:1000"` in their respective docker-compose files. This improves security and compatibility.
+
+- If your main non-root user has a different UID/GID, update the `user:` field accordingly.
+- Official third-party images (like postgres, fusionauth) are not overridden.
+- If you encounter permission issues, ensure the mapped volumes are owned by the correct UID/GID on the host.
