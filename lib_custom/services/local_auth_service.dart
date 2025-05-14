@@ -135,4 +135,33 @@ class LocalAuthService {
       return false;
     }
   }
+
+  // Login with a token (FusionAuth integration)
+  Future<void> loginWithToken(String token) async {
+    _token = token;
+    try {
+      // Fetch user profile from FusionAuth
+      final response = await http.get(
+        Uri.parse(
+            'http://localhost:9011/api/user'), // You may want to make this configurable
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // FusionAuth returns user info under 'user' key or directly as user object
+        final userJson = data['user'] ?? data;
+        final user = User.fromJson(userJson);
+        await _saveAuth(token, user);
+      } else {
+        // If user profile fetch fails, just save token and set user to null
+        await _saveAuth(token, User.empty());
+      }
+    } catch (e) {
+      debugPrint('Error fetching user profile with token: $e');
+      await _saveAuth(token, User.empty());
+    }
+  }
 }
