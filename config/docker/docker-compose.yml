@@ -27,6 +27,7 @@ services:
     user: "1000:1000" # Run as non-root user for security and compatibility
 
   webapp:
+    container_name: cloudtolocalllm-webapp
     build:
       context: ../..
       dockerfile: config/docker/Dockerfile.web
