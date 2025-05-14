@@ -17,11 +17,28 @@ if ! id "$TARGET_USER" &>/dev/null; then
   useradd -m -s /bin/bash "$TARGET_USER"
 fi
 
-# Ensure flutter is available for the user
+# Fix permissions so appuser owns the project directory
+chown -R "$TARGET_USER":"$TARGET_USER" "$PROJECT_DIR"
+
+# Check if flutter is available for the user, and fix PATH if needed
 if ! runuser -u "$TARGET_USER" -- which flutter &>/dev/null; then
-  echo "Flutter is not available for $TARGET_USER. Please ensure flutter is installed and in the PATH for this user." >&2
-  exit 2
+  echo "Flutter is not in PATH for $TARGET_USER. Attempting to fix..."
+  FLUTTER_BIN="$(which flutter 2>/dev/null || true)"
+  if [ -z "$FLUTTER_BIN" ]; then
+    for d in /usr/local/bin /usr/bin /opt/flutter/bin /snap/bin; do
+      if [ -x "$d/flutter" ]; then
+        FLUTTER_BIN="$d/flutter"; break
+      fi
+    done
+  fi
+  if [ -z "$FLUTTER_BIN" ]; then
+    echo "Could not find flutter binary. Please install Flutter and ensure it is available." >&2
+    exit 2
+  fi
+  FLUTTER_DIR="$(dirname "$FLUTTER_BIN")"
+  su - "$TARGET_USER" -c "grep -q 'export PATH=.*$FLUTTER_DIR' ~/.bashrc || echo 'export PATH=\"$FLUTTER_DIR:\$PATH\"' >> ~/.bashrc"
+  export PATH="$FLUTTER_DIR:$PATH"
 fi
 
 # Run the build commands as the target user (no sudo)
-runuser -u "$TARGET_USER" -- bash -c "cd '$PROJECT_DIR' && flutter clean && flutter pub get && flutter build web" 
+runuser -u "$TARGET_USER" -- bash -c "cd '$PROJECT_DIR' && source ~/.bashrc && flutter clean && flutter pub get && flutter build web" 
