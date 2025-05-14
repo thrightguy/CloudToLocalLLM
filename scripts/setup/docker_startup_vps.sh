@@ -16,7 +16,7 @@ fi
 # Configuration
 INSTALL_DIR="/opt/cloudtolocalllm"
 LOGFILE="$INSTALL_DIR/startup_docker.log"
-COMPOSE_FILE="config/docker/docker-compose.web.yml" # Use the web compose file
+COMPOSE_FILE="config/docker/docker-compose.yml" # Use the main compose file for the full stack
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -109,7 +109,7 @@ if ! systemctl is-active --quiet docker; then
 fi
 
 # Step 2: Build/Rebuild all services from docker-compose.yml
-log_status "[2/3] Building/Rebuilding services with --no-cache from $COMPOSE_FILE..."
+log_status "[2/3] Building/Rebuilding all services with --no-cache from $COMPOSE_FILE (full stack: webapp, FusionAuth, DB, etc.)..."
 cd "$INSTALL_DIR"
 docker compose -f "$COMPOSE_FILE" build --no-cache
 if [ $? -ne 0 ]; then
@@ -119,7 +119,7 @@ fi
 log_success "All services built successfully."
 
 # Step 3: Start all services
-log_status "[3/3] Starting all services from $COMPOSE_FILE..."
+log_status "[3/3] Starting all services from $COMPOSE_FILE (full stack: webapp, FusionAuth, DB, etc.)..."
 docker compose -f "$COMPOSE_FILE" up -d
 if [ $? -ne 0 ]; then
   log_error "Docker compose up failed. Please check the output above and container logs."
