@@ -27,7 +27,7 @@ CERTBOT_WEBROOT_SUBDIR="certbot/www" # Align with docker-compose.yml volume
 CERTBOT_LOGS_SUBDIR="logs/certbot"
 NGINX_COMPOSE_FILE_SUBDIR="config/docker/docker-compose.web.yml"
 NGINX_SERVICE_NAME_IN_WEB_COMPOSE="webapp" # Service name in docker-compose.web.yml
-EXPECTED_NGINX_CONTAINER_NAME="cloudtolocalllm-webapp" # Actual running Nginx/webapp container from docker ps
+WEBAPP_CONTAINER="docker-webapp-1" # Set the expected webapp container name (as per docker-compose default)
 
 # Construct full paths
 CERT_CONFIG_DIR="$PROJECT_DIR/$CERTBOT_CONFIG_SUBDIR"
@@ -93,18 +93,12 @@ ensure_certbot_dirs() {
 }
 
 ensure_nginx_running() {
-    echo_color "$BLUE" "Checking if primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') is running..."
-    local primary_nginx_container_id
-    primary_nginx_container_id=$(docker ps -q --filter "name=^/${EXPECTED_NGINX_CONTAINER_NAME}$")
-
-    if [ -n "$primary_nginx_container_id" ]; then
-        echo_color "$GREEN" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') found and is running (ID: $primary_nginx_container_id)."
-        echo_color "$BLUE" "Assuming it is configured for ACME challenges. Skipping attempt to start a new Nginx instance."
-        return 0
+    echo_color "$BLUE" "Checking if primary Nginx container ('$WEBAPP_CONTAINER') is running..."
+    if ! docker ps --format '{{.Names}}' | grep -q "^$WEBAPP_CONTAINER$"; then
+        echo_color "$RED" "Primary Nginx container ('$WEBAPP_CONTAINER') not found or not running. Please start it using your main compose file."
+        exit 1
     fi
-
-    echo_color "$RED" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') not found or not running. Please start it using your main compose file."
-    exit 1
+    echo_color "$GREEN" "Primary Nginx container ('$WEBAPP_CONTAINER') found and is running."
 }
 
 run_certbot_command() {
@@ -146,10 +140,10 @@ reload_nginx_config() {
     echo_color "$BLUE" "Attempting to reload Nginx configuration..."
     local nginx_container_id_to_reload
 
-    nginx_container_id_to_reload=$(docker ps -q --filter "name=^/${EXPECTED_NGINX_CONTAINER_NAME}$")
+    nginx_container_id_to_reload=$(docker ps -q --filter "name=^/${WEBAPP_CONTAINER}$")
 
     if [ -z "$nginx_container_id_to_reload" ]; then
-        echo_color "$RED" "Primary Nginx container ('$EXPECTED_NGINX_CONTAINER_NAME') not found. Nginx reload skipped. Please start the container and try again."
+        echo_color "$RED" "Primary Nginx container ('$WEBAPP_CONTAINER') not found. Nginx reload skipped. Please start the container and try again."
         return 1
     fi
 
