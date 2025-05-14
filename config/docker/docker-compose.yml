@@ -28,6 +28,7 @@ services:
 
   webapp:
     container_name: cloudtolocalllm-webapp
+    image: cloudtolocalllm-webapp:latest
     build:
       context: ../..
       dockerfile: config/docker/Dockerfile.web
