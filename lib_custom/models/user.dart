@@ -32,4 +32,15 @@ class User {
       'createdAt': createdAt.toIso8601String(),
     };
   }
+
+  // Add a static empty user factory for error handling
+  static User empty() {
+    return User(
+      id: '',
+      username: '',
+      email: '',
+      name: '',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
 }
