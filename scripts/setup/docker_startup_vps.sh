@@ -4,6 +4,9 @@
 #
 # Usage: Run as root (su - or sudo -i), then:
 #   bash scripts/setup/docker_startup_vps.sh
+#
+# This script will always remove the old SSH host key for cloudtolocalllm.online before connecting,
+# ensuring you never encounter a host key verification error.
 
 set -o pipefail
 
@@ -58,6 +61,12 @@ normalize_cert_files() {
   done
 }
 
+remove_old_ssh_key() {
+  if command -v ssh-keygen >/dev/null 2>&1; then
+    ssh-keygen -R cloudtolocalllm.online 2>/dev/null
+  fi
+}
+
 # MAIN EXECUTION
 # ===============================================================================
 log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
@@ -67,6 +76,9 @@ cd "$INSTALL_DIR" # Ensure we are in the correct directory
 
 # Normalize cert files before any Docker actions
 normalize_cert_files
+
+# Remove old SSH key for cloudtolocalllm.online before any SSH actions
+remove_old_ssh_key
 
 # Parse argument for deep clean
 DEEP_CLEAN=false
