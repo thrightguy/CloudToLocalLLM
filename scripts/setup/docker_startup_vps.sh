@@ -40,20 +40,40 @@ log_success() {
 
 trap 'log_error "Script interrupted."' ERR SIGINT SIGTERM
 
+normalize_cert_files() {
+  CERT_DIR="$INSTALL_DIR/certbot/conf/live/cloudtolocalllm.online"
+  log_status "Normalizing certificate files in $CERT_DIR (removing symlinks, copying real files if needed)"
+  for file in cert.pem chain.pem fullchain.pem privkey.pem; do
+    TARGET="$CERT_DIR/$file"
+    if [ -L "$TARGET" ]; then
+      REAL_TARGET=$(readlink -f "$TARGET")
+      log_status "Replacing symlink $TARGET with real file from $REAL_TARGET"
+      rm -f "$TARGET"
+      cp "$REAL_TARGET" "$TARGET"
+    fi
+  done
+}
+
 # MAIN EXECUTION
-# ==============================================================================
+# ===============================================================================
 log_status "==== $(date) Starting CloudToLocalLLM stack using Docker ======"
 
 # Step 0: Clean up previous Docker environment
 cd "$INSTALL_DIR" # Ensure we are in the correct directory
 
-log_status "[0/3] Docker Environment Cleanup Options"
-echo -e "${YELLOW}Do you want to perform a FULL Docker flush? (Deletes ALL unused containers, networks, volumes, images, build cache)${NC}"
-echo -e "  - Type 'yes' for a full flush."
-echo -e "  - Type 'no' for a standard restart (stops and removes project containers, then rebuilds and starts)."
-read -r -p "Perform full Docker flush? (yes/no): " FLUSH_CHOICE
+# Normalize cert files before any Docker actions
+normalize_cert_files
 
-if [[ "$FLUSH_CHOICE" == "yes" ]]; then
+# Parse argument for deep clean
+DEEP_CLEAN=false
+if [[ "$1" == "--deep-clean" ]]; then
+  DEEP_CLEAN=true
+  log_status "Argument --deep-clean detected: performing FULL Docker flush."
+else
+  log_status "No --deep-clean argument: performing standard restart."
+fi
+
+if $DEEP_CLEAN; then
     log_status "User selected: FULL Docker flush."
     log_status "Aggressively cleaning up entire Docker environment..."
 
@@ -84,16 +104,13 @@ if [[ "$FLUSH_CHOICE" == "yes" ]]; then
     log_status "Bringing down any project services defined in $COMPOSE_FILE, removing volumes and orphans..."
     docker compose -f "$COMPOSE_FILE" down --volumes --remove-orphans || log_status "No existing project services to clean up or cleanup already performed for $COMPOSE_FILE."
     log_success "Full Docker flush completed."
-elif [[ "$FLUSH_CHOICE" == "no" ]]; then
+else
     log_status "User selected: Standard restart."
     log_status "Bringing down existing services defined in $COMPOSE_FILE (if any)..."
     docker compose -f "$COMPOSE_FILE" down --remove-orphans || log_status "No existing services to bring down or already down for $COMPOSE_FILE."
     # Note: We don't remove volumes here with '--volumes' for a standard restart,
     # allowing data in named volumes (like databases) to persist.
     log_success "Standard Docker shutdown completed."
-else
-    log_error "Invalid choice: '$FLUSH_CHOICE'. Please type 'yes' or 'no'. Aborting."
-    exit 1
 fi
 
 # Step 1: Ensure Docker is installed and running
