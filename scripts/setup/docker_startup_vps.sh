@@ -5,7 +5,7 @@
 # Usage: Run as root (su - or sudo -i), then:
 #   bash scripts/setup/docker_startup_vps.sh
 
-set -uo pipefail
+set -o pipefail
 
 # --- Enforce running as root ---
 if [[ $EUID -ne 0 ]]; then
@@ -47,9 +47,13 @@ normalize_cert_files() {
     TARGET="$CERT_DIR/$file"
     if [ -L "$TARGET" ]; then
       REAL_TARGET=$(readlink -f "$TARGET")
-      log_status "Replacing symlink $TARGET with real file from $REAL_TARGET"
-      rm -f "$TARGET"
-      cp "$REAL_TARGET" "$TARGET"
+      if [ -n "$REAL_TARGET" ] && [ -f "$REAL_TARGET" ]; then
+        log_status "Replacing symlink $TARGET with real file from $REAL_TARGET"
+        rm -f "$TARGET"
+        cp "$REAL_TARGET" "$TARGET"
+      else
+        log_error "Symlink $TARGET is broken or target does not exist. Skipping."
+      fi
     fi
   done
 }
@@ -66,7 +70,7 @@ normalize_cert_files
 
 # Parse argument for deep clean
 DEEP_CLEAN=false
-if [[ "$1" == "--deep-clean" ]]; then
+if [[ "${1:-}" == "--deep-clean" ]]; then
   DEEP_CLEAN=true
   log_status "Argument --deep-clean detected: performing FULL Docker flush."
 else
