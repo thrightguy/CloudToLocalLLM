@@ -191,7 +191,7 @@ class _CloudToLocalLlmAppState extends State<CloudToLocalLlmApp> {
     final settingsProvider = Provider.of<SettingsProvider>(context);
 
     return MaterialApp(
-      title: 'CloudToLocalLLM',
+      title: 'CloudToLocalLLM Portal',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settingsProvider.themeMode,
