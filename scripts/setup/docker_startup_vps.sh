@@ -5,8 +5,9 @@
 # Usage: Run as root (su - or sudo -i), then:
 #   bash scripts/setup/docker_startup_vps.sh
 #
-# This script will always remove the old SSH host key for cloudtolocalllm.online before connecting,
-# ensuring you never encounter a host key verification error.
+# If you ever see a host key verification error when connecting to the VPS, run:
+#   ssh-keygen -R cloudtolocalllm.online
+# This will remove the old SSH host key and allow you to connect again.
 
 set -o pipefail
 
