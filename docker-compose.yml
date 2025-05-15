@@ -13,6 +13,9 @@ services:
       dockerfile: config/docker/Dockerfile.web
     image: cloudtolocalllm-webapp
     container_name: cloudtolocalllm-webapp
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
@@ -28,6 +31,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+    depends_on:
+      fusionauth:
+        condition: service_healthy
 
   # Tunnel service
 
@@ -80,34 +86,6 @@ services:
 
   # Admin control daemon
 
-  # Nginx service for routing
-  nginx:
-    image: nginx:alpine
-    container_name: cloudtolocalllm-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certbot/www:/var/www/certbot:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./ssl:/etc/nginx/ssl
-    command: sh -c "mkdir -p /var/run/nginx && chown nginx:nginx /var/run/nginx && /docker-entrypoint.sh nginx -g 'daemon off;'"
-    depends_on:
-      webapp:
-        condition: service_started
-      fusionauth:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - cloudllm-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
   # Certbot for SSL certificates
   certbot:
     image: certbot/certbot
@@ -115,7 +93,7 @@ services:
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --staging --quiet && sleep 12h & wait $${!}; done;'"
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --staging --quiet --post-hook \"docker compose exec webapp nginx -s reload\" && sleep 12h & wait $${!}; done;'"
     networks:
       - cloudllm-network
 
