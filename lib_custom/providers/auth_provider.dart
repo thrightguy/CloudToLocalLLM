@@ -7,6 +7,9 @@ import '../models/user.dart';
 import '../services/local_auth_service.dart';
 import '../services/cloud_service.dart';
 import '../services/storage_service.dart';
+import '../config/app_config.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 // import '../utils/logger.dart'; // Postponing logger
 
 class AuthProvider extends ChangeNotifier {
@@ -56,21 +59,34 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Login with username and password
-  Future<bool> login(String username, String password) async {
+  // Login with FusionAuth
+  Future<bool> loginWithFusionAuth(String email, String password) async {
     _isLoading = true;
     _error = '';
     notifyListeners();
     try {
-      final success = await authService.login(username, password);
-      if (success) {
-        // Sync user profile with cloud
+      final response = await http.post(
+        Uri.parse('${AppConfig.fusionAuthBaseUrl}/api/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'loginId': email,
+          'password': password,
+          'applicationId':
+              AppConfig.fusionAuthClientId, // TODO: Set real app/client ID
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Save token and user info as needed
+        await authService.loginWithToken(data['token']);
         await _syncUserProfile();
+        return true;
+      } else {
+        _error = 'FusionAuth login failed: ${response.body}';
+        return false;
       }
-      return success;
     } catch (e) {
-      _error = 'Error logging in: $e';
-      debugPrint(_error); // Use debugPrint
+      _error = 'Error logging in with FusionAuth: $e';
       return false;
     } finally {
       _isLoading = false;
@@ -78,26 +94,51 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Register a new user
-  Future<bool> register(String username, String email, String password) async {
+  // Register with FusionAuth
+  Future<bool> registerWithFusionAuth(
+      String name, String email, String password) async {
     _isLoading = true;
     _error = '';
     notifyListeners();
     try {
-      final success = await authService.register(username, email, password);
-      if (success) {
-        // Login with the new credentials
-        return await login(username, password);
+      final response = await http.post(
+        Uri.parse('${AppConfig.fusionAuthBaseUrl}/api/user/registration'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user': {
+            'email': email,
+            'password': password,
+            'fullName': name,
+          },
+          'registration': {
+            'applicationId':
+                AppConfig.fusionAuthClientId, // TODO: Set real app/client ID
+          }
+        }),
+      );
+      if (response.statusCode == 200) {
+        // After registration, log in
+        return await loginWithFusionAuth(email, password);
+      } else {
+        _error = 'FusionAuth registration failed: ${response.body}';
+        return false;
       }
-      return success;
     } catch (e) {
-      _error = 'Error registering: $e';
-      debugPrint(_error); // Use debugPrint
+      _error = 'Error registering with FusionAuth: $e';
       return false;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // Update login and register to use FusionAuth
+  Future<bool> login(String email, String password) async {
+    return await loginWithFusionAuth(email, password);
+  }
+
+  Future<bool> register(String name, String email, String password) async {
+    return await registerWithFusionAuth(name, email, password);
   }
 
   // Logout the current user
@@ -114,16 +155,6 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  // Login with Auth0 (legacy method - redirects to password login during testing phase)
-  Future<bool> loginWithAuth0() async {
-    debugPrint(
-        'Auth0 login was requested - using local auth during testing phase');
-    _error =
-        'Auth0 is disabled during testing. Please use username/password login.';
-    notifyListeners();
-    return false;
   }
 
   // Validate the current token

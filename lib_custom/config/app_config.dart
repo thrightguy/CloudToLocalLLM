@@ -79,4 +79,9 @@ class AppConfig {
   // Auth0 web authentication (used for desktop app)
   static const bool useExternalBrowser = true;
   static const int authSessionTimeout = 300; // 5 minutes
+
+  // FusionAuth Configuration
+  static const String fusionAuthBaseUrl = 'http://localhost:9011';
+  static const String fusionAuthClientId = 'YOUR_CLIENT_ID';
+  static const String fusionAuthClientSecret = 'YOUR_CLIENT_SECRET';
 }

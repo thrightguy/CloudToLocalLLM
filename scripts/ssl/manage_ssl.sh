@@ -217,8 +217,18 @@ main() {
         if [[ "$LATEST_CERT_DIR" != "$CERT_CONFIG_DIR/live/$DOMAIN_NAME" ]]; then
             echo_color "$YELLOW" "[AUTO-FIX] Moving new certs from $LATEST_CERT_DIR to $CERT_CONFIG_DIR/live/$DOMAIN_NAME for Nginx compatibility."
             rm -rf "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
-            mv "$LATEST_CERT_DIR" "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
+            cp -a "$LATEST_CERT_DIR" "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
         fi
+        # Remove any symlinks in the canonical directory and replace with real files from the latest cert dir
+        for file in cert.pem chain.pem fullchain.pem privkey.pem; do
+            CANONICAL_FILE="$CERT_CONFIG_DIR/live/$DOMAIN_NAME/$file"
+            LATEST_FILE="$LATEST_CERT_DIR/$file"
+            if [ -L "$CANONICAL_FILE" ]; then
+                echo_color "$YELLOW" "[AUTO-FIX] Removing symlink $CANONICAL_FILE and copying real file from $LATEST_FILE."
+                rm -f "$CANONICAL_FILE"
+                cp "$LATEST_FILE" "$CANONICAL_FILE"
+            fi
+        done
         # Delete all other cert directories except the canonical one
         for dir in $CERT_CONFIG_DIR/live/${DOMAIN_NAME}*; do
             if [[ "$dir" != "$CERT_CONFIG_DIR/live/$DOMAIN_NAME" ]]; then
