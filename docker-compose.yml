@@ -95,7 +95,15 @@ services:
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet --post-hook \"docker compose exec webapp nginx -s reload\" && sleep 12h & wait $${!}; done;'"
+    entrypoint: |
+      /bin/sh -c '
+        trap exit TERM;
+        certbot certonly --webroot -w /var/www/certbot -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d auth.cloudtolocalllm.online --email user@example.com --agree-tos --no-eff-email --non-interactive --post-hook "docker compose exec webapp nginx -s reload" || true;
+        echo "Initial cert attempt done. Starting renewal loop.";
+        while :; do 
+          certbot renew --quiet --post-hook "docker compose exec webapp nginx -s reload" && sleep 12h & wait $${!};
+        done;
+      '
     networks:
       - cloudllm-network
 
