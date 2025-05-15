@@ -37,6 +37,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: Replace this with actual authentication state
+    final bool isUserLoggedIn = false;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CloudToLocalLLM Portal'),
@@ -91,7 +94,7 @@ class HomeScreen extends StatelessWidget {
               title: 'Coming Soon',
               description:
                   'We\'re currently in development. Visit beta.cloudtolocalllm.online to try our beta version.',
-              showButton: true,
+              showButton: isUserLoggedIn,
             ),
           ],
         ),
