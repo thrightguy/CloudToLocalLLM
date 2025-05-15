@@ -100,11 +100,7 @@ services:
     entrypoint: |
       /bin/sh -c '
         trap exit TERM;
-        certbot certonly --webroot -w /var/www/certbot \\
-          -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d auth.cloudtolocalllm.online \\
-          --email christopherCHAPPELL@gmail.com \\
-          --agree-tos --no-eff-email --non-interactive \\
-          --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        certbot certonly --webroot -w /var/www/certbot -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d auth.cloudtolocalllm.online --email christopherCHAPPELL@gmail.com --agree-tos --no-eff-email --non-interactive --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
 
         echo "Initial cert attempt/check done. Starting renewal loop.";
         while :; do
