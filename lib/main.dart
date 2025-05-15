@@ -92,7 +92,7 @@ class HomeScreen extends StatelessWidget {
             _buildFeatureCard(
               title: 'Coming Soon',
               description:
-                  'We\'re currently in development. Visit beta.cloudtolocalllm.online to try our beta version.',
+                  "We're currently in development. Login will be available soon.",
               showButton: isUserLoggedIn,
             ),
           ],
