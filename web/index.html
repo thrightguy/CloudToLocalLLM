@@ -23,38 +23,14 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="cloudtolocalllm_dev">
+  <meta name="apple-mobile-web-app-title" content="CloudToLocalLLM Portal">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>cloudtolocalllm_dev</title>
+  <title>CloudToLocalLLM Portal</title>
   <link rel="manifest" href="manifest.json">
-  
-  <!-- Auth0 SPA JS -->
-  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
-  
-  <!-- Auth0 callback handler -->
-  <script>
-    // Handle Auth0 callback redirect
-    window.handleAuth0Callback = function() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const state = urlParams.get('state');
-      
-      if (code && state) {
-        // Auth0 redirect callback - Flutter will handle this
-        console.log('Auth0 callback detected, code and state present');
-        // The code will be processed by the Flutter app
-      }
-    };
-    
-    // Run on page load
-    window.addEventListener('load', function() {
-      window.handleAuth0Callback();
-    });
-  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

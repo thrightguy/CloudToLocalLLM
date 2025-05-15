@@ -22,23 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String _errorMessage = '';
 
   @override
-  void initState() {
-    super.initState();
-    // Auto-redirect to Auth0 on web platform
-    if (kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkForAuth0Callback();
-      });
-    }
-  }
-
-  // Check for Auth0 callback parameters
-  void _checkForAuth0Callback() {
-    // This would be handled by web/index.html JavaScript code
-    // This is just a placeholder for any additional logic needed
-  }
-
-  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -185,66 +168,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-              // Web login - show only Auth0 button for login on web
-              if (kIsWeb && _isLogin)
-                Column(
-                  children: [
-                    const Text(
-                      'Sign in with your account:',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Auth0 login button (main button on web)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: _isLoading ? null : _handleAuth0Login,
-                        icon: const Icon(Icons.login),
-                        label: const Text('Login'),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.blue,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Toggle to register form
-                    TextButton(
-                      onPressed: _isLoading ? null : _toggleAuthMode,
-                      child: const Text('Don\'t have an account? Register'),
-                    ),
-                  ],
-                ),
-
-              // Mobile/Desktop - show both local and Auth0 options
-              if (!kIsWeb && _isLogin)
-                Column(
-                  children: [
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Or continue with',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Auth0 login button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: OutlinedButton.icon(
-                        onPressed: _isLoading ? null : _handleAuth0Login,
-                        icon: const Icon(Icons.security),
-                        label: const Text('Login with Auth0'),
-                      ),
-                    ),
-                  ],
-                ),
-
               // Add version info at the bottom
               const SizedBox(height: 24),
               const VersionInfoFooter(showBuild: true),
@@ -279,17 +202,11 @@ class _LoginScreenState extends State<LoginScreen> {
       bool success;
 
       if (_isLogin) {
-        if (kIsWeb) {
-          // On web, we always use Auth0 for login
-          await _handleAuth0Login();
-          return;
-        } else {
-          // Use regular login for non-web platforms
-          success = await authProvider.login(
-            _emailController.text,
-            _passwordController.text,
-          );
-        }
+        // Use regular login for non-web platforms
+        success = await authProvider.login(
+          _emailController.text,
+          _passwordController.text,
+        );
       } else {
         // Register
         success = await authProvider.register(
@@ -311,47 +228,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? 'Login failed. Please check your credentials.'
                   : 'Registration failed. Please try again.';
         });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  // Handle Auth0 login
-  Future<void> _handleAuth0Login() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      // Call loginWithAuth0 which will redirect to Auth0
-      await authProvider.loginWithAuth0();
-
-      // Note: For web, we won't reach this point as the page redirects
-
-      // For non-web platforms, we check authentication
-      if (!kIsWeb) {
-        if (authProvider.isAuthenticated) {
-          if (mounted) {
-            Navigator.pop(context);
-          }
-        } else {
-          setState(() {
-            _errorMessage = authProvider.error.isNotEmpty
-                ? authProvider.error
-                : 'Auth0 login failed. Please try again.';
-          });
-        }
       }
     } catch (e) {
       setState(() {
