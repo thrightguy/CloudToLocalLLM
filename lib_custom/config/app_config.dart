@@ -81,7 +81,12 @@ class AppConfig {
   static const int authSessionTimeout = 300; // 5 minutes
 
   // FusionAuth Configuration
-  static const String fusionAuthBaseUrl = 'http://localhost:9011';
-  static const String fusionAuthClientId = 'YOUR_CLIENT_ID';
-  static const String fusionAuthClientSecret = 'YOUR_CLIENT_SECRET';
+  static const String fusionAuthBaseUrl =
+      'http://localhost:9011'; // This should be https://auth.cloudtolocalllm.online for production/deployed app
+  static const String fusionAuthClientId =
+      'db7f2043-6981-47da-9f50-ce956715d40d';
+  static const String fusionAuthClientSecret =
+      '1kUu7gdp7sTvio8UR18Csm9Hu9EuJGfuLpwdg9heyF'; // WARNING: Storing client secret in client-side code is risky. Consider PKCE or BFF.
+  static const String fusionAuthRedirectUri =
+      'https://app.cloudtolocalllm.online/login-callback';
 }
