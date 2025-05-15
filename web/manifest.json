@@ -1,11 +1,11 @@
 {
     "name": "CloudToLocalLLM Portal",
-    "short_name": "CloudToLocalLLM Portal",
+    "short_name": "CloudToLocalLLM",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "CloudToLocalLLM",
+    "background_color": "#181a20",
+    "theme_color": "#a777e3",
+    "description": "Run powerful Large Language Models locally with cloud-based management",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
