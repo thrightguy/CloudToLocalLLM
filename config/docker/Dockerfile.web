@@ -34,7 +34,7 @@ COPY --chown=flutteruser:fluttergroup . .
 
 # Build the Flutter web application
 # The output will be in /app/build/web
-RUN flutter build web --release --pwa-strategy=none
+RUN flutter build web --release
 
 # Stage 2: Serve the app with Nginx
 FROM nginx:alpine
