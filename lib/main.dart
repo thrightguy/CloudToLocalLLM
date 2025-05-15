@@ -42,7 +42,10 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CloudToLocalLLM Portal'),
+        title: const Text(
+          'CloudToLocalLLM Portal',
+          style: TextStyle(color: Colors.white70),
+        ),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Center(
@@ -50,7 +53,7 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Opacity(
-              opacity: 0.8,
+              opacity: 0.5,
               child: Image.asset(
                 'assets/images/CloudToLocalLLM_logo.jpg',
                 width: 150,
