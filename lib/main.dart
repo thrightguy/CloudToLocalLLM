@@ -44,7 +44,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'CloudToLocalLLM Portal',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Colors.white54),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
