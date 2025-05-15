@@ -49,9 +49,6 @@ COPY --from=build /app/build/web /usr/share/nginx/html
 # Set permissions for nginx user (as root)
 RUN chown -R nginx:nginx /usr/share/nginx/html && chmod -R 755 /usr/share/nginx/html
 
-# Copy the Nginx configuration for the webapp internal server
-COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/nginx.conf
-
 # Create and set permissions for Nginx cache and temp directories
 RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp /var/cache/nginx/scgi_temp && \
     chown -R nginx:nginx /var/cache/nginx && \
