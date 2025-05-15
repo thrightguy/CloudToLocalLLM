@@ -52,6 +52,7 @@ services:
       - DATABASE_PASSWORD=fusionauth
       - FUSIONAUTH_APP_MEMORY=512M
       - FUSIONAUTH_APP_RUNTIME_MODE=development
+      - FUSIONAUTH_APP_URL=https://auth.cloudtolocalllm.online
       - SEARCH_TYPE=database
     depends_on:
       db:
