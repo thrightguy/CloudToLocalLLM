@@ -23,6 +23,10 @@ The CloudToLocalLLM VPS deployment, specifically the `webapp` service, handles S
 
 See [DEPLOYMENT.MD](docs/DEPLOYMENT.md) for detailed SSL configuration instructions.
 
+## DNS Configuration
+
+A wildcard DNS A record (`*.cloudtolocalllm.online`) is configured in Namecheap, pointing to the server's IP address. This means that any subdomain under `cloudtolocalllm.online` will automatically resolve to the server. This simplifies the setup of new subdomains as no additional DNS records are typically required for them to be reachable at the server IP.
+
 ## 🛠️ Prerequisites
 
 - Flutter SDK (3.0.0 or higher recommended)
