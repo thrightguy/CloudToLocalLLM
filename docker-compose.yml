@@ -95,13 +95,21 @@ services:
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
+      - ./scripts/certbot_permissions_hook.sh:/opt/certbot_permissions_hook.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: |
       /bin/sh -c '
         trap exit TERM;
-        certbot certonly --webroot -w /var/www/certbot -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d auth.cloudtolocalllm.online --email user@example.com --agree-tos --no-eff-email --non-interactive || true;
-        echo "Initial cert attempt done. Starting renewal loop.";
-        while :; do 
-          certbot renew --quiet && sleep 12h & wait $${!};
+        certbot certonly --webroot -w /var/www/certbot \\
+          -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d auth.cloudtolocalllm.online \\
+          --email christopherCHAPPELL@gmail.com \\
+          --agree-tos --no-eff-email --non-interactive --staging \\
+          --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+
+        echo "Initial cert attempt/check done. Starting renewal loop.";
+        while :; do
+          certbot renew --quiet --staging --deploy-hook "/opt/certbot_permissions_hook.sh";
+          sleep 12h & wait $${!};
         done;
       '
     networks:
