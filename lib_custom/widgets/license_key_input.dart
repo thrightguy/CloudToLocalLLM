@@ -122,7 +122,7 @@ class _LicenseKeyInputState extends State<LicenseKeyInput> {
         if (_isVerified) ...[
           Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle,
                 color: Colors.green,
                 size: 20,
