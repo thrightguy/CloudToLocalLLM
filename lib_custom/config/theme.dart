@@ -17,7 +17,7 @@ class AppTheme {
   // Light Theme
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme(
+    colorScheme: const ColorScheme(
       brightness: Brightness.light,
       primary: primary,
       onPrimary: Colors.white,
@@ -25,10 +25,15 @@ class AppTheme {
       onSecondary: Colors.white,
       error: danger,
       onError: Colors.white,
-      background: Colors.white,
-      onBackground: bg,
-      surface: bgCard,
-      onSurface: text,
+      surface: Colors.white,
+      onSurface: bg,
+      surfaceTint: Colors.white,
+      surfaceContainerHighest: bgCard,
+      outline: textMuted,
+      outlineVariant: textMuted,
+      tertiary: accent,
+      shadow: Colors.black12,
+      scrim: Colors.black54,
     ),
     scaffoldBackgroundColor: Colors.white,
     appBarTheme: const AppBarTheme(
@@ -74,7 +79,7 @@ class AppTheme {
   // Dark Theme
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme(
+    colorScheme: const ColorScheme(
       brightness: Brightness.dark,
       primary: primary,
       onPrimary: Colors.white,
@@ -82,10 +87,15 @@ class AppTheme {
       onSecondary: Colors.white,
       error: danger,
       onError: Colors.white,
-      background: bg,
-      onBackground: text,
-      surface: bgCard,
+      surface: bg,
       onSurface: text,
+      surfaceTint: bg,
+      surfaceContainerHighest: bgCard,
+      outline: textMuted,
+      outlineVariant: text,
+      tertiary: accent,
+      shadow: Colors.black54,
+      scrim: Colors.black87,
     ),
     scaffoldBackgroundColor: bg,
     appBarTheme: const AppBarTheme(

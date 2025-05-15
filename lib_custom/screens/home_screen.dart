@@ -352,28 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.chat_bubble_outline,
-            size: 100,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Welcome to CloudToLocalLLM',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Start a new conversation or select an existing one',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 24),
+          const _WelcomeHeader(),
           ElevatedButton.icon(
             onPressed: () {
               final llmProvider =
@@ -390,6 +369,41 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Extract the const part into a separate widget
+class _WelcomeHeader extends StatelessWidget {
+  const _WelcomeHeader({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Icon(
+          Icons.chat_bubble_outline,
+          size: 100,
+          color: Colors.grey,
+        ),
+        SizedBox(height: 16),
+        Text(
+          'Welcome to CloudToLocalLLM',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Start a new conversation or select an existing one',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+          ),
+        ),
+        SizedBox(height: 24),
+      ],
     );
   }
 }
