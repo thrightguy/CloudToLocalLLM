@@ -49,10 +49,13 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/images/CloudToLocalLLM_logo.jpg',
-              width: 100,
-              height: 100,
+            Opacity(
+              opacity: 0.8,
+              child: Image.asset(
+                'assets/images/CloudToLocalLLM_logo.jpg',
+                width: 150,
+                height: 150,
+              ),
             ),
             const SizedBox(height: 24),
             const Text(
