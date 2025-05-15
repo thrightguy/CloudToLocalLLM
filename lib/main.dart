@@ -43,23 +43,16 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('CloudToLocalLLM Portal'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircleAvatar(
-              backgroundColor: Color(0xFF6A5AE0),
-              radius: 50,
-              child: Text(
-                'LLM',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            Image.asset(
+              'assets/images/CloudToLocalLLM_logo.jpg',
+              width: 100,
+              height: 100,
             ),
             const SizedBox(height: 24),
             const Text(
