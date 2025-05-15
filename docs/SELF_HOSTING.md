@@ -52,22 +52,30 @@ See [DEPLOYMENT.MD](docs/DEPLOYMENT.md) for detailed SSL configuration instructi
    ```
    For server deployment, refer to the Docker-based setup in other sections of this guide (e.g., using `scripts/setup/docker_startup_vps.sh`).
 
-## Static Portal Files (REVIEW: Is this still the process, or are all static assets part of the Flutter web build in the webapp container?)
+## Static Portal Files
 
-To update the static portal files (e.g., `index.html`, `login.html`, `theme.css`):
+(REVIEW: Is this still the process, or are all static assets part of the Flutter web build in the webapp container?)
 
-1.  **Upload changed files to the VPS:**
-    Replace `~/.ssh/id_rsa` with the path to your SSH key if different.
-    ```bash
-    scp -i ~/.ssh/id_rsa index.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/index.html
-    scp -i ~/.ssh/id_rsa login.html root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/login.html
-    scp -i ~/.ssh/id_rsa css/theme.css root@cloudtolocalllm.online:/opt/cloudtolocalllm/portal/css/theme.css
-    ```
+Previously, static files like `index.html` for the main portal were managed separately. With the current Flutter web setup, these are handled as follows:
 
-    > ⚠️ **Do NOT copy files directly into the container.**
-    > Any files placed in `/usr/share/nginx/html` inside the container will be overwritten by the contents of `/opt/cloudtolocalllm/portal/` on the host.
+1.  **`web/index.html`**: This file in the project root acts as the main HTML template for the Flutter web application.
+2.  **`flutter build web`**: This command compiles the Dart code and assets (from `lib/` and `assets/`) into the `build/web` directory.
+3.  **Docker Build (`webapp` service)**: The `Dockerfile.web` copies the contents of `build/web` into the Nginx server root within the `webapp` container (typically `/usr/share/nginx/html`).
 
-    No container restart is needed for static file changes.
+Therefore, to update any aspect of the main web application's UI or static assets, changes should be made within the Flutter project (`lib/`, `assets/`, `web/index.html`), and then the application needs to be rebuilt and redeployed via Docker:
+
+```bash
+# 1. Make changes in your local Flutter project
+# 2. Commit and push your changes
+
+# 3. On the server:
+cd /opt/cloudtolocalllm
+git pull
+docker compose build --no-cache webapp
+docker compose up -d webapp
+```
+
+No manual `scp` of individual HTML/CSS files to a separate portal directory on the host is required for the main application.
 
 ## Advanced Deployment Topics
 

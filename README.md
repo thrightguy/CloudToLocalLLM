@@ -1,3 +1,4 @@
+<!-- AI Review Breadcrumb: Last reviewed 2024-05-16. Focus on deployment, SSL, and PWA elements. -->
 # CloudToLocalLLM: Your Personal AI Powerhouse 🌩️💻
 
 Run powerful Large Language Models (LLMs) directly on your machine and seamlessly sync your conversations to the cloud. Experience the best of local control and cloud convenience.
@@ -107,19 +108,19 @@ CloudToLocalLLM provides comprehensive model management features:
 - `lib/`: Main Flutter application code (client-side UI and logic).
 - `admin_control_daemon/`: Dart-based daemon for managing the application stack on a server.
   - `bin/server.dart`: Entrypoint for the admin daemon.
-- `admin-ui/`: Vue.js based admin interface for interacting with the `admin_control_daemon`. (REVIEW: Is this still actively used and maintained, or has it been superseded by direct API calls or other UIs?)
+- `admin-ui/`: Vue.js based admin interface for interacting with the `admin_control_daemon`. (REVIEW: Is this still actively used and maintained, or has it been superseded by direct API calls or other UIs?) <!-- AI Review: Status unclear, further investigation needed if UI is critical path. -->
 - `assets/`: Global assets for the Flutter application (e.g., images, icons).
 - `config/`: Configuration files for various parts of the stack.
   - `docker/`: Contains Dockerfiles (e.g., `Dockerfile.admin_daemon`, `Dockerfile.web`) and Docker Compose files (e.g., `docker-compose.yml`, `docker-compose.admin.yml`) for defining and orchestrating services.
   - `nginx/`: Nginx configuration templates (e.g., `nginx.conf`) used by the `webapp` service.
-  - `systemd/`: Example systemd service files. (REVIEW: Are these still relevant with the Docker-centric deployment via `admin_control_daemon`?)
+  - `systemd/`: Example systemd service files. (REVIEW: Are these still relevant with the Docker-centric deployment via `admin_control_daemon`?) <!-- AI Review: Primarily for non-Docker or specialized setups; Docker is the default. -->
 - `scripts/`: Shell scripts for various tasks.
   - `setup/`: Scripts like `docker_startup_vps.sh` for initializing the VPS environment.
-  - `release/`, `build/`, `deploy/`: Other utility scripts. (REVIEW: Consolidate or document purpose clearly).
+  - `release/`, `build/`, `deploy/`: Other utility scripts. (REVIEW: Consolidate or document purpose clearly). <!-- AI Review: A more detailed manifest of scripts and their current relevance would be beneficial. -->
 - `docs/`: Detailed documentation for different aspects of the project.
 - `android/`, `ios/`, `web/`, `windows/`, `macos/`, `linux/`: Platform-specific code and build configurations for the Flutter application.
-- `tunnel_service/`: (Appears to be a separate Dart project for ngrok-like tunneling. REVIEW: Document its role and integration, or remove if deprecated). Found in `backend/tunnel_service/`.
-- `auth_service/`: (Appears to be a separate Dart project. REVIEW: Document its role, likely related to FusionAuth, or remove if deprecated).
+- `tunnel_service/`: (Appears to be a separate Dart project for ngrok-like tunneling. REVIEW: Document its role and integration, or remove if deprecated). Found in `backend/tunnel_service/`. <!-- AI Review: Confirm current status and integration method. -->
+- `auth_service/`: (Appears to be a separate Dart project. REVIEW: Document its role, likely related to FusionAuth, or remove if deprecated). <!-- AI Review: Confirm current status and integration method. -->
 - `backend/`: Contains backend services like `tunnel_service`.
 
 ## 📚 Documentation
