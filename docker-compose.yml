@@ -100,11 +100,32 @@ services:
     entrypoint: |
       /bin/sh -c '
         trap exit TERM;
-        certbot certonly --webroot -w /var/www/certbot -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d auth.cloudtolocalllm.online --email christopherCHAPPELL@gmail.com --agree-tos --no-eff-email --non-interactive --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        # Initial certificate request for wildcard - DNS-01 manual challenge (staging)
+        # Note: This container will run interactively for the first certonly command.
+        # Subsequent `docker compose up` will not re-run this interactively unless the certs are missing.
+        # The standard renewal process in the loop below will NOT work automatically for DNS-01 manual without a script.
+        echo "Attempting initial staging wildcard certificate acquisition...";
+        certbot certonly \\
+          --manual \\
+          --preferred-challenges dns \\
+          --manual-public-ip-logging-ok \\
+          --email christopher.maltais@gmail.com \\
+          --agree-tos \\
+          --no-eff-email \\
+          --staging \\
+          -d "*.cloudtolocalllm.online" \\
+          -d cloudtolocalllm.online \\
+          --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
 
-        echo "Initial cert attempt/check done. Starting renewal loop.";
+        echo "Initial cert attempt/check done. Starting renewal loop (manual intervention will be needed for DNS-01 renewals).";
         while :; do
-          certbot renew --quiet --deploy-hook "/opt/certbot_permissions_hook.sh";
+          # This renew command will likely fail for DNS-01 manual without a pre/post hook and credentials.
+          # It is kept here for structure, but manual renewal will be the primary method for now.
+          certbot renew \\
+            --quiet \\
+            --staging \\
+            --preferred-challenges dns \\
+            --deploy-hook "/opt/certbot_permissions_hook.sh";
           sleep 12h & wait $${!};
         done;
       '
