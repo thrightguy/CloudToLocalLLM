@@ -1,6 +1,8 @@
 name: cloudtolocalllm
-description: A new Flutter project.
+description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
 publish_to: 'none'
+homepage: https://cloudtolocalllm.online
+repository: https://github.com/thrightguy/CloudToLocalLLM
 version: 1.3.3+202505091412
 
 environment:
