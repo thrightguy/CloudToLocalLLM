@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Script to request a Let's Encrypt wildcard certificate from the STAGING environment
-# using manual DNS-01 challenge. This is for testing purposes.
-# Staging certificates are NOT trusted by browsers.
+# Script to request a Let's Encrypt wildcard certificate from the PRODUCTION environment
+# using manual DNS-01 challenge.
+# PRODUCTION certificates ARE trusted by browsers.
 
 # --- Configuration ---
 DOMAIN="cloudtolocalllm.online" # !!! IMPORTANT: Replace with your actual domain if different !!!
-EMAIL="christopher.maltais@gmail.com"  # !!! IMPORTANT: Replace with your actual email address - I've put the one you provided earlier, please confirm !!!
+EMAIL="christopher.maltais@gmail.com"  # !!! IMPORTANT: Replace with your actual email address !!!
 # --- End Configuration ---
 
 # Colors for output
@@ -15,11 +15,11 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Starting Let's Encrypt Wildcard Certificate Request (STAGING SERVER)${NC}"
+echo -e "${YELLOW}Starting Let's Encrypt Wildcard Certificate Request (PRODUCTION SERVER)${NC}"
 echo -e "${YELLOW}Domain:${NC} $DOMAIN"
 echo -e "${YELLOW}Email:${NC} $EMAIL"
-echo -e "${RED}IMPORTANT: This script uses the Let's Encrypt STAGING server. Certificates obtained will NOT be publicly trusted.${NC}"
-echo -e "${RED}This is for testing DNS-01 challenge setup only.${NC}"
+echo -e "${RED}IMPORTANT: This script uses the Let's Encrypt PRODUCTION server.${NC}"
+echo -e "${RED}Certificates obtained will be publicly trusted. Ensure your DNS records are set up correctly.${NC}"
 echo ""
 
 # Check if Certbot is installed
@@ -47,22 +47,21 @@ echo -e "   - Type: ${GREEN}TXT Record${NC}"
 echo -e "   - Host: Enter the part Certbot gives you (e.g., ${GREEN}_acme-challenge${NC} - Namecheap automatically appends .$DOMAIN for this field if you only enter the subdomain part)."
 echo -e "   - Value: Enter the long string value Certbot provides."
 echo -e "   - TTL: Set to a low value like ${GREEN}1 minute${NC} or ${GREEN}600 seconds${NC} (if possible) or leave as Automatic."
-echo -e "5. ${RED}Wait for a few minutes after adding the records for DNS propagation before pressing Enter in Certbot.${NC}"
+echo -e "5. ${RED}VERY IMPORTANT: Wait for DNS propagation (can take several minutes, sometimes longer) after adding the records before pressing Enter in Certbot.${NC}"
 echo -e "   You can check DNS propagation using a tool like: https://www.whatsmydns.net/#TXT/_acme-challenge.$DOMAIN"
+echo -e "   Incorrect or non-propagated DNS records will lead to FAILED validation attempts and may temporarily block you from requesting certificates."
 echo ""
 echo -e "${YELLOW}Press [Enter] to confirm you've read the instructions above and are ready to start Certbot.${NC}"
 read -r
 
 # Request the certificate
-# Using --manual-public-ip-logging-ok to acknowledge IP logging if not using a hook.
-# Using --keep-until-expiring to avoid repeated requests if script is re-run before expiry (though for staging this is less critical).
+# Using --keep-until-expiring to avoid repeated requests if script is re-run before expiry.
 certbot certonly \
     --config-dir "$(pwd)/certbot/conf" \
     --work-dir "$(pwd)/certbot/work" \
     --logs-dir "$(pwd)/certbot/logs" \
     --manual \
     --preferred-challenges dns \
-    --server https://acme-staging-v02.api.letsencrypt.org/directory \
     -d "$DOMAIN" \
     -d "*.$DOMAIN" \
     --agree-tos \
@@ -74,10 +73,10 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}Certbot process completed successfully!${NC}"
-    echo -e "${GREEN}Your STAGING certificates should be in $(pwd)/certbot/conf/live/$DOMAIN/${NC}"
-    echo -e "${YELLOW}Remember: These are STAGING certificates and are NOT trusted by browsers.${NC}"
-    echo -e "${YELLOW}Once you are confident with this process, you can adapt it for the production Let's Encrypt server by removing '--server https://acme-staging-v02.api.letsencrypt.org/directory'.${NC}"
-    echo -e "${YELLOW}However, for production, an automated DNS solution (like acme-dns or a Certbot DNS plugin if API access becomes available) is highly recommended for renewals.${NC}"
+    echo -e "${GREEN}Your PRODUCTION certificates should be in $(pwd)/certbot/conf/live/$DOMAIN/${NC}"
+    echo -e "${YELLOW}You should now restart your web server for the new certificates to take effect.${NC}"
+    echo -e "${YELLOW}For renewals, you will need to run this script again before the certificates expire (typically 90 days).${NC}"
+    echo -e "${YELLOW}Consider automating this process if possible (e.g., with acme-dns or a Certbot DNS plugin if API access becomes available for your DNS provider).${NC}"
 else
     echo -e "${RED}Certbot process failed with exit code $EXIT_CODE.${NC}"
     echo -e "${RED}Please review the output from Certbot for error details.${NC}"
