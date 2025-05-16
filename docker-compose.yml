@@ -86,6 +86,17 @@ services:
       timeout: 5s
       retries: 5
 
+  # MailHog service for email testing/catching
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: cloudtolocalllm-mailhog
+    ports:
+      - "1025:1025" # SMTP server (for other containers to connect to)
+      - "8025:8025" # Web UI (for you to view emails)
+    restart: unless-stopped
+    networks:
+      - cloudllm-network
+
   # Admin control daemon
 
   # Certbot for SSL certificates
