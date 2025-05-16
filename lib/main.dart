@@ -96,11 +96,22 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'CloudToLocalLLM',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF403575),
         elevation: 8.0,
         shadowColor: Colors.black.withOpacity(0.5),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF4A3B8A),
+                const Color(0xFF6A5AE0).withOpacity(0.85),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Stack(
         // Use Stack for layering background and foreground
