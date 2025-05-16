@@ -86,14 +86,40 @@ services:
       timeout: 5s
       retries: 5
 
-  # MailHog service for email testing/catching
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: cloudtolocalllm-mailhog
+  # Postfix Mail Server for direct email sending
+  # WARNING: Ensuring email deliverability with a self-hosted MTA is complex.
+  # Requires proper rDNS (PTR), SPF, DKIM, DMARC, and an IP with good reputation.
+  # Port 25 outbound must not be blocked by your VPS provider.
+  postfix-mail:
+    image: boky/postfix:latest # A common Postfix image
+    container_name: cloudtolocalllm-postfix-mail
+    environment:
+      # --- Core Postfix Settings --- 
+      - "HOSTNAME=mail.cloudtolocalllm.online" # IMPORTANT: Set your mail server's FQDN
+      - "DOMAIN=cloudtolocalllm.online" # Your main domain
+      - "NETWORK_INTERFACE=eth0" # Usually eth0 in Docker, verify if needed
+      # - "RELAYHOST=" # Leave empty for direct sending
+      # - "RELAYHOST_USERNAME=" # Not needed for direct sending
+      # - "RELAYHOST_PASSWORD=" # Not needed for direct sending
+      - "MYNETWORKS=127.0.0.0/8 172.16.0.0/12 192.168.0.0/16" # Allow Docker internal networks and localhost to send
+      # --- DKIM Settings (Requires you to generate keys and set DNS TXT record) ---
+      # You will need to generate DKIM keys. For example, using opendkim-tools:
+      # opendkim-genkey -s mail -d cloudtolocalllm.online 
+      # This creates mail.private (keep safe in ./config/dkim/mail.private) and mail.txt (contents for DNS)
+      # Mount the private key into the container.
+      - "DKIM_ENABLE=true"
+      - "DKIM_DOMAIN=cloudtolocalllm.online"
+      - "DKIM_SELECTOR=mail" # The selector you used for key generation (e.g., 'mail')
+      - "DKIM_KEY_PATH=/etc/opendkim/keys/cloudtolocalllm.online/mail.private" # Path inside container
+    volumes:
+      # Mount your DKIM private key here. Create ./config/dkim/ directory first.
+      # And place your mail.private (or selector.private) key in ./config/dkim/
+      - ./config/dkim:/etc/opendkim/keys/cloudtolocalllm.online:ro 
     ports:
-      - "1025:1025" # SMTP server (for other containers to connect to)
-      - "8025:8025" # Web UI (for you to view emails)
+      - "2500:25" # Expose internal port 25 as 2500 on host (for FusionAuth to connect to postfix-mail:25)
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN # May be needed by some Postfix configurations or for startup scripts in the image
     networks:
       - cloudllm-network
 
