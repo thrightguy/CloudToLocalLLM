@@ -57,6 +57,9 @@ read -r
 # Using --manual-public-ip-logging-ok to acknowledge IP logging if not using a hook.
 # Using --keep-until-expiring to avoid repeated requests if script is re-run before expiry (though for staging this is less critical).
 certbot certonly \
+    --config-dir "$(pwd)/letsencrypt_data/config" \
+    --work-dir "$(pwd)/letsencrypt_data/work" \
+    --logs-dir "$(pwd)/letsencrypt_data/logs" \
     --manual \
     --preferred-challenges dns \
     --server https://acme-staging-v02.api.letsencrypt.org/directory \
@@ -72,7 +75,7 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}Certbot process completed successfully!${NC}"
-    echo -e "${GREEN}Your STAGING certificates should be in /etc/letsencrypt/live/$DOMAIN/${NC}"
+    echo -e "${GREEN}Your STAGING certificates should be in $(pwd)/letsencrypt_data/config/live/$DOMAIN/${NC}"
     echo -e "${YELLOW}Remember: These are STAGING certificates and are NOT trusted by browsers.${NC}"
     echo -e "${YELLOW}Once you are confident with this process, you can adapt it for the production Let's Encrypt server by removing '--server https://acme-staging-v02.api.letsencrypt.org/directory'.${NC}"
     echo -e "${YELLOW}However, for production, an automated DNS solution (like acme-dns or a Certbot DNS plugin if API access becomes available) is highly recommended for renewals.${NC}"
