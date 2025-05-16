@@ -95,10 +95,12 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'CloudToLocalLLM Portal',
-          style: TextStyle(color: Colors.white54),
+          'CloudToLocalLLM',
+          style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: const Color(0xFF403575),
+        elevation: 8.0,
+        shadowColor: Colors.black.withOpacity(0.5),
       ),
       body: Stack(
         // Use Stack for layering background and foreground
