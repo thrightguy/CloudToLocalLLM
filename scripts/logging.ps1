@@ -57,18 +57,28 @@ function Write-LogMessage {
 }
 
 function Rotate-LogFile {
-    # Rotate existing log files
-    for ($i = $script:MaxLogFiles - 1; $i -ge 0; $i--) {
-        $currentFile = if ($i -eq 0) { $script:LogFile } else { "$script:LogFile.$i" }
-        $nextFile = "$script:LogFile.$($i + 1)"
-        
-        if (Test-Path $currentFile) {
-            if ($i -eq ($script:MaxLogFiles - 1)) {
-                Remove-Item $currentFile -Force
-            } else {
-                Move-Item $currentFile $nextFile -Force
+    Write-Host "Attempting to rotate log file: $script:LogFile" -ForegroundColor DarkGray
+    try {
+        # Rotate existing log files
+        for ($i = $script:MaxLogFiles - 1; $i -ge 0; $i--) {
+            $currentFile = if ($i -eq 0) { $script:LogFile } else { "$script:LogFile.$i" }
+            $nextFile = "$script:LogFile.$($i + 1)"
+            
+            if (Test-Path $currentFile) {
+                if ($i -eq ($script:MaxLogFiles - 1)) {
+                    Write-Host "  Removing oldest backup: $currentFile" -ForegroundColor DarkGray
+                    Remove-Item $currentFile -Force -ErrorAction Stop
+                } else {
+                    Write-Host "  Moving $currentFile to $nextFile" -ForegroundColor DarkGray
+                    Move-Item $currentFile $nextFile -Force -ErrorAction Stop
+                }
             }
         }
+        Write-Host "Log file rotation completed." -ForegroundColor DarkGray
+    }
+    catch {
+        Write-Host "Error during log file rotation: $_" -ForegroundColor Red
+        # Optionally, re-throw or handle more gracefully depending on desired behavior
     }
 }
 

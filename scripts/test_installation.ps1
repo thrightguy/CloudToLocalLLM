@@ -69,15 +69,50 @@ function Test-ServiceInstallation {
 
 function Test-OllamaAPI {
     Write-Info "Testing Ollama API..."
+
+    $apiHost = "localhost"
+    $apiPort = "11434" # Default port
+
+    # Try to get the configured port from Ollama service parameters
+    try {
+        $serviceParamsPath = "HKLM:\SYSTEM\CurrentControlSet\Services\Ollama\Parameters"
+        if (Test-Path $serviceParamsPath) {
+            $params = Get-ItemProperty -Path $serviceParamsPath -ErrorAction SilentlyContinue
+            if ($params.AppEnvironmentExtra) {
+                $envVars = $params.AppEnvironmentExtra
+                foreach ($envVarLine in $envVars) {
+                    if ($envVarLine -match "OLLAMA_HOST=(.+)") {
+                        $ollamaHostSetting = $matches[1]
+                        Write-Debug "Found OLLAMA_HOST setting: $ollamaHostSetting"
+                        $hostParts = $ollamaHostSetting.Split(':')
+                        if ($hostParts.Count -eq 2) {
+                            $apiHost = $hostParts[0]
+                            $apiPort = $hostParts[1]
+                        } elseif ($hostParts.Count -eq 1) {
+                            $apiPort = $hostParts[0]
+                            # Assuming localhost if only port is specified in OLLAMA_HOST
+                            $apiHost = "localhost" 
+                        }
+                        break
+                    }
+                }
+            }
+        }
+    } catch {
+        Write-Warning "Could not read Ollama service parameters from registry to determine API port: $($_.Exception.Message)"
+        Write-Info "Proceeding with default API port: $apiPort"
+    }
     
-    $apiEndpoints = @(
+    Write-Info "Targeting Ollama API at http://$apiHost:$apiPort"
+
+    $apiEndpointsToTest = @(
         @{
-            "Endpoint" = "http://localhost:11434/api/version"
+            "Endpoint" = "http://$apiHost:$apiPort/api/version"
             "Method" = "GET"
             "Description" = "Version API"
         },
         @{
-            "Endpoint" = "http://localhost:11434/api/tags"
+            "Endpoint" = "http://$apiHost:$apiPort/api/tags"
             "Method" = "GET"
             "Description" = "Models List API"
         }
@@ -85,7 +120,7 @@ function Test-OllamaAPI {
     
     $allSuccess = $true
     
-    foreach ($api in $apiEndpoints) {
+    foreach ($api in $apiEndpointsToTest) {
         try {
             $response = Invoke-WebRequest -Uri $api.Endpoint -Method $api.Method -TimeoutSec 5
             if ($response.StatusCode -eq 200) {
@@ -196,9 +231,11 @@ function Start-SelfTest {
     Write-Info "----------------------------------------"
     if ($allPassed) {
         Write-Info "All tests completed successfully!"
+        exit 0 # Explicitly exit with 0 for success
     } else {
         Write-Error "Some tests failed. Please check the log file for details."
         Write-Info "Log file location: $(Get-LogFile)"
+        exit 1 # Explicitly exit with 1 for failure
     }
 }
 
