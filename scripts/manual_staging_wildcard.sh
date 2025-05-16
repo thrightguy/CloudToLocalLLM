@@ -6,7 +6,7 @@
 
 # --- Configuration ---
 DOMAIN="cloudtolocalllm.online" # !!! IMPORTANT: Replace with your actual domain if different !!!
-EMAIL="your-email@example.com"  # !!! IMPORTANT: Replace with your actual email address !!!
+EMAIL="christopher.maltais@gmail.com"  # !!! IMPORTANT: Replace with your actual email address - I've put the one you provided earlier, please confirm !!!
 # --- End Configuration ---
 
 # Colors for output
@@ -68,8 +68,7 @@ certbot certonly \
     --agree-tos \
     -m "$EMAIL" \
     --no-eff-email \
-    --keep-until-expiring \
-    --manual-public-ip-logging-ok
+    --keep-until-expiring
 
 EXIT_CODE=$?
 
