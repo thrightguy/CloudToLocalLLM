@@ -15,15 +15,23 @@ check_requirements() {
     
     # Check minimum disk space (20GB free)
     FREE_SPACE=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    if ! [[ "$FREE_SPACE" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}Error: Could not determine free disk space.${NC}"
+        exit 1
+    fi
     if [ "$FREE_SPACE" -lt 20 ]; then
-        echo -e "${RED}Error: Insufficient disk space. Need at least 20GB free.${NC}"
+        echo -e "${RED}Error: Insufficient disk space. Need at least 20GB free. Found: ${FREE_SPACE}G${NC}"
         exit 1
     fi
     
     # Check minimum memory (4GB)
     TOTAL_MEM=$(free -g | awk 'NR==2 {print $2}')
+    if ! [[ "$TOTAL_MEM" =~ ^[0-9]+$ ]]; then
+        echo -e "${RED}Error: Could not determine total memory.${NC}"
+        exit 1
+    fi
     if [ "$TOTAL_MEM" -lt 4 ]; then
-        echo -e "${RED}Error: Insufficient memory. Need at least 4GB RAM.${NC}"
+        echo -e "${RED}Error: Insufficient memory. Need at least 4GB RAM. Found: ${TOTAL_MEM}G${NC}"
         exit 1
     fi
     
@@ -74,19 +82,19 @@ CLEANUP_SCRIPT="/var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh"
 if [ -f "$CLEANUP_SCRIPT" ]; then
     bash "$CLEANUP_SCRIPT" || {
         echo -e "${RED}Cleanup script failed, attempting basic cleanup...${NC}"
-        docker stop $(docker ps -q) 2>/dev/null || true
-        docker rm $(docker ps -a -q) 2>/dev/null || true
-        docker network prune -f
-        docker volume prune -f
-        docker builder prune -f
+        sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
+        sudo docker rm $(sudo docker ps -a -q) 2>/dev/null || true
+        sudo docker network prune -f
+        sudo docker volume prune -f
+        sudo docker builder prune -f
     }
 else
     echo -e "${YELLOW}Cleanup script not found, performing basic cleanup...${NC}"
-    docker stop $(docker ps -q) 2>/dev/null || true
-    docker rm $(docker ps -a -q) 2>/dev/null || true
-    docker network prune -f
-    docker volume prune -f
-    docker builder prune -f
+    sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
+    sudo docker rm $(sudo docker ps -a -q) 2>/dev/null || true
+    sudo docker network prune -f
+    sudo docker volume prune -f
+    sudo docker builder prune -f
 fi
 
 # Create project directory
@@ -144,8 +152,8 @@ cat << EOF > $PROJECT_DIR/Dockerfile
 FROM dart:stable AS build
 WORKDIR /app
 COPY . .
-RUN dart pub global activate flutter_tools && \
-    flutter pub get && \
+# RUN dart pub global activate flutter_tools && \\
+RUN flutter pub get && \\
     flutter build web --release
 
 # Use a lightweight server image to serve the web app
@@ -157,15 +165,15 @@ EOF
 
 # Final system check
 echo -e "${YELLOW}Performing final system check...${NC}"
-docker info || { echo -e "${RED}Docker is not running properly${NC}"; exit 1; }
+sudo docker info || { echo -e "${RED}Docker is not running properly${NC}"; exit 1; }
 nginx -t || { echo -e "${RED}Nginx configuration test failed${NC}"; exit 1; }
 systemctl is-active docker || { echo -e "${RED}Docker service is not active${NC}"; exit 1; }
 systemctl is-active nginx || { echo -e "${RED}Nginx service is not active${NC}"; exit 1; }
 
 echo -e "${GREEN}VPS setup completed successfully!${NC}"
 echo -e "${YELLOW}System Status:${NC}"
-echo "Docker Version: $(docker --version)"
-echo "Docker Compose Version: $(docker-compose --version)"
+echo "Docker Version: $(sudo docker --version)"
+echo "Docker Compose Version: $(sudo docker-compose --version)"
 echo "Nginx Version: $(nginx -v 2>&1)"
 echo "Available Disk Space: $(df -h / | awk 'NR==2 {print $4}')"
 echo "Memory Usage: $(free -h | awk 'NR==2 {print "Total: "$2"  Used: "$3"  Free: "$4}')"

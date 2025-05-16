@@ -62,13 +62,33 @@ function Move-Scripts {
         [string]$TargetFolder
     )
 
+    $fullTargetDirPath = Join-Path -Path $PSScriptRoot -ChildPath $TargetFolder
+    if (-not (Test-Path $fullTargetDirPath)) {
+        Write-Host "Creating target directory: $fullTargetDirPath" -ForegroundColor DarkYellow
+        try {
+            New-Item -ItemType Directory -Path $fullTargetDirPath -Force -ErrorAction Stop | Out-Null
+            Write-Host "Successfully created directory: $fullTargetDirPath" -ForegroundColor Green
+        } catch {
+            Write-Host "ERROR: Failed to create directory $fullTargetDirPath. $_" -ForegroundColor Red
+            # Decide if script should exit or continue trying to move other categories
+            # For now, let it continue to other categories, but this specific one might fail.
+            return # Skip trying to move files to a folder that couldn't be created
+        }
+    }
+
     foreach ($script in $ScriptList) {
         $sourcePath = Join-Path -Path $PSScriptRoot -ChildPath "..\$script"
-        $targetPath = Join-Path -Path $PSScriptRoot -ChildPath "$TargetFolder\$script"
+        # Target path should use the validated/created $fullTargetDirPath
+        $targetPath = Join-Path -Path $fullTargetDirPath -ChildPath $script 
         
         if (Test-Path $sourcePath) {
-            Write-Host "Moving $script to $TargetFolder folder..." -ForegroundColor Cyan
-            Move-Item -Path $sourcePath -Destination $targetPath -Force
+            Write-Host "Moving $script from $($sourcePath) to $targetPath..." -ForegroundColor Cyan
+            try {
+                Move-Item -Path $sourcePath -Destination $targetPath -Force -ErrorAction Stop
+                Write-Host "Successfully moved $script to $TargetFolder" -ForegroundColor Green
+            } catch {
+                Write-Host "ERROR: Failed to move $script to $TargetFolder. $_" -ForegroundColor Red
+            }
         } else {
             Write-Host "Script $script not found in root directory. Skipping." -ForegroundColor Yellow
         }

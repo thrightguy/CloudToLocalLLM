@@ -11,26 +11,35 @@ function step() {
 }
 
 step "Showing Dockerfile (first 20 lines):"
-head -20 Dockerfile || echo -e "${RED}Dockerfile not found!${NC}"
+if [ -f Dockerfile ]; then
+  head -20 Dockerfile
+else
+  echo -e "${RED}Dockerfile not found!${NC}"
+fi
 
 step "Showing docker-compose.web.yml (first 20 lines):"
-head -20 docker-compose.web.yml || echo -e "${RED}docker-compose.web.yml not found!${NC}"
+if [ -f docker-compose.web.yml ]; then
+  head -20 docker-compose.web.yml
+else
+  echo -e "${RED}docker-compose.web.yml not found!${NC}"
+fi
 
 step "Cleaning up old containers, images, and volumes..."
 docker-compose -f docker-compose.web.yml down --remove-orphans -v || true
 docker system prune -af || true
 
 step "Removing any old nginx config files from build context..."
-rm -f ./build/web/etc/nginx/conf.d/default.conf || true
-rm -f ./build/web/etc/nginx/nginx.conf || true
+rm -f ./build/web/etc/nginx/conf.d/default.conf
+rm -f ./build/web/etc/nginx/nginx.conf
 
 step "Building webapp container with verbose output..."
+BUILD_COMMAND="docker-compose -f docker-compose.web.yml build --no-cache webapp"
 if command -v docker buildx &> /dev/null; then
   export DOCKER_BUILDKIT=1
-  docker-compose -f docker-compose.web.yml build --no-cache webapp
+  ${BUILD_COMMAND}
 else
   echo -e "${YELLOW}Buildx not found, building without BuildKit...${NC}"
-  docker-compose -f docker-compose.web.yml build --no-cache webapp
+  ${BUILD_COMMAND}
 fi
 
 step "Starting webapp container..."

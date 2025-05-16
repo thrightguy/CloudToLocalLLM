@@ -87,28 +87,72 @@ switch ($Action) {
         Write-Host "Service Type: $($service.ServiceType)" -ForegroundColor White
         Write-Host "Start Type: $($service.StartType)" -ForegroundColor White
         
-        # Try to get the port from the registry or service configuration
+        $apiHost = "localhost"
+        $apiPort = "11434" # Default port
+        $apiUrl = "http://$apiHost:$apiPort/api/version"
+
         try {
-            $servicePath = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Ollama" -ErrorAction SilentlyContinue
-            if ($servicePath) {
-                Write-Host "Binary Path: $($servicePath.ImagePath)" -ForegroundColor White
+            $serviceParamsPath = "HKLM:\SYSTEM\CurrentControlSet\Services\Ollama\Parameters"
+            if (Test-Path $serviceParamsPath) {
+                $params = Get-ItemProperty -Path $serviceParamsPath -ErrorAction SilentlyContinue
+                if ($params.ImagePath) { # This is from the parent key, but good to show
+                     Write-Host "Binary Path: $($params.ImagePath)" -ForegroundColor White
+                }
+                if ($params.AppDirectory) {
+                    Write-Host "Application Directory: $($params.AppDirectory)" -ForegroundColor White
+                }
+                if ($params.AppEnvironmentExtra) {
+                    $envVars = $params.AppEnvironmentExtra
+                    foreach ($envVarLine in $envVars) {
+                        if ($envVarLine -match "OLLAMA_HOST=(.+)") {
+                            $ollamaHostSetting = $matches[1]
+                            Write-Host "Configured OLLAMA_HOST: $ollamaHostSetting" -ForegroundColor White
+                            $hostParts = $ollamaHostSetting.Split(':')
+                            if ($hostParts.Count -eq 2) {
+                                $apiHost = $hostParts[0]
+                                $apiPort = $hostParts[1]
+                                $apiUrl = "http://$apiHost:$apiPort/api/version"
+                            } elseif ($hostParts.Count -eq 1) { # Could be just port, host defaults to 0.0.0.0 or 127.0.0.1
+                                $apiPort = $hostParts[0]
+                                $apiHost = "localhost" # Assume localhost if only port is in OLLAMA_HOST
+                                $apiUrl = "http://$apiHost:$apiPort/api/version"
+                            }
+                            break
+                        }
+                    }
+                }
+            } else {
+                 # If Parameters subkey doesn't exist, try to get ImagePath from service key directly
+                 $servicePath = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\Ollama" -ErrorAction SilentlyContinue
+                 if ($servicePath.ImagePath) {
+                     Write-Host "Binary Path: $($servicePath.ImagePath)" -ForegroundColor White
+                 }
             }
         } catch {
-            # Registry key not found
+            Write-Host "Could not read service parameters from registry: $_" -ForegroundColor Yellow
         }
         
+        Write-Host "Attempting to contact API at: $apiUrl" -ForegroundColor Gray
+
         # Check if we can connect to the API
         if ($service.Status -eq "Running") {
             try {
-                $response = Invoke-WebRequest -Uri "http://localhost:11434/api/version" -Method GET -TimeoutSec 5 -ErrorAction SilentlyContinue
-                if ($response.StatusCode -eq 200) {
-                    Write-Host "API Status: Accessible (Port 11434)" -ForegroundColor Green
-                    Write-Host "API Version: $($response.Content)" -ForegroundColor White
+                $response = Invoke-WebRequest -Uri $apiUrl -Method GET -TimeoutSec 5 -ErrorAction SilentlyContinue
+                if ($response -and $response.StatusCode -eq 200) {
+                    Write-Host "API Status: Accessible (Host: $apiHost, Port: $apiPort)" -ForegroundColor Green
+                    # Attempt to parse JSON content if it is JSON
+                    try {
+                        $jsonResponse = $response.Content | ConvertFrom-Json
+                        Write-Host "API Version: $($jsonResponse.version)" -ForegroundColor White
+                    } catch {
+                        Write-Host "API Response (raw): $($response.Content)" -ForegroundColor White
+                    }
                 } else {
-                    Write-Host "API Status: Not accessible (Port 11434)" -ForegroundColor Yellow
+                    Write-Host "API Status: Not accessible (Host: $apiHost, Port: $apiPort)" -ForegroundColor Yellow
+                    if ($response) { Write-Host "  Status Code: $($response.StatusCode)" -ForegroundColor Yellow }
                 }
             } catch {
-                Write-Host "API Status: Not accessible (Port 11434)" -ForegroundColor Yellow
+                Write-Host "API Status: Not accessible (Host: $apiHost, Port: $apiPort) - Error: $($_.Exception.Message)" -ForegroundColor Yellow
             }
         }
     }

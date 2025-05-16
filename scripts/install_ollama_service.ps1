@@ -111,13 +111,17 @@ $env:OLLAMA_MODELS = $ModelsDir
 # Additional parameters for GPU acceleration
 $extraParams = ""
 if ($EnableGpu) {
-    $extraParams = "--gpu"
-    Write-Host "GPU acceleration enabled" -ForegroundColor Green
+    Write-Host "GPU acceleration was requested. Ollama typically auto-detects compatible GPUs."
+    Write-Host "Ensure NVIDIA drivers are up to date for NVIDIA GPUs."
+    Write-Host "Ollama server logs may provide more info on GPU detection."
+    # If Ollama uses specific ENV VARS for GPU for 'serve', they could be added here to AppEnvironmentExtra later.
 }
 
 # Install Ollama as a service using NSSM
 Write-Host "Installing Ollama as a Windows service..." -ForegroundColor Yellow
-& $nssmPath install Ollama $ollamaExePath serve $extraParams
+# Construct the arguments for ollama.exe serve. No explicit --gpu flag here.
+$ollamaServeArguments = "serve"
+& $nssmPath install Ollama $ollamaExePath $ollamaServeArguments
 & $nssmPath set Ollama DisplayName "Ollama - Local LLM Server"
 & $nssmPath set Ollama Description "Runs Ollama as a service for CloudToLocalLLM"
 & $nssmPath set Ollama AppDirectory $OllamaPath

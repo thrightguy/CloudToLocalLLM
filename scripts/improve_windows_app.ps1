@@ -1,14 +1,48 @@
 # Windows App Improvement Script
 
+# Function to find Inno Setup Compiler (ISCC.exe)
+function Find-InnoSetupCompiler {
+    $commonPaths = @(
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        "C:\Program Files\Inno Setup 6\ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup\ISCC.exe",
+        "C:\Program Files\Inno Setup\ISCC.exe"
+    )
+
+    foreach ($path in $commonPaths) {
+        if (Test-Path $path) {
+            Write-Host "Found Inno Setup Compiler at: $path" -ForegroundColor Green
+            return $path
+        }
+    }
+
+    # Try PATH
+    $isccInPath = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($isccInPath) {
+        Write-Host "Found Inno Setup Compiler in PATH: $($isccInPath.Source)" -ForegroundColor Green
+        return $isccInPath.Source
+    }
+
+    Write-Host "ERROR: Inno Setup Compiler (ISCC.exe) not found in common locations or PATH." -ForegroundColor Red
+    Write-Host "Please install Inno Setup 6 from https://jrsoftware.org/isinfo.php and ensure ISCC.exe is accessible."
+    return $null
+}
+
 # Function to create Windows installer
 function New-WindowsInstaller {
     param (
         [string]$OutputPath,
         [string]$AppName,
-        [string]$Version
+        [string]$Version,
+        [string]$AppExeName
     )
     
-    Write-Host "Creating Windows installer for version $Version..."
+    $isccPath = Find-InnoSetupCompiler
+    if (-not $isccPath) {
+        exit 1
+    }
+
+    Write-Host "Creating Windows installer for $AppName version $Version..."
     
     # Build the Windows app
     Write-Host "Building Windows app..."
@@ -21,15 +55,16 @@ function New-WindowsInstaller {
     }
     
     # Create Inno Setup script
+    $issAppId = [guid]::NewGuid().ToString()
     $issContent = @"
-#define MyAppName "CloudToLocalLLM"
+#define MyAppName "$AppName"
 #define MyAppVersion "$Version"
 #define MyAppPublisher "Your Company"
 #define MyAppURL "https://yourwebsite.com"
-#define MyAppExeName "cloudtolocalllm.exe"
+#define MyAppExeName "$AppExeName"
 
 [Setup]
-AppId={{YOUR-APP-ID}}
+AppId={$issAppId}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -67,8 +102,8 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
     $issContent | Out-File -FilePath "$installerDir\CloudToLocalLLM.iss" -Encoding UTF8
     
     # Build the installer
-    Write-Host "Building installer..."
-    & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "$installerDir\CloudToLocalLLM.iss"
+    Write-Host "Building installer using $isccPath..."
+    & $isccPath "$installerDir\CloudToLocalLLM.iss"
     
     Write-Host "Installer created successfully!"
 }
@@ -147,9 +182,11 @@ class WindowsNotifications {
 
 # Main script execution
 $version = "1.2.0"  # Update this version number as needed
+$appName = "CloudToLocalLLM"
+$appExeName = "cloudtolocalllm.exe" # Assumes this is the executable name
 
 Write-Host "Starting Windows app improvements..."
-New-WindowsInstaller -OutputPath $version -AppName CloudToLocalLLM -Version $version
+New-WindowsInstaller -OutputPath $version -AppName $appName -Version $version -AppExeName $appExeName
 Add-WindowsFeatures
 
 Write-Host "Windows app improvements completed!"

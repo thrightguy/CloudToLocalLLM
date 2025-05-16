@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 # This script runs inside the certbot container after a successful renewal.
 # It adjusts permissions on the certificate files in the shared volume
 # /etc/letsencrypt, so that Nginx (running in the webapp container) can access them.

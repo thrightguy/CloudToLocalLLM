@@ -56,7 +56,7 @@ read -r
 # Request the certificate
 # Using --manual-public-ip-logging-ok to acknowledge IP logging if not using a hook.
 # Using --keep-until-expiring to avoid repeated requests if script is re-run before expiry (though for staging this is less critical).
-sudo certbot certonly \
+certbot certonly \
     --manual \
     --preferred-challenges dns \
     --server https://acme-staging-v02.api.letsencrypt.org/directory \
