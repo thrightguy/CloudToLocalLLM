@@ -112,6 +112,7 @@ services:
       - "DKIM_DOMAINS=cloudtolocalllm.online" # Your domain(s) for DKIM signing
       - "DKIM_SELECTOR=mail" # The selector you used for key generation (e.g., 'mail')
       - "DKIM_KEY_PATH=/etc/opendkim/keys/cloudtolocalllm.online/mail.private" # Path inside container
+      - "DKIM_AUTOGENERATE=true"
     volumes:
       # Mount your DKIM private key here. Create ./config/dkim/ directory first.
       # And place your mail.private (or selector.private) key in ./config/dkim/
