@@ -1,0 +1,14 @@
+{
+  "name": "cloudtolocalllm-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root project configuration for CloudToLocalLLM",
+  "scripts": {
+    "lint:admin-ui": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.vue admin-ui/src",
+    "lint:admin-ui:fix": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.vue admin-ui/src --fix"
+  },
+  "devDependencies": {
+    "eslint": "^9.27.0",
+    "eslint-plugin-vue": "9.27.0"
+  }
+}

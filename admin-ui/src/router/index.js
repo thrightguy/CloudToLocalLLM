@@ -15,20 +15,20 @@ const routes = [
   },
   {
     path: '/login',
-    name: 'Login',
-    component: () => import('../views/Login.vue'),
+    name: 'UserLogin',
+    component: () => import('../views/UserLogin.vue'),
     meta: { requiresAuth: false }
   },
   {
     path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
+    name: 'MainDashboard',
+    component: () => import('../views/MainDashboard.vue'),
     meta: { requiresAuth: true }
   },
   {
     path: '/users',
-    name: 'Users',
-    component: () => import('../views/Users.vue'),
+    name: 'UserManagement',
+    component: () => import('../views/UserManagement.vue'),
     meta: { requiresAuth: true, role: 'admin' }
   },
   {
@@ -39,14 +39,14 @@ const routes = [
   },
   {
     path: '/profile',
-    name: 'Profile',
-    component: () => import('../views/Profile.vue'),
+    name: 'UserProfile',
+    component: () => import('../views/UserProfile.vue'),
     meta: { requiresAuth: true }
   },
   {
     path: '/settings',
-    name: 'Settings',
-    component: () => import('../views/Settings.vue'),
+    name: 'AppSettings',
+    component: () => import('../views/AppSettings.vue'),
     meta: { requiresAuth: true, role: 'admin' }
   },
   {

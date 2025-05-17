@@ -6,7 +6,7 @@ const api = axios.create({
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'Accept': 'application/json'
   }
 });
 
@@ -56,14 +56,14 @@ api.interceptors.response.use(
 export const authApi = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
-  verifyToken: () => api.get('/auth/verify'),
+  verifyToken: () => api.get('/auth/verify')
 };
 
 // Users API
 export const usersApi = {
   getAll: () => api.get('/users'),
   getById: (id) => api.get(`/users/${id}`),
-  getStats: () => api.get('/users/stats/dashboard'),
+  getStats: () => api.get('/users/stats/dashboard')
 };
 
 export default api; 

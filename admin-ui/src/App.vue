@@ -11,7 +11,7 @@
     <main class="app-main">
       <router-view />
     </main>
-    <Toast />
+    <AppToast />
   </div>
 </template>
 

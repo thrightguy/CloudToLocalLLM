@@ -106,9 +106,9 @@ class ModelSelector extends StatelessWidget {
             const PopupMenuDivider(),
 
           // Manage models action
-          PopupMenuItem<String>(
+          const PopupMenuItem<String>(
             value: 'manage_models',
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.settings),
                 SizedBox(width: 8),

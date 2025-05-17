@@ -72,7 +72,7 @@ class AuthProvider extends ChangeNotifier {
           'loginId': email,
           'password': password,
           'applicationId':
-              AppConfig.fusionAuthClientId, // TODO: Set real app/client ID
+              AppConfig.fusionAuthClientId, // Set real app/client ID
         }),
       );
       if (response.statusCode == 200) {
@@ -112,7 +112,7 @@ class AuthProvider extends ChangeNotifier {
           },
           'registration': {
             'applicationId':
-                AppConfig.fusionAuthClientId, // TODO: Set real app/client ID
+                AppConfig.fusionAuthClientId, // Set real app/client ID
           }
         }),
       );

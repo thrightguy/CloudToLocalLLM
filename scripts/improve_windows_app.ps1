@@ -28,6 +28,32 @@ function Find-InnoSetupCompiler {
     return $null
 }
 
+# Function to get version from pubspec.yaml
+function Get-AppVersion {
+    param (
+        [string]$PubspecPath = "pubspec.yaml"
+    )
+    try {
+        if (-not (Test-Path $PubspecPath)) {
+            Write-Host "WARNING: $PubspecPath not found. Using default version." -ForegroundColor Yellow
+            return "1.0.0" # Default version if pubspec is not found
+        }
+        $pubspecContent = Get-Content $PubspecPath -Raw
+        $versionLine = $pubspecContent | Select-String -Pattern "^version:\s*([^\s+]+)"
+        if ($versionLine -and $versionLine.Matches[0].Groups[1].Value) {
+            $appVersion = $versionLine.Matches[0].Groups[1].Value
+            Write-Host "Found version $appVersion in $PubspecPath" -ForegroundColor Green
+            return $appVersion
+        } else {
+            Write-Host "WARNING: Could not parse version from $PubspecPath. Using default version." -ForegroundColor Yellow
+            return "1.0.0"
+        }
+    } catch {
+        Write-Host "ERROR reading or parsing $PubspecPath: $_. Using default version." -ForegroundColor Red
+        return "1.0.0"
+    }
+}
+
 # Function to create Windows installer
 function New-WindowsInstaller {
     param (
@@ -59,8 +85,8 @@ function New-WindowsInstaller {
     $issContent = @"
 #define MyAppName "$AppName"
 #define MyAppVersion "$Version"
-#define MyAppPublisher "Your Company"
-#define MyAppURL "https://yourwebsite.com"
+#define MyAppPublisher "CloudToLocalLLM Inc."
+#define MyAppURL "https://cloudtolocalllm.online"
 #define MyAppExeName "$AppExeName"
 
 [Setup]
@@ -181,12 +207,13 @@ class WindowsNotifications {
 }
 
 # Main script execution
-$version = "1.2.0"  # Update this version number as needed
+# $version = "1.2.0"  # Update this version number as needed - Now read from pubspec
+$appVersion = Get-AppVersion
 $appName = "CloudToLocalLLM"
 $appExeName = "cloudtolocalllm.exe" # Assumes this is the executable name
 
 Write-Host "Starting Windows app improvements..."
-New-WindowsInstaller -OutputPath $version -AppName $appName -Version $version -AppExeName $appExeName
+New-WindowsInstaller -OutputPath $appVersion -AppName $appName -Version $appVersion -AppExeName $appExeName
 Add-WindowsFeatures
 
 Write-Host "Windows app improvements completed!"

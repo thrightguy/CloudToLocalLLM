@@ -1,1 +1,0 @@
-{"version":3,"file":"index.mjs","sources":["../../src/service/PrimeVueService.js"],"sourcesContent":["import { EventBus } from '@primeuix/utils/eventbus';\n\nexport default EventBus();\n"],"names":["EventBus"],"mappings":";;AAEA,sBAAeA,QAAQ,EAAE;;;;"}
