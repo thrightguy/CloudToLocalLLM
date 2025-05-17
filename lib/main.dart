@@ -1,17 +1,50 @@
 import 'dart:ui'; // Required for ImageFilter if we use blur, and for ShaderMask
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cloudtolocalllm/services/auth_service.dart'; // Assuming your AuthService is here
+
+// Global instance of AuthService (consider using a service locator like GetIt or Provider)
+final AuthService _authService = AuthService();
 
 void main() {
-  runApp(const CloudToLocalLLMApp());
+  runApp(CloudToLocalLLMApp());
 }
 
+// 1. Define the GoRouter configuration
+final GoRouter _router = GoRouter(
+  initialLocation: '/', // Optional: if you want a specific initial route
+  routes: <RouteBase>[
+    GoRoute(
+      path: '/',
+      builder: (BuildContext context, GoRouterState state) {
+        return const HomeScreen();
+      },
+    ),
+    GoRoute(
+      path: '/oauthredirect',
+      builder: (BuildContext context, GoRouterState state) {
+        // The full URI is available in state.uri
+        // We pass the full URI to the screen
+        return OAuthRedirectScreen(responseUri: state.uri);
+      },
+    ),
+  ],
+  // Optional: Error page (good practice)
+  errorBuilder: (context, state) => Scaffold(
+    appBar: AppBar(title: const Text('Error')),
+    body: Center(child: Text('Page not found: ${state.error}')),
+  ),
+);
+
 class CloudToLocalLLMApp extends StatelessWidget {
-  const CloudToLocalLLMApp({super.key});
+  CloudToLocalLLMApp({super.key}); // Removed const because _router is not const
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    // 2. Use MaterialApp.router
+    return MaterialApp.router(
+      routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -29,7 +62,70 @@ class CloudToLocalLLMApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.dark,
-      home: const HomeScreen(),
+      // home: const HomeScreen(), // home is replaced by routerConfig
+    );
+  }
+}
+
+// 3. Create the OAuthRedirectScreen widget
+class OAuthRedirectScreen extends StatefulWidget {
+  final Uri responseUri;
+  const OAuthRedirectScreen({super.key, required this.responseUri});
+
+  @override
+  State<OAuthRedirectScreen> createState() => _OAuthRedirectScreenState();
+}
+
+class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _handleLoginRedirect();
+  }
+
+  Future<void> _handleLoginRedirect() async {
+    try {
+      final user = await _authService.handleRedirectAndLogin(widget.responseUri);
+      if (user != null) {
+        // Successfully logged in, navigate to home or a dashboard
+        if (mounted) {
+          GoRouter.of(context).go('/'); // Navigate to home page
+        }
+      } else {
+        // Login failed
+        if (mounted) {
+          // Optionally, show an error message or navigate to a login error page
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login failed. Please try again.')),
+          );
+          GoRouter.of(context).go('/'); // Go back to home or login page
+        }
+      }
+    } catch (e) {
+      print('Error during redirect handling: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred during login: $e')),
+        );
+        GoRouter.of(context).go('/');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show a loading indicator while processing
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text('Processing login...'),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -88,7 +184,10 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isUserLoggedIn = false;
+    // final bool isUserLoggedIn = false; // We can get this from AuthService now
+    // For simplicity, let's add a login button that calls _authService.login()
+    // You would typically integrate this into your UI more cleanly.
+
     final screenWidth = MediaQuery.of(context).size.width;
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
@@ -98,6 +197,39 @@ class HomeScreen extends StatelessWidget {
           'CloudToLocalLLM',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          // Example Login/Logout Button
+          FutureBuilder<bool>(
+            future: _authService.isLoggedIn(), // Check login status
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                );
+              }
+              final bool isLoggedIn = snapshot.data ?? false;
+              return TextButton(
+                onPressed: () async {
+                  if (isLoggedIn) {
+                    await _authService.logout();
+                    // GoRouter.of(context).refresh(); // Refresh to update UI if needed
+                    // Forcing a reload of the current route to reflect logout state.
+                    // This is a simple way, a more robust solution would use a state management library.
+                    GoRouter.of(context).go('/', extra: {'refresh': DateTime.now().millisecondsSinceEpoch });
+                  } else {
+                    await _authService.login();
+                    // After calling login, browser will redirect. No need to navigate here.
+                  }
+                },
+                child: Text(
+                  isLoggedIn ? 'Logout' : 'Login',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              );
+            },
+          ),
+        ],
         elevation: 8.0,
         shadowColor: Colors.black.withOpacity(0.5),
         flexibleSpace: Container(
@@ -221,7 +353,7 @@ class HomeScreen extends StatelessWidget {
                     title: 'Coming Soon',
                     description:
                         "We're currently in development. Login will be available soon.",
-                    showButton: isUserLoggedIn,
+                    // showButton: isUserLoggedIn, // Login button is now in AppBar
                   ),
                 ],
               ),
@@ -236,7 +368,7 @@ class HomeScreen extends StatelessWidget {
     required String title,
     required String description,
     List<String> features = const [],
-    bool showButton = false,
+    // bool showButton = false, // Login button is now in AppBar
   }) {
     return Container(
       width: 500, // Max width for cards
@@ -283,22 +415,22 @@ class HomeScreen extends StatelessWidget {
                   ),
                 )),
           ],
-          if (showButton) ...[
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.center,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A5AE0),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text('Download App'),
-              ),
-            ),
-          ],
+          // if (showButton) ...[
+          //   const SizedBox(height: 16),
+          //   Align(
+          //     alignment: Alignment.center,
+          //     child: ElevatedButton(
+          //       onPressed: () {},
+          //       style: ElevatedButton.styleFrom(
+          //         backgroundColor: const Color(0xFF6A5AE0),
+          //         foregroundColor: Colors.white,
+          //         padding:
+          //             const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          //       ),
+          //       child: const Text('Download App'),
+          //     ),
+          //   ),
+          // ],
         ],
       ),
     );
