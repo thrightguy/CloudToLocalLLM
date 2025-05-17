@@ -81,8 +81,15 @@ class AppConfig {
   static const int authSessionTimeout = 300; // 5 minutes
 
   // FusionAuth Configuration
-  static const String fusionAuthBaseUrl =
-      'http://localhost:9011'; // This should be https://auth.cloudtolocalllm.online for production/deployed app
+  static String get fusionAuthBaseUrl {
+    if (kDebugMode) {
+      // Development environment
+      return 'http://localhost:9011';
+    } else {
+      // Production environment
+      return 'https://auth.cloudtolocalllm.online';
+    }
+  }
   static const String fusionAuthClientId =
       'db7f2043-6981-47da-9f50-ce956715d40d';
   static const String fusionAuthClientSecret =

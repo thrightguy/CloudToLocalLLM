@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import '../config/app_config.dart';
 
 class LocalAuthService {
   final String baseUrl;
@@ -143,7 +144,7 @@ class LocalAuthService {
       // Fetch user profile from FusionAuth
       final response = await http.get(
         Uri.parse(
-            'http://localhost:9011/api/user'), // You may want to make this configurable
+            '${AppConfig.fusionAuthBaseUrl}/api/user'), // Use AppConfig.fusionAuthBaseUrl
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
