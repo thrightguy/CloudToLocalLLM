@@ -118,7 +118,6 @@ services:
       - ./config/dkim:/etc/opendkim/keys/cloudtolocalllm.online:ro 
     ports:
       - "2500:25" # Expose internal port 25 as 2500 on host (for FusionAuth to connect to postfix-mail:25)
-    restart: unless-stopped
     cap_add:
       - NET_ADMIN # May be needed by some Postfix configurations or for startup scripts in the image
     networks:
