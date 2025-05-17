@@ -82,13 +82,8 @@ class AppConfig {
 
   // FusionAuth Configuration
   static String get fusionAuthBaseUrl {
-    if (kDebugMode) {
-      // Development environment
-      return 'http://localhost:9011';
-    } else {
-      // Production environment
-      return 'https://auth.cloudtolocalllm.online';
-    }
+    // Always use production URL for now, until a dedicated dev/beta environment is established.
+    return 'https://auth.cloudtolocalllm.online';
   }
   static const String fusionAuthClientId =
       'db7f2043-6981-47da-9f50-ce956715d40d';
@@ -96,4 +91,4 @@ class AppConfig {
       '1kUu7gdp7sTvio8UR18Csm9Hu9EuJGfuLpwdg9heyF'; // WARNING: Storing client secret in client-side code is risky. Consider PKCE or BFF.
   static const String fusionAuthRedirectUri =
       'https://app.cloudtolocalllm.online/login-callback';
-}
+} 
