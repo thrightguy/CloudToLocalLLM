@@ -57,6 +57,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      postfix-mail:
+        condition: service_started
     restart: unless-stopped
     networks:
       - cloudllm-network
