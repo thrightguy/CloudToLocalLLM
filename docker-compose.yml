@@ -43,7 +43,7 @@ services:
     image: fusionauth/fusionauth-app:latest
     container_name: cloudtolocalllm-fusionauth-app
     ports:
-      - "9011:9011"
+      - "127.0.0.1:9011:9011"
     environment:
       - DATABASE_URL=jdbc:postgresql://db:5432/fusionauth
       - DATABASE_ROOT_USERNAME=postgres
@@ -160,4 +160,3 @@ volumes:
   db_data:
     driver: local
   # fusionauth_config:
-  #   driver: local 
