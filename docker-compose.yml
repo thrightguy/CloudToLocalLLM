@@ -93,24 +93,23 @@ services:
   # Requires proper rDNS (PTR), SPF, DKIM, DMARC, and an IP with good reputation.
   # Port 25 outbound must not be blocked by your VPS provider.
   postfix-mail:
-    image: boky/postfix:latest # A common Postfix image
+    image: boky/postfix:latest
     container_name: cloudtolocalllm-postfix-mail
+    restart: always
     environment:
-      # --- Core Postfix Settings --- 
-      - "HOSTNAME=mail.cloudtolocalllm.online" # IMPORTANT: Set your mail server's FQDN
+      # - "TZ=Europe/Amsterdam" # Optional: Set your server's timezone
+      - "HOSTNAME=mail.cloudtolocalllm.online" # The FQDN of your mail server
       - "DOMAIN=cloudtolocalllm.online" # Your main domain
+      - "ALLOWED_SENDER_DOMAINS=cloudtolocalllm.online"
       - "NETWORK_INTERFACE=eth0" # Usually eth0 in Docker, verify if needed
-      # - "RELAYHOST=" # Leave empty for direct sending
+      # Set an empty RELAYHOST to use direct sending
+      - "RELAYHOST=" # Leave empty for direct sending
       # - "RELAYHOST_USERNAME=" # Not needed for direct sending
       # - "RELAYHOST_PASSWORD=" # Not needed for direct sending
       - "MYNETWORKS=127.0.0.0/8 172.16.0.0/12 192.168.0.0/16" # Allow Docker internal networks and localhost to send
       # --- DKIM Settings (Requires you to generate keys and set DNS TXT record) ---
-      # You will need to generate DKIM keys. For example, using opendkim-tools:
-      # opendkim-genkey -s mail -d cloudtolocalllm.online 
-      # This creates mail.private (keep safe in ./config/dkim/mail.private) and mail.txt (contents for DNS)
-      # Mount the private key into the container.
-      - "DKIM_ENABLE=true"
-      - "DKIM_DOMAIN=cloudtolocalllm.online"
+      # Ensure this path matches the volume mount below
+      - "DKIM_DOMAINS=cloudtolocalllm.online" # Your domain(s) for DKIM signing
       - "DKIM_SELECTOR=mail" # The selector you used for key generation (e.g., 'mail')
       - "DKIM_KEY_PATH=/etc/opendkim/keys/cloudtolocalllm.online/mail.private" # Path inside container
     volumes:
