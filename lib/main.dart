@@ -1,4 +1,4 @@
-import 'dart:ui'; // Required for ImageFilter if we use blur, and for ShaderMask
+// Required for ImageFilter if we use blur, and for ShaderMask
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +8,7 @@ import 'package:cloudtolocalllm/services/auth_service.dart'; // Assuming your Au
 final AuthService _authService = AuthService();
 
 void main() {
-  runApp(CloudToLocalLLMApp());
+  runApp(const CloudToLocalLLMApp());
 }
 
 // 1. Define the GoRouter configuration
@@ -38,7 +38,7 @@ final GoRouter _router = GoRouter(
 );
 
 class CloudToLocalLLMApp extends StatelessWidget {
-  CloudToLocalLLMApp({super.key}); // Removed const because _router is not const
+  const CloudToLocalLLMApp({super.key}); // Removed const because _router is not const
 
   @override
   Widget build(BuildContext context) {
@@ -86,29 +86,25 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
   Future<void> _handleLoginRedirect() async {
     try {
       final user = await _authService.handleRedirectAndLogin(widget.responseUri);
+      if (!mounted) return; // Check mounted after await
       if (user != null) {
         // Successfully logged in, navigate to home or a dashboard
-        if (mounted) {
-          GoRouter.of(context).go('/'); // Navigate to home page
-        }
+        GoRouter.of(context).go('/'); // Navigate to home page
       } else {
         // Login failed
-        if (mounted) {
-          // Optionally, show an error message or navigate to a login error page
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Login failed. Please try again.')),
-          );
-          GoRouter.of(context).go('/'); // Go back to home or login page
-        }
+        // Optionally, show an error message or navigate to a login error page
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
+        GoRouter.of(context).go('/'); // Go back to home or login page
       }
     } catch (e) {
-      print('Error during redirect handling: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred during login: $e')),
-        );
-        GoRouter.of(context).go('/');
-      }
+      // print('Error during redirect handling: $e'); // Removed print
+      if (!mounted) return; // Check mounted after await
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred during login: $e')),
+      );
+      GoRouter.of(context).go('/');
     }
   }
 
@@ -143,15 +139,15 @@ class CircularLlmLogo extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary.withOpacity(0.8),
-            Theme.of(context).colorScheme.secondary.withOpacity(0.6),
+            Theme.of(context).colorScheme.primary.withAlpha((255 * 0.8).round()), // Fixed withAlpha
+            Theme.of(context).colorScheme.secondary.withAlpha((255 * 0.6).round()), // Fixed withAlpha
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withAlpha((255 * 0.3).round()), // Fixed withAlpha
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -188,7 +184,7 @@ class HomeScreen extends StatelessWidget {
     // For simplicity, let's add a login button that calls _authService.login()
     // You would typically integrate this into your UI more cleanly.
 
-    final screenWidth = MediaQuery.of(context).size.width;
+    // final screenWidth = MediaQuery.of(context).size.width; // Removed unused screenWidth
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
@@ -213,6 +209,7 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () async {
                   if (isLoggedIn) {
                     await _authService.logout();
+                    if (!context.mounted) return; // Added mounted check
                     // GoRouter.of(context).refresh(); // Refresh to update UI if needed
                     // Forcing a reload of the current route to reflect logout state.
                     // This is a simple way, a more robust solution would use a state management library.
@@ -231,13 +228,13 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
         elevation: 8.0,
-        shadowColor: Colors.black.withOpacity(0.5),
+        shadowColor: Colors.black.withAlpha((255 * 0.5).round()), // Fixed withAlpha
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 const Color(0xFF4A3B8A),
-                const Color(0xFF6A5AE0).withOpacity(0.85),
+                const Color(0xFF6A5AE0).withAlpha((255 * 0.85).round()), // Fixed withAlpha
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -258,15 +255,15 @@ class HomeScreen extends StatelessWidget {
                     end: Alignment.centerRight,
                     colors: [
                       scaffoldBackgroundColor
-                          .withOpacity(0.0), // Transparent at edge
+                          .withAlpha(0), // Transparent at edge
                       scaffoldBackgroundColor
-                          .withOpacity(0.0), // Transparent for a bit
+                          .withAlpha(0), // Transparent for a bit
                       Colors.white, // Opaque center for the image to show
                       Colors.white, // Opaque center
                       scaffoldBackgroundColor
-                          .withOpacity(0.0), // Transparent for a bit
+                          .withAlpha(0), // Transparent for a bit
                       scaffoldBackgroundColor
-                          .withOpacity(0.0), // Transparent at edge
+                          .withAlpha(0), // Transparent at edge
                     ],
                     stops: const [
                       0.0,
@@ -377,7 +374,7 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: const Color(0xFF252D3F)
-            .withOpacity(0.85), // Slightly transparent to show background hint
+            .withAlpha((255 * 0.85).round()), // Slightly transparent to show background hint. Fixed withAlpha
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10, width: 0.5), // Subtle border
       ),

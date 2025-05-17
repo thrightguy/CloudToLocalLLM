@@ -12,7 +12,7 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 app.use(ToastService);
-app.component('Toast', Toast);
+app.component('AppToast', Toast);
 
 // Mount the app
 app.mount('#app'); 

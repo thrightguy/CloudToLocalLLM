@@ -246,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Main content - onboarding wizard and chat messages
       body: Column(
         children: [
-          OnboardingWizard(),
+          const OnboardingWizard(),
           Expanded(
             child: llmProvider.currentConversation == null
                 ? _buildWelcomeScreen()
@@ -375,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // Extract the const part into a separate widget
 class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({Key? key}) : super(key: key);
+  const _WelcomeHeader();
 
   @override
   Widget build(BuildContext context) {
