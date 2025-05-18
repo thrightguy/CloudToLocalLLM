@@ -32,61 +32,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
-    depends_on:
-      fusionauth:
-        condition: service_healthy
-
-  # Tunnel service
-
-  # FusionAuth service
-  fusionauth:
-    image: fusionauth/fusionauth-app:latest
-    container_name: cloudtolocalllm-fusionauth-app
-    ports:
-      - "127.0.0.1:9011:9011"
-    environment:
-      - DATABASE_URL=jdbc:postgresql://db:5432/fusionauth
-      - DATABASE_ROOT_USERNAME=postgres
-      - DATABASE_ROOT_PASSWORD=postgres
-      - DATABASE_USERNAME=fusionauth
-      - DATABASE_PASSWORD=fusionauth
-      - FUSIONAUTH_APP_MEMORY=512M
-      - FUSIONAUTH_APP_RUNTIME_MODE=development
-      - FUSIONAUTH_APP_URL=https://auth.cloudtolocalllm.online
-      - SEARCH_TYPE=database
-    depends_on:
-      db:
-        condition: service_healthy
-      postfix-mail:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - cloudllm-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9011/api/status || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-  # Database service
-  db:
-    image: postgres:13-alpine
-    container_name: cloudtolocalllm-db
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=fusionauth
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - cloudllm-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fusionauth"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Postfix Mail Server for direct email sending
   # WARNING: Ensuring email deliverability with a self-hosted MTA is complex.
@@ -123,8 +68,6 @@ services:
       - NET_ADMIN # May be needed by some Postfix configurations or for startup scripts in the image
     networks:
       - cloudllm-network
-
-  # Admin control daemon
 
   # Certbot for SSL certificates
   certbot:
