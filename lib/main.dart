@@ -345,53 +345,43 @@ class HomeScreen extends StatelessWidget {
               GoRouter.of(context).go('/debug');
             },
           ),
-          // Firebase Login/Logout Button
-          StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              // Add debug log to monitor stream status
-              developer.log(
-                'StreamBuilder: connection=${snapshot.connectionState}, hasData=${snapshot.hasData}, '
-                'hasError=${snapshot.hasError}${snapshot.hasError ? ', error=${snapshot.error}' : ''}',
-                name: 'auth_button',
-              );
-              
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+          // Always show login button regardless of Firebase state
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                developer.log('Direct login button pressed', name: 'auth_button');
+                GoRouter.of(context).go('/login');
+              },
+              child: const Text(
+                'Login',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          // Hidden Firebase state observer for debugging
+          Opacity(
+            opacity: 0,
+            child: StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                // Add debug log to monitor stream status
+                developer.log(
+                  'StreamBuilder: connection=${snapshot.connectionState}, hasData=${snapshot.hasData}, '
+                  'hasError=${snapshot.hasError}${snapshot.hasError ? ', error=${snapshot.error}' : ''}',
+                  name: 'auth_button',
                 );
-              }
-              
-              // Debug - show status
-              final bool isLoggedIn = snapshot.data != null;
-              developer.log('User logged in: $isLoggedIn', name: 'auth_button');
-              
-              // Return a more visible button for testing
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () async {
-                    developer.log('Login/logout button pressed', name: 'auth_button');
-                    if (isLoggedIn) {
-                      await _authService.logout();
-                      if (!context.mounted) return;
-                      GoRouter.of(context).go('/');
-                    } else {
-                      GoRouter.of(context).go('/login');
-                    }
-                  },
-                  child: Text(
-                    isLoggedIn ? 'Logout' : 'Login',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              );
-            },
+                
+                final bool isLoggedIn = snapshot.data != null;
+                developer.log('User logged in: $isLoggedIn', name: 'auth_button');
+                
+                return const SizedBox.shrink();
+              },
+            ),
           ),
         ],
         elevation: 8.0,
@@ -484,136 +474,86 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 40),
                   
-                  // User profile section - Only show when logged in
-                  StreamBuilder<User?>(
-                    stream: FirebaseAuth.instance.authStateChanges(),
-                    builder: (context, snapshot) {
-                      // Debug the stream builder state
-                      developer.log(
-                        'Profile StreamBuilder: connection=${snapshot.connectionState}, ' +
-                        'hasData=${snapshot.hasData}, hasError=${snapshot.hasError}',
-                        name: 'profile_card',
-                      );
-                      
-                      // Show loading indicator while waiting
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Card(
-                          elevation: 4,
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 16),
-                                  Text('Loading authentication status...'),
-                                ],
-                              ),
+                  // Fixed login card - always visible
+                  Card(
+                    elevation: 8, // Higher elevation for better visibility
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.9), // More opaque background
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                        width: 2,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0), // More padding
+                      child: Column(
+                        children: [
+                          const Icon(Icons.login, size: 48, color: Colors.blue),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Please login to access your models and settings',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Authentication is required to use this application.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 24),
+                          // Larger, more visible login button
+                          ElevatedButton(
+                            onPressed: () {
+                              developer.log('Login button in card pressed', name: 'profile_card');
+                              GoRouter.of(context).go('/login');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
+                            child: const Text('Login / Create Account'),
                           ),
-                        );
-                      }
-                      
-                      final user = snapshot.data;
-                      developer.log('User in profile card: ${user?.email ?? 'Not logged in'}', name: 'profile_card');
-                      
-                      if (user == null) {
-                        // Not logged in - show login card with enhanced visibility
-                        return Card(
-                          elevation: 8, // Higher elevation for better visibility
-                          color: Theme.of(context).colorScheme.surface.withOpacity(0.9), // More opaque background
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                              width: 2,
-                            ),
+                          const SizedBox(height: 16),
+                          // Debugging button for quick access
+                          TextButton.icon(
+                            icon: const Icon(Icons.bug_report, size: 16),
+                            label: const Text('Debug Auth Status'),
+                            onPressed: () {
+                              GoRouter.of(context).go('/debug');
+                            },
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0), // More padding
-                            child: Column(
-                              children: [
-                                const Icon(Icons.login, size: 48, color: Colors.blue),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Please login to access your models and settings',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Firebase authentication is required to use this application.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                const SizedBox(height: 24),
-                                // Larger, more visible login button
-                                ElevatedButton(
-                                  onPressed: () {
-                                    developer.log('Login button in card pressed', name: 'profile_card');
-                                    GoRouter.of(context).go('/login');
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                  child: const Text('Login / Create Account'),
-                                ),
-                                const SizedBox(height: 16),
-                                // Debugging button for quick access
-                                TextButton.icon(
-                                  icon: const Icon(Icons.bug_report, size: 16),
-                                  label: const Text('Debug Auth Status'),
-                                  onPressed: () {
-                                    GoRouter.of(context).go('/debug');
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                      
-                      // Logged in - show user info
-                      return Card(
-                        elevation: 4,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Welcome!',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Logged in as: ${user.email}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  GoRouter.of(context).go('/chat');
-                                },
-                                child: const Text('Go to Chat'),
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton(
-                                onPressed: () async {
-                                  await _authService.logout();
-                                },
-                                child: const Text('Logout'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Hidden Firebase state observer for user profile
+                  Opacity(
+                    opacity: 0,
+                    child: SizedBox(
+                      height: 0,
+                      width: 0,
+                      child: StreamBuilder<User?>(
+                        stream: FirebaseAuth.instance.authStateChanges(),
+                        builder: (context, snapshot) {
+                          // Debug the stream builder state
+                          developer.log(
+                            'Profile StreamBuilder: connection=${snapshot.connectionState}, ' +
+                            'hasData=${snapshot.hasData}, hasError=${snapshot.hasError}',
+                            name: 'profile_card',
+                          );
+                          
+                          final user = snapshot.data;
+                          developer.log('User in profile card: ${user?.email ?? 'Not logged in'}', name: 'profile_card');
+                          
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
                   ),
                 ],
               ),
