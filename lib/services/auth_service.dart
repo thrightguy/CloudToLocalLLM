@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'; // Required for kIsWeb
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert' as convert; // Added for JSON decoding
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 // Import the main library with an alias for common types like Issuer, Client, Credential, UserInfo
 import 'package:openid_client/openid_client.dart' as openid;
@@ -10,6 +11,7 @@ import 'package:openid_client/openid_client.dart' as openid;
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Configuration
   static const String _issuerUrl = 'https://auth.cloudtolocalllm.online';
@@ -61,6 +63,44 @@ class AuthService {
     }
   }
 
+  // Google Sign In
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      // Sign out of any previous Google Sign In to avoid state issues
+      await _googleSignIn.signOut();
+      
+      // Start the Google Sign In process
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User canceled the sign in
+        return null;
+      }
+
+      // Get the authentication details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      final userCredential = await _auth.signInWithCredential(credential);
+      
+      // Store tokens if needed
+      if (userCredential.user != null) {
+        final idToken = await userCredential.user!.getIdToken();
+        await _secureStorage.write(key: _idTokenKey, value: idToken);
+      }
+      
+      return userCredential;
+    } catch (e) {
+      debugPrint('Error signing in with Google: $e');
+      return null;
+    }
+  }
+
   // Email/Password Sign Up
   Future<UserCredential?> createUserWithEmailAndPassword(String email, String password) async {
     try {
@@ -106,6 +146,9 @@ class AuthService {
   // Sign Out
   Future<void> logout() async {
     try {
+      // Sign out of Google first if used
+      await _googleSignIn.signOut();
+      // Then sign out of Firebase
       await _auth.signOut();
       
       // Clean up stored tokens

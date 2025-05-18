@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
+  final bool isRegistrationMode;
 
   const LoginScreen({
     super.key,
     required this.authService,
+    this.isRegistrationMode = false,
   });
 
   @override
@@ -19,9 +21,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  bool _isLogin = true; // Toggle between login and register
+  late bool _isLogin; // Toggle between login and register
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _isLogin = !widget.isRegistrationMode; // Initialize based on prop
+  }
 
   @override
   void dispose() {
@@ -85,15 +94,49 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final result = await widget.authService.signInWithGoogle();
+      
+      if (result != null && mounted) {
+        // Google Sign-In successful, navigate to chat screen
+        GoRouter.of(context).go('/chat');
+      } else if (mounted) {
+        setState(() {
+          _errorMessage = 'Google Sign-In failed';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'An error occurred: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(_isLogin ? 'Login' : 'Create Account'),
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
@@ -102,6 +145,20 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 // Logo or branding
                 const SizedBox(height: 20),
+                const CircularLlmLogo(size: 100),
+                const SizedBox(height: 24),
+                
+                // App Name
+                Text(
+                  'CloudToLocalLLM',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
                 
                 // Email field
                 TextFormField(
@@ -165,9 +222,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator()
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : Text(
                           _isLogin ? 'Login' : 'Create Account',
                           style: const TextStyle(fontSize: 16),
@@ -176,9 +242,48 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 16),
                 
+                // Divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: theme.dividerColor)),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Google Sign-In button
+                OutlinedButton.icon(
+                  onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: theme.dividerColor),
+                  ),
+                  icon: _isGoogleLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.login),
+                  label: const Text('Continue with Google'),
+                ),
+                
+                const SizedBox(height: 24),
+                
                 // Toggle button
                 TextButton(
-                  onPressed: _isLoading
+                  onPressed: _isLoading || _isGoogleLoading
                       ? null
                       : () {
                           setState(() {
@@ -194,6 +299,55 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CircularLlmLogo extends StatelessWidget {
+  final double size;
+  const CircularLlmLogo({super.key, this.size = 120.0}); // Default size
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary.withAlpha((255 * 0.8).round()), 
+            Theme.of(context).colorScheme.secondary.withAlpha((255 * 0.6).round()),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((255 * 0.3).round()),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          'LLM',
+          style: TextStyle(
+            fontSize: size * 0.35, // Adjust text size relative to logo size
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: const [
+              Shadow(
+                blurRadius: 1.0,
+                color: Colors.black26,
+                offset: Offset(1.0, 1.0),
+              ),
+            ],
           ),
         ),
       ),
