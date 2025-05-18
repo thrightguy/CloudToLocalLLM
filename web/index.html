@@ -18,27 +18,234 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="CloudToLocalLLM">
+  <meta name="description" content="A new Flutter project.">
   
-  <!-- Content Security Policy to allow WebAssembly -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval';">
+  <!-- Content Security Policy to allow WebAssembly and Firebase -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' *.googleapis.com *.firebaseio.com *.gstatic.com;">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="CloudToLocalLLM">
+  <meta name="apple-mobile-web-app-title" content="cloudtolocalllm">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>CloudToLocalLLM</title>
+  <title>CloudToLocalLLM Portal</title>
   <link rel="manifest" href="manifest.json">
   
   <!-- Theme styles -->
   <link rel="stylesheet" href="styles.css">
+
+  <!-- Firebase SDK - Using latest modular Web SDK -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAjoUZYOf_F9LOv1mNp8NjtlcVQOQ4tKv8",
+      authDomain: "cloudtolocalllm.firebaseapp.com",
+      projectId: "cloudtolocalllm",
+      storageBucket: "cloudtolocalllm.firebasestorage.app",
+      messagingSenderId: "154919701865",
+      appId: "1:154919701865:web:2237241bc089a861d541f8",
+      measurementId: "G-CR3LEXV62H"
+    };
+    
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    
+    // Make auth available globally for Flutter web
+    window.firebaseAuth = auth;
+  </script>
+
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    var serviceWorkerVersion = null;
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+
+  <style>
+    /* Custom CSS for login overlay */
+    #html-login-overlay {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 9999;
+      font-family: 'Arial', sans-serif;
+    }
+    
+    #html-login-button {
+      background-color: #2196F3;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    #html-login-button:hover {
+      background-color: #1976D2;
+    }
+    
+    #html-login-card {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      z-index: 9999;
+      text-align: center;
+      max-width: 400px;
+      display: none;
+    }
+    
+    #html-login-card h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    #html-login-card p {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    
+    #html-login-card-button {
+      background-color: #2196F3;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 10px;
+    }
+    
+    #html-login-card-button:hover {
+      background-color: #1976D2;
+    }
+    
+    .loading-indicator {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #2196F3;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <!-- HTML Login Button that will be visible regardless of Flutter rendering -->
+  <div id="html-login-overlay">
+    <button id="html-login-button" onclick="navigateToLogin()">Login</button>
+  </div>
+  
+  <!-- Login Card -->
+  <div id="html-login-card">
+    <h2>Login Required</h2>
+    <p>Please login to access your models and settings</p>
+    <button id="html-login-card-button" onclick="navigateToLogin()">Login / Create Account</button>
+  </div>
+  
+  <script>
+    function navigateToLogin() {
+      window.location.href = '/login';
+    }
+    
+    // Show login card after a short delay
+    setTimeout(function() {
+      document.getElementById('html-login-card').style.display = 'block';
+    }, 1500);
+  </script>
+  
+  <div id="loading">
+    <style>
+      body {
+        inset: 0;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        position: fixed;
+        background-color: #121829;
+      }
+
+      #loading {
+        align-items: center;
+        display: flex;
+        height: 100%;
+        justify-content: center;
+        width: 100%;
+      }
+
+      #loading img {
+        animation: 1s ease-in-out 0s infinite alternate breathe;
+        opacity: .66;
+        transition: opacity .4s;
+      }
+
+      #loading.main_done img {
+        opacity: 1;
+      }
+
+      #loading.init_done img {
+        animation: .33s ease-in-out 0s 1 forwards zooooom;
+        opacity: .05;
+      }
+
+      @keyframes breathe {
+        from {
+          transform: scale(1)
+        }
+
+        to {
+          transform: scale(0.95)
+        }
+      }
+
+      @keyframes zooooom {
+        from {
+          transform: scale(1)
+        }
+
+        to {
+          transform: scale(10)
+        }
+      }
+    </style>
+    <img src="icons/Icon-192.png" alt="Loading indicator..." />
+  </div>
+
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Download main.dart.js
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>
