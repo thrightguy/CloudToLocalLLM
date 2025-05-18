@@ -8,19 +8,53 @@ import 'firebase_options.dart';
 import 'package:cloudtolocalllm/screens/login_screen.dart';
 import 'package:cloudtolocalllm/screens/chat_screen.dart'; // Import the chat screen
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:developer' as developer; // Import for better logging
 
 // Global instance of AuthService (consider using a service locator like GetIt or Provider)
 final AuthService _authService = AuthService();
 
+// Global flag for debugging
+bool _firebaseInitialized = false;
+String _firebaseErrorMessage = '';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    developer.log('Initializing Firebase...', name: 'firebase_init');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    _firebaseInitialized = true;
+    developer.log('Firebase initialized successfully', name: 'firebase_init');
+    
+    // Debug information
+    final FirebaseApp app = Firebase.app();
+    developer.log('Firebase app name: ${app.name}', name: 'firebase_init');
+    developer.log('Firebase options: ${app.options.projectId}', name: 'firebase_init');
+    
+    // Check if auth is working
+    final auth = FirebaseAuth.instance;
+    developer.log('Firebase Auth instance created', name: 'firebase_init');
+    
+    // Debug auth state
+    auth.authStateChanges().listen((User? user) {
+      developer.log('Auth state changed: ${user?.uid ?? 'No user logged in'}', name: 'firebase_auth');
+    });
+  } catch (e) {
+    _firebaseInitialized = false;
+    _firebaseErrorMessage = e.toString();
+    developer.log('Firebase initialization failed: $e', name: 'firebase_init', error: e);
+  }
   
   // Initialize AuthService
-  await _authService.initialize();
+  try {
+    developer.log('Initializing AuthService...', name: 'auth_service');
+    await _authService.initialize();
+    developer.log('AuthService initialized successfully', name: 'auth_service');
+  } catch (e) {
+    developer.log('AuthService initialization failed: $e', name: 'auth_service', error: e);
+  }
   
   runApp(const CloudToLocalLLMApp());
 }
@@ -60,6 +94,13 @@ final GoRouter _router = GoRouter(
         return OAuthRedirectScreen(responseUri: state.uri);
       },
     ),
+    // Add a debug route
+    GoRoute(
+      path: '/debug',
+      builder: (BuildContext context, GoRouterState state) {
+        return const DebugScreen();
+      },
+    ),
   ],
   // Optional: Error page (good practice)
   errorBuilder: (context, state) => Scaffold(
@@ -67,6 +108,83 @@ final GoRouter _router = GoRouter(
     body: Center(child: Text('Page not found: ${state.error}')),
   ),
 );
+
+// Debug screen to show Firebase status
+class DebugScreen extends StatelessWidget {
+  const DebugScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Get current Firebase state
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Debug Info'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Firebase Initialization',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Status: ${_firebaseInitialized ? 'SUCCESS' : 'FAILED'}'),
+                    if (!_firebaseInitialized) Text('Error: $_firebaseErrorMessage'),
+                    const SizedBox(height: 16),
+                    
+                    Text(
+                      'Firebase Auth State',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Logged in: ${currentUser != null ? 'YES' : 'NO'}'),
+                    if (currentUser != null) ...[
+                      Text('User ID: ${currentUser.uid}'),
+                      Text('Email: ${currentUser.email}'),
+                      Text('Anonymous: ${currentUser.isAnonymous}'),
+                    ],
+                    const SizedBox(height: 16),
+                    
+                    ElevatedButton(
+                      onPressed: () {
+                        FirebaseAuth.instance.authStateChanges().listen((User? user) {
+                          developer.log('Current auth state: ${user?.uid ?? 'No user logged in'}', 
+                            name: 'firebase_auth');
+                        });
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Auth state logged to console')),
+                        );
+                      },
+                      child: const Text('Check Auth State'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                GoRouter.of(context).go('/');
+              },
+              child: const Text('Back to Home'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class CloudToLocalLLMApp extends StatelessWidget {
   const CloudToLocalLLMApp({super.key}); // Removed const because _router is not const
@@ -220,30 +338,57 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
+          // Debug button - visible in all cases
+          IconButton(
+            icon: const Icon(Icons.bug_report, color: Colors.white),
+            onPressed: () {
+              GoRouter.of(context).go('/debug');
+            },
+          ),
           // Firebase Login/Logout Button
           StreamBuilder<User?>(
             stream: FirebaseAuth.instance.authStateChanges(),
             builder: (context, snapshot) {
+              // Add debug log to monitor stream status
+              developer.log(
+                'StreamBuilder: connection=${snapshot.connectionState}, hasData=${snapshot.hasData}, '
+                'hasError=${snapshot.hasError}${snapshot.hasError ? ', error=${snapshot.error}' : ''}',
+                name: 'auth_button',
+              );
+              
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                 );
               }
+              
+              // Debug - show status
               final bool isLoggedIn = snapshot.data != null;
-              return TextButton(
-                onPressed: () async {
-                  if (isLoggedIn) {
-                    await _authService.logout();
-                    if (!context.mounted) return;
-                    GoRouter.of(context).go('/');
-                  } else {
-                    GoRouter.of(context).go('/login');
-                  }
-                },
-                child: Text(
-                  isLoggedIn ? 'Logout' : 'Login',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              developer.log('User logged in: $isLoggedIn', name: 'auth_button');
+              
+              // Return a more visible button for testing
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    developer.log('Login/logout button pressed', name: 'auth_button');
+                    if (isLoggedIn) {
+                      await _authService.logout();
+                      if (!context.mounted) return;
+                      GoRouter.of(context).go('/');
+                    } else {
+                      GoRouter.of(context).go('/login');
+                    }
+                  },
+                  child: Text(
+                    isLoggedIn ? 'Logout' : 'Login',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               );
             },
@@ -343,26 +488,87 @@ class HomeScreen extends StatelessWidget {
                   StreamBuilder<User?>(
                     stream: FirebaseAuth.instance.authStateChanges(),
                     builder: (context, snapshot) {
-                      final user = snapshot.data;
-                      if (user == null) {
-                        // Not logged in - show login card
-                        return Card(
+                      // Debug the stream builder state
+                      developer.log(
+                        'Profile StreamBuilder: connection=${snapshot.connectionState}, ' +
+                        'hasData=${snapshot.hasData}, hasError=${snapshot.hasError}',
+                        name: 'profile_card',
+                      );
+                      
+                      // Show loading indicator while waiting
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Card(
                           elevation: 4,
                           child: Padding(
-                            padding: const EdgeInsets.all(16.0),
+                            padding: EdgeInsets.all(16.0),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('Loading authentication status...'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      final user = snapshot.data;
+                      developer.log('User in profile card: ${user?.email ?? 'Not logged in'}', name: 'profile_card');
+                      
+                      if (user == null) {
+                        // Not logged in - show login card with enhanced visibility
+                        return Card(
+                          elevation: 8, // Higher elevation for better visibility
+                          color: Theme.of(context).colorScheme.surface.withOpacity(0.9), // More opaque background
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                              width: 2,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0), // More padding
                             child: Column(
                               children: [
+                                const Icon(Icons.login, size: 48, color: Colors.blue),
+                                const SizedBox(height: 16),
                                 const Text(
                                   'Please login to access your models and settings',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Firebase authentication is required to use this application.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 24),
+                                // Larger, more visible login button
                                 ElevatedButton(
                                   onPressed: () {
+                                    developer.log('Login button in card pressed', name: 'profile_card');
                                     GoRouter.of(context).go('/login');
                                   },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
                                   child: const Text('Login / Create Account'),
+                                ),
+                                const SizedBox(height: 16),
+                                // Debugging button for quick access
+                                TextButton.icon(
+                                  icon: const Icon(Icons.bug_report, size: 16),
+                                  label: const Text('Debug Auth Status'),
+                                  onPressed: () {
+                                    GoRouter.of(context).go('/debug');
+                                  },
                                 ),
                               ],
                             ),
