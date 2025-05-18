@@ -20,8 +20,8 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="CloudToLocalLLM">
   
-  <!-- Content Security Policy to allow WebAssembly and Firebase -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' *.googleapis.com *.firebaseio.com *.gstatic.com;">
+  <!-- Content Security Policy to allow WebAssembly -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval';">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -37,59 +37,8 @@
   
   <!-- Theme styles -->
   <link rel="stylesheet" href="styles.css">
-
-  <!-- Firebase SDK - Using latest modular Web SDK -->
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAjoUZYOf_F9LOv1mNp8NjtlcVQOQ4tKv8",
-      authDomain: "cloudtolocalllm.firebaseapp.com",
-      projectId: "cloudtolocalllm",
-      storageBucket: "cloudtolocalllm.firebasestorage.app",
-      messagingSenderId: "154919701865",
-      appId: "1:154919701865:web:2237241bc089a861d541f8",
-      measurementId: "G-CR3LEXV62H"
-    };
-    
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    
-    // Make auth available globally for Flutter web
-    window.firebaseAuth = auth;
-  </script>
-
-  <!-- This script adds the flutter initialization JavaScript code -->
-  <script src="flutter.js" defer></script>
 </head>
 <body>
-  <div id="loading">
-    <div class="loading-container">
-      <div class="logo">LLM</div>
-      <div class="app-name">CloudToLocalLLM</div>
-      <div class="spinner"></div>
-      <div class="loading-text">Loading...</div>
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', function() {
-      // Initialize Flutter using the new API
-      _flutter.loader.load({
-        serviceWorker: {
-          serviceWorkerVersion: '{{flutter_service_worker_version}}',
-        }
-      }).then(function(engineInitializer) {
-        return engineInitializer.autoStart();
-      }).then(function() {
-        // Hide the loading indicator once Flutter is initialized
-        document.getElementById('loading').style.display = 'none';
-      });
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
