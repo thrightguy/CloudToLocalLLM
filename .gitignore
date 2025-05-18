@@ -123,3 +123,6 @@ dist/
 # Secrets
 cloudadmin_key
 secrets/
+
+# Cursor IDE specific files
+.cursor/

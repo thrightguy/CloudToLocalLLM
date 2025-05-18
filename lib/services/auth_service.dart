@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart'; // Required for kIsWeb
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert' as convert; // Added for JSON decoding
 
-// Import the entire library with an alias
+// Import the main library with an alias for common types like Issuer, Client, Credential, UserInfo
 import 'package:openid_client/openid_client.dart' as openid;
 
-// For kIsWeb and other Flutter-specific functionalities.
-// For browser-specific functionalities if needed for Authenticator
+// Import platform-specific libraries for Authenticator
 import 'package:openid_client/openid_client_browser.dart' as openid_browser;
+// For non-web, we'll need openid_client_io.dart if direct instantiation is used.
+// The openid_client package itself uses conditional exports to handle this normally.
+// If we directly use openid_io.Authenticator, we need to import it.
+import 'package:openid_client/openid_client_io.dart' as openid_io; 
 
 import 'package:url_launcher/url_launcher.dart';
 // import 'package:uuid/uuid.dart'; // Uuid is not used directly anymore with PKCE verifier
@@ -48,49 +52,33 @@ class AuthService {
   //   return openid.Client(issuer, _clientId, clientSecret: _clientSecret);
   // }
 
-
-  // Initialize Authenticator
-  Future<openid.Authenticator> _getAuthenticator() async {
+  // Use 'dynamic' for Authenticator return type initially, as the concrete type depends on platform.
+  // The actual interface they implement is AuthenticatorIFace, but direct instantiation is shown in examples.
+  Future<dynamic> _getAuthenticator() async {
     final issuer = await _getIssuer();
-    // For web, we use openid_browser.createAuthenticator, for others, openid.Authenticator
-    // However, openid.Authenticator should pick the correct flow based on platform.
-    // Let's try with the generic one first and see if it requires platform-specific instantiation.
-    // The openid_client usually uses conditional imports for dart:io vs dart:html.
-    
-    // The openid_client 0.4.9 `Authenticator` constructor directly takes issuer, clientId, scopes, and redirectUri.
-    // It will create its own client internally.
-    // Client secret is not directly passed to Authenticator for public clients (which is typical for mobile/SPA).
-    // If our client is confidential and needs the secret for the token exchange part of the auth code flow,
-    // this needs to be handled carefully. The `openid_client`'s `Authenticator` is more geared towards public clients.
-    // Let's assume for now the PKCE flow doesn't need client_secret for the browser part.
-    // If token endpoint requires client_secret, then the `Authenticator` might need a custom `Future<openid.Client> clientGetter()`
-    // that provides a pre-configured client.
+    final client = openid.Client(issuer, _clientId, clientSecret: _clientSecret);
 
-    // Simpler approach: openid_client may handle this if clientSecret is provided to its internal client.
-    // Let's try creating a client and passing it if Authenticator supports it.
-    // openid.Authenticator does not directly take a client or clientSecret in its constructor.
-    // It's designed for flows where client secret is not used in the browser (public clients)
-    // or where the platform specific implementation (like openid_client_io) handles it.
-
-    // For PKCE, the client secret is typically NOT used in the authorization request
-    // but IS used at the token endpoint.
-    // The `Authenticator` might need a custom `openid.Client` if the default one it creates
-    // doesn't include the client secret for the token exchange.
-
-    // Let's try providing a client getter.
-    Future<openid.Client> clientFactory() async {
-      return openid.Client(issuer, _clientId, clientSecret: _clientSecret);
+    if (kIsWeb) {
+      // For openid_client_browser.Authenticator, redirectUri and urlLancher are not typically set in constructor.
+      // authorize() handles the redirect using the redirect_uri registered with the OIDC provider.
+      return openid_browser.Authenticator(
+        client,
+        scopes: _scopes,
+        // redirectUri: Uri.parse(_redirectUriString), // Removed, not a constructor param here
+        // urlLancher: _launchUrl, // Removed, not a constructor param here
+      );
+    } else {
+      // Assuming openid_io.Authenticator is the correct class for non-web
+      // and its constructor accepts these parameters as per common patterns or IO needs.
+      return openid_io.Authenticator(
+        client,
+        scopes: _scopes,
+        port: 4000,
+        redirectUri: Uri.parse(_redirectUriString), 
+        urlLancher: _launchUrl, // Parameter name based on previous error/examples
+      );
     }
-
-    return openid.Authenticator(
-      clientFactory, // Pass the factory
-      redirectUri: Uri.parse(_redirectUriString),
-      scopes: _scopes,
-      port: kIsWeb ? null : 4000, // Port for local web server on non-web, null for web as redirect is direct
-      urlLancher: _launchUrl, // Use our existing url_launcher
-    );
   }
-
 
   Future<bool> isLoggedIn() async {
     final accessToken = await _secureStorage.read(key: _accessTokenKey);
@@ -148,10 +136,11 @@ class AuthService {
 
     // The `responseUri` contains the full redirect URI with code or error.
     // The Authenticator needs the query parameters.
-    final authenticator = await _getAuthenticator();
+    final authenticator = await _getAuthenticator(); // Returns AuthenticatorIFace
     
     try {
       // This method processes the response, extracts the code, and exchanges it for tokens.
+      // handleAuthorizationResponse is part of AuthenticatorIFace
       final credential = await authenticator.handleAuthorizationResponse(responseUri.queryParameters);
 
       // await _secureStorage.delete(key: _codeVerifierKey); // No longer needed
@@ -166,7 +155,8 @@ class AuthService {
         await _secureStorage.write(key: _refreshTokenKey, value: credential.refreshToken);
       }
       
-      // UserInfo might be directly available from credential or fetched
+      // UserInfo from Credential, ensuring client is associated if needed by underlying implementation
+      // The authenticator should return a credential with the client already associated.
       final userInfo = await credential.getUserInfo();
       if (userInfo != null) {
         await _secureStorage.write(key: _userInfoKey, value: userInfo.toJson().toString());
@@ -230,8 +220,10 @@ class AuthService {
     if (userInfoString != null) {
       try {
         // Try to parse and return if structure is as expected
-        final decoded = openid.json.decode(userInfoString); // Use openid.json.decode
-        return openid.UserInfo.fromJson(decoded); // Assuming UserInfo has fromJson
+        final decoded = convert.json.decode(userInfoString); // Use convert.json.decode
+        // We need to ensure the UserInfo object can make calls if it needs to lazy-load claims.
+        // For now, assume fromJson is sufficient if all data is in userInfoString.
+        return openid.UserInfo.fromJson(decoded);
       } catch (e) {
         // print('Error parsing stored user info: $e. Fetching fresh.');
       }
@@ -241,29 +233,15 @@ class AuthService {
     try {
       final issuer = await _getIssuer();
       // We need a client to get user info from an existing access token.
-      // The Authenticator is for the auth flow, not necessarily for this.
-      // So, _getClient is still useful.
-      final client = openid.Client(issuer, _clientId, clientSecret: _clientSecret); // Re-instantiate client here
+      final client = openid.Client(issuer, _clientId, clientSecret: _clientSecret);
       
-      // Create a credential object with the stored access token.
-      // The `openid_client` typically has a way to do this.
-      // `credential.getUserInfo()` is usually called on a credential obtained after auth.
-      // To get UserInfo from just an access token, we might need client.getUserInfo(accessToken)
-      // or construct a credential manually.
-
-      // openid.Credential.fromAccessToken(client, accessToken) or similar.
-      // Looking at openid_client, Client itself has a `getUserInfo` method if you have an Credential.
-      // A simple Credential can be created:
-      final credential = openid.Credential.fromJson({
-        'access_token': accessToken,
-        // Other token parts like id_token, refresh_token can be added if available and needed
-        // but for getUserInfo, accessToken is primary.
-      });
+      // Create a Credential object with the stored access token and associate the client.
+      final credential = client.createCredential(accessToken: accessToken);
+      // Alternatively, if fromJson is preferred and client association is manual:
+      // final credential = openid.Credential.fromJson({'access_token': accessToken});
+      // credential.client = client; // This was an error point before, let's rely on createCredential.
       
-      // Attach the client to the credential for it to make calls
-      credential.client = client;
-
-      final userInfo = await credential.getUserInfo();
+      final userInfo = await credential.getUserInfo(); // UserInfo from Credential
       await _secureStorage.write(key: _userInfoKey, value: userInfo.toJson().toString());
       // print('Fetched user info: ${userInfo.name}');
       return userInfo;
