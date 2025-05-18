@@ -7,41 +7,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 // Import the main library with an alias for common types like Issuer, Client, Credential, UserInfo
 import 'package:openid_client/openid_client.dart' as openid;
 
-// Import platform-specific libraries for Authenticator
-import 'package:openid_client/openid_client_browser.dart' as openid_browser;
-// For non-web, we'll need openid_client_io.dart if direct instantiation is used.
-// The openid_client package itself uses conditional exports to handle this normally.
-// If we directly use openid_io.Authenticator, we need to import it.
-import 'package:openid_client/openid_client_io.dart' as openid_io; 
-
-import 'package:url_launcher/url_launcher.dart';
-// import 'package:uuid/uuid.dart'; // Uuid is not used directly anymore with PKCE verifier
-
-// import 'package:openid_client/openid_client.dart' 
-//   show generateRandomCodeVerifier, calculateS256CodeChallenge, ResponseType, CodeChallengeMethod;
-
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  // final _uuid = const Uuid(); // Not strictly needed if openid_client generates state/nonce
 
   // Configuration
   static const String _issuerUrl = 'https://auth.cloudtolocalllm.online';
   static const String _clientId = '31ab784f-f74d-4764-abe1-29060075e5c3';
   static const String _clientSecret = '6DP4-nMxwPccJg-knfqXYRzlHL3hdeLifVvrIoKPMvw'; // Used for confidential client
-  
-  // Using the original public redirect URI
-  static const String _redirectUriString = 'https://cloudtolocalllm.online/oauthredirect';
-  // static final Uri _redirectUri = Uri.parse(_redirectUriString); // Authenticator takes string
-
-  static const List<String> _scopes = ['openid', 'email', 'profile', 'offline_access'];
 
   // Secure Storage Keys
   static const String _idTokenKey = 'id_token';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userInfoKey = 'user_info';
-  // static const String _codeVerifierKey = 'pkce_code_verifier'; // For manual PKCE - REMOVED
 
   // Observable for authentication state
   final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
@@ -106,25 +85,8 @@ class AuthService {
     return await openid.Issuer.discover(Uri.parse(_issuerUrl));
   }
 
-  // _getClient might still be useful for operations outside of Authenticator's direct flow,
-  // like token revocation or other direct client interactions if needed later.
-  // For now, let's assume Authenticator handles what we need for login/token exchange.
-  // Future<openid.Client> _getClient(openid.Issuer issuer) async {
-  //   return openid.Client(issuer, _clientId, clientSecret: _clientSecret);
-  // }
-
   Future<bool> isLoggedIn() async {
     return _auth.currentUser != null;
-  }
-
-  // URL Launcher helper
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, webOnlyWindowName: '_self');
-    } else {
-      throw Exception('Could not launch $url');
-    }
   }
 
   // Initiates the login process by redirecting to the auth server
@@ -217,15 +179,4 @@ class AuthService {
       return null;
     }
   }
-}
-
-// Placeholder for deep link handling (this would be in your main app logic or a handler)
-// Future<void> handleRedirect(Uri uri) async {
-//   if (uri.toString().startsWith(AuthService._redirectUriString)) {
-//     // Extract parameters and complete the login flow
-//     // final responseParams = uri.queryParameters;
-//     // This is where you would call something like:
-//     // authenticator.grant.handleAuthorizationResponse(responseParams);
-//     // And then exchange for tokens
-//   }
-// } 
+} 
