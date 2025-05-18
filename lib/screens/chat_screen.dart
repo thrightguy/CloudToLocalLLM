@@ -118,7 +118,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 BoxShadow(
                   offset: const Offset(0, -2),
                   blurRadius: 4,
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 0.1),
                 ),
               ],
             ),
@@ -166,7 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
         decoration: BoxDecoration(
           color: message.isUserMessage
               ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+              : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         constraints: BoxConstraints(
