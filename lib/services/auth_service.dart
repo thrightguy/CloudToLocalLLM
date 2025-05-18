@@ -113,34 +113,6 @@ class AuthService {
   //   return openid.Client(issuer, _clientId, clientSecret: _clientSecret);
   // }
 
-  // Use 'dynamic' for Authenticator return type initially, as the concrete type depends on platform.
-  // The actual interface they implement is AuthenticatorIFace, but direct instantiation is shown in examples.
-  Future<dynamic> _getAuthenticator() async {
-    final issuer = await _getIssuer();
-    final client = openid.Client(issuer, _clientId, clientSecret: _clientSecret);
-
-    if (kIsWeb) {
-      // For openid_client_browser.Authenticator, redirectUri and urlLancher are not typically set in constructor.
-      // authorize() handles the redirect using the redirect_uri registered with the OIDC provider.
-      return openid_browser.Authenticator(
-        client,
-        scopes: _scopes,
-        // redirectUri: Uri.parse(_redirectUriString), // Removed, not a constructor param here
-        // urlLancher: _launchUrl, // Removed, not a constructor param here
-      );
-    } else {
-      // Assuming openid_io.Authenticator is the correct class for non-web
-      // and its constructor accepts these parameters as per common patterns or IO needs.
-      return openid_io.Authenticator(
-        client,
-        scopes: _scopes,
-        port: 4000,
-        redirectUri: Uri.parse(_redirectUriString), 
-        urlLancher: _launchUrl, // Parameter name based on previous error/examples
-      );
-    }
-  }
-
   Future<bool> isLoggedIn() async {
     return _auth.currentUser != null;
   }
