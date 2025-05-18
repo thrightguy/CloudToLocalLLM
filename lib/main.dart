@@ -6,6 +6,7 @@ import 'package:cloudtolocalllm/services/auth_service.dart'; // Assuming your Au
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:cloudtolocalllm/screens/login_screen.dart';
+import 'package:cloudtolocalllm/screens/chat_screen.dart'; // Import the chat screen
 import 'package:firebase_auth/firebase_auth.dart';
 
 // Global instance of AuthService (consider using a service locator like GetIt or Provider)
@@ -38,6 +39,17 @@ final GoRouter _router = GoRouter(
       path: '/login',
       builder: (BuildContext context, GoRouterState state) {
         return LoginScreen(authService: _authService);
+      },
+    ),
+    GoRoute(
+      path: '/chat',
+      builder: (BuildContext context, GoRouterState state) {
+        // Check if user is logged in, redirect to login if not
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          return LoginScreen(authService: _authService);
+        }
+        return ChatScreen(authService: _authService);
       },
     ),
     GoRoute(
@@ -378,6 +390,13 @@ class HomeScreen extends StatelessWidget {
                                 style: const TextStyle(fontSize: 16),
                               ),
                               const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  GoRouter.of(context).go('/chat');
+                                },
+                                child: const Text('Go to Chat'),
+                              ),
+                              const SizedBox(height: 8),
                               ElevatedButton(
                                 onPressed: () async {
                                   await _authService.logout();
