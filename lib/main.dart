@@ -3,11 +3,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart'; // Assuming your AuthService is here
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:cloudtolocalllm/screens/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Global instance of AuthService (consider using a service locator like GetIt or Provider)
 final AuthService _authService = AuthService();
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize AuthService
+  await _authService.initialize();
+  
   runApp(const CloudToLocalLLMApp());
 }
 
@@ -19,6 +32,12 @@ final GoRouter _router = GoRouter(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
         return const HomeScreen();
+      },
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (BuildContext context, GoRouterState state) {
+        return LoginScreen(authService: _authService);
       },
     ),
     GoRoute(
@@ -180,12 +199,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // final bool isUserLoggedIn = false; // We can get this from AuthService now
-    // For simplicity, let's add a login button that calls _authService.login()
-    // You would typically integrate this into your UI more cleanly.
-
-    // final screenWidth = MediaQuery.of(context).size.width; // Removed unused screenWidth
-    final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    // final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
       appBar: AppBar(
@@ -194,9 +208,9 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // Example Login/Logout Button
-          FutureBuilder<bool>(
-            future: _authService.isLoggedIn(), // Check login status
+          // Firebase Login/Logout Button
+          StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
@@ -204,19 +218,15 @@ class HomeScreen extends StatelessWidget {
                   child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                 );
               }
-              final bool isLoggedIn = snapshot.data ?? false;
+              final bool isLoggedIn = snapshot.data != null;
               return TextButton(
                 onPressed: () async {
                   if (isLoggedIn) {
                     await _authService.logout();
-                    if (!context.mounted) return; // Added mounted check
-                    // GoRouter.of(context).refresh(); // Refresh to update UI if needed
-                    // Forcing a reload of the current route to reflect logout state.
-                    // This is a simple way, a more robust solution would use a state management library.
-                    GoRouter.of(context).go('/', extra: {'refresh': DateTime.now().millisecondsSinceEpoch });
+                    if (!context.mounted) return;
+                    GoRouter.of(context).go('/');
                   } else {
-                    await _authService.login();
-                    // After calling login, browser will redirect. No need to navigate here.
+                    GoRouter.of(context).go('/login');
                   }
                 },
                 child: Text(
@@ -254,15 +264,15 @@ class HomeScreen extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      scaffoldBackgroundColor
+                      Theme.of(context).scaffoldBackgroundColor
                           .withAlpha(0), // Transparent at edge
-                      scaffoldBackgroundColor
+                      Theme.of(context).scaffoldBackgroundColor
                           .withAlpha(0), // Transparent for a bit
                       Colors.white, // Opaque center for the image to show
                       Colors.white, // Opaque center
-                      scaffoldBackgroundColor
+                      Theme.of(context).scaffoldBackgroundColor
                           .withAlpha(0), // Transparent for a bit
-                      scaffoldBackgroundColor
+                      Theme.of(context).scaffoldBackgroundColor
                           .withAlpha(0), // Transparent at edge
                     ],
                     stops: const [
@@ -290,144 +300,100 @@ class HomeScreen extends StatelessWidget {
                 )),
           ),
 
-          // Foreground content layer
-          Center(
-            child: SingleChildScrollView(
-              // Make content scrollable if it overflows
-              padding: const EdgeInsets.all(
-                  16.0), // Add some padding around the content
+          // Content layer
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const CircularLlmLogo(size: 150), // Use the new circular logo
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  const CircularLlmLogo(size: 150),
+                  const SizedBox(height: 20),
                   const Text(
                     'CloudToLocalLLM',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color:
-                          Colors.white, // Ensure text is white for dark theme
-                      shadows: [
-                        Shadow(
-                          blurRadius: 2.0,
-                          color: Colors.black54,
-                          offset: Offset(1.0, 1.0),
-                        ),
-                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   const Text(
-                    'Run powerful Large Language Models locally with cloud-based management',
+                    'Run advanced AI models locally, managed by a cloud interface.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white70,
-                      shadows: [
-                        // Optional: add subtle shadow to subtitle too
-                        Shadow(
-                          blurRadius: 1.0,
-                          color: Colors.black38,
-                          offset: Offset(0.5, 0.5),
-                        ),
-                      ],
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  _buildFeatureCard(
-                    title: 'What is CloudToLocalLLM?',
-                    description:
-                        'CloudToLocalLLM is an innovative platform that lets you run AI language models on your own computer while managing them through a simple cloud interface.',
-                    features: [
-                      'Run Models Locally',
-                      'Cloud Management',
-                      'Cost Effective'
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildFeatureCard(
-                    title: 'Coming Soon',
-                    description:
-                        "We're currently in development. Login will be available soon.",
-                    // showButton: isUserLoggedIn, // Login button is now in AppBar
+                  const SizedBox(height: 40),
+                  
+                  // User profile section - Only show when logged in
+                  StreamBuilder<User?>(
+                    stream: FirebaseAuth.instance.authStateChanges(),
+                    builder: (context, snapshot) {
+                      final user = snapshot.data;
+                      if (user == null) {
+                        // Not logged in - show login card
+                        return Card(
+                          elevation: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Please login to access your models and settings',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    GoRouter.of(context).go('/login');
+                                  },
+                                  child: const Text('Login / Create Account'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      // Logged in - show user info
+                      return Card(
+                        elevation: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Welcome!',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Logged in as: ${user.email}',
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  await _authService.logout();
+                                },
+                                child: const Text('Logout'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard({
-    required String title,
-    required String description,
-    List<String> features = const [],
-    // bool showButton = false, // Login button is now in AppBar
-  }) {
-    return Container(
-      width: 500, // Max width for cards
-      constraints: const BoxConstraints(
-          maxWidth: 500), // Ensure it doesn\'t get too wide on large screens
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF252D3F)
-            .withAlpha((255 * 0.85).round()), // Slightly transparent to show background hint. Fixed withAlpha
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10, width: 0.5), // Subtle border
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            description,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
-          ),
-          if (features.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            ...features.map((feature) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle,
-                          size: 16, color: Color(0xFF6A5AE0)),
-                      const SizedBox(width: 8),
-                      Text(feature,
-                          style: const TextStyle(color: Colors.white)),
-                    ],
-                  ),
-                )),
-          ],
-          // if (showButton) ...[
-          //   const SizedBox(height: 16),
-          //   Align(
-          //     alignment: Alignment.center,
-          //     child: ElevatedButton(
-          //       onPressed: () {},
-          //       style: ElevatedButton.styleFrom(
-          //         backgroundColor: const Color(0xFF6A5AE0),
-          //         foregroundColor: Colors.white,
-          //         padding:
-          //             const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          //       ),
-          //       child: const Text('Download App'),
-          //     ),
-          //   ),
-          // ],
         ],
       ),
     );
