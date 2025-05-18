@@ -46,8 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           
           if (result != null && mounted) {
-            // Login successful, navigate to home
-            GoRouter.of(context).go('/');
+            // Login successful, navigate to chat screen
+            GoRouter.of(context).go('/chat');
           } else if (mounted) {
             setState(() {
               _errorMessage = 'Invalid email or password';
@@ -61,8 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           
           if (result != null && mounted) {
-            // Registration successful, navigate to home
-            GoRouter.of(context).go('/');
+            // Registration successful, navigate to chat screen
+            GoRouter.of(context).go('/chat');
           } else if (mounted) {
             setState(() {
               _errorMessage = 'Failed to create account. Email may already be in use.';
