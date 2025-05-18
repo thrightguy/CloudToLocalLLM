@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart'; // Required for kIsWeb
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert' as convert; // Added for JSON decoding
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Import the main library with an alias for common types like Issuer, Client, Credential, UserInfo
 import 'package:openid_client/openid_client.dart' as openid;
@@ -20,6 +21,7 @@ import 'package:url_launcher/url_launcher.dart';
 //   show generateRandomCodeVerifier, calculateS256CodeChallenge, ResponseType, CodeChallengeMethod;
 
 class AuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   // final _uuid = const Uuid(); // Not strictly needed if openid_client generates state/nonce
 
@@ -40,6 +42,65 @@ class AuthService {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userInfoKey = 'user_info';
   // static const String _codeVerifierKey = 'pkce_code_verifier'; // For manual PKCE - REMOVED
+
+  // Observable for authentication state
+  final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
+  
+  AuthService() {
+    // Listen to Firebase auth state changes and update isAuthenticated
+    _auth.authStateChanges().listen((User? user) {
+      isAuthenticated.value = user != null;
+    });
+  }
+
+  // Initialize the service
+  Future<void> initialize() async {
+    // Check if user is already logged in
+    final currentUser = _auth.currentUser;
+    isAuthenticated.value = currentUser != null;
+  }
+
+  // Email/Password Sign In
+  Future<UserCredential?> signInWithEmailAndPassword(String email, String password) async {
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      // Store tokens if needed for API calls
+      if (userCredential.user != null) {
+        final idToken = await userCredential.user!.getIdToken();
+        await _secureStorage.write(key: _idTokenKey, value: idToken);
+        // You can also store other info if needed
+      }
+      
+      return userCredential;
+    } catch (e) {
+      debugPrint('Error signing in: $e');
+      return null;
+    }
+  }
+
+  // Email/Password Sign Up
+  Future<UserCredential?> createUserWithEmailAndPassword(String email, String password) async {
+    try {
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (userCredential.user != null) {
+        final idToken = await userCredential.user!.getIdToken();
+        await _secureStorage.write(key: _idTokenKey, value: idToken);
+      }
+      
+      return userCredential;
+    } catch (e) {
+      debugPrint('Error creating user: $e');
+      return null;
+    }
+  }
 
   Future<openid.Issuer> _getIssuer() async {
     return await openid.Issuer.discover(Uri.parse(_issuerUrl));
@@ -81,9 +142,7 @@ class AuthService {
   }
 
   Future<bool> isLoggedIn() async {
-    final accessToken = await _secureStorage.read(key: _accessTokenKey);
-    // Add robust token expiration check and refresh logic.
-    return accessToken != null;
+    return _auth.currentUser != null;
   }
 
   // URL Launcher helper
@@ -98,111 +157,47 @@ class AuthService {
 
   // Initiates the login process by redirecting to the auth server
   Future<void> login() async {
-    final authenticator = await _getAuthenticator();
-    
-    // For web, authorize redirects the current window.
-    // For mobile/desktop, authorize spawns a browser window and listens on a local port.
-    if (kIsWeb) {
-      // For web, we might use `authorize` which expects a full page redirect,
-      // or `authorizeInteractive` if it's available and suitable.
-      // `openid_client_browser.authenticate` or `openid_browser.Authenticator` might be more direct.
-      // Let's stick to the general Authenticator and see its behavior.
-      // It will call the urlLancher.
-      await authenticator.authorize(); // This should use the _launchUrl we provided
-    } else {
-      // For non-web, authorizeInteractive usually opens a browser and listens on redirectUri's port
-      // The `redirectUri` for non-web should be localhost with a port.
-      // Our current _redirectUriString is a public one. This needs adjustment for non-web.
-      // For simplicity, let's assume the current _redirectUriString is handled by _launchUrl opening a browser,
-      // and the app will capture the redirect via deep linking.
-      // This part is tricky with a single redirect URI.
-      // The Authenticator's `urlLancher` param is key here.
-      await authenticator.authorize(); // Should trigger _launchUrl
-    }
+    // This would be replaced with Firebase social auth methods 
+    // when you're ready to add Google/Microsoft login
+    debugPrint('OIDC login not implemented yet. Use signInWithEmailAndPassword instead.');
   }
 
   // Handles the redirect from the auth server, exchanges code for tokens
-  Future<openid.UserInfo?> handleRedirectAndLogin(Uri responseUri) async {
-    // With Authenticator, the response is typically handled by its internal listener if not on web,
-    // or by processing the response if on web.
-    // `handleAuthorizationResponse` is the method.
+  Future<User?> handleRedirectAndLogin(Uri responseUri) async {
+    // This will be implemented when you add social logins
+    // For now, just return current user to maintain backward compatibility
+    return _auth.currentUser;
+  }
 
-    // We no longer need to read codeVerifier from storage, Authenticator manages it.
-    // final codeVerifier = await _secureStorage.read(key: _codeVerifierKey);
-    // if (codeVerifier == null) {
-    //   // print('Error: PKCE Code verifier not found in storage.');
-    //   return null;
-    // }
-
-    // The `responseUri` contains the full redirect URI with code or error.
-    // The Authenticator needs the query parameters.
-    final authenticator = await _getAuthenticator(); // Returns AuthenticatorIFace
-    
+  // Sign Out
+  Future<void> logout() async {
     try {
-      // This method processes the response, extracts the code, and exchanges it for tokens.
-      // handleAuthorizationResponse is part of AuthenticatorIFace
-      final credential = await authenticator.handleAuthorizationResponse(responseUri.queryParameters);
-
-      // await _secureStorage.delete(key: _codeVerifierKey); // No longer needed
-
-      if (credential.idToken != null) {
-        await _secureStorage.write(key: _idTokenKey, value: credential.idToken!.toString());
-      }
-      if (credential.accessToken != null) {
-        await _secureStorage.write(key: _accessTokenKey, value: credential.accessToken);
-      }
-      if (credential.refreshToken != null) {
-        await _secureStorage.write(key: _refreshTokenKey, value: credential.refreshToken);
-      }
+      await _auth.signOut();
       
-      // UserInfo from Credential, ensuring client is associated if needed by underlying implementation
-      // The authenticator should return a credential with the client already associated.
-      final userInfo = await credential.getUserInfo();
-      if (userInfo != null) {
-        await _secureStorage.write(key: _userInfoKey, value: userInfo.toJson().toString());
-        // print('Logged in user: ${userInfo.name}');
-        return userInfo;
-      }
-      return null;
+      // Clean up stored tokens
+      await _secureStorage.delete(key: _idTokenKey);
+      await _secureStorage.delete(key: _accessTokenKey);
+      await _secureStorage.delete(key: _refreshTokenKey);
+      await _secureStorage.delete(key: _userInfoKey);
     } catch (e) {
-      // print('Error exchanging authorization code or fetching user info: $e');
-      // await _secureStorage.delete(key: _codeVerifierKey); // No longer needed
-      return null;
+      debugPrint('Error signing out: $e');
     }
   }
 
-  Future<void> logout() async {
-    final idTokenHint = await _secureStorage.read(key: _idTokenKey);
-    
-    await _secureStorage.delete(key: _idTokenKey);
-    await _secureStorage.delete(key: _accessTokenKey);
-    await _secureStorage.delete(key: _refreshTokenKey);
-    await _secureStorage.delete(key: _userInfoKey);
-    // await _secureStorage.delete(key: _codeVerifierKey); // Clear verifier on logout too - REMOVED
+  // Get current user
+  User? get currentUser => _auth.currentUser;
 
-    final issuer = await _getIssuer();
-    final postLogoutRedirectUri = Uri.parse('https://cloudtolocalllm.online/loggedout'); 
-    final endSessionUri = issuer.metadata.endSessionEndpoint;
+  // For backward compatibility with your older code
+  // Validate the current token (no need with Firebase, it handles token refresh)
+  Future<bool> validateToken() async {
+    return _auth.currentUser != null;
+  }
 
-    if (endSessionUri != null) {
-      final Map<String, String?> queryParameters = {
-        'id_token_hint': idTokenHint,
-        'post_logout_redirect_uri': postLogoutRedirectUri.toString(),
-        'client_id': _clientId,
-      };
-      // Remove null values from queryParameters
-      queryParameters.removeWhere((key, value) => value == null);
-
-      final logoutUrl = endSessionUri.replace(queryParameters: queryParameters.cast<String, String>());
-
-
-      if (await canLaunchUrl(logoutUrl)) {
-        await launchUrl(logoutUrl, webOnlyWindowName: '_self');
-      } else {
-        // print('Could not launch logout URL: $logoutUrl');
-      }
-    }
-    // print('User logged out attempt initiated.');
+  // Login with token (for backward compatibility)
+  Future<void> loginWithToken(String token) async {
+    // With Firebase, you'd typically use a different method
+    // but we'll keep this for backward compatibility with your existing code
+    await _secureStorage.write(key: _idTokenKey, value: token);
   }
 
   Future<String?> getAccessToken() async {
