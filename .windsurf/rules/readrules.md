@@ -1,6 +1,6 @@
 ---
+trigger: always_on
 description: 
 globs: 
-alwaysApply: true
 ---
 RESPECT YOUR RULES ALL THE TIME

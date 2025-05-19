@@ -21,10 +21,26 @@ packages:
     dependency: transitive
     description:
       name: async
-      sha256: "758e6d74e971c3e5aceb4110bfd6698efc7f501675bcfe0c775459a8140750eb"
+      sha256: d2872f9c19731c2e5f10444b14686eb7cc85c76274bd6c16e1816bff9a3bab63
       url: "https://pub.dev"
     source: hosted
-    version: "2.13.0"
+    version: "2.12.0"
+  auth0_flutter:
+    dependency: "direct main"
+    description:
+      name: auth0_flutter
+      sha256: "304bf792c8664c226499413a571f99b61164d04d14dcc391b0d9a63ea78f234f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.10.0"
+  auth0_flutter_platform_interface:
+    dependency: transitive
+    description:
+      name: auth0_flutter_platform_interface
+      sha256: a4338a06a3a4f8c763ed2d28d99fed03b9c96f4ad274f80b6a6b215b48b46e04
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.10.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -580,10 +596,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: "6c7653816b1c938e121b69ff63a33c9dc68102b65a5fb0a5c0f9786256ed33e6"
+      sha256: fb31f383e2ee25fbbfe06b40fe21e1e458d14080e3c67e7ba0acfde4df4e0bbd
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.5"
+    version: "0.7.4"
   typed_data:
     dependency: transitive
     description:
