@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
+import 'package:auth0_flutter/auth0_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final AuthService authService;
@@ -57,8 +57,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -67,16 +65,22 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           // User info
-          if (user != null && user.email != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Center(
-                child: Text(
-                  user.email!,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
+          ValueListenableBuilder<UserProfile?>(
+              valueListenable: widget.authService.currentUser,
+              builder: (context, user, _) {
+                if (user != null && user.email != null) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Center(
+                      child: Text(
+                        user.email!,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
         ],
       ),
       body: Column(
@@ -101,14 +105,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
-          
+
           // Loading indicator
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Center(child: CircularProgressIndicator()),
             ),
-          
+
           // Message input
           Container(
             padding: const EdgeInsets.all(8.0),
@@ -118,7 +122,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 BoxShadow(
                   offset: const Offset(0, -2),
                   blurRadius: 4,
-                  color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 0.1),
+                  color: Colors.black
+                      .withValues(red: 0, green: 0, blue: 0, alpha: 0.1),
                 ),
               ],
             ),
@@ -157,9 +162,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageItem(ChatMessage message) {
     return Align(
-      alignment: message.isUserMessage
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
+      alignment:
+          message.isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8.0),
         padding: const EdgeInsets.all(12.0),
@@ -193,4 +197,4 @@ class ChatMessage {
     required this.text,
     required this.isUserMessage,
   });
-} 
+}

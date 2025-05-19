@@ -1,61 +1,58 @@
 // Required for ImageFilter if we use blur, and for ShaderMask
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloudtolocalllm/services/auth_service.dart'; // Assuming your AuthService is here
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/screens/login_screen.dart';
-import 'package:cloudtolocalllm/screens/chat_screen.dart'; // Import the chat screen
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:developer' as developer; // Import for better logging
+import 'package:cloudtolocalllm/screens/chat_screen.dart';
+import 'package:cloudtolocalllm/auth0_options.dart';
+import 'package:auth0_flutter/auth0_flutter.dart';
+import 'dart:developer' as developer;
+import 'dart:async';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
-// Global instance of AuthService (consider using a service locator like GetIt or Provider)
+// Global instance of AuthService
 final AuthService _authService = AuthService();
 
-// Global flag for debugging
-bool _firebaseInitialized = false;
-String _firebaseErrorMessage = '';
-
 void main() async {
+  // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
-    developer.log('Initializing Firebase...', name: 'firebase_init');
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    _firebaseInitialized = true;
-    developer.log('Firebase initialized successfully', name: 'firebase_init');
-    
-    // Debug information
-    final FirebaseApp app = Firebase.app();
-    developer.log('Firebase app name: ${app.name}', name: 'firebase_init');
-    developer.log('Firebase options: ${app.options.projectId}', name: 'firebase_init');
-    
-    // Check if auth is working
-    final auth = FirebaseAuth.instance;
-    developer.log('Firebase Auth instance created', name: 'firebase_init');
-    
-    // Debug auth state
-    auth.authStateChanges().listen((User? user) {
-      developer.log('Auth state changed: ${user?.uid ?? 'No user logged in'}', name: 'firebase_auth');
-    });
-  } catch (e) {
-    _firebaseInitialized = false;
-    _firebaseErrorMessage = e.toString();
-    developer.log('Firebase initialization failed: $e', name: 'firebase_init', error: e);
+
+  // Platform-specific logging
+  if (kIsWeb) {
+    developer.log('Running on Web platform', name: 'platform');
+  } else {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        developer.log('Running on Android platform', name: 'platform');
+        break;
+      case TargetPlatform.iOS:
+        developer.log('Running on iOS platform', name: 'platform');
+        break;
+      case TargetPlatform.linux:
+        developer.log('Running on Linux platform', name: 'platform');
+        break;
+      case TargetPlatform.macOS:
+        developer.log('Running on macOS platform', name: 'platform');
+        break;
+      case TargetPlatform.windows:
+        developer.log('Running on Windows platform', name: 'platform');
+        break;
+      default:
+        developer.log('Running on unknown platform', name: 'platform');
+    }
   }
-  
+
   // Initialize AuthService
   try {
     developer.log('Initializing AuthService...', name: 'auth_service');
     await _authService.initialize();
     developer.log('AuthService initialized successfully', name: 'auth_service');
   } catch (e) {
-    developer.log('AuthService initialization failed: $e', name: 'auth_service', error: e);
+    developer.log('AuthService initialization failed: $e',
+        name: 'auth_service', error: e);
   }
-  
+
   runApp(const CloudToLocalLLMApp());
 }
 
@@ -79,11 +76,17 @@ final GoRouter _router = GoRouter(
       path: '/chat',
       builder: (BuildContext context, GoRouterState state) {
         // Check if user is logged in, redirect to login if not
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
+        final bool isLoggedIn = _authService.isAuthenticated.value;
+        if (!isLoggedIn) {
           return LoginScreen(authService: _authService);
         }
         return ChatScreen(authService: _authService);
+      },
+    ),
+    GoRoute(
+      path: '/callback',
+      builder: (BuildContext context, GoRouterState state) {
+        return const CallbackScreen();
       },
     ),
     GoRoute(
@@ -109,15 +112,53 @@ final GoRouter _router = GoRouter(
   ),
 );
 
-// Debug screen to show Firebase status
+// Auth0 callback screen
+class CallbackScreen extends StatefulWidget {
+  const CallbackScreen({super.key});
+
+  @override
+  State<CallbackScreen> createState() => _CallbackScreenState();
+}
+
+class _CallbackScreenState extends State<CallbackScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _handleCallback();
+  }
+
+  Future<void> _handleCallback() async {
+    // The actual callback processing happens in AuthService.initialize()
+    // This is just a redirect after a short delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      GoRouter.of(context).go('/');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text('Processing authentication...'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Debug screen to show Auth0 status
 class DebugScreen extends StatelessWidget {
   const DebugScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Get current Firebase state
-    final User? currentUser = FirebaseAuth.instance.currentUser;
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Debug Info'),
@@ -134,39 +175,41 @@ class DebugScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Firebase Initialization',
+                      'Auth0 Authentication State',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
-                    Text('Status: ${_firebaseInitialized ? 'SUCCESS' : 'FAILED'}'),
-                    if (!_firebaseInitialized) Text('Error: $_firebaseErrorMessage'),
+                    ValueListenableBuilder<bool>(
+                        valueListenable: _authService.isAuthenticated,
+                        builder: (context, isAuthenticated, _) {
+                          return Text(
+                              'Logged in: ${isAuthenticated ? 'YES' : 'NO'}');
+                        }),
+                    ValueListenableBuilder<UserProfile?>(
+                        valueListenable: _authService.currentUser,
+                        builder: (context, user, _) {
+                          if (user == null) {
+                            return const Text('No user logged in');
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('User ID: ${user.sub}'),
+                              Text('Email: ${user.email}'),
+                              Text('Name: ${user.name}'),
+                            ],
+                          );
+                        }),
                     const SizedBox(height: 16),
-                    
-                    Text(
-                      'Firebase Auth State',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Logged in: ${currentUser != null ? 'YES' : 'NO'}'),
-                    if (currentUser != null) ...[
-                      Text('User ID: ${currentUser.uid}'),
-                      Text('Email: ${currentUser.email}'),
-                      Text('Anonymous: ${currentUser.isAnonymous}'),
-                    ],
-                    const SizedBox(height: 16),
-                    
                     ElevatedButton(
-                      onPressed: () {
-                        FirebaseAuth.instance.authStateChanges().listen((User? user) {
-                          developer.log('Current auth state: ${user?.uid ?? 'No user logged in'}', 
-                            name: 'firebase_auth');
-                        });
-                        
+                      onPressed: () async {
+                        final token = await _authService.getAccessToken();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Auth state logged to console')),
+                          SnackBar(content: Text('Token: ${token ?? 'None'}')),
                         );
                       },
-                      child: const Text('Check Auth State'),
+                      child: const Text('Show Token'),
                     ),
                   ],
                 ),
@@ -186,12 +229,12 @@ class DebugScreen extends StatelessWidget {
   }
 }
 
+// Main app wrapper without Firebase dependency
 class CloudToLocalLLMApp extends StatelessWidget {
-  const CloudToLocalLLMApp({super.key}); // Removed const because _router is not const
+  const CloudToLocalLLMApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 2. Use MaterialApp.router
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
@@ -211,7 +254,6 @@ class CloudToLocalLLMApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.dark,
-      // home: const HomeScreen(), // home is replaced by routerConfig
     );
   }
 }
@@ -234,7 +276,8 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
 
   Future<void> _handleLoginRedirect() async {
     try {
-      final user = await _authService.handleRedirectAndLogin(widget.responseUri);
+      final user =
+          await _authService.handleRedirectAndLogin(widget.responseUri);
       if (!mounted) return; // Check mounted after await
       if (user != null) {
         // Successfully logged in, navigate to home or a dashboard
@@ -248,7 +291,6 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
         GoRouter.of(context).go('/'); // Go back to home or login page
       }
     } catch (e) {
-      // print('Error during redirect handling: $e'); // Removed print
       if (!mounted) return; // Check mounted after await
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('An error occurred during login: $e')),
@@ -288,15 +330,22 @@ class CircularLlmLogo extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary.withAlpha((255 * 0.8).round()), // Fixed withAlpha
-            Theme.of(context).colorScheme.secondary.withAlpha((255 * 0.6).round()), // Fixed withAlpha
+            Theme.of(context)
+                .colorScheme
+                .primary
+                .withAlpha((255 * 0.8).round()), // Fixed withAlpha
+            Theme.of(context)
+                .colorScheme
+                .secondary
+                .withAlpha((255 * 0.6).round()), // Fixed withAlpha
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha((255 * 0.3).round()), // Fixed withAlpha
+            color:
+                Colors.black.withAlpha((255 * 0.3).round()), // Fixed withAlpha
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -329,8 +378,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -345,53 +392,93 @@ class HomeScreen extends StatelessWidget {
               GoRouter.of(context).go('/debug');
             },
           ),
-          // Always show login button regardless of Firebase state
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                developer.log('Direct login button pressed', name: 'auth_button');
-                GoRouter.of(context).go('/login');
-              },
-              child: const Text(
-                'Login',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          // Hidden Firebase state observer for debugging
-          Opacity(
-            opacity: 0,
-            child: StreamBuilder<User?>(
-              stream: FirebaseAuth.instance.authStateChanges(),
-              builder: (context, snapshot) {
-                // Add debug log to monitor stream status
-                developer.log(
-                  'StreamBuilder: connection=${snapshot.connectionState}, hasData=${snapshot.hasData}, '
-                  'hasError=${snapshot.hasError}${snapshot.hasError ? ', error=${snapshot.error}' : ''}',
-                  name: 'auth_button',
+          // Authentication state-aware buttons
+          ValueListenableBuilder<bool>(
+            valueListenable: _authService.isAuthenticated,
+            builder: (context, isAuthenticated, _) {
+              if (isAuthenticated) {
+                // User is logged in
+                return Row(
+                  children: [
+                    // Chat button
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.chat, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          GoRouter.of(context).go('/chat');
+                        },
+                        label: const Text(
+                          'Chat',
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    // Logout button
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.logout, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () async {
+                          await _authService.logout();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Logged out successfully')),
+                            );
+                          }
+                        },
+                        label: const Text(
+                          'Logout',
+                          style: TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
-                
-                final bool isLoggedIn = snapshot.data != null;
-                developer.log('User logged in: $isLoggedIn', name: 'auth_button');
-                
-                return const SizedBox.shrink();
-              },
-            ),
+              } else {
+                // User is not logged in
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      GoRouter.of(context).go('/login');
+                    },
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              }
+            },
           ),
         ],
         elevation: 8.0,
-        shadowColor: Colors.black.withAlpha((255 * 0.5).round()), // Fixed withAlpha
+        shadowColor:
+            Colors.black.withAlpha((255 * 0.5).round()), // Fixed withAlpha
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 const Color(0xFF4A3B8A),
-                const Color(0xFF6A5AE0).withAlpha((255 * 0.85).round()), // Fixed withAlpha
+                const Color(0xFF6A5AE0)
+                    .withAlpha((255 * 0.85).round()), // Fixed withAlpha
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -411,15 +498,19 @@ class HomeScreen extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      Theme.of(context).scaffoldBackgroundColor
+                      Theme.of(context)
+                          .scaffoldBackgroundColor
                           .withAlpha(0), // Transparent at edge
-                      Theme.of(context).scaffoldBackgroundColor
+                      Theme.of(context)
+                          .scaffoldBackgroundColor
                           .withAlpha(0), // Transparent for a bit
                       Colors.white, // Opaque center for the image to show
                       Colors.white, // Opaque center
-                      Theme.of(context).scaffoldBackgroundColor
+                      Theme.of(context)
+                          .scaffoldBackgroundColor
                           .withAlpha(0), // Transparent for a bit
-                      Theme.of(context).scaffoldBackgroundColor
+                      Theme.of(context)
+                          .scaffoldBackgroundColor
                           .withAlpha(0), // Transparent at edge
                     ],
                     stops: const [
@@ -473,87 +564,184 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  
-                  // Fixed login card - always visible
-                  Card(
-                    elevation: 8, // Higher elevation for better visibility
-                    color: Theme.of(context).colorScheme.surface.withOpacity(0.9), // More opaque background
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                        width: 2,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0), // More padding
-                      child: Column(
-                        children: [
-                          const Icon(Icons.login, size: 48, color: Colors.blue),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Please login to access your models and settings',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Authentication is required to use this application.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 24),
-                          // Larger, more visible login button
-                          ElevatedButton(
-                            onPressed: () {
-                              developer.log('Login button in card pressed', name: 'profile_card');
-                              GoRouter.of(context).go('/login');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+
+                  // Auth state-aware content
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _authService.isAuthenticated,
+                    builder: (context, isAuthenticated, _) {
+                      if (isAuthenticated) {
+                        // User is logged in
+                        return ValueListenableBuilder<UserProfile?>(
+                            valueListenable: _authService.currentUser,
+                            builder: (context, user, _) {
+                              return Card(
+                                elevation: 8,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surface
+                                    .withOpacity(0.9),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.5),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    children: [
+                                      const Icon(Icons.person,
+                                          size: 48, color: Colors.green),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Welcome${user?.name != null ? ', ${user!.name}' : ''}!',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        user?.email ?? 'Authenticated User',
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      // Start chatting button
+                                      ElevatedButton.icon(
+                                        icon: const Icon(Icons.chat),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 32, vertical: 16),
+                                          textStyle: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        onPressed: () {
+                                          GoRouter.of(context).go('/chat');
+                                        },
+                                        label: const Text('Start Chatting'),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      // User actions
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        alignment: WrapAlignment.center,
+                                        children: [
+                                          // Debug button
+                                          OutlinedButton.icon(
+                                            icon: const Icon(Icons.bug_report,
+                                                size: 16),
+                                            label: const Text('Debug Status'),
+                                            onPressed: () {
+                                              GoRouter.of(context).go('/debug');
+                                            },
+                                          ),
+                                          // Logout button
+                                          OutlinedButton.icon(
+                                            icon: const Icon(Icons.logout,
+                                                size: 16),
+                                            label: const Text('Logout'),
+                                            onPressed: () async {
+                                              await _authService.logout();
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                      content: Text(
+                                                          'Logged out successfully')),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            });
+                      } else {
+                        // User is not logged in
+                        return Card(
+                          elevation: 8,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withOpacity(0.9),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.5),
+                              width: 2,
                             ),
-                            child: const Text('Login / Create Account'),
                           ),
-                          const SizedBox(height: 16),
-                          // Debugging button for quick access
-                          TextButton.icon(
-                            icon: const Icon(Icons.bug_report, size: 16),
-                            label: const Text('Debug Auth Status'),
-                            onPressed: () {
-                              GoRouter.of(context).go('/debug');
-                            },
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              children: [
+                                const Icon(Icons.login,
+                                    size: 48, color: Colors.blue),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Please login to access your models and settings',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Authentication is required to use this application.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 24),
+                                // Login button
+                                ElevatedButton(
+                                  onPressed: () {
+                                    GoRouter.of(context).go('/login');
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 32, vertical: 16),
+                                    textStyle: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  child: const Text('Login / Create Account'),
+                                ),
+                                const SizedBox(height: 16),
+                                // Debug button
+                                TextButton.icon(
+                                  icon: const Icon(Icons.bug_report, size: 16),
+                                  label: const Text('Debug Auth Status'),
+                                  onPressed: () {
+                                    GoRouter.of(context).go('/debug');
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  // Hidden Firebase state observer for user profile
-                  Opacity(
-                    opacity: 0,
-                    child: SizedBox(
-                      height: 0,
-                      width: 0,
-                      child: StreamBuilder<User?>(
-                        stream: FirebaseAuth.instance.authStateChanges(),
-                        builder: (context, snapshot) {
-                          // Debug the stream builder state
-                          developer.log(
-                            'Profile StreamBuilder: connection=${snapshot.connectionState}, ' +
-                            'hasData=${snapshot.hasData}, hasError=${snapshot.hasError}',
-                            name: 'profile_card',
-                          );
-                          
-                          final user = snapshot.data;
-                          developer.log('User in profile card: ${user?.email ?? 'Not logged in'}', name: 'profile_card');
-                          
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
