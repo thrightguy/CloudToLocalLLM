@@ -1,22 +1,31 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'; // Required for kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:convert' as convert; // Added for JSON decoding
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-
-// Import the main library with an alias for common types like Issuer, Client, Credential, UserInfo
+import 'dart:convert';
+import 'package:auth0_flutter/auth0_flutter.dart';
+import 'package:cloudtolocalllm/auth0_options.dart';
+// Import the openid client library with an alias for compatibility
 import 'package:openid_client/openid_client.dart' as openid;
+import 'dart:js' as js;
+
+// Stub classes for backward compatibility with Firebase
+class Auth0User {
+  final String uid;
+  final String? email;
+  final String? displayName;
+
+  Auth0User({required this.uid, this.email, this.displayName});
+}
+
+class UserCredential {
+  final Auth0User? user;
+
+  UserCredential({this.user});
+}
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-
-  // Configuration
-  static const String _issuerUrl = 'https://auth.cloudtolocalllm.online';
-  static const String _clientId = '31ab784f-f74d-4764-abe1-29060075e5c3';
-  static const String _clientSecret = '6DP4-nMxwPccJg-knfqXYRzlHL3hdeLifVvrIoKPMvw'; // Used for confidential client
+  late Auth0 _auth0;
 
   // Secure Storage Keys
   static const String _idTokenKey = 'id_token';
@@ -26,200 +35,426 @@ class AuthService {
 
   // Observable for authentication state
   final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
-  
+  final ValueNotifier<UserProfile?> currentUser =
+      ValueNotifier<UserProfile?>(null);
+
   AuthService() {
-    // Listen to Firebase auth state changes and update isAuthenticated
-    _auth.authStateChanges().listen((User? user) {
-      isAuthenticated.value = user != null;
-    });
+    _auth0 = Auth0(Auth0Options.domain, Auth0Options.clientId);
   }
 
   // Initialize the service
   Future<void> initialize() async {
-    // Check if user is already logged in
-    final currentUser = _auth.currentUser;
-    isAuthenticated.value = currentUser != null;
-  }
+    // Check if tokens exist in secure storage
+    final idToken = await _secureStorage.read(key: _idTokenKey);
+    final accessToken = await _secureStorage.read(key: _accessTokenKey);
 
-  // Email/Password Sign In
-  Future<UserCredential?> signInWithEmailAndPassword(String email, String password) async {
-    try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      // Store tokens if needed for API calls
-      if (userCredential.user != null) {
-        final idToken = await userCredential.user!.getIdToken();
-        await _secureStorage.write(key: _idTokenKey, value: idToken);
-        // You can also store other info if needed
+    if (idToken != null && accessToken != null) {
+      // Load user info if available
+      final userInfoStr = await _secureStorage.read(key: _userInfoKey);
+      if (userInfoStr != null) {
+        try {
+          final Map<String, dynamic> userInfoMap = json.decode(userInfoStr);
+          // Auth0 Flutter doesn't have a fromMap constructor
+          // We'll have to manually populate the user info when needed
+          isAuthenticated.value = true;
+        } catch (e) {
+          debugPrint('Error parsing stored user info: $e');
+          // Clear invalid data
+          await _clearStoredData();
+        }
       }
-      
-      return userCredential;
-    } catch (e) {
-      debugPrint('Error signing in: $e');
-      return null;
+
+      // Verify token validity by getting user profile
+      try {
+        final result = await _auth0.api.userProfile(accessToken: accessToken);
+        currentUser.value = result;
+        isAuthenticated.value = true;
+      } catch (e) {
+        debugPrint('Error verifying token: $e');
+        // Token is invalid, clear storage
+        await _clearStoredData();
+        isAuthenticated.value = false;
+      }
+    } else {
+      isAuthenticated.value = false;
+    }
+
+    // On web, check for Auth0 redirect handling
+    if (kIsWeb) {
+      try {
+        // Check for session storage items set by the callback page
+        final code =
+            js.context['sessionStorage'].callMethod('getItem', ['auth0_code']);
+        final state =
+            js.context['sessionStorage'].callMethod('getItem', ['auth0_state']);
+
+        if (code != null && state != null) {
+          debugPrint('Found Auth0 callback code, processing...');
+          // Exchange the code for tokens
+          await _handleAuth0Callback(code.toString(), state.toString());
+          // Clear the stored code and state
+          js.context['sessionStorage'].callMethod('removeItem', ['auth0_code']);
+          js.context['sessionStorage']
+              .callMethod('removeItem', ['auth0_state']);
+        } else {
+          // Try standard web auth handling
+          await _checkWebAuth();
+        }
+      } catch (e) {
+        debugPrint('Error in web auth initialization: $e');
+      }
     }
   }
 
-  // Google Sign In
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<void> _checkWebAuth() async {
     try {
-      // Sign out of any previous Google Sign In to avoid state issues
-      await _googleSignIn.signOut();
-      
-      // Start the Google Sign In process
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        // User canceled the sign in
-        return null;
-      }
-
-      // Get the authentication details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      final userCredential = await _auth.signInWithCredential(credential);
-      
-      // Store tokens if needed
-      if (userCredential.user != null) {
-        final idToken = await userCredential.user!.getIdToken();
-        await _secureStorage.write(key: _idTokenKey, value: idToken);
-      }
-      
-      return userCredential;
+      // Check for Auth0 redirect result
+      final credentials = await _auth0.webAuthentication().login();
+      await _processLoginResult(credentials);
     } catch (e) {
-      debugPrint('Error signing in with Google: $e');
-      return null;
+      // Not a redirect callback or other error
+      debugPrint('No Auth0 callback detected: $e');
     }
   }
 
-  // Email/Password Sign Up
-  Future<UserCredential?> createUserWithEmailAndPassword(String email, String password) async {
+  Future<bool> _handleAuth0Callback(String code, String state) async {
     try {
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      if (userCredential.user != null) {
-        final idToken = await userCredential.user!.getIdToken();
-        await _secureStorage.write(key: _idTokenKey, value: idToken);
+      // Exchange code for tokens using the auth code grant flow
+      final result = await _auth0.credentialsManager.credentials();
+      if (result == null) {
+        // Try to exchange the code
+        await _auth0.webAuthentication().login(
+          redirectUrl: Auth0Options.redirectUri,
+          parameters: {'code': code, 'state': state},
+        );
+        final credentials = await _auth0.credentialsManager.credentials();
+        if (credentials == null) {
+          debugPrint('Failed to get credentials after code exchange');
+          return false;
+        }
+
+        // Store tokens
+        await _secureStorage.write(
+            key: _idTokenKey, value: credentials.idToken);
+        await _secureStorage.write(
+            key: _accessTokenKey, value: credentials.accessToken);
+        if (credentials.refreshToken != null) {
+          await _secureStorage.write(
+              key: _refreshTokenKey, value: credentials.refreshToken);
+        }
+
+        // Get user info
+        final userInfo =
+            await _auth0.api.userProfile(accessToken: credentials.accessToken);
+        await _secureStorage.write(
+            key: _userInfoKey, value: json.encode(_userProfileToMap(userInfo)));
+        currentUser.value = userInfo;
+
+        isAuthenticated.value = true;
+        return true;
+      } else {
+        // We already have credentials from the redirect flow
+        await _processLoginResult(result);
+        return true;
       }
-      
-      return userCredential;
     } catch (e) {
-      debugPrint('Error creating user: $e');
-      return null;
+      debugPrint('Error handling Auth0 callback: $e');
+      return false;
     }
   }
 
-  Future<openid.Issuer> _getIssuer() async {
-    return await openid.Issuer.discover(Uri.parse(_issuerUrl));
+  // Helper method to convert UserProfile to a Map
+  Map<String, dynamic> _userProfileToMap(UserProfile profile) {
+    // Convert only the fields that actually exist in UserProfile
+    final map = <String, dynamic>{
+      'sub': profile.sub,
+      'name': profile.name,
+      'email': profile.email,
+    };
+
+    // Add optional fields if they exist
+    if (profile.nickname != null) map['nickname'] = profile.nickname;
+    if (profile.givenName != null) map['given_name'] = profile.givenName;
+    if (profile.familyName != null) map['family_name'] = profile.familyName;
+    if (profile.updatedAt != null)
+      map['updated_at'] = profile.updatedAt!.toIso8601String();
+
+    return map;
   }
 
-  Future<bool> isLoggedIn() async {
-    return _auth.currentUser != null;
+  Future<void> _processLoginResult(Credentials credentials) async {
+    // Store tokens
+    await _secureStorage.write(key: _idTokenKey, value: credentials.idToken);
+    await _secureStorage.write(
+        key: _accessTokenKey, value: credentials.accessToken);
+    if (credentials.refreshToken != null) {
+      await _secureStorage.write(
+          key: _refreshTokenKey, value: credentials.refreshToken);
+    }
+
+    // Store user info
+    if (credentials.user != null) {
+      await _secureStorage.write(
+          key: _userInfoKey,
+          value: json.encode(_userProfileToMap(credentials.user!)));
+      currentUser.value = credentials.user;
+    } else {
+      // If user info is not included in credentials, fetch it
+      try {
+        final userInfo =
+            await _auth0.api.userProfile(accessToken: credentials.accessToken);
+        await _secureStorage.write(
+            key: _userInfoKey, value: json.encode(_userProfileToMap(userInfo)));
+        currentUser.value = userInfo;
+      } catch (e) {
+        debugPrint('Error fetching user profile after login: $e');
+      }
+    }
+
+    isAuthenticated.value = true;
   }
 
-  // Initiates the login process by redirecting to the auth server
+  Future<void> _clearStoredData() async {
+    await _secureStorage.delete(key: _idTokenKey);
+    await _secureStorage.delete(key: _accessTokenKey);
+    await _secureStorage.delete(key: _refreshTokenKey);
+    await _secureStorage.delete(key: _userInfoKey);
+    currentUser.value = null;
+  }
+
+  // Login methods
+
+  // Universal login - uses Auth0 universal login
   Future<void> login() async {
-    // This would be replaced with Firebase social auth methods 
-    // when you're ready to add Google/Microsoft login
-    debugPrint('OIDC login not implemented yet. Use signInWithEmailAndPassword instead.');
+    try {
+      if (kIsWeb) {
+        // Web uses redirect-based authentication
+        await _auth0.webAuthentication().login(
+          redirectUrl: Auth0Options.redirectUri,
+          audience: Auth0Options.audience,
+          scopes: {Auth0Options.scope}, // Use a set, not a list
+        );
+        // The page will redirect to Auth0, then back to the app
+        // The initialize() method will handle the callback
+      } else {
+        // Mobile uses a WebView popup
+        final credentials = await _auth0.webAuthentication().login(
+          audience: Auth0Options.audience,
+          scopes: {Auth0Options.scope}, // Use a set, not a list
+        );
+        await _processLoginResult(credentials);
+      }
+    } catch (e) {
+      debugPrint('Login error: $e');
+      rethrow;
+    }
   }
 
-  // Handles the redirect from the auth server, exchanges code for tokens
-  Future<User?> handleRedirectAndLogin(Uri responseUri) async {
-    // This will be implemented when you add social logins
-    // For now, just return current user to maintain backward compatibility
-    return _auth.currentUser;
+  // For compatibility with existing code
+  Future<UserCredential?> signInWithEmailAndPassword(
+      String email, String password) async {
+    // With Auth0 SDK, we can't directly use password grant from the client
+    // We redirect to the Auth0 Universal Login instead
+    try {
+      await login();
+      // Return null for now as we're using redirects
+      return null;
+    } catch (e) {
+      debugPrint('Email/password sign in error: $e');
+      return null;
+    }
+  }
+
+  // For compatibility with existing code
+  Future<UserCredential?> signInWithGoogle() async {
+    // In Auth0, social logins are handled by the Universal Login
+    try {
+      await login();
+      // Return null for now as we're using redirects
+      return null;
+    } catch (e) {
+      debugPrint('Google sign in error: $e');
+      return null;
+    }
+  }
+
+  // For compatibility with existing code
+  Future<UserCredential?> createUserWithEmailAndPassword(
+      String email, String password) async {
+    // With Auth0, account creation is typically handled by Universal Login
+    try {
+      await login();
+      // Return null for now as we're using redirects
+      return null;
+    } catch (e) {
+      debugPrint('Create user error: $e');
+      return null;
+    }
   }
 
   // Sign Out
   Future<void> logout() async {
     try {
-      // Sign out of Google first if used
-      await _googleSignIn.signOut();
-      // Then sign out of Firebase
-      await _auth.signOut();
-      
-      // Clean up stored tokens
-      await _secureStorage.delete(key: _idTokenKey);
-      await _secureStorage.delete(key: _accessTokenKey);
-      await _secureStorage.delete(key: _refreshTokenKey);
-      await _secureStorage.delete(key: _userInfoKey);
+      if (kIsWeb) {
+        // On web, we need to redirect to Auth0's logout endpoint
+        await _auth0.webAuthentication().logout(
+              returnTo: Uri.base.origin,
+            );
+      } else {
+        // On mobile, we can use the SDK's logout method
+        await _auth0.webAuthentication().logout();
+      }
+
+      // Clear stored data
+      await _clearStoredData();
+      isAuthenticated.value = false;
     } catch (e) {
       debugPrint('Error signing out: $e');
+      rethrow;
     }
   }
 
-  // Get current user
-  User? get currentUser => _auth.currentUser;
-
-  // For backward compatibility with your older code
-  // Validate the current token (no need with Firebase, it handles token refresh)
-  Future<bool> validateToken() async {
-    return _auth.currentUser != null;
-  }
-
-  // Login with token (for backward compatibility)
-  Future<void> loginWithToken(String token) async {
-    // With Firebase, you'd typically use a different method
-    // but we'll keep this for backward compatibility with your existing code
-    await _secureStorage.write(key: _idTokenKey, value: token);
-  }
+  // Token management
 
   Future<String?> getAccessToken() async {
     return await _secureStorage.read(key: _accessTokenKey);
   }
 
-  Future<openid.UserInfo?> getUserInfo() async {
+  Future<bool> refreshTokenIfNeeded() async {
+    final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+    if (refreshToken == null) {
+      return false;
+    }
+
+    try {
+      // Auth0 Flutter doesn't provide a direct method to refresh tokens using a stored refresh token
+      // So we'll use the credentials manager which attempts to refresh tokens automatically
+      final accessToken = await getAccessToken();
+      if (accessToken == null) return false;
+
+      // Try to validate the current token
+      try {
+        await _auth0.api.userProfile(accessToken: accessToken);
+        // Token is still valid
+        return true;
+      } catch (e) {
+        // Token is invalid, let's try to use the credentials manager
+        debugPrint('Access token invalid, attempting refresh');
+      }
+
+      // Try to get new credentials from the credentials manager
+      // Note: This only works if the SDK has been properly initialized with valid tokens
+      final credentials = await _auth0.credentialsManager.credentials();
+      if (credentials == null) {
+        // If that fails, we'll need to force a new login
+        debugPrint('Failed to refresh token automatically');
+        return false;
+      }
+
+      // Store the new tokens
+      await _secureStorage.write(
+          key: _accessTokenKey, value: credentials.accessToken);
+      await _secureStorage.write(key: _idTokenKey, value: credentials.idToken);
+
+      if (credentials.refreshToken != null) {
+        await _secureStorage.write(
+            key: _refreshTokenKey, value: credentials.refreshToken!);
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error refreshing token: $e');
+      return false;
+    }
+  }
+
+  // For backward compatibility
+  Future<bool> validateToken() async {
     final accessToken = await getAccessToken();
     if (accessToken == null) {
-      // print('No access token found, cannot get user info.');
+      return false;
+    }
+
+    try {
+      final userInfo = await _auth0.api.userProfile(accessToken: accessToken);
+      currentUser.value = userInfo;
+      return true;
+    } catch (e) {
+      debugPrint('Token validation failed: $e');
+      return false;
+    }
+  }
+
+  // For backward compatibility with your older code
+  Future<void> loginWithToken(String token) async {
+    await _secureStorage.write(key: _accessTokenKey, value: token);
+    try {
+      final userInfo = await _auth0.api.userProfile(accessToken: token);
+      currentUser.value = userInfo;
+      isAuthenticated.value = true;
+      await _secureStorage.write(
+          key: _userInfoKey, value: json.encode(_userProfileToMap(userInfo)));
+    } catch (e) {
+      debugPrint('Error validating token: $e');
+      isAuthenticated.value = false;
+    }
+  }
+
+  // Helper method for backward compatibility
+  Future<openid.UserInfo?> getUserInfo() async {
+    // This is a stub to maintain compatibility with existing code
+    // that expects an openid.UserInfo object
+    // You'll need to replace usages of this with the new getUserProfile method
+    debugPrint('getUserInfo method is deprecated, use currentUser instead');
+    return null;
+  }
+
+  // New method to get Auth0 user profile
+  Future<UserProfile?> getUserProfile() async {
+    final accessToken = await getAccessToken();
+    if (accessToken == null) {
       return null;
     }
 
-    var userInfoString = await _secureStorage.read(key: _userInfoKey);
-    if (userInfoString != null) {
-      try {
-        // Try to parse and return if structure is as expected
-        final decoded = convert.json.decode(userInfoString); // Use convert.json.decode
-        // We need to ensure the UserInfo object can make calls if it needs to lazy-load claims.
-        // For now, assume fromJson is sufficient if all data is in userInfoString.
-        return openid.UserInfo.fromJson(decoded);
-      } catch (e) {
-        // print('Error parsing stored user info: $e. Fetching fresh.');
-      }
-    }
-    
-    // print('Fetching fresh user info...');
     try {
-      final issuer = await _getIssuer();
-      // We need a client to get user info from an existing access token.
-      final client = openid.Client(issuer, _clientId, clientSecret: _clientSecret);
-      
-      // Create a Credential object with the stored access token and associate the client.
-      final credential = client.createCredential(accessToken: accessToken);
-      // Alternatively, if fromJson is preferred and client association is manual:
-      // final credential = openid.Credential.fromJson({'access_token': accessToken});
-      // credential.client = client; // This was an error point before, let's rely on createCredential.
-      
-      final userInfo = await credential.getUserInfo(); // UserInfo from Credential
-      await _secureStorage.write(key: _userInfoKey, value: userInfo.toJson().toString());
-      // print('Fetched user info: ${userInfo.name}');
+      final userInfo = await _auth0.api.userProfile(accessToken: accessToken);
+      currentUser.value = userInfo;
       return userInfo;
     } catch (e) {
-      // print('Error fetching user info: $e');
+      debugPrint('Error getting user profile: $e');
       return null;
     }
   }
-} 
+
+  // For backward compatibility - get the current user
+  Auth0User? get currentFirebaseUser {
+    if (currentUser.value == null) return null;
+    return Auth0User(
+      uid: currentUser.value!.sub,
+      email: currentUser.value!.email,
+      displayName: currentUser.value!.name,
+    );
+  }
+
+  // Handle redirect from auth server
+  Future<Auth0User?> handleRedirectAndLogin(Uri responseUri) async {
+    // This is a backward compatibility method
+    // Auth0 handles callbacks differently
+    debugPrint(
+        'handleRedirectAndLogin called, but Auth0 handles callbacks differently');
+
+    // Try to extract code and state from the URI
+    final queryParams = responseUri.queryParameters;
+    final code = queryParams['code'];
+    final state = queryParams['state'];
+
+    if (code != null && state != null) {
+      final success = await _handleAuth0Callback(code, state);
+      if (success) {
+        return currentFirebaseUser;
+      }
+    }
+
+    return null;
+  }
+}
