@@ -1,0 +1,35 @@
+FROM nginx:alpine
+
+# Install curl and openssl for healthcheck and certificate generation
+RUN apk add --no-cache curl openssl
+
+# Copy the web app
+COPY web/ /usr/share/nginx/html/
+
+# Copy custom nginx configuration
+COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/conf.d/default.conf
+
+# Set permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
+
+# Create and set permissions for Nginx cache and temp directories
+RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp /var/cache/nginx/scgi_temp && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chmod -R 700 /var/cache/nginx
+
+# Create and set permissions for Nginx PID directory
+RUN mkdir -p /var/run/nginx && \
+    chown -R nginx:nginx /var/run/nginx
+
+# Generate self-signed certs for initial Nginx startup
+RUN mkdir -p /etc/nginx/certs && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/nginx/certs/default.key -out /etc/nginx/certs/default.pem \
+    -subj "/CN=localhost" && \
+    chown -R nginx:nginx /etc/nginx/certs && \
+    chmod -R 600 /etc/nginx/certs
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"] 
