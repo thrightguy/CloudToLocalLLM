@@ -12,9 +12,14 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 // Global instance of AuthService
-final AuthService _authService = AuthService();
+final AuthService _authService = AuthService(
+  auth0: Auth0(
+    Auth0Options.domain,
+    Auth0Options.clientId,
+  ),
+);
 
-void main() async {
+void main() {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -44,6 +49,12 @@ void main() async {
   }
 
   // Initialize AuthService
+  _initializeAuthService().then((_) {
+    runApp(const CloudToLocalLLMApp());
+  });
+}
+
+Future<void> _initializeAuthService() async {
   try {
     developer.log('Initializing AuthService...', name: 'auth_service');
     await _authService.initialize();
@@ -52,13 +63,11 @@ void main() async {
     developer.log('AuthService initialization failed: $e',
         name: 'auth_service', error: e);
   }
-
-  runApp(const CloudToLocalLLMApp());
 }
 
 // 1. Define the GoRouter configuration
 final GoRouter _router = GoRouter(
-  initialLocation: '/', // Optional: if you want a specific initial route
+  initialLocation: '/',
   routes: <RouteBase>[
     GoRoute(
       path: '/',
@@ -92,12 +101,9 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/oauthredirect',
       builder: (BuildContext context, GoRouterState state) {
-        // The full URI is available in state.uri
-        // We pass the full URI to the screen
         return OAuthRedirectScreen(responseUri: state.uri);
       },
     ),
-    // Add a debug route
     GoRoute(
       path: '/debug',
       builder: (BuildContext context, GoRouterState state) {
@@ -105,7 +111,6 @@ final GoRouter _router = GoRouter(
       },
     ),
   ],
-  // Optional: Error page (good practice)
   errorBuilder: (context, state) => Scaffold(
     appBar: AppBar(title: const Text('Error')),
     body: Center(child: Text('Page not found: ${state.error}')),
