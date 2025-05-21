@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:cloudtolocalllm/auth0_options.dart';
+import 'package:auth0_flutter/auth0_flutter.dart';
 import 'dart:js' as js;
+import 'package:http/http.dart' as http;
 
 // Auth0 User Profile
 class Auth0UserProfile {
@@ -28,6 +30,7 @@ class Auth0UserProfile {
 
 class AuthService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  late final Auth0 auth0;
 
   // Secure Storage Keys
   static const String _idTokenKey = 'id_token';
@@ -36,10 +39,14 @@ class AuthService {
 
   // Observable for authentication state
   final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
-  final ValueNotifier<Auth0UserProfile?> currentUser =
-      ValueNotifier<Auth0UserProfile?>(null);
+  final ValueNotifier<Map<String, dynamic>?> currentUser = ValueNotifier<Map<String, dynamic>?>(null);
 
-  AuthService() {}
+  AuthService() {
+    auth0 = Auth0(
+      Auth0Options.domain,
+      Auth0Options.clientId,
+    );
+  }
 
   // Initialize the service
   Future<void> initialize() async {
@@ -50,10 +57,10 @@ class AuthService {
     if (idToken != null && accessToken != null) {
       // Validate token by getting user profile
       try {
-        final userProfile = await getUserProfile();
-        if (userProfile != null) {
+        final userInfo = await getUserProfile();
+        if (userInfo != null) {
           isAuthenticated.value = true;
-          currentUser.value = userProfile;
+          currentUser.value = userInfo;
         } else {
           // Token is invalid, clear storage
           await _clearStoredData();
@@ -72,10 +79,8 @@ class AuthService {
     if (kIsWeb) {
       try {
         // Check for session storage items set by the callback page
-        final code =
-            js.context['sessionStorage'].callMethod('getItem', ['auth0_code']);
-        final state =
-            js.context['sessionStorage'].callMethod('getItem', ['auth0_state']);
+        final code = js.context['sessionStorage'].callMethod('getItem', ['auth0_code']);
+        final state = js.context['sessionStorage'].callMethod('getItem', ['auth0_state']);
 
         if (code != null && state != null) {
           debugPrint('Found Auth0 callback code, processing...');
@@ -83,8 +88,7 @@ class AuthService {
           await _handleAuth0Callback(code.toString(), state.toString());
           // Clear the stored code and state
           js.context['sessionStorage'].callMethod('removeItem', ['auth0_code']);
-          js.context['sessionStorage']
-              .callMethod('removeItem', ['auth0_state']);
+          js.context['sessionStorage'].callMethod('removeItem', ['auth0_state']);
         } else {
           // Try standard web auth handling
           await _checkWebAuth();
@@ -98,7 +102,7 @@ class AuthService {
   Future<void> _checkWebAuth() async {
     try {
       // Check for Auth0 redirect result
-      final credentials = await _auth0WebAuthentication().login();
+      final credentials = await auth0.webAuthentication().login();
       await _processLoginResult(credentials);
     } catch (e) {
       // Not a redirect callback or other error
@@ -109,7 +113,7 @@ class AuthService {
   Future<bool> _handleAuth0Callback(String code, String state) async {
     try {
       // Exchange code for tokens using the auth code grant flow
-      final credentials = await _auth0WebAuthentication().login(
+      final credentials = await auth0.webAuthentication().login(
         redirectUrl: Auth0Options.redirectUri,
         parameters: {'code': code, 'state': state},
       );
@@ -124,17 +128,15 @@ class AuthService {
   Future<void> _processLoginResult(Credentials credentials) async {
     // Store tokens
     await _secureStorage.write(key: _idTokenKey, value: credentials.idToken);
-    await _secureStorage.write(
-        key: _accessTokenKey, value: credentials.accessToken);
+    await _secureStorage.write(key: _accessTokenKey, value: credentials.accessToken);
     if (credentials.refreshToken != null) {
-      await _secureStorage.write(
-          key: _refreshTokenKey, value: credentials.refreshToken);
+      await _secureStorage.write(key: _refreshTokenKey, value: credentials.refreshToken);
     }
 
     // Get user info
-    final userProfile = await getUserProfile();
-    if (userProfile != null) {
-      currentUser.value = userProfile;
+    final userInfo = await getUserProfile();
+    if (userInfo != null) {
+      currentUser.value = userInfo;
     }
 
     isAuthenticated.value = true;
@@ -152,14 +154,14 @@ class AuthService {
     try {
       if (kIsWeb) {
         // Web uses redirect-based authentication
-        await _auth0WebAuthentication().login(
+        await auth0.webAuthentication().login(
           redirectUrl: Auth0Options.redirectUri,
         );
         // The page will redirect to Auth0, then back to the app
         // The initialize() method will handle the callback
       } else {
         // Mobile uses a WebView popup
-        await _auth0WebAuthentication().login();
+        await auth0.webAuthentication().login();
       }
     } catch (e) {
       debugPrint('Login error: $e');
@@ -192,26 +194,40 @@ class AuthService {
         throw Exception('Refresh token not found');
       }
 
-      // Call the Auth0 MCP server to refresh the token
-      // TODO: Implement the call to the Auth0 MCP server
-      throw UnimplementedError('Refresh token functionality not implemented');
+      // Use the web authentication to refresh the token
+      final credentials = await auth0.webAuthentication().login(
+        redirectUrl: Auth0Options.redirectUri,
+        parameters: {'grant_type': 'refresh_token', 'refresh_token': refreshToken},
+      );
+      await _processLoginResult(credentials);
     } catch (e) {
       debugPrint('Error refreshing token: $e');
       rethrow;
     }
   }
 
-  Future<Auth0UserProfile?> getUserProfile() async {
+  Future<Map<String, dynamic>?> getUserProfile() async {
     try {
       final accessToken = await _secureStorage.read(key: _accessTokenKey);
       if (accessToken == null) {
         return null;
       }
 
-      // Call the Auth0 MCP server to get user profile
-      // TODO: Implement the call to the Auth0 MCP server
-      throw UnimplementedError(
-          'Get user profile functionality not implemented');
+      // Use the Auth0 Management API to get user info
+      final response = await http.get(
+        Uri.parse('https://${Auth0Options.domain}/userinfo'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        debugPrint('Error getting user info: ${response.statusCode}');
+        return null;
+      }
     } catch (e) {
       debugPrint('Error getting user profile: $e');
       return null;
@@ -222,12 +238,12 @@ class AuthService {
     try {
       if (kIsWeb) {
         // On web, we need to redirect to Auth0's logout endpoint
-        await _auth0WebAuthentication().logout(
+        await auth0.webAuthentication().logout(
           returnTo: Uri.base.origin,
         );
       } else {
         // On mobile, we can use the SDK's logout method
-        await _auth0WebAuthentication().logout();
+        await auth0.webAuthentication().logout();
       }
 
       // Clear stored data
@@ -239,29 +255,7 @@ class AuthService {
     }
   }
 
-  // Helper methods
-  _Auth0WebAuthentication _auth0WebAuthentication() {
-    return _Auth0WebAuthentication(
-      domain: Auth0Options.domain,
-      clientId: Auth0Options.clientId,
-    );
-  }
-}
-
-class _Auth0WebAuthentication {
-  final String domain;
-  final String clientId;
-
-  _Auth0WebAuthentication({required this.domain, required this.clientId});
-
-  Future<Credentials> login(
-      {String? redirectUrl, Map<String, dynamic>? parameters}) async {
-    // Placeholder for Auth0 web authentication logic
-    throw UnimplementedError('Auth0 web authentication not implemented');
-  }
-
-  Future<void> logout({required Uri returnTo}) async {
-    // Placeholder for Auth0 logout logic
-    throw UnimplementedError('Auth0 logout not implemented');
+  Future<String?> getAccessToken() async {
+    return await _secureStorage.read(key: _accessTokenKey);
   }
 }
