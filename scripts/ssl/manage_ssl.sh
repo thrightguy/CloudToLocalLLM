@@ -1,7 +1,8 @@
 #!/bin/bash
 # This script manages the issuance and renewal of SSL certificates using Certbot
-# with DNS validation for both the main domain and wildcard certificate.
-# It is designed to be run within an environment that has Certbot installed.
+# Obtains a cert for cloudtolocalllm.online via HTTP (webroot) validation,
+# and a wildcard cert for *.cloudtolocalllm.online via DNS validation.
+# It is designed to be run as a non-root user with permissions to certbot directories.
 
 # --- IMPORTANT PERMISSIONS NOTE ---
 # This script is intended to be run by a user or process that has:
@@ -21,10 +22,12 @@ PROJECT_DIR="/opt/cloudtolocalllm"    # Absolute path to your project's root on 
 
 # Certbot related paths
 CERTBOT_CONFIG_SUBDIR="certbot/conf"
+CERTBOT_WEBROOT_SUBDIR="certbot/www"
 CERTBOT_LOGS_SUBDIR="logs/certbot"
 
 # Construct full paths
 CERT_CONFIG_DIR="$PROJECT_DIR/$CERTBOT_CONFIG_SUBDIR"
+WEBROOT_PATH="$PROJECT_DIR/$CERTBOT_WEBROOT_SUBDIR"
 CERTBOT_LOG_DIR="$PROJECT_DIR/$CERTBOT_LOGS_SUBDIR"
 
 # Output Colors
@@ -61,23 +64,52 @@ ensure_dependencies() {
 ensure_certbot_dirs() {
     echo_color "$YELLOW" "Ensuring Certbot directories exist:"
     echo_color "$YELLOW" "  Config dir: $CERT_CONFIG_DIR"
+    echo_color "$YELLOW" "  Webroot dir: $WEBROOT_PATH/.well-known/acme-challenge"
     echo_color "$YELLOW" "  Logs dir: $CERTBOT_LOG_DIR"
 
     mkdir -p "$CERT_CONFIG_DIR"
+    mkdir -p "$WEBROOT_PATH/.well-known/acme-challenge"
     mkdir -p "$CERTBOT_LOG_DIR"
     
     # Ensure the user has write permissions
-    if [ ! -w "$CERT_CONFIG_DIR" ] || [ ! -w "$CERTBOT_LOG_DIR" ]; then
+    if [ ! -w "$CERT_CONFIG_DIR" ] || [ ! -w "$WEBROOT_PATH" ] || [ ! -w "$CERTBOT_LOG_DIR" ]; then
         echo_color "$RED" "Error: You don't have write permissions to the certbot directories."
-        echo_color "$YELLOW" "Please run: sudo chown -R $(whoami):$(whoami) $CERT_CONFIG_DIR $CERTBOT_LOG_DIR"
+        echo_color "$YELLOW" "Please run: sudo chown -R $(whoami):$(whoami) $CERT_CONFIG_DIR $WEBROOT_PATH $CERTBOT_LOG_DIR"
         exit 1
     fi
     
     echo_color "$GREEN" "Certbot directories checked/created."
 }
 
+run_webroot_certbot() {
+    echo_color "$BLUE" "Obtaining certificate for $DOMAIN_NAME using HTTP (webroot) validation..."
+    echo_color "$YELLOW" "Certbot will attempt to place a challenge file in: $WEBROOT_PATH/.well-known/acme-challenge/"
+
+    set +e
+    certbot certonly \
+        --webroot \
+        -w "$WEBROOT_PATH" \
+        -d "$DOMAIN_NAME" \
+        --email "$EMAIL" \
+        --config-dir "$CERT_CONFIG_DIR" \
+        --work-dir "$CERT_CONFIG_DIR/work" \
+        --logs-dir "$CERTBOT_LOG_DIR" \
+        --agree-tos \
+        --staging \
+        "$@"
+    local certbot_exit_code=$?
+    set -e
+
+    if [ $certbot_exit_code -eq 0 ]; then
+        echo_color "$GREEN" "Regular certificate for $DOMAIN_NAME obtained successfully!"
+    else
+        echo_color "$RED" "Failed to obtain regular certificate. Check the logs in $CERTBOT_LOG_DIR"
+        return $certbot_exit_code
+    fi
+}
+
 run_dns_certbot() {
-    echo_color "$BLUE" "Obtaining certificate using DNS validation..."
+    echo_color "$BLUE" "Obtaining wildcard certificate for *.$DOMAIN_NAME using DNS validation..."
     echo_color "$YELLOW" "This will require you to add a TXT record to your DNS provider."
     echo_color "$YELLOW" "The script will pause and wait for you to add the TXT record."
 
@@ -91,17 +123,16 @@ run_dns_certbot() {
         --logs-dir "$CERTBOT_LOG_DIR" \
         --agree-tos \
         --staging \
-        -d "$DOMAIN_NAME" \
         -d "*.${DOMAIN_NAME}" \
         "$@"
     local certbot_exit_code=$?
     set -e
 
     if [ $certbot_exit_code -eq 0 ]; then
-        echo_color "$GREEN" "Certificate obtained successfully!"
+        echo_color "$GREEN" "Wildcard certificate obtained successfully!"
         echo_color "$YELLOW" "To obtain production certificates, run this script again with --production flag."
     else
-        echo_color "$RED" "Failed to obtain certificate. Check the logs in $CERTBOT_LOG_DIR"
+        echo_color "$RED" "Failed to obtain wildcard certificate. Check the logs in $CERTBOT_LOG_DIR"
     fi
     return $certbot_exit_code
 }
@@ -125,46 +156,11 @@ main() {
     ensure_dependencies "certbot"
     ensure_certbot_dirs
 
-    # Get certificate for main domain and wildcard using DNS validation
-    if run_dns_certbot "$@"; then
-        # --- Normalize Cert Directory Name and Clean Up Old Certs ---
-        # Find the latest cert directory (with -0001, -0002, etc. if present, but not _backup_)
-        LATEST_CERT_DIR=$(ls -d $CERT_CONFIG_DIR/live/${DOMAIN_NAME}* | grep -v _backup_ | sort | tail -n 1)
-        if [[ "$LATEST_CERT_DIR" != "$CERT_CONFIG_DIR/live/$DOMAIN_NAME" ]]; then
-            echo_color "$YELLOW" "[AUTO-FIX] Moving new certs from $LATEST_CERT_DIR to $CERT_CONFIG_DIR/live/$DOMAIN_NAME for Nginx compatibility."
-            rm -rf "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
-            cp -a "$LATEST_CERT_DIR" "$CERT_CONFIG_DIR/live/$DOMAIN_NAME"
-        fi
-        # Remove any symlinks in the canonical directory and replace with real files from the latest cert dir
-        for file in cert.pem chain.pem fullchain.pem privkey.pem; do
-            CANONICAL_FILE="$CERT_CONFIG_DIR/live/$DOMAIN_NAME/$file"
-            LATEST_FILE="$LATEST_CERT_DIR/$file"
-            if [ -L "$CANONICAL_FILE" ]; then
-                echo_color "$YELLOW" "[AUTO-FIX] Removing symlink $CANONICAL_FILE and copying real file from $LATEST_FILE."
-                rm -f "$CANONICAL_FILE"
-                cp "$LATEST_FILE" "$CANONICAL_FILE"
-            fi
-        done
-        # Delete all other cert directories except the canonical one
-        for dir in $CERT_CONFIG_DIR/live/${DOMAIN_NAME}*; do
-            if [[ "$dir" != "$CERT_CONFIG_DIR/live/$DOMAIN_NAME" ]]; then
-                echo_color "$YELLOW" "[CLEANUP] Deleting old or backup cert directory: $dir"
-                rm -rf "$dir"
-            fi
-        done
-        # Also clean up archive and renewal files
-        LATEST_ARCHIVE_DIR=$(ls -d $CERT_CONFIG_DIR/archive/${DOMAIN_NAME}* | grep -v _backup_ | sort | tail -n 1)
-        if [[ "$LATEST_ARCHIVE_DIR" != "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME" ]]; then
-            rm -rf "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"
-            mv "$LATEST_ARCHIVE_DIR" "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME"
-        fi
-        for dir in $CERT_CONFIG_DIR/archive/${DOMAIN_NAME}*; do
-            if [[ "$dir" != "$CERT_CONFIG_DIR/archive/$DOMAIN_NAME" ]]; then
-                echo_color "$YELLOW" "[CLEANUP] Deleting old or backup archive directory: $dir"
-                rm -rf "$dir"
-            fi
-        done
-    fi
+    # Step 1: Get regular certificate using HTTP validation
+    run_webroot_certbot "$@"
+
+    # Step 2: Get wildcard certificate using DNS validation
+    run_dns_certbot "$@"
 }
 
 # Run the main function
