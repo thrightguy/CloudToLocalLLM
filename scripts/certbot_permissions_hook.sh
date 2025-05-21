@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 # This script runs inside the certbot container after a successful renewal.
 # It adjusts permissions on the certificate files in the shared volume
@@ -55,4 +55,11 @@ fi
 
 echo "Certbot deploy hook: Permissions adjustment complete (non-root mode)."
 echo "IMPORTANT: Nginx in the webapp container must be reloaded externally to pick up certificate changes."
-echo "Example: docker compose exec webapp nginx -s reload" 
+echo "Example: docker compose exec webapp nginx -s reload"
+
+# Set proper permissions for the certificates
+chmod -R 755 /etc/letsencrypt/live
+chmod -R 755 /etc/letsencrypt/archive
+
+# Restart Nginx to pick up the new certificates
+docker restart cloudtolocalllm-webapp 
