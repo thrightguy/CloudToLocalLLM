@@ -69,7 +69,7 @@ ensure_certbot_dirs() {
 }
 
 run_dns_certbot() {
-    echo_color "$BLUE" "Obtaining certificate for ${1} using DNS validation..."
+    echo_color "$BLUE" "Obtaining certificate using DNS validation..."
     echo_color "$YELLOW" "This will require you to add a TXT record to your DNS provider."
     echo_color "$YELLOW" "The script will pause and wait for you to add the TXT record."
 
@@ -83,7 +83,8 @@ run_dns_certbot() {
         --logs-dir "$CERTBOT_LOG_DIR" \
         --agree-tos \
         --staging \
-        -d "$1" \
+        -d "$DOMAIN_NAME" \
+        -d "*.${DOMAIN_NAME}" \
         "$@"
     local certbot_exit_code=$?
     set -e
@@ -117,7 +118,7 @@ main() {
     ensure_certbot_dirs
 
     # Get certificate for main domain and wildcard using DNS validation
-    if run_dns_certbot "$DOMAIN_NAME" "*.${DOMAIN_NAME}" "$@"; then
+    if run_dns_certbot "$@"; then
         # --- Normalize Cert Directory Name and Clean Up Old Certs ---
         # Find the latest cert directory (with -0001, -0002, etc. if present, but not _backup_)
         LATEST_CERT_DIR=$(ls -d $CERT_CONFIG_DIR/live/${DOMAIN_NAME}* | grep -v _backup_ | sort | tail -n 1)
