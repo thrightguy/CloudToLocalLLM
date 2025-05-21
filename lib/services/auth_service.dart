@@ -29,50 +29,34 @@ class Auth0UserProfile {
 }
 
 class AuthService {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  late final Auth0 auth0;
+  final Auth0 _auth0;
+  final FlutterSecureStorage _secureStorage;
+  final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
+  final ValueNotifier<UserProfile?> currentUser = ValueNotifier<UserProfile?>(null);
+
+  AuthService({
+    required Auth0 auth0,
+    FlutterSecureStorage? secureStorage,
+  })  : _auth0 = auth0,
+        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   // Secure Storage Keys
   static const String _idTokenKey = 'id_token';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
-  // Observable for authentication state
-  final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
-  final ValueNotifier<Map<String, dynamic>?> currentUser = ValueNotifier<Map<String, dynamic>?>(null);
-
-  AuthService() {
-    auth0 = Auth0(
-      Auth0Options.domain,
-      Auth0Options.clientId,
-    );
-  }
-
   // Initialize the service
   Future<void> initialize() async {
-    // Check if tokens exist in secure storage
-    final idToken = await _secureStorage.read(key: _idTokenKey);
-    final accessToken = await _secureStorage.read(key: _accessTokenKey);
-
-    if (idToken != null && accessToken != null) {
-      // Validate token by getting user profile
-      try {
-        final userInfo = await getUserProfile();
-        if (userInfo != null) {
-          isAuthenticated.value = true;
-          currentUser.value = userInfo;
-        } else {
-          // Token is invalid, clear storage
-          await _clearStoredData();
-          isAuthenticated.value = false;
-        }
-      } catch (e) {
-        // Token is invalid, clear storage
-        await _clearStoredData();
-        isAuthenticated.value = false;
+    try {
+      final credentials = await _auth0.credentialsManager.credentials();
+      if (credentials != null) {
+        isAuthenticated.value = true;
+        currentUser.value = credentials.user;
       }
-    } else {
+    } catch (e) {
+      debugPrint('Error initializing auth service: $e');
       isAuthenticated.value = false;
+      currentUser.value = null;
     }
 
     // On web, check for Auth0 redirect handling
@@ -102,7 +86,7 @@ class AuthService {
   Future<void> _checkWebAuth() async {
     try {
       // Check for Auth0 redirect result
-      final credentials = await auth0.webAuthentication().login();
+      final credentials = await _auth0.webAuthentication().login();
       await _processLoginResult(credentials);
     } catch (e) {
       // Not a redirect callback or other error
@@ -113,7 +97,7 @@ class AuthService {
   Future<bool> _handleAuth0Callback(String code, String state) async {
     try {
       // Exchange code for tokens using the auth code grant flow
-      final credentials = await auth0.webAuthentication().login(
+      final credentials = await _auth0.webAuthentication().login(
         redirectUrl: Auth0Options.redirectUri,
         parameters: {'code': code, 'state': state},
       );
@@ -126,64 +110,157 @@ class AuthService {
   }
 
   Future<void> _processLoginResult(Credentials credentials) async {
-    // Store tokens
-    await _secureStorage.write(key: _idTokenKey, value: credentials.idToken);
-    await _secureStorage.write(key: _accessTokenKey, value: credentials.accessToken);
-    if (credentials.refreshToken != null) {
-      await _secureStorage.write(key: _refreshTokenKey, value: credentials.refreshToken);
-    }
+    try {
+      // Store tokens
+      await _secureStorage.write(key: _idTokenKey, value: credentials.idToken);
+      await _secureStorage.write(key: _accessTokenKey, value: credentials.accessToken);
+      if (credentials.refreshToken != null) {
+        await _secureStorage.write(key: _refreshTokenKey, value: credentials.refreshToken);
+      }
 
-    // Get user info
-    final userInfo = await getUserProfile();
-    if (userInfo != null) {
-      currentUser.value = userInfo;
-    }
+      // Get user info
+      final userInfo = await getUserProfile();
+      if (userInfo != null) {
+        currentUser.value = userInfo;
+      }
 
-    isAuthenticated.value = true;
+      isAuthenticated.value = true;
+    } catch (e) {
+      debugPrint('Error processing login result: $e');
+      isAuthenticated.value = false;
+      currentUser.value = null;
+    }
   }
 
   Future<void> _clearStoredData() async {
-    await _secureStorage.delete(key: _idTokenKey);
-    await _secureStorage.delete(key: _accessTokenKey);
-    await _secureStorage.delete(key: _refreshTokenKey);
-    currentUser.value = null;
+    try {
+      await _secureStorage.delete(key: _idTokenKey);
+      await _secureStorage.delete(key: _accessTokenKey);
+      await _secureStorage.delete(key: _refreshTokenKey);
+      currentUser.value = null;
+    } catch (e) {
+      debugPrint('Error clearing stored data: $e');
+    }
   }
 
   // Login methods
-  Future<void> login() async {
+  Future<UserProfile?> login() async {
     try {
-      if (kIsWeb) {
-        // Web uses redirect-based authentication
-        await auth0.webAuthentication().login(
-          redirectUrl: Auth0Options.redirectUri,
+      final credentials = await _auth0.webAuthentication().login();
+      isAuthenticated.value = true;
+      currentUser.value = credentials.user;
+      return credentials.user;
+    } catch (e) {
+      debugPrint('Error during login: $e');
+      isAuthenticated.value = false;
+      currentUser.value = null;
+      rethrow;
+    }
+  }
+
+  Future<UserProfile?> signInWithEmailAndPassword(String email, String password) async {
+    try {
+      final credentials = await _auth0.api.login(
+        usernameOrEmail: email,
+        password: password,
+        connectionOrRealm: 'Username-Password-Authentication',
+      );
+      isAuthenticated.value = true;
+      currentUser.value = credentials.user;
+      return credentials.user;
+    } catch (e) {
+      debugPrint('Error signing in with email and password: $e');
+      isAuthenticated.value = false;
+      currentUser.value = null;
+      rethrow;
+    }
+  }
+
+  Future<UserProfile?> createUserWithEmailAndPassword(String email, String password) async {
+    try {
+      await _auth0.api.signup(
+        email: email,
+        password: password,
+        connection: 'Username-Password-Authentication',
+      );
+      return signInWithEmailAndPassword(email, password);
+    } catch (e) {
+      debugPrint('Error creating user with email and password: $e');
+      rethrow;
+    }
+  }
+
+  Future<UserProfile?> signInWithGoogle() async {
+    try {
+      final credentials = await _auth0.webAuthentication().login(
+        parameters: {'connection': 'google-oauth2'},
+      );
+      isAuthenticated.value = true;
+      currentUser.value = credentials.user;
+      return credentials.user;
+    } catch (e) {
+      debugPrint('Error signing in with Google: $e');
+      isAuthenticated.value = false;
+      currentUser.value = null;
+      rethrow;
+    }
+  }
+
+  Future<UserProfile?> handleRedirectAndLogin(Uri responseUri) async {
+    try {
+      final credentials = await _auth0.webAuthentication().login(
+        redirectUrl: responseUri.toString(),
+      );
+      isAuthenticated.value = true;
+      currentUser.value = credentials.user;
+      return credentials.user;
+    } catch (e) {
+      debugPrint('Error handling redirect and login: $e');
+      isAuthenticated.value = false;
+      currentUser.value = null;
+      rethrow;
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await _auth0.webAuthentication().logout();
+      await _clearStoredData();
+      isAuthenticated.value = false;
+      currentUser.value = null;
+    } catch (e) {
+      debugPrint('Error during logout: $e');
+      rethrow;
+    }
+  }
+
+  Future<String?> getAccessToken() async {
+    try {
+      final credentials = await _auth0.credentialsManager.credentials();
+      return credentials?.accessToken;
+    } catch (e) {
+      debugPrint('Error getting access token: $e');
+      return null;
+    }
+  }
+
+  Future<UserProfile?> getUserProfile() async {
+    try {
+      final credentials = await _auth0.credentialsManager.credentials();
+      if (credentials != null) {
+        final userInfo = await http.get(
+          Uri.parse('https://${Auth0Options.domain}/userinfo'),
+          headers: {'Authorization': 'Bearer ${credentials.accessToken}'},
         );
-        // The page will redirect to Auth0, then back to the app
-        // The initialize() method will handle the callback
-      } else {
-        // Mobile uses a WebView popup
-        await auth0.webAuthentication().login();
+        if (userInfo.statusCode == 200) {
+          final userData = credentials.user;
+          return userData;
+        }
       }
+      return null;
     } catch (e) {
-      debugPrint('Login error: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> signInWithEmailAndPassword(String email, String password) async {
-    try {
-      await login();
-    } catch (e) {
-      debugPrint('Email/password sign in error: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> signupWithEmailAndPassword(String email, String password) async {
-    try {
-      await login();
-    } catch (e) {
-      debugPrint('Create user error: $e');
-      rethrow;
+      debugPrint('Error getting user profile: $e');
+      return null;
     }
   }
 
@@ -191,71 +268,19 @@ class AuthService {
     try {
       final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
       if (refreshToken == null) {
-        throw Exception('Refresh token not found');
+        throw Exception('No refresh token available');
       }
-
       // Use the web authentication to refresh the token
-      final credentials = await auth0.webAuthentication().login(
+      final credentials = await _auth0.webAuthentication().login(
         redirectUrl: Auth0Options.redirectUri,
         parameters: {'grant_type': 'refresh_token', 'refresh_token': refreshToken},
       );
       await _processLoginResult(credentials);
     } catch (e) {
       debugPrint('Error refreshing token: $e');
-      rethrow;
-    }
-  }
-
-  Future<Map<String, dynamic>?> getUserProfile() async {
-    try {
-      final accessToken = await _secureStorage.read(key: _accessTokenKey);
-      if (accessToken == null) {
-        return null;
-      }
-
-      // Use the Auth0 Management API to get user info
-      final response = await http.get(
-        Uri.parse('https://${Auth0Options.domain}/userinfo'),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body) as Map<String, dynamic>;
-      } else {
-        debugPrint('Error getting user info: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('Error getting user profile: $e');
-      return null;
-    }
-  }
-
-  Future<void> logout() async {
-    try {
-      if (kIsWeb) {
-        // On web, we need to redirect to Auth0's logout endpoint
-        await auth0.webAuthentication().logout(
-          returnTo: Uri.base.origin,
-        );
-      } else {
-        // On mobile, we can use the SDK's logout method
-        await auth0.webAuthentication().logout();
-      }
-
-      // Clear stored data
-      await _clearStoredData();
       isAuthenticated.value = false;
-    } catch (e) {
-      debugPrint('Error signing out: $e');
+      currentUser.value = null;
       rethrow;
     }
-  }
-
-  Future<String?> getAccessToken() async {
-    return await _secureStorage.read(key: _accessTokenKey);
   }
 }
