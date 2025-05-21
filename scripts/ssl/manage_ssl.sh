@@ -65,6 +65,14 @@ ensure_certbot_dirs() {
 
     mkdir -p "$CERT_CONFIG_DIR"
     mkdir -p "$CERTBOT_LOG_DIR"
+    
+    # Ensure the user has write permissions
+    if [ ! -w "$CERT_CONFIG_DIR" ] || [ ! -w "$CERTBOT_LOG_DIR" ]; then
+        echo_color "$RED" "Error: You don't have write permissions to the certbot directories."
+        echo_color "$YELLOW" "Please run: sudo chown -R $(whoami):$(whoami) $CERT_CONFIG_DIR $CERTBOT_LOG_DIR"
+        exit 1
+    fi
+    
     echo_color "$GREEN" "Certbot directories checked/created."
 }
 
@@ -74,7 +82,7 @@ run_dns_certbot() {
     echo_color "$YELLOW" "The script will pause and wait for you to add the TXT record."
 
     set +e
-    sudo certbot certonly \
+    certbot certonly \
         --manual \
         --preferred-challenges dns \
         --email "$EMAIL" \
