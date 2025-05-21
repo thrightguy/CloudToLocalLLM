@@ -20,8 +20,8 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
   
-  <!-- Content Security Policy to allow WebAssembly and Firebase -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' *.googleapis.com *.firebaseio.com *.gstatic.com;">
+  <!-- Content Security Policy to allow WebAssembly and Auth0 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' *.auth0.com *.googleapis.com *.gstatic.com;">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -38,30 +38,8 @@
   <!-- Theme styles -->
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Firebase SDK - Using latest modular Web SDK -->
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAjoUZYOf_F9LOv1mNp8NjtlcVQOQ4tKv8",
-      authDomain: "cloudtolocalllm.firebaseapp.com",
-      projectId: "cloudtolocalllm",
-      storageBucket: "cloudtolocalllm.firebasestorage.app",
-      messagingSenderId: "154919701865",
-      appId: "1:154919701865:web:2237241bc089a861d541f8",
-      measurementId: "G-CR3LEXV62H"
-    };
-    
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    
-    // Make auth available globally for Flutter web
-    window.firebaseAuth = auth;
-  </script>
+  <!-- Auth0 SDK -->
+  <script src="https://cdn.auth0.com/js/auth0/9.22.1/auth0.min.js"></script>
 
   <script>
     // The value below is injected by flutter build, do not touch.
@@ -200,36 +178,16 @@
         transition: opacity .4s;
       }
 
-      #loading.main_done img {
-        opacity: 1;
-      }
-
-      #loading.init_done img {
-        animation: .33s ease-in-out 0s 1 forwards zooooom;
-        opacity: .05;
-      }
-
       @keyframes breathe {
-        from {
-          transform: scale(1)
+        0% {
+          opacity: .66;
         }
-
-        to {
-          transform: scale(0.95)
-        }
-      }
-
-      @keyframes zooooom {
-        from {
-          transform: scale(1)
-        }
-
-        to {
-          transform: scale(10)
+        100% {
+          opacity: 1;
         }
       }
     </style>
-    <img src="icons/Icon-192.png" alt="Loading indicator..." />
+    <img src="loading.gif" alt="Loading indicator...">
   </div>
 
   <script>
