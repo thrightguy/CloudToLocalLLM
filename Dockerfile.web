@@ -1,5 +1,8 @@
 FROM debian:bullseye-slim as builder
 
+# Create a non-root user
+RUN useradd -ms /bin/bash developer
+
 # Install Flutter dependencies
 RUN apt-get update && apt-get install -y \
     curl \
@@ -13,13 +16,16 @@ RUN apt-get update && apt-get install -y \
 # Install Flutter
 RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
 ENV PATH="/usr/local/flutter/bin:/usr/local/flutter/bin/cache/dart-sdk/bin:${PATH}"
+
+# Switch to non-root user
+USER developer
 RUN flutter doctor
 RUN flutter channel stable
 RUN flutter upgrade
 
 # Set up the app
 WORKDIR /app
-COPY . .
+COPY --chown=developer:developer . .
 
 # Build the app
 RUN flutter build web
@@ -27,11 +33,26 @@ RUN flutter build web
 # Production image
 FROM nginx:alpine
 
+# Create a non-root user
+RUN adduser -D -H -u 101 -s /sbin/nologin nginx-user
+
 # Copy nginx configuration
 COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/conf.d/default.conf
 
 # Copy the Flutter web build from the builder stage
 COPY --from=builder /app/build/web /usr/share/nginx/html
+
+# Set proper permissions
+RUN chown -R nginx-user:nginx-user /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html && \
+    chown -R nginx-user:nginx-user /var/cache/nginx && \
+    chown -R nginx-user:nginx-user /var/log/nginx && \
+    chown -R nginx-user:nginx-user /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx-user:nginx-user /var/run/nginx.pid
+
+# Switch to non-root user
+USER nginx-user
 
 # Expose ports
 EXPOSE 80 443
