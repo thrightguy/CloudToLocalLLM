@@ -3,9 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  flutter_acrylic
+  flutter_platform_alert
   flutter_secure_storage_windows
   screen_retriever_windows
-  system_tray
+  tray_manager
   url_launcher_windows
   window_manager
 )

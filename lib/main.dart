@@ -5,7 +5,7 @@ import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/screens/login_screen.dart';
 import 'package:cloudtolocalllm/screens/chat_screen.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
-import 'package:auth0_flutter/auth0_flutter.dart';
+import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:flutter/foundation.dart'
@@ -13,7 +13,7 @@ import 'package:flutter/foundation.dart'
 
 // Global instance of AuthService
 final AuthService _authService = AuthService(
-  auth0: Auth0(
+  Auth0(
     Auth0Options.domain,
     Auth0Options.clientId,
   ),
@@ -135,6 +135,7 @@ class _CallbackScreenState extends State<CallbackScreen> {
   Future<void> _handleCallback() async {
     // The actual callback processing happens in AuthService.initialize()
     // This is just a redirect after a short delay
+    final context = this.context;
     await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) {
       GoRouter.of(context).go('/');
@@ -249,14 +250,169 @@ class CloudToLocalLLMApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF1A1A1A),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2A2A2A),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF2A2A2A).withValues(alpha: 255),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6A5AE0).withValues(alpha: 255),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF2A2A2A).withValues(alpha: 255),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF6A5AE0), width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          displayMedium: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          displaySmall: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          headlineMedium: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 14,
+            color: Colors.white,
+          ),
+        ),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6A5AE0),
           brightness: Brightness.dark,
         ),
-        scaffoldBackgroundColor: const Color(0xFF121829),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF1A1A1A),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2A2A2A),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF2A2A2A).withValues(alpha: 255),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6A5AE0).withValues(alpha: 255),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF2A2A2A).withValues(alpha: 255),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF6A5AE0), width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Colors.red, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          displayMedium: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          displaySmall: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          headlineMedium: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 14,
+            color: Colors.white,
+          ),
+        ),
       ),
       themeMode: ThemeMode.dark,
     );
@@ -281,20 +437,10 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
 
   Future<void> _handleLoginRedirect() async {
     try {
-      final user =
-          await _authService.handleRedirectAndLogin(widget.responseUri);
+      await _authService.handleRedirectAndLogin(widget.responseUri);
       if (!mounted) return; // Check mounted after await
-      if (user != null) {
-        // Successfully logged in, navigate to home or a dashboard
-        GoRouter.of(context).go('/'); // Navigate to home page
-      } else {
-        // Login failed
-        // Optionally, show an error message or navigate to a login error page
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please try again.')),
-        );
-        GoRouter.of(context).go('/'); // Go back to home or login page
-      }
+      // Always navigate to home page after login attempt
+      GoRouter.of(context).go('/');
     } catch (e) {
       if (!mounted) return; // Check mounted after await
       ScaffoldMessenger.of(context).showSnackBar(
@@ -338,19 +484,18 @@ class CircularLlmLogo extends StatelessWidget {
             Theme.of(context)
                 .colorScheme
                 .primary
-                .withAlpha((255 * 0.8).round()), // Fixed withAlpha
+                .withValues(alpha: 204),
             Theme.of(context)
                 .colorScheme
                 .secondary
-                .withAlpha((255 * 0.6).round()), // Fixed withAlpha
+                .withValues(alpha: 204),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color:
-                Colors.black.withAlpha((255 * 0.3).round()), // Fixed withAlpha
+            color: Colors.black.withValues(alpha: 128),
             spreadRadius: 2,
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -475,15 +620,13 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
         elevation: 8.0,
-        shadowColor:
-            Colors.black.withAlpha((255 * 0.5).round()), // Fixed withAlpha
+        shadowColor: Colors.black.withValues(alpha: 128),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                const Color(0xFF4A3B8A),
-                const Color(0xFF6A5AE0)
-                    .withAlpha((255 * 0.85).round()), // Fixed withAlpha
+                Theme.of(context).colorScheme.primary.withValues(alpha: 204),
+                Theme.of(context).colorScheme.secondary.withValues(alpha: 204),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -505,18 +648,18 @@ class HomeScreen extends StatelessWidget {
                     colors: [
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withAlpha(0), // Transparent at edge
+                          .withValues(alpha: 0), // Transparent at edge
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withAlpha(0), // Transparent for a bit
+                          .withValues(alpha: 0), // Transparent for a bit
                       Colors.white, // Opaque center for the image to show
                       Colors.white, // Opaque center
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withAlpha(0), // Transparent for a bit
+                          .withValues(alpha: 0), // Transparent for a bit
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withAlpha(0), // Transparent at edge
+                          .withValues(alpha: 0), // Transparent at edge
                     ],
                     stops: const [
                       0.0,
@@ -584,14 +727,14 @@ class HomeScreen extends StatelessWidget {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .surface
-                                    .withOpacity(0.9),
+                                    .withValues(alpha: 204),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                   side: BorderSide(
                                     color: Theme.of(context)
                                         .colorScheme
                                         .primary
-                                        .withOpacity(0.5),
+                                        .withValues(alpha: 204),
                                     width: 2,
                                   ),
                                 ),
@@ -616,7 +759,7 @@ class HomeScreen extends StatelessWidget {
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.7),
+                                              .withValues(alpha: 204),
                                         ),
                                       ),
                                       const SizedBox(height: 24),
@@ -684,14 +827,14 @@ class HomeScreen extends StatelessWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .surface
-                              .withOpacity(0.9),
+                              .withValues(alpha: 204),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
                               color: Theme.of(context)
                                   .colorScheme
                                   .primary
-                                  .withOpacity(0.5),
+                                  .withValues(alpha: 204),
                               width: 2,
                             ),
                           ),

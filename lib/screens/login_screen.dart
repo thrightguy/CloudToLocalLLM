@@ -49,33 +49,25 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         if (_isLogin) {
           // Login
-          final result = await widget.authService.signInWithEmailAndPassword(
+          await widget.authService.signInWithEmailAndPassword(
             _emailController.text.trim(),
             _passwordController.text,
           );
           
-          if (result != null && mounted) {
+          if (mounted) {
             // Login successful, navigate to chat screen
             GoRouter.of(context).go('/chat');
-          } else if (mounted) {
-            setState(() {
-              _errorMessage = 'Invalid email or password';
-            });
           }
         } else {
           // Register
-          final result = await widget.authService.createUserWithEmailAndPassword(
+          await widget.authService.createUserWithEmailAndPassword(
             _emailController.text.trim(),
             _passwordController.text,
           );
           
-          if (result != null && mounted) {
+          if (mounted) {
             // Registration successful, navigate to chat screen
             GoRouter.of(context).go('/chat');
-          } else if (mounted) {
-            setState(() {
-              _errorMessage = 'Failed to create account. Email may already be in use.';
-            });
           }
         }
       } catch (e) {
@@ -101,15 +93,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final result = await widget.authService.signInWithGoogle();
+      await widget.authService.signInWithGoogle();
       
-      if (result != null && mounted) {
+      if (mounted) {
         // Google Sign-In successful, navigate to chat screen
         GoRouter.of(context).go('/chat');
-      } else if (mounted) {
-        setState(() {
-          _errorMessage = 'Google Sign-In failed';
-        });
       }
     } catch (e) {
       if (mounted) {
