@@ -14,8 +14,13 @@ RUN apt-get update && apt-get install -y \
 RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
 ENV PATH="/usr/local/flutter/bin:/usr/local/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
-# Switch to the default nginx user (or create a non-root user if needed)
+# Create a non-root user
 RUN useradd -ms /bin/bash nginx
+
+# Give nginx user ownership of flutter directory
+RUN chown -R nginx:nginx /usr/local/flutter
+
+# Switch to the nginx user
 USER nginx
 
 RUN flutter doctor
