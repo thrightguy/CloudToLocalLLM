@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
-import 'package:auth0_flutter/auth0_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final AuthService authService;
@@ -122,8 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 BoxShadow(
                   offset: const Offset(0, -2),
                   blurRadius: 4,
-                  color: Colors.black
-                      .withValues(red: 0, green: 0, blue: 0, alpha: 0.1),
+                  color: Colors.black.withValues(alpha: 26),
                 ),
               ],
             ),
@@ -170,7 +168,7 @@ class _ChatScreenState extends State<ChatScreen> {
         decoration: BoxDecoration(
           color: message.isUserMessage
               ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
+              : Theme.of(context).colorScheme.secondary.withValues(alpha: 51),
           borderRadius: BorderRadius.circular(12),
         ),
         constraints: BoxConstraints(

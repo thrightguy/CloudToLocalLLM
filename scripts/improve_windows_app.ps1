@@ -140,36 +140,72 @@ function Add-WindowsFeatures {
     
     # Add system tray support
     $trayCode = @"
-import 'package:system_tray/system_tray.dart';
+import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
+import 'dart:io';
 
-class SystemTrayManager {
-  static final SystemTray _systemTray = SystemTray();
+class SystemTrayManager with TrayListener {
+  static final TrayManager _trayManager = TrayManager();
   static final AppWindow _appWindow = AppWindow();
 
   static Future<void> initialize() async {
-    await _systemTray.initSystemTray(
-      title: "CloudToLocalLLM",
-      iconPath: "assets/images/app_icon.ico",
+    // Initialize window effects
+    await Window.initialize();
+    await Window.setEffect(
+      effect: WindowEffect.acrylic,
+      color: Colors.transparent,
     );
 
-    final menu = [
-      MenuItem(
-        label: 'Show',
-        onClicked: () => _appWindow.show(),
-      ),
-      MenuItem(
-        label: 'Hide',
-        onClicked: () => _appWindow.hide(),
-      ),
-      MenuSeparator(),
-      MenuItem(
-        label: 'Exit',
-        onClicked: () => _appWindow.close(),
-      ),
-    ];
+    // Initialize system tray
+    await _trayManager.setIcon(
+      Platform.isWindows ? 'assets/images/app_icon.ico' : 'assets/images/app_icon.png',
+      isTemplate: true,
+    );
 
-    await _systemTray.setContextMenu(menu);
+    final menu = Menu(
+      items: [
+        MenuItem(
+          key: 'show',
+          label: 'Show',
+          icon: 'assets/images/show.png',
+        ),
+        MenuItem(
+          key: 'hide',
+          label: 'Hide',
+          icon: 'assets/images/hide.png',
+        ),
+        MenuItem.separator(),
+        MenuItem(
+          key: 'exit',
+          label: 'Exit',
+          icon: 'assets/images/exit.png',
+        ),
+      ],
+    );
+
+    await _trayManager.setContextMenu(menu);
+  }
+
+  @override
+  void onTrayMenuItemClick(MenuItem menuItem) {
+    if (menuItem.key == 'show') {
+      _appWindow.show();
+    } else if (menuItem.key == 'hide') {
+      _appWindow.hide();
+    } else if (menuItem.key == 'exit') {
+      _appWindow.close();
+    }
+  }
+
+  @override
+  void onTrayIconMouseDown() {
+    _appWindow.show();
+  }
+
+  @override
+  void onTrayIconRightMouseDown() {
+    _trayManager.popUpContextMenu();
   }
 }
 "@
@@ -179,23 +215,16 @@ class SystemTrayManager {
     
     # Add Windows notifications support
     $notificationsCode = @"
-import 'package:win32/win32.dart';
+import 'package:flutter_platform_alert/flutter_platform_alert.dart';
 
 class WindowsNotifications {
-  static void showNotification(String title, String message) {
-    final notification = ToastNotificationManager.createToastNotifier();
-    final template = ToastNotificationManager.getTemplateContent(
-      ToastTemplateType.toastText02,
+  static Future<void> showNotification(String title, String message) async {
+    await FlutterPlatformAlert.showAlert(
+      windowTitle: title,
+      text: message,
+      alertStyle: AlertButtonStyle.ok,
+      iconStyle: IconStyle.information,
     );
-    
-    template.getElementsByTagName('text')[0].appendChild(
-      template.createTextNode(title),
-    );
-    template.getElementsByTagName('text')[1].appendChild(
-      template.createTextNode(message),
-    );
-    
-    notification.show(template);
   }
 }
 "@
