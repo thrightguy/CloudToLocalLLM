@@ -34,7 +34,7 @@ RUN flutter build web
 FROM nginx:alpine
 
 # Create a non-root user
-RUN adduser -D -H -u 101 -s /sbin/nologin nginx-user
+RUN adduser -D -H -u 1000 -s /sbin/nologin nginx-user
 
 # Copy nginx configuration
 COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/conf.d/default.conf
