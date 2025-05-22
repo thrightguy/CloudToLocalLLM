@@ -14,7 +14,6 @@ services:
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-      - ./ssl:/etc/nginx/ssl
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/health_internal || exit 1"]
@@ -61,11 +60,11 @@ services:
     entrypoint: |
       /bin/sh -c '
         trap exit TERM;
-        echo "Attempting initial staging wildcard certificate acquisition...";
-        certbot certonly --manual --preferred-challenges dns --manual-public-ip-logging-ok --email christopher.maltais@gmail.com --agree-tos --no-eff-email --staging -d "*.cloudtolocalllm.online" -d cloudtolocalllm.online --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        echo "Attempting initial wildcard certificate acquisition...";
+        certbot certonly --manual --preferred-challenges dns --manual-public-ip-logging-ok --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d "*.cloudtolocalllm.online" -d cloudtolocalllm.online --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
         echo "Initial cert attempt/check done. Starting renewal loop.";
         while :; do
-          certbot renew --quiet --staging --preferred-challenges dns --deploy-hook "/opt/certbot_permissions_hook.sh";
+          certbot renew --quiet --preferred-challenges dns --deploy-hook "/opt/certbot_permissions_hook.sh";
           sleep 12h & wait $${!};
         done;
       '
