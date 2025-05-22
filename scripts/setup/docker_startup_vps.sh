@@ -98,11 +98,10 @@ deploy_as_user() {
     log_status "Pruning Docker system: containers, networks, volumes, images, build cache..."
     docker system prune -a -f --volumes || log_status "Docker system prune completed or nothing to prune."
 
-    # Specific cleanup for old fusionauth DB container if it somehow survived prune -a
-    log_status "Attempting to stop and remove potentially conflicting old DB container (cloudtolocalllm-fusionauth-db)..."
-    docker stop cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
-    docker rm cloudtolocalllm-fusionauth-db >/dev/null 2>&1 || true
-    log_status "Done attempting to remove old DB container."
+    # Specific cleanup for old containers if they somehow survived prune -a
+    log_status "Attempting to stop and remove potentially conflicting old containers..."
+    docker stop cloudtolocalllm-webapp >/dev/null 2>&1 || true
+    docker rm cloudtolocalllm-webapp >/dev/null 2>&1 || true
 
     # Bring down any services defined in $COMPOSE_FILE, removing volumes and orphans.
     log_status "Bringing down any project services defined in $COMPOSE_FILE, removing volumes and orphans..."
@@ -123,7 +122,7 @@ deploy_as_user() {
   fi
 
   # Step 2: Build/Rebuild all services from docker-compose.yml
-  log_status "[2/3] Building/Rebuilding all services with --no-cache from $COMPOSE_FILE (full stack: webapp, FusionAuth, DB, etc.)..."
+  log_status "[2/3] Building/Rebuilding all services with --no-cache from $COMPOSE_FILE (full stack: webapp, etc.)..."
   cd "$INSTALL_DIR"
   docker compose -f "$COMPOSE_FILE" build --no-cache
   if [ $? -ne 0 ]; then
@@ -133,7 +132,7 @@ deploy_as_user() {
   log_success "All services built successfully."
 
   # Step 3: Start all services
-  log_status "[3/3] Starting all services from $COMPOSE_FILE (full stack: webapp, FusionAuth, DB, etc.)..."
+  log_status "[3/3] Starting all services from $COMPOSE_FILE (full stack: webapp, etc.)..."
   docker compose -f "$COMPOSE_FILE" up -d
   if [ $? -ne 0 ]; then
     log_error "Docker compose up failed. Please check the output above and container logs."
