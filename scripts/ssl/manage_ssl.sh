@@ -161,6 +161,13 @@ main() {
 
     # Step 2: Get wildcard certificate using DNS validation
     run_dns_certbot "$@"
+
+    # Reload nginx to apply the new certificates
+    echo "Reloading nginx to apply the new certificates..."
+    sed -i 's|ssl_certificate /etc/nginx/ssl/default.pem;|ssl_certificate /etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem;|g' /opt/cloudtolocalllm/config/nginx/nginx-webapp-internal.conf
+    sed -i 's|ssl_certificate_key /etc/nginx/ssl/default.key;|ssl_certificate_key /etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem;|g' /opt/cloudtolocalllm/config/nginx/nginx-webapp-internal.conf
+    docker compose restart webapp
+    echo "Nginx reloaded successfully."
 }
 
 # Run the main function
