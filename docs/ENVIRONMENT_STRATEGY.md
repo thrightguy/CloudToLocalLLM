@@ -1,5 +1,54 @@
 # Environment Strategy
 
+## Overview
+
+This document outlines the environment strategy for the CloudToLocalLLM application.
+
+## Authentication (Auth0)
+
+*   **Production**: The application uses Auth0 for authentication in all environments.
+*   **Configuration**: This is managed in `lib_custom/config/app_config.dart` via the Auth0 configuration settings.
+*   **Rationale**: Using Auth0 provides a secure, scalable, and maintainable authentication solution without the need for self-hosted authentication services.
+
+## Environment Variables
+
+*   **Development**: Uses `.env.development` for local development settings.
+*   **Production**: Uses `.env` for production settings.
+*   **Secrets**: Sensitive information is stored in environment variables and not committed to the repository.
+
+## Docker Environment
+
+*   **Development**: Uses development-specific Docker configurations.
+*   **Production**: Uses production-optimized Docker configurations.
+*   **Volumes**: Persistent data is stored in Docker volumes.
+
+## SSL Configuration
+
+*   **Development**: Uses self-signed certificates.
+*   **Production**: Uses Let's Encrypt or commercial SSL certificates.
+*   **Configuration**: SSL settings are managed through environment variables and Docker configurations.
+
+## Monitoring and Logging
+
+*   **Development**: Basic logging for debugging.
+*   **Production**: Comprehensive logging and monitoring setup.
+*   **Tools**: Prometheus and Grafana for metrics collection and visualization.
+
+## Backup Strategy
+
+*   **Development**: Manual backups as needed.
+*   **Production**: Automated regular backups of all persistent data.
+*   **Storage**: Backups are stored in a secure, off-site location.
+
+## Security Considerations
+
+*   **Development**: Basic security measures for local development.
+*   **Production**: Comprehensive security measures including:
+    *   Regular security updates
+    *   Network isolation
+    *   Access control
+    *   Monitoring and alerting
+
 ## Current Approach (As of May 2024)
 
 For the initial development phase leading up to the first production version, the project utilizes a single, unified environment for certain key services.

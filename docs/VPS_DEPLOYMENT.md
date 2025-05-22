@@ -1,5 +1,93 @@
 # VPS Deployment Guide for CloudToLocalLLM
 
+## IMPORTANT: Deployment Script
+The ONLY script that should be used for deployment is:
+```bash
+scripts/setup/docker_startup_vps.sh
+```
+
+This script handles all necessary deployment steps including:
+- Docker container management
+- SSL certificate handling
+- Service verification
+- Proper user permissions
+
+## Quick Setup
+
+1. SSH into your VPS as the `cloudllm` user:
+```bash
+ssh cloudllm@cloudtolocalllm.online
+```
+
+2. Navigate to the installation directory:
+```bash
+cd /opt/cloudtolocalllm
+```
+
+3. Pull the latest changes:
+```bash
+git pull
+```
+
+4. Run the deployment script:
+```bash
+bash scripts/setup/docker_startup_vps.sh
+```
+
+## SSL Setup
+
+The SSL certificates are managed automatically by the deployment script. If you need to manually manage SSL certificates, use:
+```bash
+bash scripts/ssl/manage_ssl.sh
+```
+
+## Monitoring
+
+To check the status of your deployment:
+```bash
+# Check running containers
+docker compose -f config/docker/docker-compose.yml ps
+
+# View logs
+docker compose -f config/docker/docker-compose.yml logs -f
+```
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. Check container status:
+```bash
+docker compose -f config/docker/docker-compose.yml ps
+```
+
+2. Check container logs:
+```bash
+docker compose -f config/docker/docker-compose.yml logs
+```
+
+3. Verify SSL certificates:
+```bash
+ls -la certbot/conf/live/cloudtolocalllm.online/
+```
+
+4. Check web application health:
+```bash
+curl -f http://localhost:80/health_internal
+```
+
+5. Check API health:
+```bash
+curl -f http://localhost:8080/health
+```
+
+## Important Notes
+
+- Always use the `cloudllm` user for deployment operations
+- The deployment script handles all necessary root operations internally
+- Do not create or modify deployment scripts without explicit approval
+- All deployment operations should be performed through the official deployment script
+
 **This document is outdated.**
 
 Please refer to the main [VPS Deployment Guide](DEPLOYMENT.MD) for the current and recommended deployment procedures, which utilize the `scripts/setup/docker_startup_vps.sh` script and the `admin_control_daemon`.
