@@ -16,8 +16,6 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./ssl:/etc/nginx/ssl
     restart: unless-stopped
-    networks:
-      - cloudllm-network
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/health_internal || exit 1"]
       interval: 30s
@@ -50,8 +48,6 @@ services:
       - "2500:25"
     cap_add:
       - NET_ADMIN
-    networks:
-      - cloudllm-network
 
   # Certbot for SSL certificates
   certbot:
@@ -73,42 +69,3 @@ services:
           sleep 12h & wait $${!};
         done;
       '
-    networks:
-      - cloudllm-network
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    ports:
-      - "8080:8080"
-    environment:
-      - NODE_ENV=production
-      - AUTH0_DOMAIN=dev-xafu7oedkd5wlrbo.us.auth0.com
-      - AUTH0_CLIENT_ID=HlOeY1pG9e2g6MvFKPDFbJ3ASIhxDgNu
-      - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET}
-      - AUTH0_AUDIENCE=https://dev-xafu7oedkd5wlrbo.us.auth0.com/api/v2/
-      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/cloudtolocalllm
-    depends_on:
-      - db
-    restart: unless-stopped
-
-  db:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=cloudtolocalllm
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-networks:
-  cloudllm-network:
-    driver: bridge
-
-volumes:
-  db_data:
-    driver: local
-  postgres_data:
