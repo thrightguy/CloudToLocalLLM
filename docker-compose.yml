@@ -60,11 +60,11 @@ services:
     entrypoint: |
       /bin/sh -c '
         trap exit TERM;
-        echo "Attempting initial wildcard certificate acquisition...";
-        certbot certonly --manual --preferred-challenges dns --manual-public-ip-logging-ok --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d "*.cloudtolocalllm.online" -d cloudtolocalllm.online --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        echo "Attempting initial certificate acquisition...";
+        certbot certonly --webroot -w /var/www/certbot --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
         echo "Initial cert attempt/check done. Starting renewal loop.";
         while :; do
-          certbot renew --quiet --preferred-challenges dns --deploy-hook "/opt/certbot_permissions_hook.sh";
+          certbot renew --quiet --webroot -w /var/www/certbot --deploy-hook "/opt/certbot_permissions_hook.sh";
           sleep 12h & wait $${!};
         done;
       '
