@@ -5,7 +5,13 @@ FROM cirrusci/flutter:stable as builder
 # This should apply to the flutter user as well.
 RUN git config --system --add safe.directory /sdks/flutter
 
-# The cirrusci/flutter image has a 'flutter' user (uid/gid 1000).
+# Explicitly create the flutter user and group, even if it should exist.
+# Use standard UID/GID for flutter if known, or just create.
+RUN addgroup --gid 1000 flutter && \
+    adduser --uid 1000 --gid 1000 --disabled-password --gecos "" flutter && \
+    usermod -aG sudo flutter && \
+    echo "flutter ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
 WORKDIR /home/flutter/project # Set WORKDIR for flutter user
 USER flutter                  # Switch to flutter user
 
