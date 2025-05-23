@@ -13,7 +13,8 @@ services:
       - "443:443"
     volumes:
       - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/live:/etc/letsencrypt/live
+      - ./certbot/archive:/etc/letsencrypt/archive
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/health_internal || exit 1"]
@@ -54,7 +55,8 @@ services:
     container_name: cloudtolocalllm-certbot
     volumes:
       - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/live:/etc/letsencrypt/live
+      - ./certbot/archive:/etc/letsencrypt/archive
       - ./scripts/certbot_permissions_hook.sh:/opt/certbot_permissions_hook.sh:ro
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: |
