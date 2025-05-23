@@ -2,17 +2,17 @@
 FROM cirrusci/flutter:stable as builder
 
 # The cirrusci/flutter image has a 'flutter' user (uid/gid 1000).
-# We'll use that user. Switch to it if not default.
-# The WORKDIR is often already /home/flutter/project or similar, but we'll set it.
-USER flutter
+# Set WORKDIR first, then switch user.
 WORKDIR /home/flutter/project
+USER flutter
 
-# Configure git safe directory for the flutter user
+# Configure git safe directory.
+# This will write to /home/flutter/.gitconfig
 RUN git config --global --add safe.directory /sdks/flutter
 
-# Copy application source (ensure flutter user owns these files)
-# We COPY to the WORKDIR, then chown to ensure flutter user owns them
+# Copy application source
 COPY . .
+# Ensure flutter user owns these files after copy. sudo should be available.
 RUN sudo chown -R flutter:flutter /home/flutter/project
 
 # Build the Flutter web application
