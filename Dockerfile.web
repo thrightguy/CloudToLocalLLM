@@ -1,14 +1,19 @@
 # Stage 1: Build the Flutter web application
 FROM cirrusci/flutter:stable as builder
-# Or: FROM heydu/flutter:latest as builder
 
-# Create a non-root user for the build (optional but good practice)
-RUN useradd -ms /bin/bash appuser
-USER appuser
-WORKDIR /app
+# The cirrusci/flutter image has a 'flutter' user (uid/gid 1000).
+# We'll use that user. Switch to it if not default.
+# The WORKDIR is often already /home/flutter/project or similar, but we'll set it.
+USER flutter
+WORKDIR /home/flutter/project
 
-# Copy application source
-COPY --chown=appuser:appuser . .
+# Configure git safe directory for the flutter user
+RUN git config --global --add safe.directory /sdks/flutter
+
+# Copy application source (ensure flutter user owns these files)
+# We COPY to the WORKDIR, then chown to ensure flutter user owns them
+COPY . .
+RUN sudo chown -R flutter:flutter /home/flutter/project
 
 # Build the Flutter web application
 RUN flutter build web --release
@@ -20,13 +25,11 @@ FROM nginx:alpine
 COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/conf.d/default.conf
 
 # Copy the Flutter web build from the builder stage
-COPY --from=builder /app/build/web /usr/share/nginx/html
+COPY --from=builder /home/flutter/project/build/web /usr/share/nginx/html
 
-# Create nginx user/group (if not already present in nginx:alpine, though it usually is)
+# Nginx user setup (nginx:alpine usually has an 'nginx' user)
 # Ensure nginx user owns the web files and Nginx-related directories
 RUN \
-    addgroup -g 101 -S nginx && \
-    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx && \
     chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
