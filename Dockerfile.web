@@ -1,51 +1,33 @@
-FROM debian:bullseye-slim as builder
+# Stage 1: Build the Flutter web application
+FROM cirrusci/flutter:stable as builder
+# Or: FROM heydu/flutter:latest as builder
 
-# Install Flutter dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    unzip \
-    xz-utils \
-    zip \
-    libglu1-mesa \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Flutter
-RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
-ENV PATH="/usr/local/flutter/bin:/usr/local/flutter/bin/cache/dart-sdk/bin:${PATH}"
-
-# Create a non-root user
-RUN useradd -ms /bin/bash nginx
-
-# Give nginx user ownership of flutter directory
-RUN chown -R nginx:nginx /usr/local/flutter
-
-# Switch to the nginx user
-USER nginx
-
-RUN flutter doctor
-RUN flutter channel stable
-RUN flutter upgrade
-
-# Set up the app
+# Create a non-root user for the build (optional but good practice)
+RUN useradd -ms /bin/bash appuser
+USER appuser
 WORKDIR /app
-COPY --chown=nginx:nginx . .
 
-# Build the app
-RUN flutter build web
+# Copy application source
+COPY --chown=appuser:appuser . .
 
-# Production image
+# Build the Flutter web application
+RUN flutter build web --release
+
+# Stage 2: Serve the Flutter web application with Nginx
 FROM nginx:alpine
 
-# Copy nginx configuration
+# Copy custom Nginx configuration
 COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/conf.d/default.conf
 
 # Copy the Flutter web build from the builder stage
 COPY --from=builder /app/build/web /usr/share/nginx/html
 
-# Set proper permissions
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html && \
+# Create nginx user/group (if not already present in nginx:alpine, though it usually is)
+# Ensure nginx user owns the web files and Nginx-related directories
+RUN \
+    addgroup -g 101 -S nginx && \
+    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d && \
@@ -55,5 +37,5 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 # Expose ports
 EXPOSE 80 443
 
-# Start nginx
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"] 
