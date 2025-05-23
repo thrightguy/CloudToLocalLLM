@@ -1,14 +1,13 @@
 # Stage 1: Build the Flutter web application
 FROM cirrusci/flutter:stable as builder
 
-# The cirrusci/flutter image has a 'flutter' user (uid/gid 1000).
-# Set WORKDIR first, then switch user.
-WORKDIR /home/flutter/project
-USER flutter
+# Configure git safe directory system-wide (as root)
+# This should apply to the flutter user as well.
+RUN git config --system --add safe.directory /sdks/flutter
 
-# Configure git safe directory.
-# This will write to /home/flutter/.gitconfig
-RUN git config --global --add safe.directory /sdks/flutter
+# The cirrusci/flutter image has a 'flutter' user (uid/gid 1000).
+WORKDIR /home/flutter/project # Set WORKDIR for flutter user
+USER flutter                  # Switch to flutter user
 
 # Copy application source
 COPY . .
