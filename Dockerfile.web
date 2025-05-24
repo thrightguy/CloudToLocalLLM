@@ -1,5 +1,5 @@
 # Stage 1: Build the Flutter web app
-FROM ghcr.io/cirruslabs/flutter:3.24.5 AS build
+FROM ghcr.io/cirruslabs/flutter:master AS build
 
 # Set environment variables to suppress Flutter warnings and optimize build
 ENV FLUTTER_ROOT=/flutter \
