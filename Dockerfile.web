@@ -6,7 +6,7 @@ RUN git config --system --add safe.directory /sdks/flutter
 
 # Explicitly create the flutter user and group.
 RUN addgroup --gid 1000 flutter && \
-    adduser --uid 1000 --gid 1000 --disabled-password --gecos "" flutter --ingroup flutter && \
+    adduser --uid 1000 --gid 1000 --disabled-password --gecos "" flutter && \
     usermod -aG sudo flutter && \
     echo "flutter ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
