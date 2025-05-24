@@ -43,10 +43,16 @@ services:
       - "DKIM_SELECTOR=mail"
       - "DKIM_KEY_PATH=/etc/opendkim/keys/cloudtolocalllm.online/mail.private"
       - "DKIM_AUTOGENERATE=true"
+      - "SSL_CERT_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem"
+      - "SSL_KEY_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem"
     volumes:
-      - ./config/dkim:/etc/opendkim/keys/cloudtolocalllm.online:ro 
+      - ./config/dkim:/etc/opendkim/keys/cloudtolocalllm.online:ro
+      - ./certbot/live:/etc/letsencrypt/live:ro
+      - ./certbot/archive:/etc/letsencrypt/archive:ro
     ports:
       - "2500:25"
+      - "587:587"  # Submission port for authenticated SMTP
+      - "465:465"  # SMTPS port for SSL/TLS
     cap_add:
       - NET_ADMIN
 
@@ -69,7 +75,7 @@ services:
         mkdir -p /etc/letsencrypt/live /etc/letsencrypt/archive;
         chmod -R 755 /etc/letsencrypt;
         echo "Attempting initial certificate acquisition...";
-        certbot certonly --webroot -w /var/www/certbot --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        certbot certonly --webroot -w /var/www/certbot --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d mail.cloudtolocalllm.online --force-renewal --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
         echo "Initial cert attempt/check done. Starting renewal loop.";
         while :; do
           certbot renew --quiet --webroot -w /var/www/certbot --deploy-hook "/opt/certbot_permissions_hook.sh";
