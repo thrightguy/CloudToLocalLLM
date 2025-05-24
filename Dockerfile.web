@@ -10,8 +10,8 @@ RUN addgroup --gid 1000 flutter && \
     usermod -aG sudo flutter && \
     echo "flutter ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Fix permissions for the Flutter SDK cache directory
-RUN chown -R flutter:flutter /sdks/flutter/bin/cache
+# Fix permissions for the entire Flutter SDK directory
+RUN chown -R flutter:flutter /sdks/flutter
 
 # Switch to the flutter user for subsequent commands
 USER flutter
