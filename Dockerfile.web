@@ -1,5 +1,28 @@
 # Stage 1: Build the Flutter web app
-FROM ghcr.io/cirruslabs/flutter:master AS build
+FROM debian:bullseye-slim AS build
+
+# Install required packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    unzip \
+    xz-utils \
+    zip \
+    libglu1-mesa \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV FLUTTER_HOME=/flutter \
+    FLUTTER_VERSION=3.24.5 \
+    PATH=/flutter/bin:$PATH
+
+# Download and install Flutter
+RUN curl -O https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz \
+    && tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz -C / \
+    && rm flutter_linux_${FLUTTER_VERSION}-stable.tar.xz \
+    && flutter channel master \
+    && flutter upgrade \
+    && flutter doctor
 
 # Set environment variables to suppress Flutter warnings and optimize build
 ENV FLUTTER_ROOT=/flutter \
@@ -16,9 +39,9 @@ RUN groupadd -r fluttergroup && useradd -r -g fluttergroup -m -s /sbin/nologin f
 # Cache-busting echo
 RUN echo "Build version: $(date +%s)"
 
-# Change ownership of /app and /sdks/flutter to flutteruser before running flutter commands
+# Change ownership of /app and /flutter to flutteruser before running flutter commands
 RUN chown -R flutteruser:fluttergroup /app && \
-    chown -R flutteruser:fluttergroup /sdks/flutter
+    chown -R flutteruser:fluttergroup /flutter
 
 # Copy pubspec files first to leverage Docker cache for dependencies
 COPY --chown=flutteruser:fluttergroup pubspec.yaml ./
@@ -28,7 +51,7 @@ COPY --chown=flutteruser:fluttergroup pubspec.lock ./
 USER flutteruser
 
 # Add Flutter SDK directory as a safe directory for git
-RUN git config --global --add safe.directory /sdks/flutter
+RUN git config --global --add safe.directory /flutter
 
 # Get dependencies
 RUN flutter pub get
