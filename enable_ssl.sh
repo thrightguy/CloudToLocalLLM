@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 
 # Exit on any error
 set -e
 
 # Path to nginx config
-NGINX_CONF="/etc/nginx/conf.d/default.conf"
+NGINX_CONF="./nginx/conf.d/default.conf"
 
 # Uncomment SSL server block and update server names
 sed -i 's/# server {/server {/g' "$NGINX_CONF"
@@ -53,6 +53,6 @@ sed -i 's/#     gzip_disable/    gzip_disable/g' "$NGINX_CONF"
 sed -i 's/# }/}/g' "$NGINX_CONF"
 
 # Reload nginx
-nginx -s reload
+docker exec cloudtolocalllm-webapp nginx -s reload
 
 echo "SSL configuration enabled and nginx reloaded" 
