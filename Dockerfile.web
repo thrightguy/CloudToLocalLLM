@@ -1,5 +1,12 @@
 # Stage 1: Build the Flutter web app
-FROM ghcr.io/cirruslabs/flutter:dev AS build
+FROM ghcr.io/cirruslabs/flutter:3.24.5 AS build
+
+# Set environment variables to suppress Flutter warnings and optimize build
+ENV FLUTTER_ROOT=/flutter \
+    PUB_CACHE=/flutter/.pub-cache \
+    FLUTTER_SUPPRESS_ANALYTICS=true \
+    NO_COLOR=true \
+    FLUTTER_NO_ROOT_WARNING=true
 
 WORKDIR /app
 
@@ -10,12 +17,10 @@ RUN groupadd -r fluttergroup && useradd -r -g fluttergroup -m -s /sbin/nologin f
 RUN echo "Build version: $(date +%s)"
 
 # Change ownership of /app and /sdks/flutter to flutteruser before running flutter commands
-# This is done as root, as USER flutteruser is set later
 RUN chown -R flutteruser:fluttergroup /app && \
     chown -R flutteruser:fluttergroup /sdks/flutter
 
 # Copy pubspec files first to leverage Docker cache for dependencies
-# Ensure these are copied with correct ownership from the start
 COPY --chown=flutteruser:fluttergroup pubspec.yaml ./
 COPY --chown=flutteruser:fluttergroup pubspec.lock ./
 
@@ -28,26 +33,25 @@ RUN git config --global --add safe.directory /sdks/flutter
 # Get dependencies
 RUN flutter pub get
 
-# Copy the rest of the application source code (as flutteruser)
-# Ensure correct ownership using --chown with COPY
+# Copy the rest of the application source code
 COPY --chown=flutteruser:fluttergroup . .
 
-# Build the Flutter web application
-# The output will be in /app/build/web
-RUN flutter build web --release
+# Build the Flutter web application with optimizations
+RUN flutter build web --release --no-tree-shake-icons
 
 # Stage 2: Serve the app with Nginx
 FROM nginx:alpine
 
-# Install curl for healthcheck (keep only curl, remove openssl)
+# Install curl for healthcheck
 USER root
-RUN apk add --no-cache curl openssl
+RUN apk add --no-cache curl
 
 # Copy the built web app from the build stage
 COPY --from=build /app/build/web /usr/share/nginx/html
 
-# Set permissions for nginx user (as root)
-RUN chown -R nginx:nginx /usr/share/nginx/html && chmod -R 755 /usr/share/nginx/html
+# Set permissions for nginx user
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
 
 # Create and set permissions for Nginx cache and temp directories
 RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp /var/cache/nginx/scgi_temp && \
