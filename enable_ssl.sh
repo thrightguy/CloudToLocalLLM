@@ -4,7 +4,7 @@
 set -e
 
 # Path to nginx config
-NGINX_CONF="./nginx/conf.d/default.conf"
+NGINX_CONF="./config/nginx/nginx-webapp-internal.conf"
 
 # Uncomment SSL server block and update server names
 sed -i 's/# server {/server {/g' "$NGINX_CONF"
