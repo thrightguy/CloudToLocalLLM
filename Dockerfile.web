@@ -1,7 +1,10 @@
 # Stage 1: Build the Flutter web app
 FROM debian:bullseye-slim AS build
 
-# Install required packages
+# Create a non-root user and group first
+RUN groupadd -r fluttergroup && useradd -r -g fluttergroup -m -s /sbin/nologin flutteruser
+
+# Install required packages as root (only system-level operations)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -16,13 +19,17 @@ ENV FLUTTER_HOME=/flutter \
     FLUTTER_VERSION=3.24.5 \
     PATH=/flutter/bin:$PATH
 
-# Download and install Flutter
+# Download Flutter as root (needed for /flutter directory)
 RUN curl -O https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz \
     && tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz -C / \
-    && rm flutter_linux_${FLUTTER_VERSION}-stable.tar.xz \
-    && flutter channel master \
-    && flutter upgrade \
-    && flutter doctor
+    && rm flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
+
+# Fix permissions for Flutter directory
+RUN chown -R flutteruser:fluttergroup /flutter
+
+# Switch to non-root user for all subsequent operations
+USER flutteruser
+WORKDIR /app
 
 # Set environment variables to suppress Flutter warnings and optimize build
 ENV FLUTTER_ROOT=/flutter \
@@ -31,41 +38,37 @@ ENV FLUTTER_ROOT=/flutter \
     NO_COLOR=true \
     FLUTTER_NO_ROOT_WARNING=true
 
-WORKDIR /app
+# Add Flutter SDK directory as a safe directory for git
+RUN git config --global --add safe.directory /flutter
 
-# Create a non-root user and group
-RUN groupadd -r fluttergroup && useradd -r -g fluttergroup -m -s /sbin/nologin flutteruser
+# Switch to master channel and upgrade Flutter
+RUN /flutter/bin/flutter channel master \
+    && /flutter/bin/flutter upgrade \
+    && /flutter/bin/flutter doctor
 
 # Cache-busting echo
 RUN echo "Build version: $(date +%s)"
-
-# Change ownership of /app and /flutter to flutteruser before running flutter commands
-RUN chown -R flutteruser:fluttergroup /app && \
-    chown -R flutteruser:fluttergroup /flutter
 
 # Copy pubspec files first to leverage Docker cache for dependencies
 COPY --chown=flutteruser:fluttergroup pubspec.yaml ./
 COPY --chown=flutteruser:fluttergroup pubspec.lock ./
 
-# Switch to non-root user for flutter commands
-USER flutteruser
-
-# Add Flutter SDK directory as a safe directory for git
-RUN git config --global --add safe.directory /flutter
-
 # Get dependencies
-RUN flutter pub get
+RUN /flutter/bin/flutter pub get
 
 # Copy the rest of the application source code
 COPY --chown=flutteruser:fluttergroup . .
 
 # Build the Flutter web application with optimizations
-RUN flutter build web --release --no-tree-shake-icons
+RUN /flutter/bin/flutter build web --release --no-tree-shake-icons
 
 # Stage 2: Serve the app with Nginx
 FROM nginx:alpine
 
-# Install curl for healthcheck
+# Create a non-root user for Nginx (if not already exists)
+RUN adduser -D -H -u 101 -s /sbin/nologin nginx || true
+
+# Install curl for healthcheck (as root, but only system-level operation)
 USER root
 RUN apk add --no-cache curl
 
@@ -83,6 +86,9 @@ RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache
 
 # Copy custom Nginx configuration
 COPY config/nginx/nginx-webapp-internal.conf /etc/nginx/conf.d/default.conf
+
+# Switch to nginx user for running the server
+USER nginx
 
 # Expose ports
 EXPOSE 80 443
