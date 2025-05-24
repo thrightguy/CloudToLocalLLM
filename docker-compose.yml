@@ -14,8 +14,8 @@ services:
       - "443:443"
     volumes:
       - ./certbot/www:/var/www/certbot
-      - ./certbot/live:/etc/letsencrypt/live
-      - ./certbot/archive:/etc/letsencrypt/archive
+      # - ./certbot/live:/etc/letsencrypt/live
+      # - ./certbot/archive:/etc/letsencrypt/archive
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/health_internal || exit 1"]
@@ -43,12 +43,12 @@ services:
       - "DKIM_SELECTOR=mail"
       - "DKIM_KEY_PATH=/etc/opendkim/keys/cloudtolocalllm.online/mail.private"
       - "DKIM_AUTOGENERATE=true"
-      - "SSL_CERT_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem"
-      - "SSL_KEY_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem"
+      # - "SSL_CERT_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem"
+      # - "SSL_KEY_PATH=/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem"
     volumes:
       - ./config/dkim:/etc/opendkim/keys/cloudtolocalllm.online:ro
-      - ./certbot/live:/etc/letsencrypt/live:ro
-      - ./certbot/archive:/etc/letsencrypt/archive:ro
+      # - ./certbot/live:/etc/letsencrypt/live:ro
+      # - ./certbot/archive:/etc/letsencrypt/archive:ro
     ports:
       - "2500:25"
       - "587:587"  # Submission port for authenticated SMTP
