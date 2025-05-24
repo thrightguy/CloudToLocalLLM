@@ -12,54 +12,36 @@ ARCHIVE_DIR="${LE_BASE_PATH}/archive"
 DOMAIN_LIVE_DIR="${LIVE_DIR}/${DOMAIN}"
 DOMAIN_ARCHIVE_DIR="${ARCHIVE_DIR}/${DOMAIN}"
 
-echo "Certbot deploy hook: Adjusting permissions for ${DOMAIN} (non-root mode)"
+echo "Certbot deploy hook: Adjusting permissions for ${DOMAIN}"
 
-# Base directories: Owner rwx, Group rx, Others ---
-# This assumes the parent directories up to /etc/letsencrypt are already traversable
-# by the group Certbot/Nginx are in. The volume mount handles host permissions.
-# Inside the container, Certbot (as appuser:NGINX_GID) will create these with suitable ownership.
-echo "Setting base directory permissions..."
-chmod 0750 "${LE_BASE_PATH}"
-chmod 0750 "${LIVE_DIR}"
-chmod 0750 "${ARCHIVE_DIR}"
+# Create directories if they don't exist
+mkdir -p "${LIVE_DIR}" "${ARCHIVE_DIR}" "${DOMAIN_LIVE_DIR}" "${DOMAIN_ARCHIVE_DIR}"
 
-if [ -d "${DOMAIN_LIVE_DIR}" ]; then
-  chmod 0750 "${DOMAIN_LIVE_DIR}"
-  # Symlinks created by certbot usually have rwxrwxrwx, pointing to files in archive.
-  # The permissions of the target files are what matter most.
-else
-  echo "Warning: Live directory for domain not found: ${DOMAIN_LIVE_DIR}"
-  # Attempt to create it with appropriate permissions if certbot didn't
-  mkdir -p "${DOMAIN_LIVE_DIR}"
-  chmod 0750 "${DOMAIN_LIVE_DIR}"
-fi
+# Set base directory permissions
+chmod 755 "${LE_BASE_PATH}"
+chmod 755 "${LIVE_DIR}"
+chmod 755 "${ARCHIVE_DIR}"
+chmod 755 "${DOMAIN_LIVE_DIR}"
+chmod 755 "${DOMAIN_ARCHIVE_DIR}"
 
+# Set permissions for certificate files
 if [ -d "${DOMAIN_ARCHIVE_DIR}" ]; then
-  chmod 0750 "${DOMAIN_ARCHIVE_DIR}"
-
-  # Private key(s): Owner rw, Group r, Others ---
-  echo "Setting permissions for private key(s) in ${DOMAIN_ARCHIVE_DIR}..."
-  find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'privkey*.pem' -exec chmod 0640 {} \\;
-
-  # Public certificates and chain: Owner rw, Group r, Others r (or Group r, Others --- if stricter)
-  # For simplicity and wider compatibility if other tools inside container need to read them:
-  echo "Setting permissions for public certs in ${DOMAIN_ARCHIVE_DIR}..."
-  find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'cert*.pem' -exec chmod 0644 {} \\;
-  find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'chain*.pem' -exec chmod 0644 {} \\;
-  find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'fullchain*.pem' -exec chmod 0644 {} \\;
-else
-  echo "Warning: Archive directory for domain not found: ${DOMAIN_ARCHIVE_DIR}"
-  mkdir -p "${DOMAIN_ARCHIVE_DIR}"
-  chmod 0750 "${DOMAIN_ARCHIVE_DIR}"
+    # Private key: Owner rw, Group r, Others ---
+    find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'privkey*.pem' -exec chmod 640 {} \;
+    
+    # Public certificates and chain: Owner rw, Group r, Others r
+    find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'cert*.pem' -exec chmod 644 {} \;
+    find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'chain*.pem' -exec chmod 644 {} \;
+    find "${DOMAIN_ARCHIVE_DIR}" -type f -name 'fullchain*.pem' -exec chmod 644 {} \;
 fi
 
-echo "Certbot deploy hook: Permissions adjustment complete (non-root mode)."
-echo "IMPORTANT: Nginx in the webapp container must be reloaded externally to pick up certificate changes."
-echo "Example: docker compose exec webapp nginx -s reload"
+# Ensure symlinks in live directory are readable
+if [ -d "${DOMAIN_LIVE_DIR}" ]; then
+    chmod 755 "${DOMAIN_LIVE_DIR}"
+    find "${DOMAIN_LIVE_DIR}" -type l -exec chmod 755 {} \;
+fi
 
-# Set proper permissions for the certificates
-chmod -R 755 /etc/letsencrypt/live
-chmod -R 755 /etc/letsencrypt/archive
+echo "Certbot deploy hook: Permissions adjustment complete"
 
 # Restart Nginx to pick up the new certificates
 docker restart cloudtolocalllm-webapp 

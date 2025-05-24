@@ -8,6 +8,7 @@ services:
       dockerfile: Dockerfile.web
     image: cloudtolocalllm-webapp
     container_name: cloudtolocalllm-webapp
+    user: "101:101"  # nginx user and group
     ports:
       - "80:80"
       - "443:443"
