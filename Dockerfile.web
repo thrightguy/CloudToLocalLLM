@@ -2,23 +2,21 @@
 FROM cirrusci/flutter:stable as builder
 
 # Configure git safe directory system-wide (as root)
-# This should apply to the flutter user as well.
 RUN git config --system --add safe.directory /sdks/flutter
 
-# Explicitly create the flutter user and group, even if it should exist.
-# Use standard UID/GID for flutter if known, or just create.
+# Explicitly create the flutter user and group.
 RUN addgroup --gid 1000 flutter && \
-    adduser --uid 1000 --gid 1000 --disabled-password --gecos "" flutter && \
+    adduser --uid 1000 --gid 1000 --disabled-password --gecos "" flutter --ingroup flutter && \
     usermod -aG sudo flutter && \
     echo "flutter ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-WORKDIR /home/flutter/project # Set WORKDIR for flutter user
-USER flutter                  # Switch to flutter user
+# Switch to the flutter user for subsequent commands
+USER flutter
+WORKDIR /home/flutter/project
 
-# Copy application source
+# Copy application source. After this, files are owned by flutter due to USER context.
 COPY . .
-# Ensure flutter user owns these files after copy. sudo should be available.
-RUN sudo chown -R flutter:flutter /home/flutter/project
+# No chown needed here if COPY respects USER. If not, we'll adjust.
 
 # Build the Flutter web application
 RUN flutter build web --release
