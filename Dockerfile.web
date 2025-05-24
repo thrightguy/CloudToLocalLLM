@@ -1,5 +1,5 @@
 # Stage 1: Build the Flutter web application
-FROM cirrusci/flutter:stable as builder
+FROM cirrusci/flutter:latest as builder
 
 # Configure git safe directory system-wide (as root)
 RUN git config --system --add safe.directory /sdks/flutter
