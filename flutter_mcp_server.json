@@ -1,0 +1,66 @@
+{
+  "name": "flutter_mcp_server",
+  "version": "1.0.0",
+  "description": "Flutter MCP Server for Dart & Flutter development",
+  "type": "http",
+  "url": "https://mcp.so/api/flutter_mcp_server",
+  "tools": [
+    {
+      "name": "analyze",
+      "description": "Analyze Dart/Flutter files for diagnostics and suggestions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "Path to the Dart/Flutter file to analyze"
+          }
+        },
+        "required": ["filePath"]
+      }
+    },
+    {
+      "name": "format",
+      "description": "Format Dart/Flutter code",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "Path to the Dart/Flutter file to format"
+          }
+        },
+        "required": ["filePath"]
+      }
+    },
+    {
+      "name": "create_project",
+      "description": "Create a new Flutter project",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectName": {
+            "type": "string",
+            "description": "Name of the new Flutter project"
+          },
+          "template": {
+            "type": "string",
+            "description": "Project template to use",
+            "enum": ["app", "package", "plugin"]
+          }
+        },
+        "required": ["projectName"]
+      }
+    }
+  ],
+  "resources": {
+    "flutter_sdk": {
+      "type": "path",
+      "description": "Path to Flutter SDK"
+    },
+    "dart_sdk": {
+      "type": "path",
+      "description": "Path to Dart SDK"
+    }
+  }
+} 

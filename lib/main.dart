@@ -437,7 +437,7 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
 
   Future<void> _handleLoginRedirect() async {
     try {
-      await _authService.handleRedirectAndLogin(widget.responseUri);
+          await _authService.handleRedirectAndLogin(widget.responseUri);
       if (!mounted) return; // Check mounted after await
       // Always navigate to home page after login attempt
       GoRouter.of(context).go('/');
