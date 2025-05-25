@@ -14,8 +14,10 @@ services:
       - "443:443"
     volumes:
       - ./certbot/www:/var/www/certbot
-      # - ./certbot/live:/etc/letsencrypt/live
-      # - ./certbot/archive:/etc/letsencrypt/archive
+      - ./certbot/live:/etc/letsencrypt/live
+      - ./certbot/archive:/etc/letsencrypt/archive
+      - ./config/nginx/nginx-webapp-internal.conf:/etc/nginx/conf.d/default.conf
+      - ./build/web:/usr/share/nginx/html
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/health_internal || exit 1"]
@@ -75,10 +77,14 @@ services:
         mkdir -p /etc/letsencrypt/live /etc/letsencrypt/archive;
         chmod -R 755 /etc/letsencrypt;
         echo "Attempting initial certificate acquisition...";
-        certbot certonly --webroot -w /var/www/certbot --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d mail.cloudtolocalllm.online --force-renewal --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        certbot certonly --webroot -w /var/www/certbot --email christopher.maltais@gmail.com --agree-tos --no-eff-email -d cloudtolocalllm.online -d app.cloudtolocalllm.online -d mail.cloudtolocalllm.online --force-renewal --deploy-hook "/opt/certbot_permissions_hook.sh" || echo "Initial certonly command failed or no certs due for renewal.";
+        # Change ownership of certificates to nginx user (101:101)
+        chown -R 101:101 /etc/letsencrypt/live /etc/letsencrypt/archive;
         echo "Initial cert attempt/check done. Starting renewal loop.";
         while :; do
           certbot renew --quiet --webroot -w /var/www/certbot --deploy-hook "/opt/certbot_permissions_hook.sh";
+          # Change ownership after each renewal
+          chown -R 101:101 /etc/letsencrypt/live /etc/letsencrypt/archive;
           sleep 12h & wait $${!};
         done;
       '
