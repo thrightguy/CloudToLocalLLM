@@ -121,6 +121,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.2"
+  equatable:
+    dependency: transitive
+    description:
+      name: equatable
+      sha256: "567c64b3cb4cf82397aac55f4f0cbd3ca20d77c6c03bedbc4ceaddc08904aef7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.7"
   ffi:
     dependency: transitive
     description:
@@ -219,6 +227,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  from_json_to_json:
+    dependency: transitive
+    description:
+      name: from_json_to_json
+      sha256: ed6382b875aeb263ed37a99fdef062767f5ad2c4ade4e6ce3048bc23d171b9ca
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.0"
   go_router:
     dependency: "direct main"
     description:
@@ -243,6 +259,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  is_dart_empty_or_not:
+    dependency: transitive
+    description:
+      name: is_dart_empty_or_not
+      sha256: "31fef508da3e89ab8cd4634d7149f72a0a2e54c841c96b72f393dfc882fdde81"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.3"
   jose:
     dependency: transitive
     description:
@@ -299,6 +323,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.1"
+  mcp_toolkit:
+    dependency: "direct main"
+    description:
+      name: mcp_toolkit
+      sha256: abd00fcb545f395112eee79b586e636d1df1d4ced8134ec4dc1fb54b7b5c30a1
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
   menu_base:
     dependency: transitive
     description:
@@ -648,6 +680,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: "1722b2dcc462b4b2f3ee7d188dad008b6eb4c40bbd03a3de451d82c78bba9aad"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.2"
   url_launcher:
     dependency: "direct main"
     description:

@@ -10,6 +10,7 @@ import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
 import 'package:cloudtolocalllm/components/themed_card.dart';
 import 'package:cloudtolocalllm/components/gradient_button.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
+import 'package:mcp_toolkit/mcp_toolkit.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:flutter/foundation.dart'
@@ -23,39 +24,51 @@ final AuthService _authService = AuthService(
   ),
 );
 
-void main() {
-  // Ensure Flutter is initialized
-  WidgetsFlutterBinding.ensureInitialized();
+Future<void> main() async {
+  runZonedGuarded(
+    () async {
+      // Ensure Flutter is initialized
+      WidgetsFlutterBinding.ensureInitialized();
 
-  // Platform-specific logging
-  if (kIsWeb) {
-    developer.log('Running on Web platform', name: 'platform');
-  } else {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        developer.log('Running on Android platform', name: 'platform');
-        break;
-      case TargetPlatform.iOS:
-        developer.log('Running on iOS platform', name: 'platform');
-        break;
-      case TargetPlatform.linux:
-        developer.log('Running on Linux platform', name: 'platform');
-        break;
-      case TargetPlatform.macOS:
-        developer.log('Running on macOS platform', name: 'platform');
-        break;
-      case TargetPlatform.windows:
-        developer.log('Running on Windows platform', name: 'platform');
-        break;
-      default:
-        developer.log('Running on unknown platform', name: 'platform');
-    }
-  }
+      // Initialize MCP Toolkit
+      MCPToolkitBinding.instance
+        ..initialize() // Initializes the Toolkit
+        ..initializeFlutterToolkit(); // Adds Flutter related methods to the MCP server
 
-  // Initialize AuthService
-  _initializeAuthService().then((_) {
-    runApp(const CloudToLocalLLMApp());
-  });
+      // Platform-specific logging
+      if (kIsWeb) {
+        developer.log('Running on Web platform', name: 'platform');
+      } else {
+        switch (defaultTargetPlatform) {
+          case TargetPlatform.android:
+            developer.log('Running on Android platform', name: 'platform');
+            break;
+          case TargetPlatform.iOS:
+            developer.log('Running on iOS platform', name: 'platform');
+            break;
+          case TargetPlatform.linux:
+            developer.log('Running on Linux platform', name: 'platform');
+            break;
+          case TargetPlatform.macOS:
+            developer.log('Running on macOS platform', name: 'platform');
+            break;
+          case TargetPlatform.windows:
+            developer.log('Running on Windows platform', name: 'platform');
+            break;
+          default:
+            developer.log('Running on unknown platform', name: 'platform');
+        }
+      }
+
+      // Initialize AuthService
+      await _initializeAuthService();
+      runApp(const CloudToLocalLLMApp());
+    },
+    (error, stack) {
+      // Critical: Handle zone errors for MCP server error reporting
+      MCPToolkitBinding.instance.handleZoneError(error, stack);
+    },
+  );
 }
 
 Future<void> _initializeAuthService() async {
@@ -273,7 +286,7 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
 
   Future<void> _handleLoginRedirect() async {
     try {
-          await _authService.handleRedirectAndLogin(widget.responseUri);
+      await _authService.handleRedirectAndLogin(widget.responseUri);
       if (!mounted) return; // Check mounted after await
       // Always navigate to home page after login attempt
       GoRouter.of(context).go('/');
@@ -379,7 +392,8 @@ class HomeScreen extends StatelessWidget {
                         onPressed: () {
                           GoRouter.of(context).go('/chat');
                         },
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         fontSize: 14,
                       ),
                     ),
@@ -398,7 +412,8 @@ class HomeScreen extends StatelessWidget {
                             );
                           }
                         },
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         fontSize: 14,
                       ),
                     ),
@@ -413,7 +428,8 @@ class HomeScreen extends StatelessWidget {
                     onPressed: () {
                       GoRouter.of(context).go('/login');
                     },
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     fontSize: 14,
                   ),
                 );
@@ -511,8 +527,10 @@ class HomeScreen extends StatelessWidget {
                             valueListenable: _authService.currentUser,
                             builder: (context, user, _) {
                               return InfoCard(
-                                title: 'Welcome${user?.name != null ? ', ${user!.name}' : ''}!',
-                                description: user?.email ?? 'Authenticated User',
+                                title:
+                                    'Welcome${user?.name != null ? ', ${user!.name}' : ''}!',
+                                description:
+                                    user?.email ?? 'Authenticated User',
                                 icon: Icons.person,
                                 iconColor: CloudToLocalLLMTheme.successColor,
                                 width: 480,
@@ -569,8 +587,10 @@ class HomeScreen extends StatelessWidget {
                       } else {
                         // User is not logged in
                         return InfoCard(
-                          title: 'Please login to access your models and settings',
-                          description: 'Authentication is required to use this application.',
+                          title:
+                              'Please login to access your models and settings',
+                          description:
+                              'Authentication is required to use this application.',
                           icon: Icons.login,
                           iconColor: CloudToLocalLLMTheme.infoColor,
                           width: 480,
