@@ -5,6 +5,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CloudToLocalLLM Portal</title>
   <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    body {
+      background: #23242a;
+      color: #fff;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      text-align: center;
+      margin-top: 3rem;
+    }
+    .logo {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #4fc3f7;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin: 0.5rem 0 0.2rem 0;
+    }
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 400;
+      color: #b0bec5;
+      margin: 0 0 2rem 0;
+    }
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 2rem;
+    }
+    .card {
+      background: #2c2f36;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      padding: 2rem 2.5rem;
+      margin-bottom: 2rem;
+      max-width: 420px;
+      width: 100%;
+    }
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .card-desc {
+      font-size: 1rem;
+      color: #b0bec5;
+      margin-bottom: 1rem;
+    }
+    .button {
+      display: inline-block;
+      background: #4fc3f7;
+      color: #23242a;
+      font-weight: 600;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1rem;
+      margin-top: 1rem;
+      transition: background 0.2s;
+    }
+    .button:hover {
+      background: #039be5;
+      color: #fff;
+    }
+    .coming-soon {
+      color: #ffb300;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    .footer {
+      margin-top: 3rem;
+      padding: 1rem 0;
+      text-align: center;
+    }
+    .version-info {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
 </head>
 <body>
   <!-- Banner hidden per design system requirements -->
@@ -31,25 +117,13 @@
     
     <div class="card" style="margin-top:2.5rem;">
       <div class="card-title">Getting Started</div>
-      <div class="card-desc">Download the application for your platform to begin using CloudToLocalLLM.</div>
-      <a href="/download" class="button" style="align-self: center; margin-top: 1rem;">Download App</a>
+      <div class="card-desc">The CloudToLocalLLM App Portal is <span class="coming-soon">Coming Soon!</span></div>
+      <a href="https://app.cloudtolocalllm.online" class="button">Go to App Portal (Coming Soon)</a>
     </div>
   </main>
   
   <footer class="footer">
     <div class="version-info">CloudToLocalLLM v1.3.1 (202405051630)</div>
   </footer>
-
-  <style>
-    .footer {
-      margin-top: 3rem;
-      padding: 1rem 0;
-      text-align: center;
-    }
-    .version-info {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.6);
-    }
-  </style>
 </body>
 </html> 
