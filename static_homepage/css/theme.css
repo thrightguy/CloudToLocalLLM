@@ -166,4 +166,26 @@ li {
   .main { padding: 1rem 0.2rem 2rem 0.2rem; }
   .card { padding: 1.2rem 0.7rem 1.2rem 0.7rem; }
   h1 { font-size: 1.5rem; }
+}
+
+.button {
+  display: inline-block;
+  padding: 0.7rem 1.7rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--gradient-button);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--box-shadow-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  margin-top: 1.2rem;
+}
+.button:hover, .button:focus {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 4px 16px 0 rgba(167, 119, 227, 0.25);
+  text-decoration: none;
 } 
