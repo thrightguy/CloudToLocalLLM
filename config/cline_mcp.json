@@ -1,13 +1,5 @@
 {
   "mcpServers": {
-    "mcpadvisor": {
-      "command": "node",
-      "args": ["https://mcp.so/api/mcpadvisor"],
-      "env": {
-        "API_KEY": "wqhi62mb2ttvmf"
-      },
-      "disabled": false
-    },
     "flutter-inspector-local": {
       "command": "node",
       "args": ["/home/rightguy/Dev/Tools/MCP/mcp_flutter/mcp_server/build/index.js"],
@@ -22,7 +14,8 @@
         "DDS_PORT": "8181",
         "REMOTE_MODE": "false"
       },
-      "disabled": false
+      "disabled": false,
+      "autoApprove": []
     },
     "flutter-inspector-remote": {
       "command": "node",
@@ -39,7 +32,8 @@
         "REMOTE_MODE": "true",
         "TARGET_HOST": "cloudtolocalllm.online"
       },
-      "disabled": true
+      "disabled": true,
+      "autoApprove": []
     }
   }
 }
