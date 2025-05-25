@@ -1,138 +1,198 @@
-# CloudToLocalLLM Scripts Directory
+# CloudToLocalLLM Deployment Scripts
 
-**For a categorized list and explanation of all scripts (including which are for main deployment, maintenance, or setup), see [`SCRIPTS_OVERVIEW.md`](../SCRIPTS_OVERVIEW.md).**
+This directory contains production-ready deployment scripts for the CloudToLocalLLM application. All scripts follow security best practices and run without root privileges.
 
-This README contains general notes about script usage and organization.
+## 🚀 Quick Start
 
-This directory contains various scripts organized by function for the CloudToLocalLLM application.
-
-## Directory Structure
-
-- **build/** - Scripts for building the application for different platforms
-- **deploy/** - Scripts for deploying the application to different environments
-- **release/** - Scripts for release management and version control
-- **auth0/** - Scripts for Auth0 integration and authentication
-- **utils/** - Utility scripts for various tasks
-
-## Organization Scripts
-
-Two special scripts help manage the script organization:
-
-- **organize_scripts.ps1** - Moves scripts from the root directory into appropriate subfolders
-- **update_references.ps1** - Updates references to scripts in other files after reorganization
-
-## Script Categories
-
-### Build Scripts
-Build scripts handle the compilation and packaging of the application for different platforms:
-- Windows installers (admin and regular)
-- Android builds
-- Preparation for cloud builds
-
-### Deploy Scripts
-Deploy scripts handle the deployment of the application to different environments:
-- VPS deployment
-- Docker container setup
-- Web deployment
-- Cloud environment deployment
-
-### Release Scripts
-Release scripts handle version management and release processes:
-- Cleaning up old releases
-- Checking for updates
-- Release candidate selection
-
-### Auth0 Scripts
-Auth0 scripts handle authentication integration:
-- Auth0 setup and configuration
-- Authentication flow integration
-- API authentication
-
-### Utility Scripts
-Utility scripts provide various helper functions:
-- SSL certificate management
-- Nginx configuration
-- Container setup
-- UI adjustments
-
-## Running Scripts
-
-Most scripts should be run from the project root directory. Some scripts require administrative privileges and will prompt for elevation if needed.
-
-Example:
-```powershell
-# From the project root
-.\scripts\build\build_windows_with_license.ps1
+### Initial Deployment
+```bash
+# On VPS server as cloudllm user
+cd /opt/cloudtolocalllm
+./scripts/deploy_vps.sh
 ```
 
-## Contributing New Scripts
-
-When adding new scripts to the project:
-
-1. Place the script in the appropriate subdirectory based on its function
-2. Update this README if adding a new category of scripts
-3. Follow the naming convention of existing scripts
-4. Include comments at the top of the script describing its purpose and usage
-
-## Generate Icons Script
-
-The `generate_icons.ps1` script generates app icons for Windows, Android, and iOS platforms from a source image.
-
-### Prerequisites
-
-- Windows operating system
-- PowerShell 5.1 or higher
-- [ImageMagick](https://imagemagick.org/script/download.php) installed
-
-### Usage
-
-1. Ensure you have a logo image at `assets\images\CloudToLocalLLM_logo.jpg`
-2. Run the script from the project root directory:
-
-```powershell
-.\scripts\generate_icons.ps1
+### Regular Updates
+```bash
+# Pull latest changes and rebuild
+./scripts/update_deployment.sh
 ```
 
-### Features
+### Container Management
+```bash
+# Start/restart containers only
+./scripts/docker_startup_vps.sh
+```
 
-- Automatically finds ImageMagick installation across different common paths
-- Creates all required output directories if they don't exist
-- Generates icons in all required sizes for Windows, Android, and iOS
-- Provides detailed progress information and error handling
-- Color-coded output for better visibility
+## 📁 Directory Structure
 
-### Icon Sizes Generated
+### Core Deployment Scripts
+- `deploy_vps.sh` - **Main deployment script** (non-root, production-ready)
+- `docker_startup_vps.sh` - **Container startup script** (uses existing Let's Encrypt certs)
+- `update_deployment.sh` - **Update script** for regular deployments
 
-#### Windows
-- 256x256
-- 64x64
-- 32x32
-- 16x16
+### Supporting Directories
+- `auth0/` - Auth0 integration scripts
+- `build/` - Build scripts for different platforms
+- `deploy/` - Additional deployment utilities
+- `setup/` - Initial server setup scripts
+- `ssl/` - SSL certificate management
+- `verification/` - Deployment verification tools
 
-#### Android
-- xxxhdpi (192x192)
-- xxhdpi (144x144)
-- xhdpi (96x96)
-- hdpi (72x72)
-- mdpi (48x48)
+## 🔧 Script Details
 
-#### iOS
-- 1024x1024
-- 180x180
-- 120x120
-- 87x87
-- 80x80
-- 60x60
-- 58x58
-- 40x40
-- 29x29
+### `deploy_vps.sh` - Main Deployment Script
+**Purpose**: Complete application deployment with Flutter build and Docker containers
 
-### Troubleshooting
+**Features**:
+- ✅ Non-root execution (requires Docker group membership)
+- ✅ Comprehensive logging and error handling
+- ✅ Flutter web application build
+- ✅ Docker container management
+- ✅ Deployment verification
+- ✅ Uses existing Let's Encrypt certificates
 
-If you encounter any issues:
+**Usage**:
+```bash
+./scripts/deploy_vps.sh
+```
 
-1. Ensure ImageMagick is properly installed
-2. Check that your logo image exists at the specified path
-3. Make sure you have write permissions to the output directories
+**Requirements**:
+- User in Docker group: `sudo usermod -aG docker $USER`
+- Flutter installed and in PATH
+- Existing Let's Encrypt certificates (optional but recommended)
 
-If ImageMagick is installed in a non-standard location, you may need to modify the script to add the path to the `$possiblePaths` array in the `Find-ImageMagick` function. 
+### `docker_startup_vps.sh` - Container Startup
+**Purpose**: Start Docker containers using existing configuration
+
+**Features**:
+- ✅ Non-root execution
+- ✅ Uses existing Let's Encrypt certificates (no self-signed generation)
+- ✅ Container health verification
+- ✅ Proper error handling
+
+**Usage**:
+```bash
+./scripts/docker_startup_vps.sh
+```
+
+### `update_deployment.sh` - Regular Updates
+**Purpose**: Update application with latest code changes
+
+**Features**:
+- ✅ Git pull latest changes
+- ✅ Rebuild Flutter application
+- ✅ Restart containers with zero-downtime approach
+- ✅ Verify deployment success
+
+**Usage**:
+```bash
+./scripts/update_deployment.sh
+```
+
+## 🔒 Security Features
+
+### Non-Root Execution
+- All scripts run as `cloudllm` user
+- No `sudo` commands required during deployment
+- Docker group membership provides necessary container access
+
+### Certificate Management
+- Uses existing Let's Encrypt certificates
+- No self-signed certificate generation
+- Proper certificate permissions (nginx user 101:101)
+
+### Error Handling
+- `set -e` and `set -u` for strict error handling
+- Comprehensive logging to deployment.log
+- Graceful failure recovery
+
+## 📋 Prerequisites
+
+### System Requirements
+- Ubuntu/Debian VPS with Docker installed
+- User added to Docker group: `sudo usermod -aG docker cloudllm`
+- Flutter SDK installed and in PATH
+- Git repository access
+
+### Let's Encrypt Certificates (Recommended)
+```bash
+# Certificates should exist at:
+/opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online/
+```
+
+### Directory Permissions
+```bash
+# Project directory owned by cloudllm user
+sudo chown -R cloudllm:cloudllm /opt/cloudtolocalllm
+```
+
+## 🚦 Deployment Workflow
+
+### 1. Initial Setup (One-time)
+```bash
+# Ensure user is in docker group
+sudo usermod -aG docker cloudllm
+newgrp docker
+
+# Clone repository
+git clone https://github.com/thrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
+cd /opt/cloudtolocalllm
+
+# Set permissions
+sudo chown -R cloudllm:cloudllm /opt/cloudtolocalllm
+```
+
+### 2. Deploy Application
+```bash
+# Run main deployment script
+./scripts/deploy_vps.sh
+```
+
+### 3. Regular Updates
+```bash
+# For code updates
+./scripts/update_deployment.sh
+
+# For container restarts only
+./scripts/docker_startup_vps.sh
+```
+
+## 🌐 Application URLs
+
+After successful deployment:
+- **Homepage**: http://cloudtolocalllm.online
+- **Web App**: http://app.cloudtolocalllm.online
+- **HTTPS** (if certificates configured): https://cloudtolocalllm.online
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**Docker Permission Denied**
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+**Flutter Not Found**
+```bash
+# Add Flutter to PATH in ~/.bashrc
+export PATH="$PATH:/opt/flutter/bin"
+source ~/.bashrc
+```
+
+**Container Startup Fails**
+```bash
+# Check logs
+docker logs cloudtolocalllm-webapp
+# Verify docker-compose.yml syntax
+docker compose config
+```
+
+## 📝 Notes
+
+- All scripts maintain backward compatibility with existing Docker setup
+- Let's Encrypt certificates are preserved and reused
+- No root privileges required for normal operations
+- Comprehensive logging for troubleshooting
+- Zero-downtime updates when possible

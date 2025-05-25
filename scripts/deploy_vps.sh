@@ -1,191 +1,234 @@
 #!/bin/bash
 
-# Exit on error
-set -e
+# CloudToLocalLLM VPS Deployment Script (Non-Root)
+# This script deploys the CloudToLocalLLM application using Docker without requiring root privileges
+# Requires: Docker group membership, existing Let's Encrypt certificates
+
+set -e  # Exit on any error
+set -u  # Exit on undefined variables
 
 # Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly RED='\033[0;31m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m'
 
-# Function to check system requirements
+# Configuration
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly LOG_FILE="${PROJECT_DIR}/deployment.log"
+readonly TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Logging function
+log() {
+    echo -e "${1}" | tee -a "${LOG_FILE}"
+}
+
+log_info() {
+    log "${BLUE}[INFO ${TIMESTAMP}]${NC} ${1}"
+}
+
+log_success() {
+    log "${GREEN}[SUCCESS ${TIMESTAMP}]${NC} ${1}"
+}
+
+log_warning() {
+    log "${YELLOW}[WARNING ${TIMESTAMP}]${NC} ${1}"
+}
+
+log_error() {
+    log "${RED}[ERROR ${TIMESTAMP}]${NC} ${1}"
+}
+
+# Function to check system requirements (non-root)
 check_requirements() {
-    echo -e "${YELLOW}Checking system requirements...${NC}"
-    
-    # Check minimum disk space (20GB free)
-    FREE_SPACE=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
-    if ! [[ "$FREE_SPACE" =~ ^[0-9]+$ ]]; then
-        echo -e "${RED}Error: Could not determine free disk space.${NC}"
+    log_info "Checking system requirements..."
+
+    # Check Docker access (non-root)
+    if ! docker info >/dev/null 2>&1; then
+        log_error "Docker is not accessible. Please ensure user is in docker group."
+        log_error "Run: sudo usermod -aG docker \$USER && newgrp docker"
         exit 1
     fi
-    if [ "$FREE_SPACE" -lt 20 ]; then
-        echo -e "${RED}Error: Insufficient disk space. Need at least 20GB free. Found: ${FREE_SPACE}G${NC}"
+
+    # Check Docker Compose
+    if ! command -v docker >/dev/null 2>&1; then
+        log_error "Docker Compose is not installed."
         exit 1
     fi
-    
-    # Check minimum memory (4GB)
-    TOTAL_MEM=$(free -g | awk 'NR==2 {print $2}')
-    if ! [[ "$TOTAL_MEM" =~ ^[0-9]+$ ]]; then
-        echo -e "${RED}Error: Could not determine total memory.${NC}"
+
+    # Check minimum disk space (5GB free for application)
+    local free_space
+    free_space=$(df -BG "${PROJECT_DIR}" | awk 'NR==2 {print $4}' | sed 's/G//')
+    if ! [[ "$free_space" =~ ^[0-9]+$ ]]; then
+        log_error "Could not determine free disk space."
         exit 1
     fi
-    if [ "$TOTAL_MEM" -lt 4 ]; then
-        echo -e "${RED}Error: Insufficient memory. Need at least 4GB RAM. Found: ${TOTAL_MEM}G${NC}"
+    if [ "$free_space" -lt 5 ]; then
+        log_error "Insufficient disk space. Need at least 5GB free. Found: ${free_space}G"
         exit 1
     fi
-    
-    echo -e "${GREEN}System requirements met.${NC}"
+
+    # Check if Let's Encrypt certificates exist
+    if [ ! -d "${PROJECT_DIR}/certbot/live" ]; then
+        log_warning "Let's Encrypt certificates not found. SSL may not work properly."
+    fi
+
+    log_success "System requirements met."
 }
 
-# Function to backup existing configuration
-backup_config() {
-    echo -e "${YELLOW}Backing up existing configuration...${NC}"
-    BACKUP_DIR="/var/www/cloudtolocalllm_backup_$(date +%Y%m%d_%H%M%S)"
-    if [ -d "/var/www/cloudtolocalllm" ]; then
-        sudo cp -r /var/www/cloudtolocalllm $BACKUP_DIR
-        echo -e "${GREEN}Backup created at $BACKUP_DIR${NC}"
+# Function to backup existing build
+backup_build() {
+    log_info "Backing up existing build..."
+    local backup_dir="${PROJECT_DIR}/backup_$(date +%Y%m%d_%H%M%S)"
+
+    if [ -d "${PROJECT_DIR}/build" ]; then
+        cp -r "${PROJECT_DIR}/build" "${backup_dir}"
+        log_success "Build backup created at ${backup_dir}"
     fi
 }
 
-echo -e "${GREEN}Starting VPS deployment setup...${NC}"
+# Function to clean up Docker containers (non-root)
+cleanup_containers() {
+    log_info "Cleaning up existing containers..."
 
-# Check system requirements
-check_requirements
+    # Stop and remove containers if they exist
+    if docker ps -q --filter "name=cloudtolocalllm" | grep -q .; then
+        log_info "Stopping existing CloudToLocalLLM containers..."
+        docker stop $(docker ps -q --filter "name=cloudtolocalllm") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=cloudtolocalllm") 2>/dev/null || true
+    fi
 
-# Backup existing configuration
-backup_config
+    # Clean up unused Docker resources
+    log_info "Cleaning up unused Docker resources..."
+    docker system prune -f --volumes 2>/dev/null || true
 
-# Update system
-echo -e "${YELLOW}Updating system packages...${NC}"
-sudo apt update || { echo -e "${RED}Failed to update package list${NC}"; exit 1; }
-sudo apt upgrade -y || { echo -e "${RED}Failed to upgrade packages${NC}"; exit 1; }
-
-# Install required packages
-echo -e "${YELLOW}Installing required packages...${NC}"
-sudo apt install -y docker.io docker-compose nginx certbot python3-certbot-nginx || {
-    echo -e "${RED}Failed to install required packages${NC}"
-    exit 1
+    log_success "Container cleanup completed."
 }
 
-# Start and enable Docker
-echo -e "${YELLOW}Configuring Docker...${NC}"
-sudo systemctl start docker || { echo -e "${RED}Failed to start Docker${NC}"; exit 1; }
-sudo systemctl enable docker || { echo -e "${RED}Failed to enable Docker${NC}"; exit 1; }
+# Function to build Flutter web application
+build_flutter_app() {
+    log_info "Building Flutter web application..."
 
-# Add current user to docker group
-sudo usermod -aG docker $USER
+    # Check if Flutter is available
+    if ! command -v flutter >/dev/null 2>&1; then
+        log_error "Flutter is not installed or not in PATH."
+        exit 1
+    fi
 
-# Deep clean existing setup
-echo -e "${YELLOW}Performing deep cleanup...${NC}"
-CLEANUP_SCRIPT="/var/www/cloudtolocalllm/scripts/deploy/cleanup_containers.sh"
-if [ -f "$CLEANUP_SCRIPT" ]; then
-    bash "$CLEANUP_SCRIPT" || {
-        echo -e "${RED}Cleanup script failed, attempting basic cleanup...${NC}"
-        sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
-        sudo docker rm $(sudo docker ps -a -q) 2>/dev/null || true
-        sudo docker network prune -f
-        sudo docker volume prune -f
-        sudo docker builder prune -f
+    # Clean previous build
+    if [ -d "${PROJECT_DIR}/build" ]; then
+        rm -rf "${PROJECT_DIR}/build"
+    fi
+
+    # Get dependencies
+    log_info "Getting Flutter dependencies..."
+    cd "${PROJECT_DIR}"
+    flutter pub get || {
+        log_error "Failed to get Flutter dependencies"
+        exit 1
     }
-else
-    echo -e "${YELLOW}Cleanup script not found, performing basic cleanup...${NC}"
-    sudo docker stop $(sudo docker ps -q) 2>/dev/null || true
-    sudo docker rm $(sudo docker ps -a -q) 2>/dev/null || true
-    sudo docker network prune -f
-    sudo docker volume prune -f
-    sudo docker builder prune -f
-fi
 
-# Create project directory
-echo -e "${YELLOW}Setting up project directory...${NC}"
-PROJECT_DIR="/var/www/cloudtolocalllm"
-sudo mkdir -p $PROJECT_DIR
-sudo chown $USER:$USER $PROJECT_DIR
-
-# Create Nginx configuration
-echo -e "${YELLOW}Creating Nginx configuration...${NC}"
-cat << EOF | sudo tee /etc/nginx/sites-available/cloudtolocalllm
-server {
-    listen 80;
-    server_name _;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
+    # Build web application
+    log_info "Building Flutter web application for production..."
+    flutter build web --release --web-renderer html || {
+        log_error "Failed to build Flutter web application"
+        exit 1
     }
+
+    log_success "Flutter web application built successfully."
 }
-EOF
 
-# Enable Nginx site
-sudo ln -sf /etc/nginx/sites-available/cloudtolocalllm /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
+# Main deployment function
+main() {
+    log_info "Starting CloudToLocalLLM VPS deployment..."
 
-# Test Nginx configuration
-sudo nginx -t
+    # Check system requirements
+    check_requirements
 
-# Restart Nginx
-sudo systemctl restart nginx
+    # Backup existing build
+    backup_build
 
-# Create Docker Compose file
-echo -e "${YELLOW}Creating Docker Compose configuration...${NC}"
-cat << EOF > $PROJECT_DIR/docker-compose.yml
-version: '3'
-services:
-  web:
-    build: .
-    ports:
-      - "8080:80"
-    restart: always
-    environment:
-      - NODE_ENV=production
-EOF
+    # Clean up existing containers
+    cleanup_containers
 
-# Create Dockerfile
-echo -e "${YELLOW}Creating Dockerfile...${NC}"
-cat << EOF > $PROJECT_DIR/Dockerfile
-# Use the official Dart image to build the web app
-FROM dart:stable AS build
-WORKDIR /app
-COPY . .
-# RUN dart pub global activate flutter_tools && \\
-RUN flutter pub get && \\
-    flutter build web --release
+    # Build Flutter application
+    build_flutter_app
 
-# Use a lightweight server image to serve the web app
-FROM nginx:alpine
-COPY --from=build /app/build/web /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-EOF
+    # Deploy with Docker
+    deploy_docker
 
-# Final system check
-echo -e "${YELLOW}Performing final system check...${NC}"
-sudo docker info || { echo -e "${RED}Docker is not running properly${NC}"; exit 1; }
-nginx -t || { echo -e "${RED}Nginx configuration test failed${NC}"; exit 1; }
-systemctl is-active docker || { echo -e "${RED}Docker service is not active${NC}"; exit 1; }
-systemctl is-active nginx || { echo -e "${RED}Nginx service is not active${NC}"; exit 1; }
+    # Verify deployment
+    verify_deployment
 
-echo -e "${GREEN}VPS setup completed successfully!${NC}"
-echo -e "${YELLOW}System Status:${NC}"
-echo "Docker Version: $(sudo docker --version)"
-echo "Docker Compose Version: $(sudo docker-compose --version)"
-echo "Nginx Version: $(nginx -v 2>&1)"
-echo "Available Disk Space: $(df -h / | awk 'NR==2 {print $4}')"
-echo "Memory Usage: $(free -h | awk 'NR==2 {print "Total: "$2"  Used: "$3"  Free: "$4}')"
+    log_success "CloudToLocalLLM deployment completed successfully!"
+}
 
-echo -e "\n${YELLOW}Next steps:${NC}"
-echo "1. Copy your Flutter web app files to $PROJECT_DIR"
-echo "2. Run: cd $PROJECT_DIR && docker-compose up -d"
-echo "3. To set up SSL, run: sudo certbot --nginx -d your-domain.com"
-echo "4. Configure your domain's DNS to point to this VPS's IP address"
+# Function to deploy using Docker Compose
+deploy_docker() {
+    log_info "Deploying application with Docker Compose..."
 
-# Print instructions for Windows app deployment
-echo -e "\n${GREEN}Windows App Deployment Instructions:${NC}"
-echo "1. Build the Windows app using: flutter build windows"
-echo "2. Package the app using the existing scripts"
-echo "3. Upload the release to GitHub" 
+    cd "${PROJECT_DIR}"
+
+    # Ensure required directories exist
+    mkdir -p certbot/www certbot/live certbot/archive ssl config/nginx
+
+    # Build and start containers
+    log_info "Building and starting Docker containers..."
+    docker compose up -d --build || {
+        log_error "Failed to start Docker containers"
+        exit 1
+    }
+
+    log_success "Docker containers started successfully."
+}
+
+# Function to verify deployment
+verify_deployment() {
+    log_info "Verifying deployment..."
+
+    # Wait for containers to start
+    sleep 10
+
+    # Check if containers are running
+    if ! docker ps --filter "name=cloudtolocalllm" --format "table {{.Names}}\t{{.Status}}" | grep -q "Up"; then
+        log_error "Containers are not running properly"
+        docker ps --filter "name=cloudtolocalllm"
+        exit 1
+    fi
+
+    # Check if web application is responding
+    local max_attempts=30
+    local attempt=1
+
+    while [ $attempt -le $max_attempts ]; do
+        if curl -f http://localhost:80/health_internal >/dev/null 2>&1; then
+            log_success "Web application is responding."
+            break
+        fi
+
+        log_info "Waiting for web application to start... (attempt $attempt/$max_attempts)"
+        sleep 2
+        ((attempt++))
+    done
+
+    if [ $attempt -gt $max_attempts ]; then
+        log_error "Web application failed to start within expected time"
+        docker logs cloudtolocalllm-webapp --tail 50
+        exit 1
+    fi
+
+    # Display deployment status
+    log_success "Deployment verification completed."
+    log_info "Container Status:"
+    docker ps --filter "name=cloudtolocalllm" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+    log_info "Application URLs:"
+    log_info "- Homepage: http://cloudtolocalllm.online"
+    log_info "- Web App: http://app.cloudtolocalllm.online"
+    log_info "- HTTPS URLs available if Let's Encrypt certificates are configured"
+}
+
+# Run main function
+main "$@"
