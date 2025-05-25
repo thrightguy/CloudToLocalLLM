@@ -44,15 +44,11 @@ This guide outlines the deployment process for the CloudToLocalLLM application.
 
 ## SSL Configuration
 
-The application supports both self-signed certificates and Let's Encrypt certificates.
+The application uses Let's Encrypt certificates for secure HTTPS connections.
 
-### Self-Signed Certificates
+### Let's Encrypt Certificates
 
-1.  Generate self-signed certificates:
-    ```bash
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-      -keyout ssl/private.key -out ssl/certificate.crt
-    ```
+The application automatically manages Let's Encrypt certificates through the certbot service.
 
 2.  The certificates will be automatically mounted into the webapp container.
 
@@ -98,4 +94,4 @@ The application uses Auth0 for authentication. Configure the following environme
 *   Ensure all required ports are open
 *   Check SSL certificate configuration
 
---- 
+---
