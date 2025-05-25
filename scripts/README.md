@@ -1,5 +1,9 @@
 # CloudToLocalLLM Scripts Directory
 
+**For a categorized list and explanation of all scripts (including which are for main deployment, maintenance, or setup), see [`SCRIPTS_OVERVIEW.md`](../SCRIPTS_OVERVIEW.md).**
+
+This README contains general notes about script usage and organization.
+
 This directory contains various scripts organized by function for the CloudToLocalLLM application.
 
 ## Directory Structure
