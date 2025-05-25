@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' as auth0;
 import 'package:cloudtolocalllm/auth0_options.dart';
-import 'package:web/web.dart' as web;
+
+// Conditional imports for web-specific functionality
+import 'auth_service_stub.dart'
+    if (dart.library.html) 'auth_service_web.dart' as platform_auth;
 
 // User Profile class
 class UserProfile {
@@ -37,8 +40,8 @@ class AuthService {
   Future<void> initialize() async {
     try {
       final credentials = await _credentialsManager.credentials();
-      isAuthenticated.value = true;
-      currentUser.value = UserProfile.fromAuth0User(credentials.user);
+        isAuthenticated.value = true;
+        currentUser.value = UserProfile.fromAuth0User(credentials.user);
     } catch (e) {
       debugPrint('Error initializing auth service: $e');
     }
@@ -46,22 +49,9 @@ class AuthService {
     // On web, check for Auth0 redirect handling
     if (kIsWeb) {
       try {
-        // Check for session storage items set by the callback page
-        final storage = web.window.sessionStorage;
-        final code = storage.getItem('auth0_code');
-        final state = storage.getItem('auth0_state');
-
-        if (code != null && state != null) {
-          debugPrint('Found Auth0 callback code, processing...');
-          // Exchange the code for tokens
-          await _handleAuth0Callback(code.toString(), state.toString());
-          // Clear the stored code and state
-          storage.removeItem('auth0_code');
-          storage.removeItem('auth0_state');
-        } else {
-          // Try standard web auth handling
-          await _checkWebAuth();
-        }
+        // Handle web-specific authentication using platform auth
+        platform_auth.PlatformAuth.handleWebCallback();
+        await _checkWebAuth();
       } catch (e) {
         debugPrint('Error in web auth initialization: $e');
       }
@@ -216,14 +206,14 @@ class AuthService {
         password: password,
         connection: 'Username-Password-Authentication',
       );
-      
+
       // After signup, automatically sign in the user
       final loginCredentials = await _auth0.api.login(
         usernameOrEmail: email,
         password: password,
         connectionOrRealm: 'Username-Password-Authentication',
       );
-      
+
       isAuthenticated.value = true;
       final user = UserProfile.fromAuth0User(loginCredentials.user);
       currentUser.value = user;

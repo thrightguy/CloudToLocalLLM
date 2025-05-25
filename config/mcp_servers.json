@@ -1,0 +1,35 @@
+{
+  "servers": {
+    "mcpadvisor": {
+      "type": "http",
+      "url": "https://mcp.so/api/mcpadvisor",
+      "auth": {
+        "type": "apiKey",
+        "key": "wqhi62mb2ttvmf"
+      }
+    },
+    "flutter_mcp_server": {
+      "type": "http",
+      "url": "https://mcp.so/api/flutter_mcp_server",
+      "command": "docker run -p 8080:8080 centinolalt/flutter_mcp_server",
+      "tools": [
+        {
+          "name": "analyze",
+          "description": "Analyze Dart/Flutter files for diagnostics and suggestions",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the Dart/Flutter file to analyze"
+              }
+            },
+            "required": [
+              "filePath"
+            ]
+          }
+        }
+      ]
+    }
+  }
+} 
