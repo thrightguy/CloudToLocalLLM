@@ -140,6 +140,24 @@ build_flutter_app() {
     log_success "Flutter web application built successfully."
 }
 
+# Function to setup Let's Encrypt certificates
+setup_certificates() {
+    log_info "Setting up Let's Encrypt certificates..."
+
+    # Check if certificate setup script exists
+    if [ -f "${PROJECT_DIR}/scripts/ssl/setup_letsencrypt.sh" ]; then
+        cd "${PROJECT_DIR}"
+        ./scripts/ssl/setup_letsencrypt.sh setup || {
+            log_warning "Certificate setup failed. You can run it manually later:"
+            log_warning "./scripts/ssl/setup_letsencrypt.sh setup"
+        }
+    else
+        log_warning "Certificate setup script not found."
+        log_info "You can obtain certificates manually with:"
+        log_info "docker compose run --rm certbot certonly --webroot -w /var/www/certbot --email admin@cloudtolocalllm.online --agree-tos --no-eff-email -d cloudtolocalllm.online -d app.cloudtolocalllm.online"
+    fi
+}
+
 # Main deployment function
 main() {
     log_info "Starting CloudToLocalLLM VPS deployment..."
@@ -161,6 +179,9 @@ main() {
 
     # Verify deployment
     verify_deployment
+
+    # Setup Let's Encrypt certificates
+    setup_certificates
 
     log_success "CloudToLocalLLM deployment completed successfully!"
 }

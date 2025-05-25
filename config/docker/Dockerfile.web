@@ -58,18 +58,11 @@ RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache
 RUN mkdir -p /var/run/nginx && \
     chown -R nginx:nginx /var/run/nginx
 
-# Generate self-signed certs for initial Nginx startup if they don't exist
-# This allows Nginx to start and serve ACME challenges before real certs are available
-RUN mkdir -p /etc/nginx/certs && \
-    if [ ! -f /etc/nginx/certs/default.pem ] || [ ! -f /etc/nginx/certs/default.key ]; then \
-      openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-      -keyout /etc/nginx/certs/default.key -out /etc/nginx/certs/default.pem \
-      -subj "/CN=localhost"; \
-    fi && \
-    chown -R nginx:nginx /etc/nginx/certs && \
-    chmod -R 600 /etc/nginx/certs
+# Create directory for Let's Encrypt certificates
+RUN mkdir -p /etc/letsencrypt/live/cloudtolocalllm.online && \
+    chown -R nginx:nginx /etc/letsencrypt
 
 EXPOSE 80
 # USER nginx is already specified in nginx:alpine base image and Nginx will run as nginx user by default.
 # Explicitly setting it here for clarity.
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["nginx", "-g", "daemon off;"]

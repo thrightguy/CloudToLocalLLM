@@ -65,7 +65,7 @@ remove_old_ssh_key() {
 # Function for non-root operations
 deploy_as_user() {
   log_status "==== $(date) Starting user-level deployment operations ===="
-  
+
   # Step 0: Clean up previous Docker environment
   cd "$INSTALL_DIR" # Ensure we are in the correct directory
 
@@ -157,40 +157,15 @@ deploy_as_root() {
     exit 1
   fi
 
-  # Generate self-signed certificate if Let's Encrypt certs don't exist
+  # Ensure Let's Encrypt certificate directory exists
   CERT_DIR="$INSTALL_DIR/certbot/conf/live/cloudtolocalllm.online"
-  if [ ! -f "$CERT_DIR/cert.pem" ]; then
-    log_status "No Let's Encrypt certificates found. Generating self-signed certificate..."
-    
-    # Create SSL directory
-    mkdir -p "$INSTALL_DIR/ssl"
-    
-    # Generate private key
-    openssl genrsa -out "$INSTALL_DIR/ssl/private.key" 2048
-    
-    # Generate CSR
-    openssl req -new -key "$INSTALL_DIR/ssl/private.key" \
-        -out "$INSTALL_DIR/ssl/certificate.csr" \
-        -subj "/C=US/ST=State/L=City/O=Organization/CN=cloudtolocalllm.online"
-    
-    # Generate self-signed certificate
-    openssl x509 -req -days 365 \
-        -in "$INSTALL_DIR/ssl/certificate.csr" \
-        -signkey "$INSTALL_DIR/ssl/private.key" \
-        -out "$INSTALL_DIR/ssl/certificate.crt"
-    
-    # Set proper permissions
-    chmod 600 "$INSTALL_DIR/ssl/private.key"
-    chmod 644 "$INSTALL_DIR/ssl/certificate.crt"
-    
-    # Create symlinks for nginx
-    mkdir -p "$CERT_DIR"
-    ln -sf "$INSTALL_DIR/ssl/certificate.crt" "$CERT_DIR/cert.pem"
-    ln -sf "$INSTALL_DIR/ssl/certificate.crt" "$CERT_DIR/chain.pem"
-    ln -sf "$INSTALL_DIR/ssl/certificate.crt" "$CERT_DIR/fullchain.pem"
-    ln -sf "$INSTALL_DIR/ssl/private.key" "$CERT_DIR/privkey.pem"
-    
-    log_success "Self-signed certificate generated and symlinked for nginx"
+  mkdir -p "$CERT_DIR"
+
+  if [ ! -f "$CERT_DIR/fullchain.pem" ]; then
+    log_status "Let's Encrypt certificates not found. Please run certificate setup after deployment."
+    log_status "Use: docker compose run --rm certbot certonly --webroot -w /var/www/certbot --email admin@cloudtolocalllm.online --agree-tos --no-eff-email -d cloudtolocalllm.online -d app.cloudtolocalllm.online"
+  else
+    log_success "Let's Encrypt certificates found at $CERT_DIR"
   fi
 
   # Normalize cert files before any Docker actions
