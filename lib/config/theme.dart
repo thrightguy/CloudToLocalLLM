@@ -2,34 +2,35 @@ import 'package:flutter/material.dart';
 
 /// CloudToLocalLLM Design System
 ///
-/// This file contains the unified theme configuration that matches the homepage design.
+/// This file contains the unified dark theme configuration that matches the homepage design.
+/// CloudToLocalLLM is designed as a dark-themed application only.
 /// All colors, typography, spacing, and component styles are defined here to ensure
 /// consistency across the Flutter web and desktop applications.
 class CloudToLocalLLMTheme {
   // Design System Colors - matching homepage CSS variables
-  static const Color primaryColor = Color(0xFFa777e3);      // --color-primary
-  static const Color secondaryColor = Color(0xFF6e8efb);    // --color-secondary
-  static const Color accentColor = Color(0xFF00c58e);       // --color-accent
+  static const Color primaryColor = Color(0xFFa777e3); // --color-primary
+  static const Color secondaryColor = Color(0xFF6e8efb); // --color-secondary
+  static const Color accentColor = Color(0xFF00c58e); // --color-accent
 
   // Background Colors
-  static const Color backgroundMain = Color(0xFF181a20);    // --bg-main
-  static const Color backgroundCard = Color(0xFF23243a);    // --bg-card
-  static const Color backgroundLight = Color(0xFFf5f5f5);   // --bg-light
+  static const Color backgroundMain = Color(0xFF181a20); // --bg-main
+  static const Color backgroundCard = Color(0xFF23243a); // --bg-card
+  static const Color backgroundLight = Color(0xFFf5f5f5); // --bg-light
 
   // Text Colors
-  static const Color textColor = Color(0xFFf1f1f1);         // --text-color
-  static const Color textColorLight = Color(0xFFb0b0b0);    // --text-color-light
-  static const Color textColorDark = Color(0xFF2c3e50);     // --text-color-dark
+  static const Color textColor = Color(0xFFf1f1f1); // --text-color
+  static const Color textColorLight = Color(0xFFb0b0b0); // --text-color-light
+  static const Color textColorDark = Color(0xFF2c3e50); // --text-color-dark
 
   // Status Colors
-  static const Color successColor = Color(0xFF4caf50);      // --color-success
-  static const Color warningColor = Color(0xFFffa726);      // --color-warning
-  static const Color dangerColor = Color(0xFFff5252);       // --color-danger
-  static const Color infoColor = Color(0xFF2196f3);         // --color-info
+  static const Color successColor = Color(0xFF4caf50); // --color-success
+  static const Color warningColor = Color(0xFFffa726); // --color-warning
+  static const Color dangerColor = Color(0xFFff5252); // --color-danger
+  static const Color infoColor = Color(0xFF2196f3); // --color-info
 
   // Spacing & Layout Constants
-  static const double borderRadius = 16.0;                  // --border-radius
-  static const double borderRadiusSmall = 4.0;              // --border-radius-sm
+  static const double borderRadius = 16.0; // --border-radius
+  static const double borderRadiusSmall = 4.0; // --border-radius-sm
 
   // Typography
   static const String fontFamily = 'Segoe UI';
@@ -74,8 +75,8 @@ class CloudToLocalLLMTheme {
     ),
   ];
 
-  /// Creates the main theme for the application
-  static ThemeData get lightTheme {
+  /// Creates the dark theme for the application (our main theme)
+  static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
@@ -183,7 +184,8 @@ class CloudToLocalLLMTheme {
           borderRadius: BorderRadius.circular(borderRadiusSmall),
           borderSide: const BorderSide(color: dangerColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         hintStyle: TextStyle(
           color: textColorLight,
           fontSize: 16,
@@ -293,6 +295,6 @@ class CloudToLocalLLMTheme {
     );
   }
 
-  /// Dark theme (same as light theme since the design system is dark-based)
-  static ThemeData get darkTheme => lightTheme;
+  /// Light theme returns dark theme since CloudToLocalLLM is dark-only
+  static ThemeData get lightTheme => darkTheme;
 }
