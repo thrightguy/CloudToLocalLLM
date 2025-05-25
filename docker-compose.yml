@@ -8,7 +8,6 @@ services:
       dockerfile: Dockerfile.web
     image: cloudtolocalllm-webapp
     container_name: cloudtolocalllm-webapp
-    user: "101:101"  # nginx user and group
     ports:
       - "80:80"
       - "443:443"
@@ -16,6 +15,7 @@ services:
       - ./certbot/www:/var/www/certbot
       - ./certbot/live:/etc/letsencrypt/live
       - ./certbot/archive:/etc/letsencrypt/archive
+      - ./config/nginx/nginx-nonroot.conf:/etc/nginx/nginx.conf
       - ./config/nginx/nginx-webapp-internal.conf:/etc/nginx/conf.d/default.conf
       - ./build/web:/usr/share/nginx/html
       - ./static_homepage:/usr/share/nginx/landing
