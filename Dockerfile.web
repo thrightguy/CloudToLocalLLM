@@ -22,8 +22,9 @@ RUN curl -O https://storage.googleapis.com/flutter_infra_release/releases/stable
 # Set Flutter directory permissions
 RUN chown -R flutteruser:fluttergroup /flutter
 
-# Set working directory
+# Set working directory and ensure proper ownership
 WORKDIR /app
+RUN chown -R flutteruser:fluttergroup /app
 
 # Configure git for Flutter (as root first)
 RUN git config --global --add safe.directory /flutter
