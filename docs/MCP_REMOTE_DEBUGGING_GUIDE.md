@@ -15,7 +15,12 @@ The MCP Flutter Inspector allows you to debug and inspect your live Flutter web 
 
 1. **SSH Access**: SSH key access to cloudtolocalllm.online
 2. **Local MCP Server**: MCP Flutter Inspector installed locally
-3. **Augment**: VSCode with Augment extension
+3. **AI Tool**: One of the following:
+   - **Cursor**: AI-powered code editor
+   - **Claude Desktop**: Anthropic's desktop application
+   - **Cline AI**: VSCode extension
+   - **Augment**: VSCode extension
+   - **Other MCP-compatible tools**
 4. **Network Access**: Ability to create SSH tunnels
 
 ## 🚀 Quick Start
@@ -51,18 +56,29 @@ chmod +x scripts/setup_mcp_tunnel.sh
 
 ### Step 3: Configure Local MCP Server
 
-Update your MCP configuration to enable the remote server:
+Configure MCP for your specific AI tool:
 
 ```bash
-# Edit the MCP configuration
-nano config/mcp_servers.json
+# Run the configuration script
+./scripts/configure_mcp_client.sh
 
-# Change "disabled": true to "disabled": false for flutter-inspector-remote
+# Choose your AI tool:
+# 1. Cursor
+# 2. Claude Desktop
+# 3. Cline AI (VSCode)
+# 4. Augment (VSCode)
+# 5. Custom setup
 ```
+
+The script will automatically:
+- Detect your operating system
+- Set up the correct configuration path
+- Install the appropriate MCP configuration
+- Provide tool-specific instructions
 
 ### Step 4: Test Connection
 
-Ask Augment:
+Ask your AI tool:
 - "Take a screenshot of the CloudToLocalLLM production app"
 - "Show me the widget tree of the live application"
 - "What's the current performance of the production app?"
@@ -75,13 +91,50 @@ CloudToLocalLLM/
 ├── deploy_mcp_cleanup.sh        # Disable debug mode on VPS
 ├── scripts/
 │   ├── setup_mcp_tunnel.sh      # Create SSH tunnels
-│   └── stop_mcp_tunnel.sh       # Stop SSH tunnels
+│   ├── stop_mcp_tunnel.sh       # Stop SSH tunnels
+│   └── configure_mcp_client.sh  # Configure MCP for different AI tools
 ├── config/
-│   ├── mcp_servers.json         # Main MCP configuration
+│   ├── mcp_servers.json         # Main MCP configuration (Augment/VSCode)
+│   ├── cursor_mcp.json          # Cursor-specific configuration
+│   ├── claude_desktop_mcp.json  # Claude Desktop configuration
+│   ├── cline_mcp.json           # Cline AI configuration
 │   └── mcp_remote_config.json   # Remote debugging configuration
 └── docs/
     └── MCP_REMOTE_DEBUGGING_GUIDE.md  # This guide
 ```
+
+## 🤖 AI Tool Configurations
+
+### Cursor
+- **Configuration**: `config/cursor_mcp.json`
+- **Location**: `~/.cursor/mcp.json` (Linux/macOS) or `%APPDATA%/cursor/mcp.json` (Windows)
+- **Special Notes**:
+  - Resources are disabled (`RESOURCES_SUPPORTED=false`) for compatibility
+  - Images are supported for screenshots
+  - Restart Cursor after configuration
+
+### Claude Desktop
+- **Configuration**: `config/claude_desktop_mcp.json`
+- **Location**: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+- **Special Notes**:
+  - Full MCP feature support including resources
+  - Supports both images and resources
+  - Restart Claude Desktop after configuration
+
+### Cline AI (VSCode)
+- **Configuration**: `config/cline_mcp.json`
+- **Location**: VSCode User settings directory under `globalStorage/saoudrizwan.claude-dev/settings/`
+- **Special Notes**:
+  - Supports auto-approval for trusted operations
+  - Full MCP feature support
+  - Restart VSCode after configuration
+
+### Augment (VSCode)
+- **Configuration**: `config/mcp_servers.json`
+- **Setup**: Manual configuration through Augment settings
+- **Special Notes**:
+  - Full MCP feature support
+  - Requires manual setup in Augment extension settings
 
 ## 🔒 Security Considerations
 
@@ -150,7 +203,7 @@ node ~/Dev/Tools/MCP/mcp_flutter/mcp_server/build/index.js --help
    ```bash
    # On VPS
    ./deploy_mcp_debug.sh
-   
+
    # On Local
    ./scripts/setup_mcp_tunnel.sh
    ```
@@ -164,7 +217,7 @@ node ~/Dev/Tools/MCP/mcp_flutter/mcp_server/build/index.js --help
    ```bash
    # On Local
    ./scripts/stop_mcp_tunnel.sh
-   
+
    # On VPS
    ./deploy_mcp_cleanup.sh
    ```

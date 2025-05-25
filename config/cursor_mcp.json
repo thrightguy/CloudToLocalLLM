@@ -1,21 +1,12 @@
 {
   "mcpServers": {
-    "mcpadvisor": {
-      "command": "node",
-      "args": ["https://mcp.so/api/mcpadvisor"],
-      "env": {
-        "API_KEY": "wqhi62mb2ttvmf"
-      },
-      "disabled": false
-    },
     "flutter-inspector-local": {
       "command": "node",
       "args": ["/home/rightguy/Dev/Tools/MCP/mcp_flutter/mcp_server/build/index.js"],
       "env": {
-        "PORT": "3334",
-        "LOG_LEVEL": "critical",
-        "RESOURCES_SUPPORTED": "true",
+        "RESOURCES_SUPPORTED": "false",
         "IMAGES_SUPPORTED": "true",
+        "LOG_LEVEL": "critical",
         "DART_VM_HOST": "localhost",
         "DART_VM_PORT": "8182",
         "DDS_HOST": "localhost",
@@ -28,10 +19,9 @@
       "command": "node",
       "args": ["/home/rightguy/Dev/Tools/MCP/mcp_flutter/mcp_server/build/index.js"],
       "env": {
-        "PORT": "3335",
-        "LOG_LEVEL": "critical",
-        "RESOURCES_SUPPORTED": "true",
+        "RESOURCES_SUPPORTED": "false",
         "IMAGES_SUPPORTED": "true",
+        "LOG_LEVEL": "critical",
         "DART_VM_HOST": "localhost",
         "DART_VM_PORT": "18182",
         "DDS_HOST": "localhost",
