@@ -7,9 +7,9 @@ set -e
 echo "Pulling latest code..."
 git pull
 
-# Rebuild Flutter web app inside the container
-echo "Building Flutter web app inside the container..."
-docker exec cloudtolocalllm-webapp flutter build web
+# Rebuild Flutter web app as user (not root)
+echo "Building Flutter web app..."
+/opt/flutter/bin/flutter build web
 
 # Copy static homepage
 echo "Copying static homepage to container..."
