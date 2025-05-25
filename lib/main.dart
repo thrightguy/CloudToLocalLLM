@@ -5,6 +5,10 @@ import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/screens/login_screen.dart';
 import 'package:cloudtolocalllm/screens/chat_screen.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
+import 'package:cloudtolocalllm/config/theme.dart';
+import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
+import 'package:cloudtolocalllm/components/themed_card.dart';
+import 'package:cloudtolocalllm/components/gradient_button.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -244,176 +248,8 @@ class CloudToLocalLLMApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6A5AE0),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF1A1A1A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2A2A2A),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF2A2A2A).withValues(alpha: 255),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6A5AE0).withValues(alpha: 255),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFF2A2A2A).withValues(alpha: 255),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF6A5AE0), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          displayMedium: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          displaySmall: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6A5AE0),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF1A1A1A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2A2A2A),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF2A2A2A).withValues(alpha: 255),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6A5AE0).withValues(alpha: 255),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFF2A2A2A).withValues(alpha: 255),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF6A5AE0), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.red, width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          displayMedium: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          displaySmall: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            color: Colors.white,
-          ),
-        ),
-      ),
+      theme: CloudToLocalLLMTheme.lightTheme,
+      darkTheme: CloudToLocalLLMTheme.darkTheme,
       themeMode: ThemeMode.dark,
     );
   }
@@ -479,28 +315,12 @@ class CircularLlmLogo extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context)
-                .colorScheme
-                .primary
-                .withValues(alpha: 204),
-            Theme.of(context)
-                .colorScheme
-                .secondary
-                .withValues(alpha: 204),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: CloudToLocalLLMTheme.secondaryColor,
+        border: Border.all(
+          color: CloudToLocalLLMTheme.primaryColor,
+          width: 3,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 128),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: CloudToLocalLLMTheme.smallShadow,
       ),
       child: Center(
         child: Text(
@@ -509,6 +329,7 @@ class CircularLlmLogo extends StatelessWidget {
             fontSize: size * 0.35, // Adjust text size relative to logo size
             fontWeight: FontWeight.bold,
             color: Colors.white,
+            fontFamily: CloudToLocalLLMTheme.fontFamily,
             shadows: const [
               Shadow(
                 blurRadius: 1.0,
@@ -529,11 +350,10 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'CloudToLocalLLM',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+      appBar: GradientAppBar(
+        title: 'CloudToLocalLLM',
+        subtitle: 'Run powerful Large Language Models locally',
+        showLogo: true,
         actions: [
           // Debug button - visible in all cases
           IconButton(
@@ -553,31 +373,22 @@ class HomeScreen extends StatelessWidget {
                     // Chat button
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.chat, size: 16),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
+                      child: GradientButton(
+                        text: 'Chat',
+                        icon: Icons.chat,
                         onPressed: () {
                           GoRouter.of(context).go('/chat');
                         },
-                        label: const Text(
-                          'Chat',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        fontSize: 14,
                       ),
                     ),
                     // Logout button
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.logout, size: 16),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
+                      child: SecondaryButton(
+                        text: 'Logout',
+                        icon: Icons.logout,
                         onPressed: () async {
                           await _authService.logout();
                           if (context.mounted) {
@@ -587,11 +398,8 @@ class HomeScreen extends StatelessWidget {
                             );
                           }
                         },
-                        label: const Text(
-                          'Logout',
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -600,39 +408,19 @@ class HomeScreen extends StatelessWidget {
                 // User is not logged in
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
+                  child: GradientButton(
+                    text: 'Login',
                     onPressed: () {
                       GoRouter.of(context).go('/login');
                     },
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    fontSize: 14,
                   ),
                 );
               }
             },
           ),
         ],
-        elevation: 8.0,
-        shadowColor: Colors.black.withValues(alpha: 128),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary.withValues(alpha: 204),
-                Theme.of(context).colorScheme.secondary.withValues(alpha: 204),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
       ),
       body: Stack(
         // Use Stack for layering background and foreground
@@ -722,170 +510,91 @@ class HomeScreen extends StatelessWidget {
                         return ValueListenableBuilder<UserProfile?>(
                             valueListenable: _authService.currentUser,
                             builder: (context, user, _) {
-                              return Card(
-                                elevation: 8,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surface
-                                    .withValues(alpha: 204),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withValues(alpha: 204),
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24.0),
-                                  child: Column(
-                                    children: [
-                                      const Icon(Icons.person,
-                                          size: 48, color: Colors.green),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'Welcome${user?.name != null ? ', ${user!.name}' : ''}!',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        user?.email ?? 'Authenticated User',
-                                        style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 204),
+                              return InfoCard(
+                                title: 'Welcome${user?.name != null ? ', ${user!.name}' : ''}!',
+                                description: user?.email ?? 'Authenticated User',
+                                icon: Icons.person,
+                                iconColor: CloudToLocalLLMTheme.successColor,
+                                width: 480,
+                                content: Column(
+                                  children: [
+                                    // Start chatting button
+                                    GradientButton(
+                                      text: 'Start Chatting',
+                                      icon: Icons.chat,
+                                      onPressed: () {
+                                        GoRouter.of(context).go('/chat');
+                                      },
+                                      width: double.infinity,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    // User actions
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      alignment: WrapAlignment.center,
+                                      children: [
+                                        // Debug button
+                                        SecondaryButton(
+                                          text: 'Debug Status',
+                                          icon: Icons.bug_report,
+                                          onPressed: () {
+                                            GoRouter.of(context).go('/debug');
+                                          },
+                                          fontSize: 14,
                                         ),
-                                      ),
-                                      const SizedBox(height: 24),
-                                      // Start chatting button
-                                      ElevatedButton.icon(
-                                        icon: const Icon(Icons.chat),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.green,
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 32, vertical: 16),
-                                          textStyle: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold),
+                                        // Logout button
+                                        SecondaryButton(
+                                          text: 'Logout',
+                                          icon: Icons.logout,
+                                          onPressed: () async {
+                                            await _authService.logout();
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                    content: Text(
+                                                        'Logged out successfully')),
+                                              );
+                                            }
+                                          },
+                                          fontSize: 14,
                                         ),
-                                        onPressed: () {
-                                          GoRouter.of(context).go('/chat');
-                                        },
-                                        label: const Text('Start Chatting'),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      // User actions
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        alignment: WrapAlignment.center,
-                                        children: [
-                                          // Debug button
-                                          OutlinedButton.icon(
-                                            icon: const Icon(Icons.bug_report,
-                                                size: 16),
-                                            label: const Text('Debug Status'),
-                                            onPressed: () {
-                                              GoRouter.of(context).go('/debug');
-                                            },
-                                          ),
-                                          // Logout button
-                                          OutlinedButton.icon(
-                                            icon: const Icon(Icons.logout,
-                                                size: 16),
-                                            label: const Text('Logout'),
-                                            onPressed: () async {
-                                              await _authService.logout();
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                      content: Text(
-                                                          'Logged out successfully')),
-                                                );
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               );
                             });
                       } else {
                         // User is not logged in
-                        return Card(
-                          elevation: 8,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withValues(alpha: 204),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 204),
-                              width: 2,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              children: [
-                                const Icon(Icons.login,
-                                    size: 48, color: Colors.blue),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Please login to access your models and settings',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Authentication is required to use this application.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                const SizedBox(height: 24),
-                                // Login button
-                                ElevatedButton(
-                                  onPressed: () {
-                                    GoRouter.of(context).go('/login');
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 32, vertical: 16),
-                                    textStyle: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  child: const Text('Login / Create Account'),
-                                ),
-                                const SizedBox(height: 16),
-                                // Debug button
-                                TextButton.icon(
-                                  icon: const Icon(Icons.bug_report, size: 16),
-                                  label: const Text('Debug Auth Status'),
-                                  onPressed: () {
-                                    GoRouter.of(context).go('/debug');
-                                  },
-                                ),
-                              ],
-                            ),
+                        return InfoCard(
+                          title: 'Please login to access your models and settings',
+                          description: 'Authentication is required to use this application.',
+                          icon: Icons.login,
+                          iconColor: CloudToLocalLLMTheme.infoColor,
+                          width: 480,
+                          content: Column(
+                            children: [
+                              // Login button
+                              GradientButton(
+                                text: 'Login / Create Account',
+                                onPressed: () {
+                                  GoRouter.of(context).go('/login');
+                                },
+                                width: double.infinity,
+                              ),
+                              const SizedBox(height: 16),
+                              // Debug button
+                              SecondaryButton(
+                                text: 'Debug Auth Status',
+                                icon: Icons.bug_report,
+                                onPressed: () {
+                                  GoRouter.of(context).go('/debug');
+                                },
+                                fontSize: 14,
+                              ),
+                            ],
                           ),
                         );
                       }
