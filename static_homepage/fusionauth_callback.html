@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Callback</title>
+    <script type="text/javascript">
+        function handleOAuthCallback() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const state = params.get('state');
+            const error = params.get('error');
+            const errorDescription = params.get('error_description');
+
+            // Define your custom URI scheme and path
+            const customScheme = "cloudtolocalllm";
+            const customPath = "oauthredirect";
+
+            if (error) {
+                console.error("OAuth Error: " + error + " - " + errorDescription);
+                // Optionally, redirect to an error path within your custom scheme if your app handles it
+                // window.location.href = customScheme + "://" + customPath + "?error=" + encodeURIComponent(error) + "&error_description=" + encodeURIComponent(errorDescription);
+                document.body.innerHTML = "<h1>Authentication Error</h1><p>" + decodeURIComponent(errorDescription || error) + "</p><p>Please return to the app and try again.</p>";
+                return;
+            }
+
+            if (code) {
+                let targetUrl = customScheme + "://" + customPath + "?code=" + encodeURIComponent(code);
+                if (state) {
+                    targetUrl += "&state=" + encodeURIComponent(state);
+                }
+                // Attempt to redirect to the custom URI scheme
+                window.location.href = targetUrl;
+
+                // Provide a fallback message for users if the redirect doesn't happen automatically
+                // (e.g., if the app isn't installed or the custom scheme isn't registered correctly)
+                setTimeout(function() {
+                    document.body.innerHTML = "<h1>Processing Authentication...</h1><p>If the app does not open automatically, please ensure it is installed and try again, or manually return to the app.</p><p><a href='" + targetUrl + "'>Retry Opening App</a></p>";
+                }, 1000); // Show fallback after 1 second
+            } else {
+                console.error("OAuth Error: Authorization code not found in callback.");
+                document.body.innerHTML = "<h1>Authentication Error</h1><p>Authorization code not found. Please try logging in again.</p>";
+            }
+        }
+        window.onload = handleOAuthCallback;
+    </script>
+</head>
+<body>
+    <p>Processing authentication, please wait...</p>
+</body>
+</html> 
