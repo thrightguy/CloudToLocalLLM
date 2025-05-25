@@ -25,7 +25,13 @@ RUN chown -R flutteruser:fluttergroup /flutter
 # Set working directory
 WORKDIR /app
 
-# Configure git for Flutter
+# Configure git for Flutter (as root first)
+RUN git config --global --add safe.directory /flutter
+
+# Switch to non-root user for Flutter operations
+USER flutteruser
+
+# Configure git for the non-root user
 RUN git config --global --add safe.directory /flutter
 
 # Upgrade Flutter and verify installation
@@ -46,8 +52,11 @@ RUN /flutter/bin/flutter pub get
 # Copy the rest of the application
 COPY --chown=flutteruser:fluttergroup . .
 
-# Build the Flutter web app
+# Build the Flutter web app as non-root user
 RUN /flutter/bin/flutter build web --release --no-tree-shake-icons
+
+# Switch back to root for the final stage setup
+USER root
 
 # Use Nginx Alpine as the base image for the final stage
 FROM nginx:alpine
