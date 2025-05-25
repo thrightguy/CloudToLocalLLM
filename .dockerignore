@@ -1,27 +1,92 @@
-# Flutter/Dart build artifacts
+# =============================================================================
+# Docker Build Context Optimization
+# =============================================================================
+
+# Flutter/Dart build artifacts (reduces context size)
 build/
 .dart_tool/
 .packages
 .pub/
+.flutter-plugins
+.flutter-plugins-dependencies
 
-# Node/npm
-node_modules/
-
-# Git
+# Development files (not needed in container)
 .git/
 .gitignore
+.gitattributes
+README.md
+CHANGELOG.md
+LICENSE
 
-# IDE/editor
+# IDE/editor files (reduces context size)
 .vscode/
 .idea/
 *.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
 
-# OS
+# OS generated files (reduces context size)
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Other
-secrets/
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD and deployment (not needed in build)
+.github/
+.gitlab-ci.yml
+.travis.yml
+scripts/deploy*.sh
+scripts/setup/
+
+# Logs and temporary files (reduces context size)
 logs/
+*.log
+tmp/
+temp/
+
+# Security and secrets (never include)
+secrets/
+.env
+.env.local
+.env.production
+*.key
+*.pem
+*.p12
+
+# Documentation and assets not needed for build
+docs/
+screenshots/
 releases/
-Output/ 
+Output/
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test files (not needed in production build)
+test/
+*_test.dart
+test_driver/
+integration_test/
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Backup files
+*.bak
+*.backup
+*~
