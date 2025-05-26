@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' as auth0;
-import 'package:cloudtolocalllm/auth0_options.dart';
 
 // Conditional imports for web-specific functionality
-import 'auth_service_stub.dart'
-    if (dart.library.html) 'auth_service_web.dart' as platform_auth;
+import 'auth_service_stub.dart' if (dart.library.html) 'auth_service_web.dart'
+    as platform_auth;
 
 // User Profile class
 class UserProfile {
@@ -32,7 +31,8 @@ class AuthService {
   final auth0.Auth0 _auth0;
   final auth0.CredentialsManager _credentialsManager;
   final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
-  final ValueNotifier<UserProfile?> currentUser = ValueNotifier<UserProfile?>(null);
+  final ValueNotifier<UserProfile?> currentUser =
+      ValueNotifier<UserProfile?>(null);
 
   AuthService(this._auth0) : _credentialsManager = _auth0.credentialsManager;
 
@@ -40,8 +40,8 @@ class AuthService {
   Future<void> initialize() async {
     try {
       final credentials = await _credentialsManager.credentials();
-        isAuthenticated.value = true;
-        currentUser.value = UserProfile.fromAuth0User(credentials.user);
+      isAuthenticated.value = true;
+      currentUser.value = UserProfile.fromAuth0User(credentials.user);
     } catch (e) {
       debugPrint('Error initializing auth service: $e');
     }
@@ -66,21 +66,6 @@ class AuthService {
     } catch (e) {
       // Not a redirect callback or other error
       debugPrint('No Auth0 callback detected: $e');
-    }
-  }
-
-  Future<bool> _handleAuth0Callback(String code, String state) async {
-    try {
-      // Exchange code for tokens using the auth code grant flow
-      final credentials = await _auth0.webAuthentication().login(
-        redirectUrl: Auth0Options.redirectUri,
-        parameters: {'code': code, 'state': state},
-      );
-      await _processLoginResult(credentials);
-      return true;
-    } catch (e) {
-      debugPrint('Error handling Auth0 callback: $e');
-      return false;
     }
   }
 
@@ -132,7 +117,8 @@ class AuthService {
     }
   }
 
-  Future<UserProfile> signInWithEmailAndPassword(String email, String password) async {
+  Future<UserProfile> signInWithEmailAndPassword(
+      String email, String password) async {
     try {
       final credentials = await _auth0.api.login(
         usernameOrEmail: email,
@@ -167,8 +153,8 @@ class AuthService {
   Future<UserProfile> handleRedirectAndLogin(Uri responseUri) async {
     try {
       final credentials = await _auth0.webAuthentication().login(
-        redirectUrl: responseUri.toString(),
-      );
+            redirectUrl: responseUri.toString(),
+          );
       isAuthenticated.value = true;
       final user = UserProfile.fromAuth0User(credentials.user);
       currentUser.value = user;
@@ -199,7 +185,8 @@ class AuthService {
     }
   }
 
-  Future<UserProfile> createUserWithEmailAndPassword(String email, String password) async {
+  Future<UserProfile> createUserWithEmailAndPassword(
+      String email, String password) async {
     try {
       await _auth0.api.signup(
         email: email,
