@@ -28,7 +28,7 @@ services:
       - ./certbot/www:/var/www/certbot:ro
       - debug_logs:/var/log
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
