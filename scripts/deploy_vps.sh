@@ -195,7 +195,13 @@ deploy_docker() {
     # Ensure required directories exist
     mkdir -p certbot/www certbot/live certbot/archive ssl config/nginx
 
-    # Build and start containers
+    # Ensure Flutter build directory exists (built on host, not in container)
+    if [ ! -d "${PROJECT_DIR}/build/web" ]; then
+        log_error "Flutter build directory not found. Please run 'flutter build web --release' first."
+        exit 1
+    fi
+
+    # Build and start containers (nginx only, no Flutter build)
     log_info "Building and starting Docker containers..."
     docker compose up -d --build || {
         log_error "Failed to start Docker containers"

@@ -5,13 +5,14 @@ services:
   webapp:
     build:
       context: .
-      dockerfile: Dockerfile.web
-    image: cloudtolocalllm-webapp
+      dockerfile: Dockerfile.nginx
+    image: cloudtolocalllm-nginx
     container_name: cloudtolocalllm-webapp
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./build/web:/usr/share/nginx/html:ro
       - ./certbot/www:/var/www/certbot
       - ./certbot/live:/etc/letsencrypt/live
       - ./certbot/archive:/etc/letsencrypt/archive
