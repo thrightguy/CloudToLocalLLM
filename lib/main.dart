@@ -10,7 +10,6 @@ import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
 import 'package:cloudtolocalllm/components/themed_card.dart';
 import 'package:cloudtolocalllm/components/gradient_button.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
-import 'package:mcp_toolkit/mcp_toolkit.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:flutter/foundation.dart'
@@ -29,11 +28,6 @@ Future<void> main() async {
     () async {
       // Ensure Flutter is initialized
       WidgetsFlutterBinding.ensureInitialized();
-
-      // Initialize MCP Toolkit
-      MCPToolkitBinding.instance
-        ..initialize() // Initializes the Toolkit
-        ..initializeFlutterToolkit(); // Adds Flutter related methods to the MCP server
 
       // Platform-specific logging
       if (kIsWeb) {
@@ -65,8 +59,9 @@ Future<void> main() async {
       runApp(const CloudToLocalLLMApp());
     },
     (error, stack) {
-      // Critical: Handle zone errors for MCP server error reporting
-      MCPToolkitBinding.instance.handleZoneError(error, stack);
+      // Handle zone errors with standard logging
+      developer.log('Zone error: $error',
+          name: 'zone_error', error: error, stackTrace: stack);
     },
   );
 }
