@@ -130,4 +130,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 COPY scripts/debug/start-debug.sh /start-debug.sh
 RUN chmod +x /start-debug.sh
 
-CMD ["/start-debug.sh"]
+# Override the default nginx entrypoint
+ENTRYPOINT ["/start-debug.sh"]
