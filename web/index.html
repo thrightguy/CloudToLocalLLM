@@ -25,7 +25,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' *.auth0.com *.googleapis.com *.gstatic.com;">
 
   <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="cloudtolocalllm">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -39,12 +39,9 @@
   <!-- Theme styles -->
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Auth0 SDK -->
-  <script src="https://cdn.auth0.com/js/auth0/9.22.1/auth0.min.js"></script>
-
   <script>
     // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = "984055065";
+    const serviceWorkerVersion = "{{flutter_service_worker_version}}";
   </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
