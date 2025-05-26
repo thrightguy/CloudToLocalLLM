@@ -230,7 +230,7 @@ verify_deployment() {
     local attempt=1
 
     while [ $attempt -le $max_attempts ]; do
-        if curl -f http://localhost:80/health_internal >/dev/null 2>&1; then
+        if curl -f http://localhost:80/ >/dev/null 2>&1; then
             log_success "Web application is responding."
             break
         fi
