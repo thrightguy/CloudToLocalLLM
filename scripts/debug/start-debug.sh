@@ -17,24 +17,97 @@ echo_color() {
     echo -e "${1}${2}${NC}"
 }
 
-# Function to start Flutter DevTools
-start_devtools() {
-    echo_color "$BLUE" "Starting Flutter DevTools..."
+# Function to setup Flutter debugging environment
+setup_flutter_debug() {
+    echo_color "$BLUE" "Setting up Flutter debugging environment..."
 
     # Set Flutter path
     export PATH="/flutter/bin:$PATH"
 
-    # Install DevTools globally first
-    echo_color "$BLUE" "Installing DevTools..."
-    flutter pub global activate devtools
+    # Create debug info file
+    cat > /usr/share/nginx/html/debug-info.json << EOF
+{
+  "debug_mode": true,
+  "flutter_version": "3.29.1",
+  "dart_version": "3.7.0",
+  "build_mode": "debug",
+  "source_maps": true,
+  "debug_endpoints": {
+    "devtools_instructions": "/debug-instructions.html",
+    "app_url": "https://app.cloudtolocalllm.online",
+    "local_devtools": "flutter pub global run devtools --port=8181"
+  },
+  "theme_debug": {
+    "theme_file": "lib/config/theme.dart",
+    "expected_colors": {
+      "primary": "#a777e3",
+      "secondary": "#6e8efb",
+      "background": "#181a20"
+    }
+  }
+}
+EOF
 
-    # Start DevTools daemon in background
-    echo_color "$BLUE" "Starting DevTools server..."
-    nohup flutter pub global run devtools --port=8181 --host=0.0.0.0 > /var/log/devtools.log 2>&1 &
-    DEVTOOLS_PID=$!
+    # Create debug instructions page
+    cat > /usr/share/nginx/html/debug-instructions.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CloudToLocalLLM Debug Instructions</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #181a20; color: #fff; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .step { margin: 20px 0; padding: 15px; background: #2a2d35; border-radius: 8px; }
+        .code { background: #1a1d23; padding: 10px; border-radius: 4px; font-family: monospace; }
+        .highlight { color: #a777e3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 CloudToLocalLLM Debug Setup</h1>
 
-    echo_color "$GREEN" "Flutter DevTools started on port 8181 (PID: $DEVTOOLS_PID)"
-    echo $DEVTOOLS_PID > /var/run/devtools.pid
+        <div class="step">
+            <h2>1. Setup SSH Tunnel (Local Machine)</h2>
+            <div class="code">
+                ssh -L 8181:localhost:8181 -L 8182:localhost:8182 cloudllm@cloudtolocalllm.online
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>2. Install Flutter DevTools (Local Machine)</h2>
+            <div class="code">
+                flutter pub global activate devtools<br>
+                flutter pub global run devtools --port=8181
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>3. Debug Theme Issues</h2>
+            <p>The app is built in <span class="highlight">debug mode</span> with source maps enabled.</p>
+            <p>Expected theme colors:</p>
+            <ul>
+                <li>Primary: <span style="color: #a777e3;">#a777e3</span></li>
+                <li>Secondary: <span style="color: #6e8efb;">#6e8efb</span></li>
+                <li>Background: <span style="color: #181a20;">#181a20</span></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>4. Access Debug App</h2>
+            <p>The debug version is running at: <a href="/" style="color: #a777e3;">https://app.cloudtolocalllm.online</a></p>
+            <p>Use browser dev tools to inspect theme application.</p>
+        </div>
+
+        <div class="step">
+            <h2>5. Debug Info</h2>
+            <p>Debug configuration: <a href="/debug-info.json" style="color: #a777e3;">/debug-info.json</a></p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+
+    echo_color "$GREEN" "Flutter debug environment setup complete"
 }
 
 # Function to start VM Service proxy
@@ -146,17 +219,13 @@ main() {
     # Setup environment
     setup_debug_env
 
-    # Start debugging services
-    start_devtools
-    start_vm_service
+    # Setup Flutter debugging environment
+    setup_flutter_debug
 
-    # Wait a moment for services to start
-    sleep 3
-
-    echo_color "$GREEN" "Debug services started successfully!"
-    echo_color "$BLUE" "DevTools available at: http://localhost:8181"
-    echo_color "$BLUE" "VM Service proxy at: http://localhost:3334"
-    echo_color "$BLUE" "Web app at: http://localhost:80"
+    echo_color "$GREEN" "Debug environment ready!"
+    echo_color "$BLUE" "Debug instructions: http://localhost:80/debug-instructions.html"
+    echo_color "$BLUE" "Debug info: http://localhost:80/debug-info.json"
+    echo_color "$BLUE" "Web app: http://localhost:80"
 
     # Start Nginx (this will run in foreground)
     start_nginx
