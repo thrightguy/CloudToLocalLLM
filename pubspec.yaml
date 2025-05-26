@@ -35,8 +35,8 @@ dependencies:
   flutter_platform_alert: ^0.7.0
   flutter_acrylic: ^1.1.4
   web: ^1.1.1
-  mcp_toolkit: ^0.1.2
   # Removed Firebase dependencies in favor of Auth0
+  # Removed MCP toolkit dependency - unnecessary complexity
 
 flutter:
   uses-material-design: true
