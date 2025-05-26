@@ -86,8 +86,8 @@ RUN /flutter/bin/flutter build web \
 # =============================================================================
 FROM nginx:alpine AS debug-production
 
-# Install curl and bash for debugging
-RUN apk add --no-cache curl bash
+# Install curl, bash, and git for debugging
+RUN apk add --no-cache curl bash git
 
 # Create nginx user
 RUN adduser -D -H -u 101 -s /sbin/nologin nginx || true
