@@ -132,7 +132,7 @@ build_flutter_app() {
 
     # Build web application
     log_info "Building Flutter web application for production..."
-    flutter build web --release --web-renderer html || {
+    flutter build web --release || {
         log_error "Failed to build Flutter web application"
         exit 1
     }
