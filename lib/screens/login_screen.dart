@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloudtolocalllm/config/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   late bool _isLogin; // Toggle between login and register
   bool _isLoading = false;
   bool _isGoogleLoading = false;
@@ -53,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-          
+
           if (mounted) {
             // Login successful, navigate to chat screen
             GoRouter.of(context).go('/chat');
@@ -64,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
-          
+
           if (mounted) {
             // Registration successful, navigate to chat screen
             GoRouter.of(context).go('/chat');
@@ -94,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await widget.authService.signInWithGoogle();
-      
+
       if (mounted) {
         // Google Sign-In successful, navigate to chat screen
         GoRouter.of(context).go('/chat');
@@ -116,38 +117,146 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isLogin ? 'Login' : 'Create Account'),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Logo or branding
-                const SizedBox(height: 20),
-                const CircularLlmLogo(size: 100),
-                const SizedBox(height: 24),
-                
-                // App Name
-                Text(
-                  'CloudToLocalLLM',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
+      body: Column(
+        children: [
+          // Header section matching homepage design
+          Container(
+            decoration: const BoxDecoration(
+              gradient: CloudToLocalLLMTheme.headerGradient,
+              boxShadow: CloudToLocalLLMTheme.smallShadow,
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+                child: Column(
+                  children: [
+                    // Logo matching homepage
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: CloudToLocalLLMTheme.secondaryColor,
+                        borderRadius: BorderRadius.circular(35),
+                        border: Border.all(
+                          color: CloudToLocalLLMTheme.primaryColor,
+                          width: 3,
+                        ),
+                        boxShadow: CloudToLocalLLMTheme.smallShadow,
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'LLM',
+                          style: TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontFamily: CloudToLocalLLMTheme.fontFamily,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Title matching homepage
+                    const Text(
+                      'CloudToLocalLLM',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: Colors.white,
+                        fontFamily: CloudToLocalLLMTheme.fontFamily,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 8,
+                            color: Color(0x446e8efb),
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Subtitle matching homepage
+                    const Text(
+                      'Run powerful Large Language Models locally with cloud-based management',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFFe0d7ff),
+                        fontFamily: CloudToLocalLLMTheme.fontFamily,
+                      ),
+                    ),
+                  ],
                 ),
-                
-                const SizedBox(height: 32),
-                
+              ),
+            ),
+          ),
+
+          // Main content area
+          Expanded(
+            child: Container(
+              color: CloudToLocalLLMTheme.backgroundMain,
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: CloudToLocalLLMTheme.backgroundCard,
+                        borderRadius: BorderRadius.circular(CloudToLocalLLMTheme.borderRadius),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x66000000),
+                            blurRadius: 24,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: CloudToLocalLLMTheme.secondaryColor.withValues(alpha: 0.27),
+                          width: 1.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(32),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Card title matching homepage
+                            Text(
+                              _isLogin ? 'Login' : 'Create Account',
+                              style: const TextStyle(
+                                color: CloudToLocalLLMTheme.primaryColor,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                fontFamily: CloudToLocalLLMTheme.fontFamily,
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // Card description
+                            Text(
+                              _isLogin
+                                ? 'Sign in to access your CloudToLocalLLM dashboard'
+                                : 'Create your account to get started with CloudToLocalLLM',
+                              style: const TextStyle(
+                                color: CloudToLocalLLMTheme.textColorLight,
+                                fontSize: 16,
+                                fontFamily: CloudToLocalLLMTheme.fontFamily,
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
@@ -161,15 +270,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -189,7 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                
+
                 // Error message
                 if (_errorMessage.isNotEmpty)
                   Padding(
@@ -202,9 +312,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Submit button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _submitForm,
@@ -227,9 +337,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: const TextStyle(fontSize: 16),
                         ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Divider
                 Row(
                   children: [
@@ -247,9 +357,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(child: Divider(color: theme.dividerColor)),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Google Sign-In button
                 OutlinedButton.icon(
                   onPressed: _isGoogleLoading ? null : _signInWithGoogle,
@@ -266,9 +376,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Icon(Icons.login),
                   label: const Text('Continue with Google'),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Toggle button
                 TextButton(
                   onPressed: _isLoading || _isGoogleLoading
@@ -307,8 +417,14 @@ class CircularLlmLogo extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary.withAlpha((255 * 0.8).round()), 
-            Theme.of(context).colorScheme.secondary.withAlpha((255 * 0.6).round()),
+            Theme.of(context)
+                .colorScheme
+                .primary
+                .withAlpha((255 * 0.8).round()),
+            Theme.of(context)
+                .colorScheme
+                .secondary
+                .withAlpha((255 * 0.6).round()),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -341,4 +457,4 @@ class CircularLlmLogo extends StatelessWidget {
       ),
     );
   }
-} 
+}
