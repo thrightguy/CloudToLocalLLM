@@ -42,9 +42,71 @@
   <script>
     // The value below is injected by flutter build, do not touch.
     const serviceWorkerVersion = {{flutter_service_worker_version}};
+
+    // Enhanced Flutter loading diagnostics
+    console.log('CloudToLocalLLM: Service Worker Version:', serviceWorkerVersion);
+
+    // Track Flutter loading stages
+    window.cloudToLocalLLMDiagnostics.flutterStages = {
+      scriptLoaded: false,
+      engineInitialized: false,
+      appStarted: false,
+      errors: []
+    };
+
+    // Override Flutter loader to add diagnostics
+    window.addEventListener('load', function() {
+      console.log('CloudToLocalLLM: Window loaded, checking Flutter loader');
+
+      if (window._flutter && window._flutter.loader) {
+        console.log('CloudToLocalLLM: Flutter loader found');
+        window.cloudToLocalLLMDiagnostics.flutterStages.scriptLoaded = true;
+
+        // Try to load Flutter with enhanced error handling
+        try {
+          window._flutter.loader.load({
+            serviceWorkerSettings: {
+              serviceWorkerVersion: serviceWorkerVersion
+            }
+          }).then(function(engineInitializer) {
+            console.log('CloudToLocalLLM: Flutter engine initializer loaded');
+            window.cloudToLocalLLMDiagnostics.flutterStages.engineInitialized = true;
+
+            return engineInitializer.initializeEngine();
+          }).then(function(appRunner) {
+            console.log('CloudToLocalLLM: Flutter engine initialized');
+            return appRunner.runApp();
+          }).then(function() {
+            console.log('CloudToLocalLLM: Flutter app started successfully');
+            window.cloudToLocalLLMDiagnostics.flutterStages.appStarted = true;
+          }).catch(function(error) {
+            console.error('CloudToLocalLLM: Flutter loading failed:', error);
+            window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
+              stage: 'flutter_load',
+              error: error.toString(),
+              timestamp: new Date().toISOString()
+            });
+          });
+        } catch (error) {
+          console.error('CloudToLocalLLM: Flutter loader.load() failed:', error);
+          window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
+            stage: 'loader_call',
+            error: error.toString(),
+            timestamp: new Date().toISOString()
+          });
+        }
+      } else {
+        console.error('CloudToLocalLLM: Flutter loader not found!');
+        window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
+          stage: 'loader_missing',
+          error: 'window._flutter.loader not available',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
   </script>
   <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
+  <script src="flutter.js" defer onload="console.log('CloudToLocalLLM: flutter.js loaded')" onerror="console.error('CloudToLocalLLM: flutter.js failed to load')"></script>
 
   <style>
     /* Custom CSS for login overlay - Hidden when Flutter app loads */
@@ -259,16 +321,31 @@
         console.log('CloudToLocalLLM Diagnostics:', window.cloudToLocalLLMDiagnostics);
 
         // Show diagnostic info instead of just hiding
+        const flutterStages = window.cloudToLocalLLMDiagnostics.flutterStages || {};
         loading.innerHTML = `
           <div style="color: #fff; font-family: monospace; font-size: 14px; max-width: 800px; text-align: left;">
             <h3 style="color: #ff6b6b;">CloudToLocalLLM Diagnostic Information</h3>
             <p><strong>Status:</strong> Loading timeout reached (10 seconds)</p>
             <p><strong>Flutter First Frame:</strong> ${window.cloudToLocalLLMDiagnostics.flutterFirstFrame ? 'Yes' : 'No'}</p>
-            <p><strong>Errors:</strong> ${window.cloudToLocalLLMDiagnostics.errors.length}</p>
+
+            <h4 style="color: #a777e3; margin-top: 20px;">Flutter Loading Stages:</h4>
+            <p><strong>Script Loaded:</strong> ${flutterStages.scriptLoaded ? 'Yes' : 'No'}</p>
+            <p><strong>Engine Initialized:</strong> ${flutterStages.engineInitialized ? 'Yes' : 'No'}</p>
+            <p><strong>App Started:</strong> ${flutterStages.appStarted ? 'Yes' : 'No'}</p>
+
+            <p><strong>General Errors:</strong> ${window.cloudToLocalLLMDiagnostics.errors.length}</p>
+            <p><strong>Flutter Errors:</strong> ${flutterStages.errors ? flutterStages.errors.length : 0}</p>
+
             ${window.cloudToLocalLLMDiagnostics.errors.length > 0 ?
-              '<div style="background: #2a2a2a; padding: 10px; margin: 10px 0; border-radius: 4px;"><pre>' +
+              '<div style="background: #2a2a2a; padding: 10px; margin: 10px 0; border-radius: 4px;"><h5>General Errors:</h5><pre>' +
               JSON.stringify(window.cloudToLocalLLMDiagnostics.errors, null, 2) +
               '</pre></div>' : ''}
+
+            ${flutterStages.errors && flutterStages.errors.length > 0 ?
+              '<div style="background: #2a2a2a; padding: 10px; margin: 10px 0; border-radius: 4px;"><h5>Flutter Errors:</h5><pre>' +
+              JSON.stringify(flutterStages.errors, null, 2) +
+              '</pre></div>' : ''}
+
             <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
             <p><strong>URL:</strong> ${window.location.href}</p>
             <button onclick="window.location.reload()" style="background: #6e8efb; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Reload Page</button>
