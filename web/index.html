@@ -65,13 +65,66 @@
     // Enhanced Flutter loading diagnostics
     console.log('CloudToLocalLLM: Service Worker Version:', serviceWorkerVersion);
 
-    // Monitor Flutter loader availability without interfering
+    // Monitor Flutter loader and add engine initialization tracking
     window.addEventListener('load', function() {
       console.log('CloudToLocalLLM: Window loaded, checking Flutter loader');
 
-      // Check if Flutter loader is available but don't call it manually
+      // Check if Flutter loader is available
       if (window._flutter && window._flutter.loader) {
-        console.log('CloudToLocalLLM: Flutter loader found - letting Flutter handle initialization');
+        console.log('CloudToLocalLLM: Flutter loader found - monitoring initialization');
+
+        // Override the loader to add our diagnostics
+        const originalLoad = window._flutter.loader.load;
+        window._flutter.loader.load = function(config) {
+          console.log('CloudToLocalLLM: Flutter loader.load() called with config:', config);
+
+          return originalLoad.call(this, config).then(function(engineInitializer) {
+            console.log('CloudToLocalLLM: Flutter engine initializer received');
+            window.cloudToLocalLLMDiagnostics.flutterStages.engineInitialized = true;
+
+            // Override initializeEngine to track it
+            const originalInitializeEngine = engineInitializer.initializeEngine;
+            engineInitializer.initializeEngine = function(config) {
+              console.log('CloudToLocalLLM: initializeEngine() called');
+
+              return originalInitializeEngine.call(this, config).then(function(appRunner) {
+                console.log('CloudToLocalLLM: Flutter engine initialized successfully');
+
+                // Override runApp to track it
+                const originalRunApp = appRunner.runApp;
+                appRunner.runApp = function() {
+                  console.log('CloudToLocalLLM: runApp() called');
+
+                  const result = originalRunApp.call(this);
+                  console.log('CloudToLocalLLM: Flutter app started successfully');
+                  window.cloudToLocalLLMDiagnostics.flutterStages.appStarted = true;
+
+                  return result;
+                };
+
+                return appRunner;
+              }).catch(function(error) {
+                console.error('CloudToLocalLLM: Engine initialization failed:', error);
+                window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
+                  stage: 'engine_init',
+                  error: error.toString(),
+                  timestamp: new Date().toISOString()
+                });
+                throw error;
+              });
+            };
+
+            return engineInitializer;
+          }).catch(function(error) {
+            console.error('CloudToLocalLLM: Flutter loader failed:', error);
+            window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
+              stage: 'loader_load',
+              error: error.toString(),
+              timestamp: new Date().toISOString()
+            });
+            throw error;
+          });
+        };
       } else {
         console.error('CloudToLocalLLM: Flutter loader not found!');
         window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
