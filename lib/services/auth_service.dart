@@ -60,12 +60,14 @@ class AuthService {
 
   Future<void> _checkWebAuth() async {
     try {
-      // Check for Auth0 redirect result
-      final credentials = await _auth0.webAuthentication().login();
-      await _processLoginResult(credentials);
+      // Only check for existing credentials, don't attempt login
+      final credentials = await _credentialsManager.credentials();
+      if (credentials.accessToken.isNotEmpty) {
+        await _processLoginResult(credentials);
+      }
     } catch (e) {
-      // Not a redirect callback or other error
-      debugPrint('No Auth0 callback detected: $e');
+      // No existing credentials or other error
+      debugPrint('No existing Auth0 credentials: $e');
     }
   }
 
