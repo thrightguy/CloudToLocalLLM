@@ -207,10 +207,29 @@
   </div>
 
   <script>
-    window.addEventListener('load', function() {
+    // Don't hide loading screen on window load - let Flutter handle it
+    // window.addEventListener('load', function() {
+    //   var loading = document.getElementById('loading-container');
+    //   if (loading) loading.style.display = 'none';
+    // });
+
+    // Hide loading screen when Flutter is ready
+    window.addEventListener('flutter-first-frame', function() {
+      console.log('Flutter first frame rendered, hiding loading screen');
       var loading = document.getElementById('loading-container');
-      if (loading) loading.style.display = 'none';
+      if (loading) {
+        loading.style.display = 'none';
+      }
     });
+
+    // Fallback: hide loading screen after a reasonable timeout
+    setTimeout(function() {
+      var loading = document.getElementById('loading-container');
+      if (loading && loading.style.display !== 'none') {
+        console.log('Timeout reached, hiding loading screen');
+        loading.style.display = 'none';
+      }
+    }, 10000); // 10 second timeout
   </script>
 </body>
 </html>

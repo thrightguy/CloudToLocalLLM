@@ -14,6 +14,7 @@ import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'dart:html' as html show window, CustomEvent;
 
 // Global instance of AuthService
 final AuthService _authService = AuthService(
@@ -28,6 +29,7 @@ Future<void> main() async {
     () async {
       // Ensure Flutter is initialized
       WidgetsFlutterBinding.ensureInitialized();
+      developer.log('Flutter binding initialized', name: 'main');
 
       // Platform-specific logging
       if (kIsWeb) {
@@ -56,7 +58,9 @@ Future<void> main() async {
 
       // Initialize AuthService
       await _initializeAuthService();
+      developer.log('About to run app', name: 'main');
       runApp(const CloudToLocalLLMApp());
+      developer.log('App started', name: 'main');
     },
     (error, stack) {
       // Handle zone errors with standard logging
@@ -253,6 +257,22 @@ class CloudToLocalLLMApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Trigger flutter-first-frame event after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      developer.log('First frame callback triggered', name: 'flutter_frame');
+      if (kIsWeb) {
+        // Dispatch flutter-first-frame event for web
+        try {
+          html.window.dispatchEvent(html.CustomEvent('flutter-first-frame'));
+          developer.log('flutter-first-frame event dispatched',
+              name: 'flutter_frame');
+        } catch (e) {
+          developer.log('Error dispatching flutter-first-frame event: $e',
+              name: 'flutter_frame');
+        }
+      }
+    });
+
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
