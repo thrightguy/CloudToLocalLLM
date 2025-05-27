@@ -57,27 +57,46 @@ check_webapp_running() {
 # Function to obtain Let's Encrypt certificate
 obtain_certificate() {
     echo_color "$BLUE" "Obtaining Let's Encrypt certificate for $DOMAIN..."
-    
+
+    # Check if containers are running
+    if ! docker compose ps | grep -q "cloudtolocalllm-webapp.*Up"; then
+        echo_color "$RED" "Webapp container is not running. Cannot obtain certificates."
+        return 1
+    fi
+
     # Ensure webroot directory exists
-    docker compose exec webapp mkdir -p "$WEBROOT_PATH"
-    
-    # Run certbot to obtain certificate
-    docker compose run --rm certbot certonly \
+    echo_color "$BLUE" "Creating webroot directory..."
+    docker compose exec webapp mkdir -p "$WEBROOT_PATH" || {
+        echo_color "$RED" "Failed to create webroot directory"
+        return 1
+    }
+
+    echo_color "$BLUE" "Attempting initial certificate acquisition..."
+
+    # Run certbot to obtain certificate with timeout
+    timeout 300 docker compose run --rm certbot certonly \
         --webroot \
         --webroot-path="$WEBROOT_PATH" \
         --email "$EMAIL" \
         --agree-tos \
         --no-eff-email \
-        --force-renewal \
+        --non-interactive \
+        --keep-until-expiring \
         -d "$DOMAIN" \
-        -d "www.$DOMAIN" \
-        -d "app.$DOMAIN"
-    
-    if [ $? -eq 0 ]; then
+        -d "app.$DOMAIN" \
+        -d "mail.$DOMAIN" 2>&1
+
+    local cert_result=$?
+
+    if [ $cert_result -eq 0 ]; then
         echo_color "$GREEN" "Certificate obtained successfully!"
         return 0
+    elif [ $cert_result -eq 124 ]; then
+        echo_color "$RED" "Certificate acquisition timed out after 5 minutes"
+        return 1
     else
-        echo_color "$RED" "Failed to obtain certificate"
+        echo_color "$YELLOW" "Initial certonly command failed or no certs due for renewal."
+        echo_color "$BLUE" "Initial cert attempt/check done. Starting renewal loop."
         return 1
     fi
 }
@@ -85,9 +104,9 @@ obtain_certificate() {
 # Function to test certificate renewal
 test_renewal() {
     echo_color "$BLUE" "Testing certificate renewal..."
-    
+
     docker compose run --rm certbot renew --dry-run
-    
+
     if [ $? -eq 0 ]; then
         echo_color "$GREEN" "Certificate renewal test passed!"
         return 0
@@ -107,7 +126,7 @@ restart_webapp() {
 # Function to check certificate status
 check_certificate() {
     echo_color "$BLUE" "Checking certificate status..."
-    
+
     if docker compose run --rm certbot certificates | grep -q "$DOMAIN"; then
         echo_color "$GREEN" "Certificate found for $DOMAIN"
         docker compose run --rm certbot certificates
@@ -121,7 +140,7 @@ check_certificate() {
 # Function to setup automatic renewal
 setup_renewal() {
     echo_color "$BLUE" "Setting up automatic certificate renewal..."
-    
+
     # Create renewal script
     cat > /tmp/renew_certs.sh << 'EOF'
 #!/bin/bash
@@ -129,11 +148,11 @@ cd /opt/cloudtolocalllm
 docker compose run --rm certbot renew --quiet
 docker compose restart webapp
 EOF
-    
+
     # Move to proper location and set permissions
     sudo mv /tmp/renew_certs.sh /etc/cron.daily/renew-cloudtolocalllm-certs
     sudo chmod +x /etc/cron.daily/renew-cloudtolocalllm-certs
-    
+
     echo_color "$GREEN" "Automatic renewal setup complete!"
     echo_color "$YELLOW" "Certificates will be renewed daily if needed."
 }
@@ -142,22 +161,31 @@ EOF
 main() {
     echo_color "$BLUE" "CloudToLocalLLM Let's Encrypt Certificate Setup"
     echo_color "$BLUE" "=============================================="
-    
+
     check_root
     check_docker
-    
+
     case "${1:-setup}" in
         "setup")
             check_webapp_running
-            obtain_certificate
-            restart_webapp
-            setup_renewal
-            echo_color "$GREEN" "Certificate setup complete!"
+            if obtain_certificate; then
+                restart_webapp
+                setup_renewal
+                echo_color "$GREEN" "Certificate setup complete!"
+            else
+                echo_color "$YELLOW" "Certificate setup failed, but continuing deployment..."
+                echo_color "$YELLOW" "You can try again later with: ./scripts/ssl/setup_letsencrypt.sh setup"
+                echo_color "$YELLOW" "The application will work with HTTP for now."
+            fi
             ;;
         "renew")
-            obtain_certificate
-            restart_webapp
-            echo_color "$GREEN" "Certificate renewal complete!"
+            if obtain_certificate; then
+                restart_webapp
+                echo_color "$GREEN" "Certificate renewal complete!"
+            else
+                echo_color "$RED" "Certificate renewal failed!"
+                exit 1
+            fi
             ;;
         "test")
             test_renewal

@@ -147,10 +147,20 @@ setup_certificates() {
     # Check if certificate setup script exists
     if [ -f "${PROJECT_DIR}/scripts/ssl/setup_letsencrypt.sh" ]; then
         cd "${PROJECT_DIR}"
-        ./scripts/ssl/setup_letsencrypt.sh setup || {
+
+        # Run SSL setup with timeout to prevent hanging
+        timeout 600 ./scripts/ssl/setup_letsencrypt.sh setup
+        local ssl_result=$?
+
+        if [ $ssl_result -eq 0 ]; then
+            log_success "SSL certificates configured successfully!"
+        elif [ $ssl_result -eq 124 ]; then
+            log_warning "SSL setup timed out after 10 minutes. Continuing without SSL."
+            log_warning "You can run it manually later: ./scripts/ssl/setup_letsencrypt.sh setup"
+        else
             log_warning "Certificate setup failed. You can run it manually later:"
             log_warning "./scripts/ssl/setup_letsencrypt.sh setup"
-        }
+        fi
     else
         log_warning "Certificate setup script not found."
         log_info "You can obtain certificates manually with:"
