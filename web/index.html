@@ -54,47 +54,13 @@
       errors: []
     };
 
-    // Override Flutter loader to add diagnostics
+    // Monitor Flutter loader availability without interfering
     window.addEventListener('load', function() {
       console.log('CloudToLocalLLM: Window loaded, checking Flutter loader');
 
+      // Check if Flutter loader is available but don't call it manually
       if (window._flutter && window._flutter.loader) {
-        console.log('CloudToLocalLLM: Flutter loader found');
-        window.cloudToLocalLLMDiagnostics.flutterStages.scriptLoaded = true;
-
-        // Try to load Flutter with enhanced error handling
-        try {
-          window._flutter.loader.load({
-            serviceWorkerSettings: {
-              serviceWorkerVersion: serviceWorkerVersion
-            }
-          }).then(function(engineInitializer) {
-            console.log('CloudToLocalLLM: Flutter engine initializer loaded');
-            window.cloudToLocalLLMDiagnostics.flutterStages.engineInitialized = true;
-
-            return engineInitializer.initializeEngine();
-          }).then(function(appRunner) {
-            console.log('CloudToLocalLLM: Flutter engine initialized');
-            return appRunner.runApp();
-          }).then(function() {
-            console.log('CloudToLocalLLM: Flutter app started successfully');
-            window.cloudToLocalLLMDiagnostics.flutterStages.appStarted = true;
-          }).catch(function(error) {
-            console.error('CloudToLocalLLM: Flutter loading failed:', error);
-            window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
-              stage: 'flutter_load',
-              error: error.toString(),
-              timestamp: new Date().toISOString()
-            });
-          });
-        } catch (error) {
-          console.error('CloudToLocalLLM: Flutter loader.load() failed:', error);
-          window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
-            stage: 'loader_call',
-            error: error.toString(),
-            timestamp: new Date().toISOString()
-          });
-        }
+        console.log('CloudToLocalLLM: Flutter loader found - letting Flutter handle initialization');
       } else {
         console.error('CloudToLocalLLM: Flutter loader not found!');
         window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
@@ -106,7 +72,9 @@
     });
   </script>
   <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer onload="console.log('CloudToLocalLLM: flutter.js loaded')" onerror="console.error('CloudToLocalLLM: flutter.js failed to load')"></script>
+  <script src="flutter.js" defer
+    onload="console.log('CloudToLocalLLM: flutter.js loaded successfully'); window.cloudToLocalLLMDiagnostics.flutterStages.scriptLoaded = true;"
+    onerror="console.error('CloudToLocalLLM: flutter.js failed to load'); window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({stage: 'script_load', error: 'flutter.js failed to load', timestamp: new Date().toISOString()});"></script>
 
   <style>
     /* Custom CSS for login overlay - Hidden when Flutter app loads */
