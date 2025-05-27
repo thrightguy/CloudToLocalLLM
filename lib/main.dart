@@ -73,11 +73,16 @@ Future<void> main() async {
 Future<void> _initializeAuthService() async {
   try {
     developer.log('Initializing AuthService...', name: 'auth_service');
+    developer.log('Auth0 Domain: ${Auth0Options.domain}', name: 'auth_service');
+    developer.log('Auth0 Client ID: ${Auth0Options.clientId}',
+        name: 'auth_service');
+
     await _authService.initialize();
     developer.log('AuthService initialized successfully', name: 'auth_service');
-  } catch (e) {
+  } catch (e, stackTrace) {
     developer.log('AuthService initialization failed: $e',
-        name: 'auth_service', error: e);
+        name: 'auth_service', error: e, stackTrace: stackTrace);
+    // Don't rethrow - allow app to continue even if auth fails
   }
 }
 
@@ -264,11 +269,11 @@ class CloudToLocalLLMApp extends StatelessWidget {
         // Dispatch flutter-first-frame event for web
         try {
           web.window.dispatchEvent(web.CustomEvent('flutter-first-frame'));
-          developer.log('flutter-first-frame event dispatched',
+          developer.log('flutter-first-frame event dispatched successfully',
               name: 'flutter_frame');
-        } catch (e) {
+        } catch (e, stackTrace) {
           developer.log('Error dispatching flutter-first-frame event: $e',
-              name: 'flutter_frame');
+              name: 'flutter_frame', error: e, stackTrace: stackTrace);
         }
       }
     });
