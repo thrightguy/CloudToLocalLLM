@@ -36,6 +36,25 @@
   <title>CloudToLocalLLM Portal</title>
   <link rel="manifest" href="manifest.json">
 
+  <!-- Initialize diagnostics object first -->
+  <script>
+    // Initialize diagnostics object immediately
+    window.cloudToLocalLLMDiagnostics = {
+      indexLoaded: true,
+      flutterLoaded: false,
+      flutterFirstFrame: false,
+      authInitialized: false,
+      errors: [],
+      flutterStages: {
+        scriptLoaded: false,
+        engineInitialized: false,
+        appStarted: false,
+        errors: []
+      }
+    };
+    console.log('CloudToLocalLLM: Diagnostics object initialized');
+  </script>
+
   <!-- Theme styles -->
   <link rel="stylesheet" href="styles.css">
 
@@ -45,14 +64,6 @@
 
     // Enhanced Flutter loading diagnostics
     console.log('CloudToLocalLLM: Service Worker Version:', serviceWorkerVersion);
-
-    // Track Flutter loading stages
-    window.cloudToLocalLLMDiagnostics.flutterStages = {
-      scriptLoaded: false,
-      engineInitialized: false,
-      appStarted: false,
-      errors: []
-    };
 
     // Monitor Flutter loader availability without interfering
     window.addEventListener('load', function() {
@@ -239,15 +250,6 @@
   <script>
     // Enhanced diagnostic logging for black screen debugging
     console.log('CloudToLocalLLM: Index.html script loaded');
-
-    // Track loading states
-    window.cloudToLocalLLMDiagnostics = {
-      indexLoaded: true,
-      flutterLoaded: false,
-      flutterFirstFrame: false,
-      authInitialized: false,
-      errors: []
-    };
 
     // Log all errors
     window.addEventListener('error', function(e) {
