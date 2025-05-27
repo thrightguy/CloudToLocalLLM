@@ -128,7 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
                 child: Column(
                   children: [
                     // Logo matching homepage
@@ -210,7 +211,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: CloudToLocalLLMTheme.backgroundCard,
-                        borderRadius: BorderRadius.circular(CloudToLocalLLMTheme.borderRadius),
+                        borderRadius: BorderRadius.circular(
+                            CloudToLocalLLMTheme.borderRadius),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x66000000),
@@ -219,7 +221,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                         border: Border.all(
-                          color: CloudToLocalLLMTheme.secondaryColor.withValues(alpha: 0.27),
+                          color: CloudToLocalLLMTheme.secondaryColor
+                              .withValues(alpha: 0.27),
                           width: 1.5,
                         ),
                       ),
@@ -246,8 +249,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Card description
                             Text(
                               _isLogin
-                                ? 'Sign in to access your CloudToLocalLLM dashboard'
-                                : 'Create your account to get started with CloudToLocalLLM',
+                                  ? 'Sign in to access your CloudToLocalLLM dashboard'
+                                  : 'Create your account to get started with CloudToLocalLLM',
                               style: const TextStyle(
                                 color: CloudToLocalLLMTheme.textColorLight,
                                 fontSize: 16,
@@ -257,148 +260,211 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             const SizedBox(height: 24),
 
-                // Email field
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                        .hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
+                            // Email field
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.email),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your email';
+                                }
+                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                    .hasMatch(value)) {
+                                  return 'Please enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
 
-                const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                // Password field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (!_isLogin && value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
+                            // Password field
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Password',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.lock),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your password';
+                                }
+                                if (!_isLogin && value.length < 6) {
+                                  return 'Password must be at least 6 characters';
+                                }
+                                return null;
+                              },
+                            ),
 
-                // Error message
-                if (_errorMessage.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      _errorMessage,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontWeight: FontWeight.bold,
+                            // Error message
+                            if (_errorMessage.isNotEmpty)
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  _errorMessage,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+
+                            const SizedBox(height: 24),
+
+                            // Submit button with homepage styling
+                            Container(
+                              width: double.infinity,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: CloudToLocalLLMTheme.buttonGradient,
+                                borderRadius: BorderRadius.circular(
+                                    CloudToLocalLLMTheme.borderRadiusSmall),
+                                boxShadow: CloudToLocalLLMTheme.smallShadow,
+                              ),
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _submitForm,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        CloudToLocalLLMTheme.borderRadiusSmall),
+                                  ),
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text(
+                                        _isLogin ? 'Login' : 'Create Account',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                          fontFamily:
+                                              CloudToLocalLLMTheme.fontFamily,
+                                        ),
+                                      ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Divider
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    color: CloudToLocalLLMTheme.textColorLight
+                                        .withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  child: Text(
+                                    'OR',
+                                    style: const TextStyle(
+                                      color:
+                                          CloudToLocalLLMTheme.textColorLight,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily:
+                                          CloudToLocalLLMTheme.fontFamily,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Divider(
+                                    color: CloudToLocalLLMTheme.textColorLight
+                                        .withValues(alpha: 0.3),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Google Sign-In button
+                            OutlinedButton.icon(
+                              onPressed:
+                                  _isGoogleLoading ? null : _signInWithGoogle,
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(
+                                  color: CloudToLocalLLMTheme.secondaryColor
+                                      .withValues(alpha: 0.5),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      CloudToLocalLLMTheme.borderRadiusSmall),
+                                ),
+                              ),
+                              icon: _isGoogleLoading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    )
+                                  : const Icon(
+                                      Icons.login,
+                                      color: CloudToLocalLLMTheme.textColor,
+                                    ),
+                              label: const Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  color: CloudToLocalLLMTheme.textColor,
+                                  fontFamily: CloudToLocalLLMTheme.fontFamily,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Toggle button
+                            TextButton(
+                              onPressed: _isLoading || _isGoogleLoading
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _isLogin = !_isLogin;
+                                        _errorMessage = '';
+                                      });
+                                    },
+                              child: Text(
+                                _isLogin
+                                    ? 'Need an account? Sign Up'
+                                    : 'Already have an account? Login',
+                                style: const TextStyle(
+                                  color: CloudToLocalLLMTheme.primaryColor,
+                                  fontFamily: CloudToLocalLLMTheme.fontFamily,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-
-                const SizedBox(height: 24),
-
-                // Submit button
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _isLogin ? 'Login' : 'Create Account',
-                          style: const TextStyle(fontSize: 16),
-                        ),
                 ),
-
-                const SizedBox(height: 16),
-
-                // Divider
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: theme.dividerColor)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(
-                          color: theme.textTheme.bodySmall?.color,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: theme.dividerColor)),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // Google Sign-In button
-                OutlinedButton.icon(
-                  onPressed: _isGoogleLoading ? null : _signInWithGoogle,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: theme.dividerColor),
-                  ),
-                  icon: _isGoogleLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.login),
-                  label: const Text('Continue with Google'),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Toggle button
-                TextButton(
-                  onPressed: _isLoading || _isGoogleLoading
-                      ? null
-                      : () {
-                          setState(() {
-                            _isLogin = !_isLogin;
-                            _errorMessage = '';
-                          });
-                        },
-                  child: Text(
-                    _isLogin
-                        ? 'Need an account? Sign Up'
-                        : 'Already have an account? Login',
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
