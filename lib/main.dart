@@ -14,7 +14,7 @@ import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'dart:html' as html show window, CustomEvent;
+import 'package:web/web.dart' as web;
 
 // Global instance of AuthService
 final AuthService _authService = AuthService(
@@ -263,7 +263,7 @@ class CloudToLocalLLMApp extends StatelessWidget {
       if (kIsWeb) {
         // Dispatch flutter-first-frame event for web
         try {
-          html.window.dispatchEvent(html.CustomEvent('flutter-first-frame'));
+          web.window.dispatchEvent(web.CustomEvent('flutter-first-frame'));
           developer.log('flutter-first-frame event dispatched',
               name: 'flutter_frame');
         } catch (e) {
