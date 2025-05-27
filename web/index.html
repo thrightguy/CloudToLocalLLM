@@ -140,6 +140,11 @@
     onload="console.log('CloudToLocalLLM: flutter.js loaded successfully'); window.cloudToLocalLLMDiagnostics.flutterStages.scriptLoaded = true;"
     onerror="console.error('CloudToLocalLLM: flutter.js failed to load'); window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({stage: 'script_load', error: 'flutter.js failed to load', timestamp: new Date().toISOString()});"></script>
 
+  <!-- This script bootstraps Flutter and starts the application -->
+  <script src="flutter_bootstrap.js" defer
+    onload="console.log('CloudToLocalLLM: flutter_bootstrap.js loaded successfully');"
+    onerror="console.error('CloudToLocalLLM: flutter_bootstrap.js failed to load'); window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({stage: 'bootstrap_load', error: 'flutter_bootstrap.js failed to load', timestamp: new Date().toISOString()});"></script>
+
   <style>
     /* Custom CSS for login overlay - Hidden when Flutter app loads */
     #html-login-overlay {
