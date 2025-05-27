@@ -16,7 +16,8 @@ class Auth0Options {
 
   /// The redirect URI for authentication callbacks
   /// For web applications, this should be registered in Auth0 dashboard
-  static const String redirectUri = 'https://cloudtolocalllm.online/callback';
+  static const String redirectUri =
+      'https://app.cloudtolocalllm.online/callback';
 
   /// The audience (API identifier) for securing API requests
   /// Only required if you need to access a protected API

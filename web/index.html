@@ -207,29 +207,80 @@
   </div>
 
   <script>
-    // Don't hide loading screen on window load - let Flutter handle it
-    // window.addEventListener('load', function() {
-    //   var loading = document.getElementById('loading-container');
-    //   if (loading) loading.style.display = 'none';
-    // });
+    // Enhanced diagnostic logging for black screen debugging
+    console.log('CloudToLocalLLM: Index.html script loaded');
+
+    // Track loading states
+    window.cloudToLocalLLMDiagnostics = {
+      indexLoaded: true,
+      flutterLoaded: false,
+      flutterFirstFrame: false,
+      authInitialized: false,
+      errors: []
+    };
+
+    // Log all errors
+    window.addEventListener('error', function(e) {
+      console.error('CloudToLocalLLM Error:', e.error);
+      window.cloudToLocalLLMDiagnostics.errors.push({
+        type: 'error',
+        message: e.message,
+        filename: e.filename,
+        lineno: e.lineno,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Log unhandled promise rejections
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('CloudToLocalLLM Unhandled Promise Rejection:', e.reason);
+      window.cloudToLocalLLMDiagnostics.errors.push({
+        type: 'unhandledrejection',
+        reason: e.reason,
+        timestamp: new Date().toISOString()
+      });
+    });
 
     // Hide loading screen when Flutter is ready
     window.addEventListener('flutter-first-frame', function() {
-      console.log('Flutter first frame rendered, hiding loading screen');
+      console.log('CloudToLocalLLM: Flutter first frame rendered, hiding loading screen');
+      window.cloudToLocalLLMDiagnostics.flutterFirstFrame = true;
       var loading = document.getElementById('loading-container');
       if (loading) {
         loading.style.display = 'none';
       }
     });
 
-    // Fallback: hide loading screen after a reasonable timeout
+    // Enhanced fallback with diagnostic info
     setTimeout(function() {
       var loading = document.getElementById('loading-container');
       if (loading && loading.style.display !== 'none') {
-        console.log('Timeout reached, hiding loading screen');
-        loading.style.display = 'none';
+        console.log('CloudToLocalLLM: Timeout reached, hiding loading screen');
+        console.log('CloudToLocalLLM Diagnostics:', window.cloudToLocalLLMDiagnostics);
+
+        // Show diagnostic info instead of just hiding
+        loading.innerHTML = `
+          <div style="color: #fff; font-family: monospace; font-size: 14px; max-width: 800px; text-align: left;">
+            <h3 style="color: #ff6b6b;">CloudToLocalLLM Diagnostic Information</h3>
+            <p><strong>Status:</strong> Loading timeout reached (10 seconds)</p>
+            <p><strong>Flutter First Frame:</strong> ${window.cloudToLocalLLMDiagnostics.flutterFirstFrame ? 'Yes' : 'No'}</p>
+            <p><strong>Errors:</strong> ${window.cloudToLocalLLMDiagnostics.errors.length}</p>
+            ${window.cloudToLocalLLMDiagnostics.errors.length > 0 ?
+              '<div style="background: #2a2a2a; padding: 10px; margin: 10px 0; border-radius: 4px;"><pre>' +
+              JSON.stringify(window.cloudToLocalLLMDiagnostics.errors, null, 2) +
+              '</pre></div>' : ''}
+            <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
+            <p><strong>URL:</strong> ${window.location.href}</p>
+            <button onclick="window.location.reload()" style="background: #6e8efb; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Reload Page</button>
+          </div>
+        `;
       }
     }, 10000); // 10 second timeout
+
+    // Additional diagnostic logging
+    console.log('CloudToLocalLLM: User Agent:', navigator.userAgent);
+    console.log('CloudToLocalLLM: URL:', window.location.href);
+    console.log('CloudToLocalLLM: Service Worker Support:', 'serviceWorker' in navigator);
   </script>
 </body>
 </html>
