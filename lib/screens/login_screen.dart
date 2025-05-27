@@ -120,11 +120,24 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Header section matching homepage design
+          // Header section matching homepage design - with explicit gradient
           Container(
             decoration: const BoxDecoration(
-              gradient: CloudToLocalLLMTheme.headerGradient,
-              boxShadow: CloudToLocalLLMTheme.smallShadow,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF6e8efb),
+                  Color(0xFFa777e3)
+                ], // Explicit purple gradient
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: SafeArea(
               child: Padding(
@@ -160,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Title matching homepage
+                    // Title matching homepage - with explicit purple color test
                     const Text(
                       'CloudToLocalLLM',
                       textAlign: TextAlign.center,
@@ -169,11 +182,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
                         color: Colors.white,
-                        fontFamily: CloudToLocalLLMTheme.fontFamily,
+                        fontFamily: 'Inter',
                         shadows: [
                           Shadow(
                             blurRadius: 8,
-                            color: Color(0x446e8efb),
+                            color: Color(0x446e8efb), // Explicit purple shadow
                             offset: Offset(0, 2),
                           ),
                         ],
