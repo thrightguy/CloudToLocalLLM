@@ -36,356 +36,56 @@
   <title>CloudToLocalLLM Portal</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Initialize diagnostics object first -->
-  <script>
-    // Initialize diagnostics object immediately
-    window.cloudToLocalLLMDiagnostics = {
-      indexLoaded: true,
-      flutterLoaded: false,
-      flutterFirstFrame: false,
-      authInitialized: false,
-      errors: [],
-      flutterStages: {
-        scriptLoaded: false,
-        engineInitialized: false,
-        appStarted: false,
-        errors: []
-      }
-    };
-    console.log('CloudToLocalLLM: Diagnostics object initialized');
-  </script>
-
-  <!-- Theme styles -->
-  <link rel="stylesheet" href="styles.css">
-
   <script>
     // The value below is injected by flutter build, do not touch.
     const serviceWorkerVersion = {{flutter_service_worker_version}};
-
-    // Enhanced Flutter loading diagnostics
-    console.log('CloudToLocalLLM: Service Worker Version:', serviceWorkerVersion);
-
-    // Monitor Flutter loader and add engine initialization tracking
-    window.addEventListener('load', function() {
-      console.log('CloudToLocalLLM: Window loaded, checking Flutter loader');
-
-      // Check if Flutter loader is available
-      if (window._flutter && window._flutter.loader) {
-        console.log('CloudToLocalLLM: Flutter loader found - monitoring initialization');
-
-        // Override the loader to add our diagnostics
-        const originalLoad = window._flutter.loader.load;
-        window._flutter.loader.load = function(config) {
-          console.log('CloudToLocalLLM: Flutter loader.load() called with config:', config);
-
-          return originalLoad.call(this, config).then(function(engineInitializer) {
-            console.log('CloudToLocalLLM: Flutter engine initializer received');
-            window.cloudToLocalLLMDiagnostics.flutterStages.engineInitialized = true;
-
-            // Override initializeEngine to track it
-            const originalInitializeEngine = engineInitializer.initializeEngine;
-            engineInitializer.initializeEngine = function(config) {
-              console.log('CloudToLocalLLM: initializeEngine() called');
-
-              return originalInitializeEngine.call(this, config).then(function(appRunner) {
-                console.log('CloudToLocalLLM: Flutter engine initialized successfully');
-
-                // Override runApp to track it
-                const originalRunApp = appRunner.runApp;
-                appRunner.runApp = function() {
-                  console.log('CloudToLocalLLM: runApp() called');
-
-                  const result = originalRunApp.call(this);
-                  console.log('CloudToLocalLLM: Flutter app started successfully');
-                  window.cloudToLocalLLMDiagnostics.flutterStages.appStarted = true;
-
-                  return result;
-                };
-
-                return appRunner;
-              }).catch(function(error) {
-                console.error('CloudToLocalLLM: Engine initialization failed:', error);
-                window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
-                  stage: 'engine_init',
-                  error: error.toString(),
-                  timestamp: new Date().toISOString()
-                });
-                throw error;
-              });
-            };
-
-            return engineInitializer;
-          }).catch(function(error) {
-            console.error('CloudToLocalLLM: Flutter loader failed:', error);
-            window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
-              stage: 'loader_load',
-              error: error.toString(),
-              timestamp: new Date().toISOString()
-            });
-            throw error;
-          });
-        };
-      } else {
-        console.error('CloudToLocalLLM: Flutter loader not found!');
-        window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({
-          stage: 'loader_missing',
-          error: 'window._flutter.loader not available',
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
   </script>
   <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer
-    onload="console.log('CloudToLocalLLM: flutter.js loaded successfully'); window.cloudToLocalLLMDiagnostics.flutterStages.scriptLoaded = true;"
-    onerror="console.error('CloudToLocalLLM: flutter.js failed to load'); window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({stage: 'script_load', error: 'flutter.js failed to load', timestamp: new Date().toISOString()});"></script>
-
+  <script src="flutter.js" defer></script>
   <!-- This script bootstraps Flutter and starts the application -->
-  <script src="flutter_bootstrap.js" defer
-    onload="console.log('CloudToLocalLLM: flutter_bootstrap.js loaded successfully');"
-    onerror="console.error('CloudToLocalLLM: flutter_bootstrap.js failed to load'); window.cloudToLocalLLMDiagnostics.flutterStages.errors.push({stage: 'bootstrap_load', error: 'flutter_bootstrap.js failed to load', timestamp: new Date().toISOString()});"></script>
+  <script src="flutter_bootstrap.js" defer></script>
 
   <style>
-    /* Custom CSS for login overlay - Hidden when Flutter app loads */
-    #html-login-overlay {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 9999;
-      font-family: 'Arial', sans-serif;
-      display: none; /* Hide by default, Flutter app will handle login */
+    body {
+      background: #181a20; /* Or your preferred default background */
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-
-    #html-login-button {
-      background: linear-gradient(90deg, #6e8efb 0%, #a777e3 100%);
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    #html-login-button:hover {
-      background: linear-gradient(90deg, #5a7ae8 0%, #9566d6 100%);
-      box-shadow: 0 4px 16px rgba(167, 119, 227, 0.3);
-    }
-
-    #html-login-card {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: #23243a;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-      border: 1.5px solid rgba(110, 142, 251, 0.27);
-      z-index: 9999;
-      text-align: center;
-      max-width: 400px;
-      display: none;
-    }
-
-    #html-login-card h2 {
-      color: #a777e3;
-      margin-bottom: 20px;
-      font-weight: bold;
-    }
-
-    #html-login-card p {
-      color: #b0b0b0;
-      margin-bottom: 30px;
-    }
-
-    #html-login-card-button {
-      background: linear-gradient(90deg, #6e8efb 0%, #a777e3 100%);
-      color: white;
-      padding: 12px 30px;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-      display: inline-block;
-      margin-top: 10px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    #html-login-card-button:hover {
-      background: linear-gradient(90deg, #5a7ae8 0%, #9566d6 100%);
-      box-shadow: 0 4px 16px rgba(167, 119, 227, 0.3);
-    }
-
+    /* Default Flutter loading indicator (simple) */
     .loading-indicator {
       display: inline-block;
       width: 50px;
       height: 50px;
       border: 3px solid rgba(255,255,255,.3);
       border-radius: 50%;
-      border-top-color: #2196F3;
+      border-top-color: #2196F3; /* Default blue */
       animation: spin 1s ease-in-out infinite;
     }
-
     @keyframes spin {
       to { transform: rotate(360deg); }
-    }
-
-    body {
-      background: #181a20;
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      width: 100vw;
-      overflow: hidden;
-    }
-    #loading-container {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      background: #181a20;
-    }
-    #loading-logo {
-      width: 96px;
-      height: 96px;
-      margin-bottom: 24px;
-    }
-    .spinner {
-      border: 6px solid #222;
-      border-top: 6px solid #00bcd4;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 16px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #loading-text {
-      color: #fff;
-      font-size: 1.2rem;
-      font-family: sans-serif;
-      opacity: 0.8;
     }
   </style>
 </head>
 <body>
-  <!-- HTML Login Button that will be visible regardless of Flutter rendering -->
-  <div id="html-login-overlay">
-    <button id="html-login-button" onclick="navigateToLogin()">Login</button>
-  </div>
-
-  <!-- Login Card -->
-  <div id="html-login-card">
-    <h2>Login Required</h2>
-    <p>Please login to access your models and settings</p>
-    <button id="html-login-card-button" onclick="navigateToLogin()">Login / Create Account</button>
+  <!-- Default loading indicator -->
+  <div id="loading-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #181a20;">
+    <div class="loading-indicator"></div>
+    <p style="color: #fff; margin-top: 20px;">Loading CloudToLocalLLM...</p>
   </div>
 
   <script>
-    function navigateToLogin() {
-      window.location.href = '/login';
-    }
-
-    // Login card is hidden by default - Flutter app handles authentication UI
-    // setTimeout(function() {
-    //   document.getElementById('html-login-card').style.display = 'block';
-    // }, 1500);
-  </script>
-
-  <div id="loading-container">
-    <img id="loading-logo" src="favicon.png" alt="CloudToLocalLLM Logo" />
-    <div class="spinner"></div>
-    <div id="loading-text">Loading CloudToLocalLLM Portal...</div>
-  </div>
-
-  <script>
-    // Enhanced diagnostic logging for black screen debugging
-    console.log('CloudToLocalLLM: Index.html script loaded');
-
-    // Log all errors
-    window.addEventListener('error', function(e) {
-      console.error('CloudToLocalLLM Error:', e.error);
-      window.cloudToLocalLLMDiagnostics.errors.push({
-        type: 'error',
-        message: e.message,
-        filename: e.filename,
-        lineno: e.lineno,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // Log unhandled promise rejections
-    window.addEventListener('unhandledrejection', function(e) {
-      console.error('CloudToLocalLLM Unhandled Promise Rejection:', e.reason);
-      window.cloudToLocalLLMDiagnostics.errors.push({
-        type: 'unhandledrejection',
-        reason: e.reason,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // Hide loading screen when Flutter is ready
-    window.addEventListener('flutter-first-frame', function() {
-      console.log('CloudToLocalLLM: Flutter first frame rendered, hiding loading screen');
-      window.cloudToLocalLLMDiagnostics.flutterFirstFrame = true;
-      var loading = document.getElementById('loading-container');
-      if (loading) {
-        loading.style.display = 'none';
+    window.addEventListener('flutter-first-frame', function () {
+      var loadingContainer = document.getElementById('loading-container');
+      if (loadingContainer) {
+        loadingContainer.style.display = 'none';
       }
     });
-
-    // Enhanced fallback with diagnostic info
-    setTimeout(function() {
-      var loading = document.getElementById('loading-container');
-      if (loading && loading.style.display !== 'none') {
-        console.log('CloudToLocalLLM: Timeout reached, hiding loading screen');
-        console.log('CloudToLocalLLM Diagnostics:', window.cloudToLocalLLMDiagnostics);
-
-        // Show diagnostic info instead of just hiding
-        const flutterStages = window.cloudToLocalLLMDiagnostics.flutterStages || {};
-        loading.innerHTML = `
-          <div style="color: #fff; font-family: monospace; font-size: 14px; max-width: 800px; text-align: left;">
-            <h3 style="color: #ff6b6b;">CloudToLocalLLM Diagnostic Information</h3>
-            <p><strong>Status:</strong> Loading timeout reached (10 seconds)</p>
-            <p><strong>Flutter First Frame:</strong> ${window.cloudToLocalLLMDiagnostics.flutterFirstFrame ? 'Yes' : 'No'}</p>
-
-            <h4 style="color: #a777e3; margin-top: 20px;">Flutter Loading Stages:</h4>
-            <p><strong>Script Loaded:</strong> ${flutterStages.scriptLoaded ? 'Yes' : 'No'}</p>
-            <p><strong>Engine Initialized:</strong> ${flutterStages.engineInitialized ? 'Yes' : 'No'}</p>
-            <p><strong>App Started:</strong> ${flutterStages.appStarted ? 'Yes' : 'No'}</p>
-
-            <p><strong>General Errors:</strong> ${window.cloudToLocalLLMDiagnostics.errors.length}</p>
-            <p><strong>Flutter Errors:</strong> ${flutterStages.errors ? flutterStages.errors.length : 0}</p>
-
-            ${window.cloudToLocalLLMDiagnostics.errors.length > 0 ?
-              '<div style="background: #2a2a2a; padding: 10px; margin: 10px 0; border-radius: 4px;"><h5>General Errors:</h5><pre>' +
-              JSON.stringify(window.cloudToLocalLLMDiagnostics.errors, null, 2) +
-              '</pre></div>' : ''}
-
-            ${flutterStages.errors && flutterStages.errors.length > 0 ?
-              '<div style="background: #2a2a2a; padding: 10px; margin: 10px 0; border-radius: 4px;"><h5>Flutter Errors:</h5><pre>' +
-              JSON.stringify(flutterStages.errors, null, 2) +
-              '</pre></div>' : ''}
-
-            <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
-            <p><strong>URL:</strong> ${window.location.href}</p>
-            <button onclick="window.location.reload()" style="background: #6e8efb; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Reload Page</button>
-          </div>
-        `;
-      }
-    }, 10000); // 10 second timeout
-
-    // Additional diagnostic logging
-    console.log('CloudToLocalLLM: User Agent:', navigator.userAgent);
-    console.log('CloudToLocalLLM: URL:', window.location.href);
-    console.log('CloudToLocalLLM: Service Worker Support:', 'serviceWorker' in navigator);
   </script>
 </body>
 </html>
