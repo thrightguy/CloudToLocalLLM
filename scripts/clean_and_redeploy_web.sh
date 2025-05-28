@@ -12,8 +12,8 @@ flutter clean
 echo "[3/7] Getting Flutter dependencies..."
 flutter pub get
 
-echo "[4/7] Building Flutter web app (using CanvasKit renderer)..."
-flutter build web --web-renderer canvaskit
+echo "[4/7] Building Flutter web app..."
+flutter build web
 
 echo "[5/7] Rebuilding Docker webapp image (no cache)..."
 docker compose build --no-cache webapp
