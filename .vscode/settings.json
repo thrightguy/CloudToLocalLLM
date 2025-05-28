@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/home/rightguy/Dev/CloudToLocalLLM/linux"
+    "cmake.sourceDirectory": "/home/rightguy/Dev/CloudToLocalLLM/linux",
+    "bitoAI.codeCompletion.enableAutoCompletion": false
 }
