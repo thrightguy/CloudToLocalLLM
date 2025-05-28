@@ -348,21 +348,19 @@ class CircularLlmLogo extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: CloudToLocalLLMTheme.secondaryColor,
+        color: Theme.of(context).primaryColor,
         border: Border.all(
-          color: CloudToLocalLLMTheme.primaryColor,
+          color: Theme.of(context).primaryColor,
           width: 3,
         ),
-        boxShadow: CloudToLocalLLMTheme.smallShadow,
       ),
       child: Center(
         child: Text(
           'LLM',
           style: TextStyle(
-            fontSize: size * 0.35, // Adjust text size relative to logo size
+            fontSize: size * 0.35,
             fontWeight: FontWeight.bold,
             color: Colors.white,
-            fontFamily: CloudToLocalLLMTheme.fontFamily,
             shadows: const [
               Shadow(
                 blurRadius: 1.0,
@@ -552,7 +550,7 @@ class HomeScreen extends StatelessWidget {
                                 description:
                                     user?.email ?? 'Authenticated User',
                                 icon: Icons.person,
-                                iconColor: CloudToLocalLLMTheme.successColor,
+                                iconColor: Colors.green,
                                 width: 480,
                                 content: Column(
                                   children: [
@@ -612,7 +610,7 @@ class HomeScreen extends StatelessWidget {
                           description:
                               'Authentication is required to use this application.',
                           icon: Icons.login,
-                          iconColor: CloudToLocalLLMTheme.infoColor,
+                          iconColor: Colors.blue,
                           width: 480,
                           content: Column(
                             children: [
