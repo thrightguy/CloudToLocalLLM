@@ -2,13 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
-import 'package:cloudtolocalllm/screens/login_screen.dart';
-import 'package:cloudtolocalllm/screens/chat_screen.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
 import 'package:cloudtolocalllm/config/theme.dart';
-import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
-import 'package:cloudtolocalllm/components/themed_card.dart';
-import 'package:cloudtolocalllm/components/gradient_button.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -283,7 +278,7 @@ class CloudToLocalLLMApp extends StatelessWidget {
       title: 'CloudToLocalLLM Portal',
       theme: CloudToLocalLLMTheme.lightTheme,
       darkTheme: CloudToLocalLLMTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      themeMode: ThemeMode.system,
     );
   }
 }
@@ -337,44 +332,7 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
   }
 }
 
-class CircularLlmLogo extends StatelessWidget {
-  final double size;
-  const CircularLlmLogo({super.key, this.size = 120.0}); // Default size
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Theme.of(context).primaryColor,
-        border: Border.all(
-          color: Theme.of(context).primaryColor,
-          width: 3,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          'LLM',
-          style: TextStyle(
-            fontSize: size * 0.35,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: const [
-              Shadow(
-                blurRadius: 1.0,
-                color: Colors.black26,
-                offset: Offset(1.0, 1.0),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+// Basic HomeScreen
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -387,6 +345,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+// Basic LoginScreen
 class LoginScreen extends StatelessWidget {
   final AuthService authService;
   final bool isRegistrationMode;
@@ -401,6 +360,7 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
+// Basic ChatScreen
 class ChatScreen extends StatelessWidget {
   final AuthService authService;
   const ChatScreen({super.key, required this.authService});
