@@ -472,18 +472,18 @@ class HomeScreen extends StatelessWidget {
                     colors: [
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withValues(alpha: 0), // Transparent at edge
+                          .withOpacity(0), // Transparent at edge
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withValues(alpha: 0), // Transparent for a bit
+                          .withOpacity(0), // Transparent for a bit
                       Colors.white, // Opaque center for the image to show
                       Colors.white, // Opaque center
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withValues(alpha: 0), // Transparent for a bit
+                          .withOpacity(0), // Transparent for a bit
                       Theme.of(context)
                           .scaffoldBackgroundColor
-                          .withValues(alpha: 0), // Transparent at edge
+                          .withOpacity(0), // Transparent at edge
                     ],
                     stops: const [
                       0.0,

@@ -112,7 +112,7 @@ class CloudToLocalLLMTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
           side: BorderSide(
-            color: secondaryColor.withValues(alpha: 0.27),
+            color: secondaryColor.withOpacity(0.27),
             width: 1.5,
           ),
         ),

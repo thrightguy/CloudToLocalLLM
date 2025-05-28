@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/config/theme.dart';
+import 'package:cloudtolocalllm/components/gradient_button.dart';
+import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
+import 'package:cloudtolocalllm/main.dart' show CircularLlmLogo;
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -120,96 +123,11 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Header section matching homepage design - with explicit gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF6e8efb),
-                  Color(0xFFa777e3)
-                ], // Explicit purple gradient
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-                child: Column(
-                  children: [
-                    // Logo matching homepage
-                    Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color: CloudToLocalLLMTheme.secondaryColor,
-                        borderRadius: BorderRadius.circular(35),
-                        border: Border.all(
-                          color: CloudToLocalLLMTheme.primaryColor,
-                          width: 3,
-                        ),
-                        boxShadow: CloudToLocalLLMTheme.smallShadow,
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'LLM',
-                          style: TextStyle(
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: CloudToLocalLLMTheme.fontFamily,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Title matching homepage - with explicit purple color test
-                    const Text(
-                      'CloudToLocalLLM',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1,
-                        color: Colors.white,
-                        fontFamily: 'Inter',
-                        shadows: [
-                          Shadow(
-                            blurRadius: 8,
-                            color: Color(0x446e8efb), // Explicit purple shadow
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Subtitle matching homepage
-                    const Text(
-                      'Run powerful Large Language Models locally with cloud-based management',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFFe0d7ff),
-                        fontFamily: CloudToLocalLLMTheme.fontFamily,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // Header section using HeroHeader component
+          HeroHeader(
+            title: 'CloudToLocalLLM',
+            subtitle: 'Run powerful Large Language Models locally with cloud-based management',
+            logo: const CircularLlmLogo(size: 70),
           ),
 
           // Main content area
@@ -235,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                         border: Border.all(
                           color: CloudToLocalLLMTheme.secondaryColor
-                              .withValues(alpha: 0.27),
+                              .withOpacity(0.27),
                           width: 1.5,
                         ),
                       ),
@@ -332,46 +250,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             const SizedBox(height: 24),
 
-                            // Submit button with homepage styling
-                            Container(
+                            // Submit button using GradientButton component
+                            GradientButton(
+                              text: _isLogin ? 'Login' : 'Create Account',
+                              onPressed: _isLoading ? null : _submitForm,
+                              isLoading: _isLoading,
                               width: double.infinity,
                               height: 48,
-                              decoration: BoxDecoration(
-                                gradient: CloudToLocalLLMTheme.buttonGradient,
-                                borderRadius: BorderRadius.circular(
-                                    CloudToLocalLLMTheme.borderRadiusSmall),
-                                boxShadow: CloudToLocalLLMTheme.smallShadow,
-                              ),
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _submitForm,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        CloudToLocalLLMTheme.borderRadiusSmall),
-                                  ),
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Text(
-                                        _isLogin ? 'Login' : 'Create Account',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                          fontFamily:
-                                              CloudToLocalLLMTheme.fontFamily,
-                                        ),
-                                      ),
-                              ),
                             ),
 
                             const SizedBox(height: 16),
@@ -382,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Expanded(
                                   child: Divider(
                                     color: CloudToLocalLLMTheme.textColorLight
-                                        .withValues(alpha: 0.3),
+                                        .withOpacity(0.3),
                                   ),
                                 ),
                                 Padding(
@@ -402,7 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Expanded(
                                   child: Divider(
                                     color: CloudToLocalLLMTheme.textColorLight
-                                        .withValues(alpha: 0.3),
+                                        .withOpacity(0.3),
                                   ),
                                 ),
                               ],
@@ -410,40 +295,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                             const SizedBox(height: 16),
 
-                            // Google Sign-In button
-                            OutlinedButton.icon(
-                              onPressed:
-                                  _isGoogleLoading ? null : _signInWithGoogle,
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(
-                                  color: CloudToLocalLLMTheme.secondaryColor
-                                      .withValues(alpha: 0.5),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                      CloudToLocalLLMTheme.borderRadiusSmall),
-                                ),
-                              ),
-                              icon: _isGoogleLoading
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    )
-                                  : const Icon(
-                                      Icons.login,
-                                      color: CloudToLocalLLMTheme.textColor,
-                                    ),
-                              label: const Text(
-                                'Continue with Google',
-                                style: TextStyle(
-                                  color: CloudToLocalLLMTheme.textColor,
-                                  fontFamily: CloudToLocalLLMTheme.fontFamily,
-                                ),
-                              ),
+                            // Google Sign-In button using SecondaryButton component
+                            SecondaryButton(
+                              text: 'Continue with Google',
+                              onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                              isLoading: _isGoogleLoading,
+                              icon: Icons.login,
+                              width: double.infinity,
+                              height: 48,
                             ),
 
                             const SizedBox(height: 24),
@@ -478,61 +337,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class CircularLlmLogo extends StatelessWidget {
-  final double size;
-  const CircularLlmLogo({super.key, this.size = 120.0}); // Default size
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context)
-                .colorScheme
-                .primary
-                .withAlpha((255 * 0.8).round()),
-            Theme.of(context)
-                .colorScheme
-                .secondary
-                .withAlpha((255 * 0.6).round()),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((255 * 0.3).round()),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          'LLM',
-          style: TextStyle(
-            fontSize: size * 0.35, // Adjust text size relative to logo size
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: const [
-              Shadow(
-                blurRadius: 1.0,
-                color: Colors.black26,
-                offset: Offset(1.0, 1.0),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
