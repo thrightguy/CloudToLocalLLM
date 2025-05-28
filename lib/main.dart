@@ -381,269 +381,35 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: GradientAppBar(
-        title: 'CloudToLocalLLM',
-        subtitle: 'Run powerful Large Language Models locally',
-        showLogo: true,
-        actions: [
-          // Debug button - visible in all cases
-          IconButton(
-            icon: const Icon(Icons.bug_report, color: Colors.white),
-            onPressed: () {
-              GoRouter.of(context).go('/debug');
-            },
-          ),
-          // Authentication state-aware buttons
-          ValueListenableBuilder<bool>(
-            valueListenable: _authService.isAuthenticated,
-            builder: (context, isAuthenticated, _) {
-              if (isAuthenticated) {
-                // User is logged in
-                return Row(
-                  children: [
-                    // Chat button
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: GradientButton(
-                        text: 'Chat',
-                        icon: Icons.chat,
-                        onPressed: () {
-                          GoRouter.of(context).go('/chat');
-                        },
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        fontSize: 14,
-                      ),
-                    ),
-                    // Logout button
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: SecondaryButton(
-                        text: 'Logout',
-                        icon: Icons.logout,
-                        onPressed: () async {
-                          await _authService.logout();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Logged out successfully')),
-                            );
-                          }
-                        },
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                );
-              } else {
-                // User is not logged in
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: GradientButton(
-                    text: 'Login',
-                    onPressed: () {
-                      GoRouter.of(context).go('/login');
-                    },
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    fontSize: 14,
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        // Use Stack for layering background and foreground
-        children: [
-          // Background layer
-          Positioned.fill(
-            child: ShaderMask(
-                shaderCallback: (Rect bounds) {
-                  // Gradient that fades to transparent at the sides, showing scaffold background
-                  return LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Theme.of(context)
-                          .scaffoldBackgroundColor
-                          .withOpacity(0), // Transparent at edge
-                      Theme.of(context)
-                          .scaffoldBackgroundColor
-                          .withOpacity(0), // Transparent for a bit
-                      Colors.white, // Opaque center for the image to show
-                      Colors.white, // Opaque center
-                      Theme.of(context)
-                          .scaffoldBackgroundColor
-                          .withOpacity(0), // Transparent for a bit
-                      Theme.of(context)
-                          .scaffoldBackgroundColor
-                          .withOpacity(0), // Transparent at edge
-                    ],
-                    stops: const [
-                      0.0,
-                      0.15,
-                      0.3,
-                      0.7,
-                      0.85,
-                      1.0
-                    ], // Control fade points
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode
-                    .dstOut, // This blend mode will effectively "erase" based on gradient alpha
-                // Alternative for fading image: BlendMode.dstIn or use Opacity widgets with gradients
-                child: Opacity(
-                  // Added overall opacity to the background image to make it more subtle
-                  opacity:
-                      0.15, // Adjust as needed, 0.1 to 0.3 is usually good for subtle backgrounds
-                  child: Image.asset(
-                    'assets/images/CloudToLocalLLM_logo.jpg',
-                    fit: BoxFit.cover, // Cover the area, might be cropped
-                    alignment: Alignment.center,
-                  ),
-                )),
-          ),
+      appBar: AppBar(title: const Text('Home')),
+      body: const Center(child: Text('Hello, Flutter!')),
+    );
+  }
+}
 
-          // Content layer
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Center(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 20),
-                  const CircularLlmLogo(size: 150),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'CloudToLocalLLM',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Run advanced AI models locally, managed by a cloud interface.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
+class LoginScreen extends StatelessWidget {
+  final AuthService authService;
+  final bool isRegistrationMode;
+  const LoginScreen({super.key, required this.authService, this.isRegistrationMode = false});
 
-                  // Auth state-aware content
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _authService.isAuthenticated,
-                    builder: (context, isAuthenticated, _) {
-                      if (isAuthenticated) {
-                        // User is logged in
-                        return ValueListenableBuilder<UserProfile?>(
-                            valueListenable: _authService.currentUser,
-                            builder: (context, user, _) {
-                              return InfoCard(
-                                title:
-                                    'Welcome${user?.name != null ? ', ${user!.name}' : ''}!',
-                                description:
-                                    user?.email ?? 'Authenticated User',
-                                icon: Icons.person,
-                                iconColor: Colors.green,
-                                width: 480,
-                                content: Column(
-                                  children: [
-                                    // Start chatting button
-                                    GradientButton(
-                                      text: 'Start Chatting',
-                                      icon: Icons.chat,
-                                      onPressed: () {
-                                        GoRouter.of(context).go('/chat');
-                                      },
-                                      width: double.infinity,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    // User actions
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      alignment: WrapAlignment.center,
-                                      children: [
-                                        // Debug button
-                                        SecondaryButton(
-                                          text: 'Debug Status',
-                                          icon: Icons.bug_report,
-                                          onPressed: () {
-                                            GoRouter.of(context).go('/debug');
-                                          },
-                                          fontSize: 14,
-                                        ),
-                                        // Logout button
-                                        SecondaryButton(
-                                          text: 'Logout',
-                                          icon: Icons.logout,
-                                          onPressed: () async {
-                                            await _authService.logout();
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                    content: Text(
-                                                        'Logged out successfully')),
-                                              );
-                                            }
-                                          },
-                                          fontSize: 14,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            });
-                      } else {
-                        // User is not logged in
-                        return InfoCard(
-                          title:
-                              'Please login to access your models and settings',
-                          description:
-                              'Authentication is required to use this application.',
-                          icon: Icons.login,
-                          iconColor: Colors.blue,
-                          width: 480,
-                          content: Column(
-                            children: [
-                              // Login button
-                              GradientButton(
-                                text: 'Login / Create Account',
-                                onPressed: () {
-                                  GoRouter.of(context).go('/login');
-                                },
-                                width: double.infinity,
-                              ),
-                              const SizedBox(height: 16),
-                              // Debug button
-                              SecondaryButton(
-                                text: 'Debug Auth Status',
-                                icon: Icons.bug_report,
-                                onPressed: () {
-                                  GoRouter.of(context).go('/debug');
-                                },
-                                fontSize: 14,
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login')),
+      body: const Center(child: Text('Login Screen')),
+    );
+  }
+}
+
+class ChatScreen extends StatelessWidget {
+  final AuthService authService;
+  const ChatScreen({super.key, required this.authService});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chat')),
+      body: const Center(child: Text('Chat Screen')),
     );
   }
 }
