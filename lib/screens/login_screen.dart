@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
           // Main content area
           Expanded(
             child: Container(
-              color: CloudToLocalLLMTheme.backgroundMain,
+              color: Theme.of(context).scaffoldBackgroundColor,
               child: Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -141,19 +141,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     constraints: const BoxConstraints(maxWidth: 480),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: CloudToLocalLLMTheme.backgroundCard,
-                        borderRadius: BorderRadius.circular(
-                            CloudToLocalLLMTheme.borderRadius),
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: const [
                           BoxShadow(
-                            color: Color(0x66000000),
+                            color: Colors.black26,
                             blurRadius: 24,
                             offset: Offset(0, 4),
                           ),
                         ],
                         border: Border.all(
-                          color: CloudToLocalLLMTheme.secondaryColor
-                              .withOpacity(0.27),
+                          color: Colors.grey.withOpacity(0.27),
                           width: 1.5,
                         ),
                       ),
@@ -167,11 +165,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             Text(
                               _isLogin ? 'Login' : 'Create Account',
                               style: const TextStyle(
-                                color: CloudToLocalLLMTheme.primaryColor,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
-                                fontFamily: CloudToLocalLLMTheme.fontFamily,
                               ),
                             ),
 
@@ -183,9 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? 'Sign in to access your CloudToLocalLLM dashboard'
                                   : 'Create your account to get started with CloudToLocalLLM',
                               style: const TextStyle(
-                                color: CloudToLocalLLMTheme.textColorLight,
                                 fontSize: 16,
-                                fontFamily: CloudToLocalLLMTheme.fontFamily,
                               ),
                             ),
 
@@ -241,8 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     const EdgeInsets.symmetric(vertical: 8.0),
                                 child: Text(
                                   _errorMessage,
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
+                                  style: const TextStyle(
+                                    color: Colors.red,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -266,8 +260,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 Expanded(
                                   child: Divider(
-                                    color: CloudToLocalLLMTheme.textColorLight
-                                        .withOpacity(0.3),
+                                    color: Colors.grey,
+                                    thickness: 1,
                                   ),
                                 ),
                                 Padding(
@@ -276,18 +270,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Text(
                                     'OR',
                                     style: const TextStyle(
-                                      color:
-                                          CloudToLocalLLMTheme.textColorLight,
+                                      color: Colors.grey,
                                       fontWeight: FontWeight.bold,
-                                      fontFamily:
-                                          CloudToLocalLLMTheme.fontFamily,
                                     ),
                                   ),
                                 ),
                                 Expanded(
                                   child: Divider(
-                                    color: CloudToLocalLLMTheme.textColorLight
-                                        .withOpacity(0.3),
+                                    color: Colors.grey,
+                                    thickness: 1,
                                   ),
                                 ),
                               ],
@@ -322,8 +313,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? 'Need an account? Sign Up'
                                     : 'Already have an account? Login',
                                 style: const TextStyle(
-                                  color: CloudToLocalLLMTheme.primaryColor,
-                                  fontFamily: CloudToLocalLLMTheme.fontFamily,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),

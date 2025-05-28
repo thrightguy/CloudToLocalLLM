@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
 
-/// A card component that matches the homepage design system
+/// A card component with default Material styles
 class ThemedCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -30,30 +29,24 @@ class ThemedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
+    return Card(
       margin: margin ?? const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? CloudToLocalLLMTheme.backgroundCard,
-        borderRadius: BorderRadius.circular(CloudToLocalLLMTheme.borderRadius),
-        border: showBorder
-            ? Border.all(
-                color: borderColor ?? CloudToLocalLLMTheme.secondaryColor.withValues(alpha: 0.27),
-                width: 1.5,
-              )
-            : null,
-        boxShadow: showShadow ? CloudToLocalLLMTheme.cardShadow : null,
+      color: backgroundColor ?? Theme.of(context).cardColor,
+      elevation: showShadow ? 2 : 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: showBorder
+            ? BorderSide(color: borderColor ?? Colors.grey.withOpacity(0.27), width: 1.5)
+            : BorderSide.none,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(CloudToLocalLLMTheme.borderRadius),
-          child: Container(
-            padding: padding ?? const EdgeInsets.all(24),
-            child: child,
-          ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: width,
+          height: height,
+          padding: padding ?? const EdgeInsets.all(24),
+          child: child,
         ),
       ),
     );
@@ -98,13 +91,12 @@ class InfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header with icon and title
           Row(
             children: [
               if (icon != null) ...[
                 Icon(
                   icon,
-                  color: iconColor ?? CloudToLocalLLMTheme.primaryColor,
+                  color: iconColor ?? Theme.of(context).primaryColor,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -112,38 +104,22 @@ class InfoCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: CloudToLocalLLMTheme.primaryColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: CloudToLocalLLMTheme.fontFamily,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-
-          // Description
           if (description != null) ...[
             const SizedBox(height: 8),
             Text(
               description!,
-              style: const TextStyle(
-                color: CloudToLocalLLMTheme.textColorLight,
-                fontSize: 14,
-                height: 1.5,
-                fontFamily: CloudToLocalLLMTheme.fontFamily,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
-
-          // Custom content
           if (content != null) ...[
             const SizedBox(height: 16),
             content!,
           ],
-
-          // Actions
           if (actions != null && actions!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Wrap(
@@ -185,47 +161,30 @@ class FeatureCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Icon
           Container(
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: (iconColor ?? CloudToLocalLLMTheme.primaryColor).withValues(alpha: 0.1),
+              color: (iconColor ?? Theme.of(context).primaryColor).withOpacity(0.1),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
               icon,
-              color: iconColor ?? CloudToLocalLLMTheme.primaryColor,
+              color: iconColor ?? Theme.of(context).primaryColor,
               size: 30,
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // Title
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: CloudToLocalLLMTheme.primaryColor,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: CloudToLocalLLMTheme.fontFamily,
-            ),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 8),
-
-          // Description
           Text(
             description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: CloudToLocalLLMTheme.textColorLight,
-              fontSize: 14,
-              height: 1.5,
-              fontFamily: CloudToLocalLLMTheme.fontFamily,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
       ),
