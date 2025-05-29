@@ -5,24 +5,26 @@ CERT_DIR="/etc/letsencrypt/live/cloudtolocalllm.online"
 FALLBACK_CERT="/etc/nginx/ssl/selfsigned.crt"
 FALLBACK_KEY="/etc/nginx/ssl/selfsigned.key"
 NGINX_CONF="/etc/nginx/conf.d/default.conf"
+NGINX_CONF_TEMPLATE="/etc/nginx/conf.d/default.conf.template"
 
 # Create fallback SSL directory if needed
 mkdir -p /etc/nginx/ssl
 mkdir -p /var/www/certbot/.well-known/acme-challenge
 chmod -R 755 /var/www/certbot
 
+# Copy the original config as template if it doesn't exist
+if [ ! -f "$NGINX_CONF_TEMPLATE" ]; then
+  cp "$NGINX_CONF" "$NGINX_CONF_TEMPLATE"
+fi
+
 # Check if real Let's Encrypt certificates exist
 if [ -f "$CERT_DIR/fullchain.pem" ] && [ -f "$CERT_DIR/privkey.pem" ]; then
   echo "[entrypoint] Real Let's Encrypt certificates found, using them."
-  # Create a temporary copy of the config and modify it
-  cp "$NGINX_CONF" "$NGINX_CONF.tmp"
-  sed "s|ssl_certificate $FALLBACK_CERT;|ssl_certificate /etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem;|g" "$NGINX_CONF.tmp" > "$NGINX_CONF.new"
-  sed "s|ssl_certificate_key $FALLBACK_KEY;|ssl_certificate_key /etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem;|g" "$NGINX_CONF.new" > "$NGINX_CONF.final"
-  mv "$NGINX_CONF.final" "$NGINX_CONF"
-  rm -f "$NGINX_CONF.tmp" "$NGINX_CONF.new"
+  # Use real certificates - copy template as-is since it already has the correct paths
+  cp "$NGINX_CONF_TEMPLATE" "$NGINX_CONF"
 else
   echo "[entrypoint] Real certs not found, generating self-signed fallback certificates..."
-  # Generate self-signed certificates only if real ones don't exist
+  # Generate self-signed certificates
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$FALLBACK_KEY" \
     -out "$FALLBACK_CERT" \
@@ -30,12 +32,9 @@ else
     2>/dev/null || echo "[entrypoint] Self-signed cert generation failed, continuing..."
   
   echo "[entrypoint] Self-signed certificates created as fallback."
-  # Create a temporary copy of the config and modify it
-  cp "$NGINX_CONF" "$NGINX_CONF.tmp"
-  sed "s|ssl_certificate /etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem;|ssl_certificate $FALLBACK_CERT;|g" "$NGINX_CONF.tmp" > "$NGINX_CONF.new"
-  sed "s|ssl_certificate_key /etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem;|ssl_certificate_key $FALLBACK_KEY;|g" "$NGINX_CONF.new" > "$NGINX_CONF.final"
-  mv "$NGINX_CONF.final" "$NGINX_CONF"
-  rm -f "$NGINX_CONF.tmp" "$NGINX_CONF.new"
+  # Replace certificate paths in the template and save to config
+  sed "s|/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem|$FALLBACK_CERT|g" "$NGINX_CONF_TEMPLATE" | \
+  sed "s|/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem|$FALLBACK_KEY|g" > "$NGINX_CONF"
   echo "[entrypoint] WARNING: Using self-signed certificates. Please set up Let's Encrypt certificates for production use."
 fi
 
