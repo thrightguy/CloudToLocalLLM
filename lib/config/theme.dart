@@ -35,13 +35,6 @@ class CloudToLocalLLMTheme {
         background: bgMain,
       ),
       scaffoldBackgroundColor: bgMain,
-      cardTheme: CardTheme(
-        color: bgCard,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
       appBarTheme: AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: textColor,
