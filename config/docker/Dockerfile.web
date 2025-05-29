@@ -62,7 +62,13 @@ RUN mkdir -p /var/run/nginx && \
 RUN mkdir -p /etc/letsencrypt/live/cloudtolocalllm.online && \
     chown -R nginx:nginx /etc/letsencrypt
 
+# Add entrypoint script for self-signed cert fallback
+COPY --chown=root:root config/docker/entrypoint-with-ssl-fallback.sh /entrypoint-with-ssl-fallback.sh
+RUN chmod +x /entrypoint-with-ssl-fallback.sh
+
 EXPOSE 80
 # USER nginx is already specified in nginx:alpine base image and Nginx will run as nginx user by default.
 # Explicitly setting it here for clarity.
 CMD ["nginx", "-g", "daemon off;"]
+
+ENTRYPOINT ["/entrypoint-with-ssl-fallback.sh"]
