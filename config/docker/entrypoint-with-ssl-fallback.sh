@@ -21,6 +21,7 @@ fi
 if [ -f "$CERT_DIR/fullchain.pem" ] && [ -f "$CERT_DIR/privkey.pem" ]; then
   echo "[entrypoint] Real Let's Encrypt certificates found, using them."
   # Use real certificates - copy template as-is since it already has the correct paths
+  rm -f "$NGINX_CONF"
   cp "$NGINX_CONF_TEMPLATE" "$NGINX_CONF"
 else
   echo "[entrypoint] Real certs not found, generating self-signed fallback certificates..."
@@ -33,6 +34,7 @@ else
   
   echo "[entrypoint] Self-signed certificates created as fallback."
   # Replace certificate paths in the template and save to config
+  rm -f "$NGINX_CONF"
   sed "s|/etc/letsencrypt/live/cloudtolocalllm.online/fullchain.pem|$FALLBACK_CERT|g" "$NGINX_CONF_TEMPLATE" | \
   sed "s|/etc/letsencrypt/live/cloudtolocalllm.online/privkey.pem|$FALLBACK_KEY|g" > "$NGINX_CONF"
   echo "[entrypoint] WARNING: Using self-signed certificates. Please set up Let's Encrypt certificates for production use."
