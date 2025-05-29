@@ -56,7 +56,7 @@ Follow these steps to build a new version of the Windows app:
 ## Creating a GitHub Release
 
 1. **Go to the GitHub Repository**
-   - Open a web browser and navigate to https://github.com/thrightguy/CloudToLocalLLM
+   - Open a web browser and navigate to https://github.com/imrightguy/CloudToLocalLLM
 
 2. **Create a New Release**
    - Click on the "Releases" tab on the right side of the repository page

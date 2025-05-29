@@ -14,7 +14,7 @@ set -o pipefail
 # Configuration
 INSTALL_DIR="/opt/cloudtolocalllm"
 LOGFILE="$INSTALL_DIR/startup_docker.log"
-COMPOSE_FILE="config/docker/docker-compose.yml" # Use the main compose file for the full stack
+COMPOSE_FILE="docker-compose.yml" # Use the main compose file for the full stack (webapp, postfix-mail, certbot)
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -122,7 +122,7 @@ deploy_as_user() {
   fi
 
   # Step 2: Build/Rebuild all services from docker-compose.yml
-  log_status "[2/3] Building/Rebuilding all services with --no-cache from $COMPOSE_FILE (full stack: webapp, etc.)..."
+  log_status "[2/3] Building/Rebuilding all services with --no-cache from $COMPOSE_FILE (full stack: webapp, postfix-mail, certbot)..."
   cd "$INSTALL_DIR"
   docker compose -f "$COMPOSE_FILE" build --no-cache
   if [ $? -ne 0 ]; then
@@ -132,7 +132,7 @@ deploy_as_user() {
   log_success "All services built successfully."
 
   # Step 3: Start all services
-  log_status "[3/3] Starting all services from $COMPOSE_FILE (full stack: webapp, etc.)..."
+  log_status "[3/3] Starting all services from $COMPOSE_FILE (full stack: webapp, postfix-mail, certbot)..."
   docker compose -f "$COMPOSE_FILE" up -d
   if [ $? -ne 0 ]; then
     log_error "Docker compose up failed. Please check the output above and container logs."

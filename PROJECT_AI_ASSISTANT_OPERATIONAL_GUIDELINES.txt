@@ -1,7 +1,0 @@
-BrowserTools MCP (Browser Automation and Auditing on your local machine):
-1.  BrowserTools MCP is configured to run on localhost:3025.
-2.  Screenshots taken via BrowserTools MCP are saved to /home/rightguy/Dev/Tools/BrowserToolMCP/.
-3.  Provides browser automation, screenshot capture, and advanced audit tools (Accessibility, Performance, SEO, Best Practices, NextJS, Debugger Mode) directly from Cursor and other MCP-compatible IDEs.
-4.  To run audits, use the appropriate tool or command (e.g., runAccessibilityAudit, runPerformanceAudit, runSEOAudit, runBestPracticesAudit, runAuditMode, runNextJSAudit, runDebuggerMode).
-5.  All browser logs, screenshots, and audit results are handled locally and never sent to third-party services.
-6.  The BrowserTools Chrome extension must be installed and enabled for full functionality. 

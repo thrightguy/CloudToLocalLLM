@@ -135,7 +135,7 @@ sudo usermod -aG docker cloudllm
 newgrp docker
 
 # Clone repository
-git clone https://github.com/thrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
+git clone https://github.com/imrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
 cd /opt/cloudtolocalllm
 
 # Set permissions

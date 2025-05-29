@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 # Define the repository URL
-$repoUrl = "https://github.com/thrightguy/CloudToLocalLLM.git"
+$repoUrl = "https://github.com/imrightguy/CloudToLocalLLM.git"
 $remoteName = "origin"
 $branchName = "main"  # Default branch; GitHub typically uses 'main' for new repos
 

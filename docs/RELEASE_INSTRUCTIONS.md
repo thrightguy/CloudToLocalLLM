@@ -10,7 +10,7 @@ This document provides instructions on how to create a GitHub release and make t
 ## Creating a GitHub Release
 
 1. **Go to the GitHub Repository**
-   - Open a web browser and navigate to https://github.com/thrightguy/CloudToLocalLLM
+   - Open a web browser and navigate to https://github.com/imrightguy/CloudToLocalLLM
 
 2. **Create a New Release**
    - Click on the "Releases" tab on the right side of the repository page
@@ -39,7 +39,7 @@ The README.md file already contains instructions for downloading the app from th
 
 ```markdown
 1. **Download the Application**
-   - Download the latest release from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
+   - Download the latest release from the [Releases](https://github.com/imrightguy/CloudToLocalLLM/releases) page.
    - Either run the installer or extract the ZIP file to a location of your choice.
 ```
 

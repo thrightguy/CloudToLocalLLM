@@ -28,7 +28,7 @@ mkdir -p /opt/cloudtolocalllm/portal
 cd /opt/cloudtolocalllm/portal
 
 # Clone GitHub repository
-git clone https://github.com/thrightguy/CloudToLocalLLM.git .
+git clone https://github.com/imrightguy/CloudToLocalLLM.git .
 
 # Make scripts executable
 chmod +x *.sh
