@@ -54,6 +54,46 @@ check_webapp_running() {
     fi
 }
 
+# Function to test ACME challenge accessibility for all domains
+precheck_acme_challenge() {
+    local testfile="/opt/cloudtolocalllm/certbot/www/.well-known/acme-challenge/testfile"
+    local teststr="test-$(date +%s)"
+    
+    # Create directory if it doesn't exist
+    mkdir -p "/opt/cloudtolocalllm/certbot/www/.well-known/acme-challenge"
+    
+    echo "$teststr" > "$testfile"
+    chmod 644 "$testfile"
+    
+    local failed=0
+    for d in cloudtolocalllm.online www.cloudtolocalllm.online app.cloudtolocalllm.online mail.cloudtolocalllm.online; do
+        echo -n "[Precheck] Testing $d: "
+        local result=$(curl -s -m 5 "http://$d/.well-known/acme-challenge/testfile")
+        if [ "$result" = "$teststr" ]; then
+            echo "OK"
+        else
+            echo "FAILED (got: $result)"
+            echo "[INFO] This is expected if DNS is not yet pointing to this server."
+            echo "[INFO] Make sure your domain's DNS records point to this server's IP address."
+            failed=1
+        fi
+    done
+    rm -f "$testfile"
+    
+    if [ $failed -ne 0 ]; then
+        echo "[WARNING] ACME challenge precheck failed for one or more domains."
+        echo "[WARNING] This could be due to DNS not being properly configured yet."
+        echo "[WARNING] You can continue, but Let's Encrypt certificate acquisition may fail."
+        echo "[INFO] Would you like to continue anyway? (y/n)"
+        read -r response
+        if [[ "$response" != "y" && "$response" != "Y" ]]; then
+            echo "[INFO] Aborting. Please fix DNS configuration and try again."
+            exit 1
+        fi
+        echo "[INFO] Continuing with certificate acquisition attempt..."
+    fi
+}
+
 # Function to obtain Let's Encrypt certificate
 obtain_certificate() {
     echo_color "$BLUE" "Obtaining Let's Encrypt certificate for $DOMAIN..."
@@ -61,42 +101,73 @@ obtain_certificate() {
     # Check if containers are running
     if ! docker compose ps | grep -q "cloudtolocalllm-webapp.*Up"; then
         echo_color "$RED" "Webapp container is not running. Cannot obtain certificates."
-        return 1
+        echo_color "$YELLOW" "Starting webapp container..."
+        docker compose up -d webapp
+        sleep 10
     fi
 
     # Ensure webroot directory exists
     echo_color "$BLUE" "Creating webroot directory..."
-    docker compose exec webapp mkdir -p "$WEBROOT_PATH" || {
-        echo_color "$RED" "Failed to create webroot directory"
-        return 1
-    }
+    mkdir -p "/opt/cloudtolocalllm/certbot/www/.well-known/acme-challenge"
+    chmod -R 755 "/opt/cloudtolocalllm/certbot/www"
 
     echo_color "$BLUE" "Attempting initial certificate acquisition..."
+    echo_color "$YELLOW" "This may take a few minutes..."
 
     # Run certbot to obtain certificate with timeout
+    echo_color "$BLUE" "Running certbot..."
+    
+    # First try with staging to test configuration
+    echo_color "$YELLOW" "Testing with Let's Encrypt staging environment first..."
     timeout 300 docker compose run --rm certbot certonly \
         --webroot \
         --webroot-path="$WEBROOT_PATH" \
         --email "$EMAIL" \
         --agree-tos \
         --no-eff-email \
-        --non-interactive \
-        --keep-until-expiring \
+        --staging \
+        --force-renewal \
         -d "$DOMAIN" \
         -d "app.$DOMAIN" \
         -d "mail.$DOMAIN" 2>&1
-
-    local cert_result=$?
-
-    if [ $cert_result -eq 0 ]; then
-        echo_color "$GREEN" "Certificate obtained successfully!"
-        return 0
-    elif [ $cert_result -eq 124 ]; then
-        echo_color "$RED" "Certificate acquisition timed out after 5 minutes"
+    
+    local staging_result=$?
+    
+    if [ $staging_result -eq 0 ]; then
+        echo_color "$GREEN" "Staging certificate test successful!"
+        echo_color "$BLUE" "Now obtaining production certificate..."
+        
+        # Now try with production
+        timeout 300 docker compose run --rm certbot certonly \
+            --webroot \
+            --webroot-path="$WEBROOT_PATH" \
+            --email "$EMAIL" \
+            --agree-tos \
+            --no-eff-email \
+            --force-renewal \
+            -d "$DOMAIN" \
+            -d "app.$DOMAIN" \
+            -d "mail.$DOMAIN" 2>&1
+        
+        local cert_result=$?
+        
+        if [ $cert_result -eq 0 ]; then
+            echo_color "$GREEN" "Production certificate obtained successfully!"
+            return 0
+        elif [ $cert_result -eq 124 ]; then
+            echo_color "$RED" "Production certificate acquisition timed out after 5 minutes"
+            return 1
+        else
+            echo_color "$RED" "Production certificate acquisition failed with code $cert_result"
+            return 1
+        fi
+    elif [ $staging_result -eq 124 ]; then
+        echo_color "$RED" "Staging certificate test timed out after 5 minutes"
         return 1
     else
-        echo_color "$YELLOW" "Initial certonly command failed or no certs due for renewal."
-        echo_color "$BLUE" "Initial cert attempt/check done. Starting renewal loop."
+        echo_color "$RED" "Staging certificate test failed with code $staging_result"
+        echo_color "$YELLOW" "This could be due to DNS not being properly configured yet."
+        echo_color "$YELLOW" "Make sure your domain's DNS records point to this server's IP address."
         return 1
     fi
 }
@@ -164,6 +235,8 @@ main() {
 
     check_root
     check_docker
+
+    precheck_acme_challenge
 
     case "${1:-setup}" in
         "setup")
