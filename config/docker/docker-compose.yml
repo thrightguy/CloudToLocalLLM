@@ -38,6 +38,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ../../ssl:/etc/nginx/ssl:ro
+      - ../../certbot/live/cloudtolocalllm.online:/etc/letsencrypt/live/cloudtolocalllm.online:ro
+      - ../../certbot/archive:/etc/letsencrypt/archive:ro
       - ../../.env:/app/.env:ro
       - ../../static_portal_files:/usr/share/nginx/html/portal_files:ro
     networks:
