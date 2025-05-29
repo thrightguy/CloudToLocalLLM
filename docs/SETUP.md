@@ -76,7 +76,7 @@ You have two options for connecting to LLMs:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-username/CloudToLocalLLM.git
+   git clone https://github.com/imrightguy/CloudToLocalLLM.git
    cd CloudToLocalLLM
    ```
 

@@ -94,7 +94,7 @@ cat > /tmp/index.html << 'EOF'
           <a href="/login.html" class="button is-primary is-large">
             <strong>Login</strong>
           </a>
-          <a href="https://github.com/thrightguy/CloudToLocalLLM" class="button is-light is-large">
+          <a href="https://github.com/imrightguy/CloudToLocalLLM" class="button is-light is-large">
             GitHub
           </a>
         </div>

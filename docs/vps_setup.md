@@ -30,7 +30,7 @@ There are two approaches to setting up the CloudToLocalLLM stack:
 1. Clone the repository:
    ```bash
    cd /opt
-   git clone https://github.com/thrightguy/CloudToLocalLLM.git cloudtolocalllm
+   git clone https://github.com/imrightguy/CloudToLocalLLM.git cloudtolocalllm
    cd cloudtolocalllm
    ```
 
@@ -44,7 +44,7 @@ There are two approaches to setting up the CloudToLocalLLM stack:
 1. Clone the repository:
    ```bash
    cd /opt
-   git clone https://github.com/thrightguy/CloudToLocalLLM.git cloudtolocalllm
+   git clone https://github.com/imrightguy/CloudToLocalLLM.git cloudtolocalllm
    cd cloudtolocalllm
    ```
 

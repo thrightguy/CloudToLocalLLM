@@ -38,7 +38,7 @@ The installer includes the following features:
 ### Installation Steps
 
 1. **Download the Installer**:
-   - Download the latest installer from the [Releases](https://github.com/thrightguy/CloudToLocalLLM/releases) page.
+   - Download the latest installer from the [Releases](https://github.com/imrightguy/CloudToLocalLLM/releases) page.
 
 2. **Run the Installer**:
    - Double-click the installer file (`CloudToLocalLLM-Windows-X.X.X-Setup.exe`).
@@ -109,7 +109,7 @@ After installation, the following components will be set up:
 
 If you encounter issues not covered in this guide, please:
 
-1. Check the [GitHub Issues](https://github.com/thrightguy/CloudToLocalLLM/issues) for similar problems and solutions.
+1. Check the [GitHub Issues](https://github.com/imrightguy/CloudToLocalLLM/issues) for similar problems and solutions.
 2. Create a new issue with detailed information about your problem.
 
 ## Future Enhancements

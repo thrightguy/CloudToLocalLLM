@@ -33,7 +33,7 @@ These steps should be performed as the `root` user or a user with `sudo` privile
 It's highly recommended to run the application under a dedicated non-root user.
 - The `scripts/setup_cloudllm_user.sh` script can automate this. Download and run it:
   ```bash
-  curl -o setup_cloudllm_user.sh https://raw.githubusercontent.com/thrightguy/CloudToLocalLLM/main/scripts/setup_cloudllm_user.sh
+  curl -o setup_cloudllm_user.sh https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/main/scripts/setup_cloudllm_user.sh
   chmod +x setup_cloudllm_user.sh
   ./setup_cloudllm_user.sh cloudllm your_public_ssh_key_string
   ```
@@ -50,7 +50,7 @@ It's highly recommended to run the application under a dedicated non-root user.
 
 As the `cloudllm` user, clone the project repository:
 ```bash
-git clone https://github.com/thrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
+git clone https://github.com/imrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
 cd /opt/cloudtolocalllm
 ```
 The rest of the setup will assume you are in the `/opt/cloudtolocalllm` directory.
