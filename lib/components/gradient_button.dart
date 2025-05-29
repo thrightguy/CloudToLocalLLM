@@ -1,122 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:cloudtolocalllm/config/theme.dart';
 
-/// A button with default Material styles
+/// A custom button with gradient background matching the website theme
 class GradientButton extends StatelessWidget {
   final String text;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final EdgeInsetsGeometry? padding;
-  final double? fontSize;
-  final FontWeight? fontWeight;
-  final bool isLoading;
+  final VoidCallback onPressed;
   final double? width;
-  final double? height;
-
+  final double height;
+  final EdgeInsetsGeometry padding;
+  
   const GradientButton({
     super.key,
     required this.text,
-    this.onPressed,
-    this.icon,
-    this.padding,
-    this.fontSize,
-    this.fontWeight,
-    this.isLoading = false,
+    required this.onPressed,
     this.width,
-    this.height,
+    this.height = 48.0,
+    this.padding = const EdgeInsets.symmetric(horizontal: 24.0),
   });
-
+  
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
       width: width,
-      height: height ?? 48,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          padding: padding,
-          textStyle: TextStyle(
-            fontSize: fontSize,
-            fontWeight: fontWeight,
+      height: height,
+      decoration: BoxDecoration(
+        gradient: CloudToLocalLLMTheme.buttonGradient,
+        borderRadius: BorderRadius.circular(4.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : icon != null
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon),
-                      const SizedBox(width: 8),
-                      Text(text),
-                    ],
-                  )
-                : Text(text),
+        ],
       ),
-    );
-  }
-}
-
-/// A secondary button with default Material OutlinedButton style
-class SecondaryButton extends StatelessWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final EdgeInsetsGeometry? padding;
-  final double? fontSize;
-  final FontWeight? fontWeight;
-  final bool isLoading;
-  final double? width;
-  final double? height;
-
-  const SecondaryButton({
-    super.key,
-    required this.text,
-    this.onPressed,
-    this.icon,
-    this.padding,
-    this.fontSize,
-    this.fontWeight,
-    this.isLoading = false,
-    this.width,
-    this.height,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height ?? 48,
-      child: OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
           padding: padding,
-          textStyle: TextStyle(
-            fontSize: fontSize,
-            fontWeight: fontWeight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4.0),
           ),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : icon != null
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon),
-                      const SizedBox(width: 8),
-                      Text(text),
-                    ],
-                  )
-                : Text(text),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
       ),
     );
   }

@@ -47,43 +47,67 @@
 
   <style>
     body {
-      background: #181a20; /* Or your preferred default background */
+      background: #181a20;
       margin: 0;
       padding: 0;
       height: 100vh;
       width: 100vw;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     }
-    /* Default Flutter loading indicator (simple) */
-    .loading-indicator {
-      display: inline-block;
-      width: 50px;
-      height: 50px;
-      border: 3px solid rgba(255,255,255,.3);
+    
+    /* Loading indicator styling */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      flex-direction: column;
+      background: #181a20;
+      color: #f1f1f1;
+    }
+    
+    .loading-text {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #a777e3;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(167, 119, 227, 0.3);
       border-radius: 50%;
-      border-top-color: #2196F3; /* Default blue */
+      border-top-color: #a777e3;
       animation: spin 1s ease-in-out infinite;
     }
+    
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <!-- Default loading indicator -->
-  <div id="loading-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #181a20;">
-    <div class="loading-indicator"></div>
-    <p style="color: #fff; margin-top: 20px;">Loading CloudToLocalLLM...</p>
+  <!-- Loading indicator that will be replaced by Flutter -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading CloudToLocalLLM...</div>
   </div>
-
+  
   <script>
-    window.addEventListener('flutter-first-frame', function () {
-      var loadingContainer = document.getElementById('loading-container');
-      if (loadingContainer) {
-        loadingContainer.style.display = 'none';
+    // Hide loading indicator once Flutter app is initialized
+    window.addEventListener('flutter-first-frame', function() {
+      const loadingIndicator = document.getElementById('loading');
+      if (loadingIndicator) {
+        loadingIndicator.style.opacity = '0';
+        loadingIndicator.style.transition = 'opacity 0.4s ease-out';
+        setTimeout(function() {
+          loadingIndicator.style.display = 'none';
+        }, 400);
       }
     });
   </script>
