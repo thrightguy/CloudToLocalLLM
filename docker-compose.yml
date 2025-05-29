@@ -19,6 +19,7 @@ services:
       - ./config/nginx/nginx-nonroot.conf:/etc/nginx/nginx.conf
       - ./config/nginx/nginx-webapp-internal.conf:/etc/nginx/conf.d/default.conf
       - ./static_homepage:/usr/share/nginx/landing
+      - ./config/docker/entrypoint-with-ssl-fallback.sh:/entrypoint.sh:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]

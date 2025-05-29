@@ -3,8 +3,8 @@
 
 FROM nginx:alpine
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+# Install curl for healthcheck and openssl for self-signed certificates
+RUN apk add --no-cache curl openssl
 
 # Create nginx user with specific UID/GID for security
 RUN adduser -D -H -u 101 -s /sbin/nologin nginx || true
@@ -17,10 +17,15 @@ RUN mkdir -p \
     /var/cache/nginx/uwsgi_temp \
     /var/cache/nginx/scgi_temp \
     /tmp/nginx \
+    /etc/nginx/ssl \
     /etc/letsencrypt/live/cloudtolocalllm.online && \
-    chown -R nginx:nginx /var/cache/nginx /tmp/nginx /etc/letsencrypt && \
+    chown -R nginx:nginx /var/cache/nginx /tmp/nginx /etc/letsencrypt /etc/nginx/ssl && \
     chmod -R 700 /var/cache/nginx && \
     chmod -R 755 /tmp/nginx
+
+# Copy entrypoint script
+COPY config/docker/entrypoint-with-ssl-fallback.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Expose ports
 EXPOSE 80 443
@@ -29,5 +34,5 @@ EXPOSE 80 443
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:80/ || exit 1
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Use entrypoint script to handle SSL certificates
+ENTRYPOINT ["/entrypoint.sh"]
