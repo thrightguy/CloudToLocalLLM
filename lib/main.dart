@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
+import 'package:cloudtolocalllm/config/theme.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -275,25 +276,8 @@ class CloudToLocalLLMApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
-          brightness: Brightness.dark,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-        ),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
     );
