@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
-import 'package:go_router/go_router.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
-import 'package:cloudtolocalllm/components/gradient_button.dart';
-import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
-import 'package:cloudtolocalllm/main.dart' show CircularLlmLogo;
 
 class LoginScreen extends StatelessWidget {
   final AuthService authService;

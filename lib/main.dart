@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -276,12 +275,15 @@ class CloudToLocalLLMApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
-      theme: CloudToLocalLLMTheme.lightTheme,
-      darkTheme: CloudToLocalLLMTheme.darkTheme,
+      theme: ThemeData(
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        useMaterial3: true,
+      ),
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      // Force theme refresh by using a unique key
-      key: UniqueKey(),
     );
   }
 }
@@ -344,11 +346,6 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('CloudToLocalLLM'),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: CloudToLocalLLMTheme.headerGradient,
-          ),
-        ),
       ),
       body: Center(
         child: Padding(
@@ -360,7 +357,10 @@ class HomeScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
@@ -370,10 +370,13 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       Text(
                         'CloudToLocalLLM',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -397,18 +400,14 @@ class HomeScreen extends StatelessWidget {
 class LoginScreen extends StatelessWidget {
   final AuthService authService;
   final bool isRegistrationMode;
-  const LoginScreen({super.key, required this.authService, this.isRegistrationMode = false});
+  const LoginScreen(
+      {super.key, required this.authService, this.isRegistrationMode = false});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Login'),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: CloudToLocalLLMTheme.headerGradient,
-          ),
-        ),
       ),
       body: Center(
         child: Padding(
@@ -417,7 +416,10 @@ class LoginScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -429,9 +431,9 @@ class LoginScreen extends StatelessWidget {
                   Text(
                     'Welcome to CloudToLocalLLM',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
@@ -447,7 +449,8 @@ class LoginScreen extends StatelessWidget {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -474,11 +477,6 @@ class ChatScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: CloudToLocalLLMTheme.headerGradient,
-          ),
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -499,7 +497,10 @@ class ChatScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
@@ -511,9 +512,9 @@ class ChatScreen extends StatelessWidget {
                   Text(
                     'Chat Interface',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 16),
                   const Text('Chat functionality coming soon!'),
