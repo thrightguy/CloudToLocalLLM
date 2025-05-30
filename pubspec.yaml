@@ -23,7 +23,7 @@ dependencies:
   path: ^1.8.3
   process_run: ^1.2.4
   tray_manager: ^0.5.0
-  window_manager: ^0.4.3
+  window_manager: ^0.5.0
   win32: ^5.2.0
   logging: ^1.2.0 # Used by admin_control_daemon Dart server
   crypto: ^3.0.3
@@ -32,19 +32,11 @@ dependencies:
   flutter_secure_storage: ^10.0.0-beta.4
   args: ^2.4.2
   go_router: ^15.1.2
-  flutter_platform_alert: ^0.7.0
+  flutter_platform_alert: ^0.8.0
   flutter_acrylic: ^1.1.4
   web: ^1.1.1
   # Removed Firebase dependencies in favor of Auth0
   # Removed MCP toolkit dependency - unnecessary complexity
-
-dependency_overrides:
-  # Force update constrained transitive dependencies to latest versions
-  crypto_keys: ^0.3.0+2
-  material_color_utilities: ^0.12.0
-  meta: ^1.17.0
-  pointycastle: ^4.0.0
-  vector_math: ^2.2.0
 
 flutter:
   uses-material-design: true
