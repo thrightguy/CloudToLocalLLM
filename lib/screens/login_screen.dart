@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/config/theme.dart';
 import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
@@ -128,8 +129,23 @@ class LoginScreen extends StatelessWidget {
                           boxShadow: const [AppTheme.boxShadowSmall],
                         ),
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: Implement Auth0 login
+                          onPressed: () async {
+                            try {
+                              await authService.login();
+                              if (context.mounted) {
+                                // Navigate to home after successful login
+                                GoRouter.of(context).go('/');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Login error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,

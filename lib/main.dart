@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
 import 'package:cloudtolocalllm/config/theme.dart';
+import 'package:cloudtolocalllm/screens/home_screen.dart';
+import 'package:cloudtolocalllm/screens/login_screen.dart';
+import 'package:cloudtolocalllm/screens/chat_screen.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
-import 'dart:developer' as developer;
 import 'dart:async';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:web/web.dart' as web;
 
 // Global instance of AuthService
@@ -24,59 +25,22 @@ Future<void> main() async {
     () async {
       // Ensure Flutter is initialized
       WidgetsFlutterBinding.ensureInitialized();
-      developer.log('Flutter binding initialized', name: 'main');
-
-      // Platform-specific logging
-      if (kIsWeb) {
-        developer.log('Running on Web platform', name: 'platform');
-      } else {
-        switch (defaultTargetPlatform) {
-          case TargetPlatform.android:
-            developer.log('Running on Android platform', name: 'platform');
-            break;
-          case TargetPlatform.iOS:
-            developer.log('Running on iOS platform', name: 'platform');
-            break;
-          case TargetPlatform.linux:
-            developer.log('Running on Linux platform', name: 'platform');
-            break;
-          case TargetPlatform.macOS:
-            developer.log('Running on macOS platform', name: 'platform');
-            break;
-          case TargetPlatform.windows:
-            developer.log('Running on Windows platform', name: 'platform');
-            break;
-          default:
-            developer.log('Running on unknown platform', name: 'platform');
-        }
-      }
 
       // Initialize AuthService
       await _initializeAuthService();
-      developer.log('About to run app', name: 'main');
       runApp(const CloudToLocalLLMApp());
-      developer.log('App started', name: 'main');
     },
     (error, stack) {
-      // Handle zone errors with standard logging
-      developer.log('Zone error: $error',
-          name: 'zone_error', error: error, stackTrace: stack);
+      // Handle zone errors gracefully in production
+      // In production, you might want to send errors to a crash reporting service
     },
   );
 }
 
 Future<void> _initializeAuthService() async {
   try {
-    developer.log('Initializing AuthService...', name: 'auth_service');
-    developer.log('Auth0 Domain: ${Auth0Options.domain}', name: 'auth_service');
-    developer.log('Auth0 Client ID: ${Auth0Options.clientId}',
-        name: 'auth_service');
-
     await _authService.initialize();
-    developer.log('AuthService initialized successfully', name: 'auth_service');
-  } catch (e, stackTrace) {
-    developer.log('AuthService initialization failed: $e',
-        name: 'auth_service', error: e, stackTrace: stackTrace);
+  } catch (e) {
     // Don't rethrow - allow app to continue even if auth fails
   }
 }
@@ -88,7 +52,7 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
-        return const HomeScreen();
+        return HomeScreen(authService: _authService);
       },
     ),
     GoRoute(
@@ -118,12 +82,6 @@ final GoRouter _router = GoRouter(
       path: '/oauthredirect',
       builder: (BuildContext context, GoRouterState state) {
         return OAuthRedirectScreen(responseUri: state.uri);
-      },
-    ),
-    GoRoute(
-      path: '/debug',
-      builder: (BuildContext context, GoRouterState state) {
-        return const DebugScreen();
       },
     ),
   ],
@@ -175,82 +133,6 @@ class _CallbackScreenState extends State<CallbackScreen> {
   }
 }
 
-// Debug screen to show Auth0 status
-class DebugScreen extends StatelessWidget {
-  const DebugScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Debug Info'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Auth0 Authentication State',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    ValueListenableBuilder<bool>(
-                        valueListenable: _authService.isAuthenticated,
-                        builder: (context, isAuthenticated, _) {
-                          return Text(
-                              'Logged in: ${isAuthenticated ? 'YES' : 'NO'}');
-                        }),
-                    ValueListenableBuilder<UserProfile?>(
-                        valueListenable: _authService.currentUser,
-                        builder: (context, user, _) {
-                          if (user == null) {
-                            return const Text('No user logged in');
-                          }
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('User ID: ${user.sub}'),
-                              Text('Email: ${user.email}'),
-                              Text('Name: ${user.name}'),
-                            ],
-                          );
-                        }),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final token = await _authService.getAccessToken();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Token: ${token ?? 'None'}')),
-                        );
-                      },
-                      child: const Text('Show Token'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                GoRouter.of(context).go('/');
-              },
-              child: const Text('Back to Home'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // Main app wrapper without Firebase dependency
 class CloudToLocalLLMApp extends StatelessWidget {
   const CloudToLocalLLMApp({super.key});
@@ -259,16 +141,12 @@ class CloudToLocalLLMApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Trigger flutter-first-frame event after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      developer.log('First frame callback triggered', name: 'flutter_frame');
       if (kIsWeb) {
         // Dispatch flutter-first-frame event for web
         try {
           web.window.dispatchEvent(web.CustomEvent('flutter-first-frame'));
-          developer.log('flutter-first-frame event dispatched successfully',
-              name: 'flutter_frame');
-        } catch (e, stackTrace) {
-          developer.log('Error dispatching flutter-first-frame event: $e',
-              name: 'flutter_frame', error: e, stackTrace: stackTrace);
+        } catch (e) {
+          // Silently handle errors in production
         }
       }
     });
@@ -327,157 +205,6 @@ class _OAuthRedirectScreenState extends State<OAuthRedirectScreen> {
             SizedBox(height: 20),
             Text('Processing login...'),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// Basic HomeScreen
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('CloudToLocalLLM'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'CloudToLocalLLM',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Run powerful Large Language Models locally with cloud-based management',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Basic LoginScreen
-class LoginScreen extends StatelessWidget {
-  final AuthService authService;
-  final bool isRegistrationMode;
-  const LoginScreen(
-      {super.key, required this.authService, this.isRegistrationMode = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Welcome to CloudToLocalLLM',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await authService.login();
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Login error: $e')),
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('Login'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Basic ChatScreen
-class ChatScreen extends StatelessWidget {
-  final AuthService authService;
-  const ChatScreen({super.key, required this.authService});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await authService.logout();
-              if (context.mounted) {
-                GoRouter.of(context).go('/login');
-              }
-            },
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Chat Interface',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Chat functionality coming soon!'),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );
