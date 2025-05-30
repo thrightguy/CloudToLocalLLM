@@ -279,7 +279,7 @@ class CloudToLocalLLMApp extends StatelessWidget {
       title: 'CloudToLocalLLM Portal',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark, // Force dark theme to match homepage design
       debugShowCheckedModeBanner: false,
     );
   }
