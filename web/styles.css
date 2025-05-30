@@ -1,50 +1,9 @@
-/* CloudToLocalLLM Web App Styles
-   Based on unified design system for consistent branding across all platforms
-*/
+/* Basic Flutter web styles */
 
-:root {
-  /* Design System Colors - matching homepage and Flutter theme */
-  --color-primary: #a777e3;
-  --color-secondary: #6e8efb;
-  --color-accent: #00c58e;
-
-  /* Backgrounds */
-  --bg-main: #181a20;
-  --bg-card: #23243a;
-  --bg-light: #f5f5f5;
-
-  /* Text colors */
-  --text-color: #f1f1f1;
-  --text-color-light: #b0b0b0;
-  --text-color-dark: #2c3e50;
-
-  /* Status colors */
-  --color-success: #4caf50;
-  --color-warning: #ffa726;
-  --color-danger: #ff5252;
-  --color-info: #2196f3;
-
-  /* Spacing & Layout */
-  --border-radius: 16px;
-  --border-radius-sm: 4px;
-  --box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.4);
-  --box-shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.2);
-
-  /* Gradients */
-  --gradient-header: linear-gradient(135deg, #6e8efb 0%, #a777e3 100%);
-  --gradient-button: linear-gradient(90deg, #6e8efb 0%, #a777e3 100%);
-}
-
-/* Basic styles for Flutter web */
 body {
-  background-color: var(--bg-main);
-  color: var(--text-color);
-  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  font-size: 16px;
-  line-height: 1.5;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Loading screen styling */
@@ -54,24 +13,6 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--bg-main);
-  color: var(--text-color);
-}
-
-.loading-logo {
-  width: 80px;
-  height: 80px;
-  background: var(--color-secondary);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  color: white;
-  font-weight: bold;
-  margin-bottom: 20px;
-  border: 3px solid var(--color-primary);
-  box-shadow: var(--box-shadow-sm);
 }
 
 .loading-text {
@@ -82,29 +23,7 @@ body {
 
 .loading-subtext {
   font-size: 14px;
-  color: var(--text-color-light);
-}
-
-/* Flutter-specific elements */
-#flutter_target,
-flt-glass-pane,
-.flutter-loader {
-  background-color: var(--bg-main) !important;
-}
-
-/* Loading indicator styling */
-.flutter-loader {
-  color: var(--color-primary);
-}
-
-/* Fix for potential white flashes during load */
-flt-renderer {
-  background-color: var(--bg-main) !important;
-}
-
-/* Prevent any white backgrounds from showing through */
-* {
-  transition: background-color 0.2s ease;
+  opacity: 0.7;
 }
 
 /* Loading screen styles */
@@ -117,7 +36,6 @@ flt-renderer {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--bg-main);
   z-index: 9999;
 }
 
@@ -128,41 +46,14 @@ flt-renderer {
   justify-content: center;
 }
 
-.logo {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 38px;
-  font-weight: bold;
-  color: white;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-}
-
-.app-name {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 24px;
-  color: var(--text-color);
-}
-
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.1);
+  border: 4px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
-  border-left-color: var(--color-primary);
+  border-left-color: #2196f3;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
-}
-
-.loading-text {
-  color: var(--text-color-light);
-  font-size: 16px;
 }
 
 @keyframes spin {
