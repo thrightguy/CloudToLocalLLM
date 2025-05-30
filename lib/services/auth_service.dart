@@ -38,52 +38,23 @@ class AuthService {
 
   // Initialize the service
   Future<void> initialize() async {
-    try {
-      final credentials = await _credentialsManager.credentials();
-      isAuthenticated.value = true;
-      currentUser.value = UserProfile.fromAuth0User(credentials.user);
-    } catch (e) {
-      debugPrint('Error initializing auth service: $e');
-    }
-
-    // On web, check for Auth0 redirect handling
     if (kIsWeb) {
+      // For web platform, use simplified initialization
       try {
-        // Handle web-specific authentication using platform auth
         platform_auth.PlatformAuth.handleWebCallback();
-        await _checkWebAuth();
+        debugPrint('Web auth callback handled');
       } catch (e) {
-        debugPrint('Error in web auth initialization: $e');
+        debugPrint('No Auth0 callback detected: $e');
       }
-    }
-  }
-
-  Future<void> _checkWebAuth() async {
-    try {
-      // Only check for existing credentials, don't attempt login
-      final credentials = await _credentialsManager.credentials();
-      if (credentials.accessToken.isNotEmpty) {
-        await _processLoginResult(credentials);
+    } else {
+      // For mobile/desktop platforms, use credentials manager
+      try {
+        final credentials = await _credentialsManager.credentials();
+        isAuthenticated.value = true;
+        currentUser.value = UserProfile.fromAuth0User(credentials.user);
+      } catch (e) {
+        debugPrint('Error initializing auth service: $e');
       }
-    } catch (e) {
-      // No existing credentials or other error
-      debugPrint('No existing Auth0 credentials: $e');
-    }
-  }
-
-  Future<void> _processLoginResult(auth0.Credentials credentials) async {
-    try {
-      // Get user info
-      final userInfo = await getUserProfile();
-      if (userInfo != null) {
-        currentUser.value = userInfo;
-      }
-
-      isAuthenticated.value = true;
-    } catch (e) {
-      debugPrint('Error processing login result: $e');
-      isAuthenticated.value = false;
-      currentUser.value = null;
     }
   }
 

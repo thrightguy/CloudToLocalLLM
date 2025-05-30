@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
+import 'package:cloudtolocalllm/config/theme.dart';
+import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -275,13 +277,8 @@ class CloudToLocalLLMApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
     );
@@ -344,8 +341,8 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CloudToLocalLLM'),
+      appBar: const GradientAppBar(
+        title: 'CloudToLocalLLM',
       ),
       body: Center(
         child: Padding(
