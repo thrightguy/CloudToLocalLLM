@@ -24,17 +24,14 @@ flutter build web --no-tree-shake-icons
 echo -e "${YELLOW}Stopping existing containers...${NC}"
 docker compose -f docker-compose.yml down
 
-# Make scripts executable
-chmod +x init-ssl.sh
-chmod +x deploy_commands.sh
-
-# Check if SSL certs exist
+# Check if SSL certs exist and start services
 if [ -d "certbot/conf/live/cloudtolocalllm.online" ]; then
     echo -e "${YELLOW}SSL certificates already exist. Starting services...${NC}"
     docker compose -f docker-compose.yml up -d
 else
-    echo -e "${YELLOW}SSL certificates not found. Running SSL initialization...${NC}"
-    ./init-ssl.sh
+    echo -e "${RED}SSL certificates not found. Please set up SSL certificates first.${NC}"
+    echo -e "${YELLOW}You can use: certbot certonly --webroot -w /var/www/html -d cloudtolocalllm.online -d app.cloudtolocalllm.online${NC}"
+    exit 1
 fi
 
 # Wait for containers to start
