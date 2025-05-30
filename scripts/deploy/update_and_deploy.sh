@@ -25,7 +25,7 @@ echo -e "${YELLOW}Stopping existing containers...${NC}"
 docker compose -f docker-compose.yml down
 
 # Check if SSL certs exist and start services
-if [ -d "certbot/conf/live/cloudtolocalllm.online" ]; then
+if [ -d "certbot/live/cloudtolocalllm.online" ]; then
     echo -e "${YELLOW}SSL certificates already exist. Starting services...${NC}"
     docker compose -f docker-compose.yml up -d
 else
