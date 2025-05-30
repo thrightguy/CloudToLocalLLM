@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/config/theme.dart';
 import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
+import 'package:cloudtolocalllm/components/gradient_button.dart';
+import 'package:cloudtolocalllm/components/modern_card.dart';
 
 class HomeScreen extends StatelessWidget {
   final AuthService authService;
@@ -98,10 +100,7 @@ class HomeScreen extends StatelessWidget {
                   // Title
                   Text(
                     'CloudToLocalLLM',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 28,
@@ -121,38 +120,23 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 32),
 
                   // Main content card
-                  Card(
-                    elevation: 8,
-                    shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                      side: BorderSide(
-                        color: AppTheme.secondaryColor.withValues(alpha: 0.27),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.backgroundCard,
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadius),
-                      ),
-                      padding: const EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Content based on authentication status
-                          ValueListenableBuilder<bool>(
-                            valueListenable: authService.isAuthenticated,
-                            builder: (context, isAuthenticated, child) {
-                              if (isAuthenticated) {
-                                return _buildAuthenticatedContent(context);
-                              } else {
-                                return _buildUnauthenticatedContent(context);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
+                  ModernCard(
+                    padding: EdgeInsets.all(AppTheme.spacingXL),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Content based on authentication status
+                        ValueListenableBuilder<bool>(
+                          valueListenable: authService.isAuthenticated,
+                          builder: (context, isAuthenticated, child) {
+                            if (isAuthenticated) {
+                              return _buildAuthenticatedContent(context);
+                            } else {
+                              return _buildUnauthenticatedContent(context);
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -187,34 +171,13 @@ class HomeScreen extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 32),
-        Container(
+        GradientButton(
+          text: 'Start Chatting',
+          icon: Icons.chat_bubble_outline,
           width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: AppTheme.buttonGradient,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
-            boxShadow: const [AppTheme.boxShadowSmall],
-          ),
-          child: ElevatedButton(
-            onPressed: () {
-              GoRouter.of(context).go('/chat');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
-              ),
-            ),
-            child: const Text(
-              'Start Chatting',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          onPressed: () {
+            GoRouter.of(context).go('/chat');
+          },
         ),
       ],
     );
@@ -243,34 +206,13 @@ class HomeScreen extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 32),
-        Container(
+        GradientButton(
+          text: 'Login / Create Account',
+          icon: Icons.login,
           width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: AppTheme.buttonGradient,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
-            boxShadow: const [AppTheme.boxShadowSmall],
-          ),
-          child: ElevatedButton(
-            onPressed: () {
-              GoRouter.of(context).go('/login');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
-              ),
-            ),
-            child: const Text(
-              'Login / Create Account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          onPressed: () {
+            GoRouter.of(context).go('/login');
+          },
         ),
       ],
     );
