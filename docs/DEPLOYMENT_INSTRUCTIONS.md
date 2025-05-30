@@ -1,89 +1,95 @@
 # CloudToLocalLLM Deployment Instructions
 
-**This document is outdated.**
-
-Please refer to the main [VPS Deployment Guide](DEPLOYMENT.MD) for the current and recommended deployment procedures, which utilize the `scripts/setup/docker_startup_vps.sh` script and the `admin_control_daemon`.
+**This document may contain outdated information. Always refer to `VPS_DEPLOYMENT.md` for the most current and comprehensive VPS deployment procedures.**
 
 ## Server Requirements
 - Linux VPS (tested on Ubuntu/Debian)
-- Root access
+- A dedicated non-root user (e.g., `cloudllm`) for application management. Root access is needed for initial setup and system-level tasks.
 - Ports 80 and 443 open
-- Domain name pointing to the VPS IP (cloudtolocalllm.online)
+- Domain name pointing to the VPS IP (e.g., cloudtolocalllm.online)
 
 ## Deployment Process
 
 ### 1. SSH to Your Server
+Log in as your non-root user (e.g., `cloudllm`):
 ```bash
-# Login directly as root
-ssh root@162.254.34.115
+ssh cloudllm@your_vps_ip_or_domain
+```
+Initial server setup (installing Docker, git, etc.) might require `root` or `sudo`.
+
+### 2. Initial Deployment / Updates
+The simplest way to deploy or update is using the main deployment script (e.g., `scripts/setup/docker_startup_vps.sh`).
+
+```bash
+# Navigate to the application directory
+cd /opt/cloudtolocalllm
+
+# Pull the latest changes from GitHub
+git pull origin master # Or your main branch
+
+# Ensure scripts are executable (usually done once)
+# chmod +x scripts/setup/*.sh 
+
+# Run the main deployment/startup script
+bash scripts/setup/docker_startup_vps.sh # Replace with your actual script name
 ```
 
-### 2. Initial Deployment
-
-The simplest way to deploy is using our comprehensive deployment script:
-
-```bash
-# Create deployment directory
-mkdir -p /opt/cloudtolocalllm/portal
-cd /opt/cloudtolocalllm/portal
-
-# Clone GitHub repository
-git clone https://github.com/imrightguy/CloudToLocalLLM.git .
-
-# Make scripts executable
-chmod +x *.sh
-
-# Run the combined fix and deploy script
-./fix_and_deploy.sh
-```
-
-This script will:
-1. Pull the latest changes from GitHub
-2. Fix any nginx configuration issues
-3. Restart the containers with the correct configuration
-4. Set up SSL certificates
+This script typically handles:
+1. Pulling the latest changes from GitHub (though often done manually before running the script).
+2. Building/rebuilding Docker images if necessary.
+3. Starting/restarting Docker containers using `docker compose`.
+4. Setting up SSL certificates via Certbot.
+5. Applying necessary file permissions.
 
 ### 3. Adding Beta Subdomain with Authentication
-
-To add support for beta.cloudtolocalllm.online with authentication:
-
-```bash
-# Run the SSL update script
-./update_ssl_fixed.sh
-```
-
-This will:
-1. Update the SSL certificate to include the beta subdomain
-2. Update the nginx configuration to support the new subdomain with authentication
-3. Add the auth service container to the deployment
-4. Restart the containers with the new configuration
+If applicable, specific scripts might handle adding subdomains or features. Refer to relevant documentation or script comments.
 
 ### 4. Verify Deployment
 
 After deployment completes, verify the services are running:
 
 ```bash
-docker-compose -f docker-compose.web.yml ps
+# Use Docker Compose v2 syntax
+docker compose ps
 ```
 
 Check that the portal is accessible by visiting:
-- https://cloudtolocalllm.online
-- https://www.cloudtolocalllm.online
-- https://beta.cloudtolocalllm.online (with authentication)
+- https://cloudtolocalllm.online (should show static landing page)
+- https://app.cloudtolocalllm.online (should show the Flutter web application)
+- Other subdomains as configured.
 
 ### 5. Troubleshooting
+
+Refer to the troubleshooting section in `VPS_DEPLOYMENT.md`. Key areas:
+- **Container Logs**: `docker compose logs webapp` (or other services).
+- **Nginx Configuration**: Check for syntax errors (`docker exec cloudtolocalllm-webapp nginx -t`). The configuration is usually mounted from `config/nginx/nginx-webapp-internal.conf`.
+- **SSL Certificates**: Ensure certificates exist in `/opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online/` and have correct permissions (readable by Nginx user 101:101).
+- **`static_homepage` Directory**: Ensure `/opt/cloudtolocalllm/static_homepage/index.html` exists for the main domain's landing page.
 
 #### SSL Certificate Issues
 If SSL certificate doesn't work properly:
 ```bash
-docker run --rm -v "$(pwd)/certbot/conf:/etc/letsencrypt" certbot/certbot certificates
+# Check certbot container logs
+docker compose logs certbot
+
+# List certificates known to certbot (run from host, mounts are relative to docker-compose.yml)
+# This command might need adjustment based on your certbot container setup.
+# A simpler check is to inspect the cert files on the host:
+ls -la /opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online/
 ```
 
 #### Nginx Configuration Issues
 If the server won't start due to nginx configuration issues:
 ```bash
-# Run the nginx fix script
-./fix_nginx.sh
+# Check webapp container logs for specific Nginx errors
+docker compose logs webapp
+
+# Test Nginx configuration inside the container
+docker exec cloudtolocalllm-webapp nginx -t
+```
+If `nginx-webapp-internal.conf` was modified, ensure changes are valid and then restart:
+```bash
+docker compose restart webapp
 ```
 
 #### Server Configuration Issues
@@ -122,30 +128,26 @@ docker-compose -f docker-compose.web.yml restart auth
 3. Fix any Dart errors and retry the build.
 
 #### Webapp Build Issues
-If the webapp build fails due to Flutter SDK version issues:
-1. The Dockerfile has been updated to use `--no-sound-null-safety` flag
-2. Check the Docker build logs:
-```bash
-docker-compose -f docker-compose.web.yml logs webapp
-```
+If the webapp build fails (usually handled by Docker image build process):
+1. Check Docker build logs if you're building images on the VPS:
+   ```bash
+   docker compose build webapp # Or the service that failed
+   ```
+2. Ensure your Flutter SDK (if building locally before pushing image) is compatible.
 
 ### 6. Maintenance
 
 #### Regular Updates
-To update the portal with the latest changes:
+To update the application with the latest changes:
 ```bash
-# Use the git pull script
-./git_pull.sh
-
-# Then reapply configuration and restart
-./fix_and_deploy.sh
+cd /opt/cloudtolocalllm
+git pull origin master
+bash scripts/setup/docker_startup_vps.sh # Or your main deployment script
 ```
 
 #### Renew SSL Certificates
-SSL certificates are set to auto-renew, but you can manually renew them:
-```bash
-./renew-ssl.sh
-```
+SSL certificates managed by Certbot (via the `certbot` container) are typically set to auto-renew. You can check the `certbot` container logs for renewal activity.
+Manual renewal can often be triggered by restarting the `certbot` container or running a specific renewal command if provided by your setup.
 
 ## Services Architecture
 
@@ -156,9 +158,6 @@ SSL certificates are set to auto-renew, but you can manually renew them:
 
 ## Important Files
 
-- `docker-compose.web.yml`: Docker Compose configuration
-- `server.conf`: Nginx server blocks configuration
-- `fix_and_deploy.sh`: Combined fix and deployment script
-- `update_ssl_fixed.sh`: Script to add subdomains to SSL certificate and configure auth
-- `git_pull.sh`: Script to pull latest changes from GitHub
-- `fix_nginx.sh`: Script to fix nginx configuration issues 
+- `docker-compose.yml`: Main Docker Compose configuration.
+- `config/nginx/nginx-webapp-internal.conf`: Nginx server blocks configuration for the webapp.
+- `scripts/setup/docker_startup_vps.sh` (or similar): Main deployment/startup script

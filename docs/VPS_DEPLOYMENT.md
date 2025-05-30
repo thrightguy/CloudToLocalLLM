@@ -1,16 +1,13 @@
 # VPS Deployment Guide for CloudToLocalLLM
 
 ## IMPORTANT: Deployment Script
-The ONLY script that should be used for deployment is:
-```bash
-scripts/setup/docker_startup_vps.sh
-```
+The primary script for deployment and management on the VPS is typically located in the `scripts/setup/` directory (e.g., `docker_startup_vps.sh` or a similar script). This script should be used for most operations.
 
 This script handles all necessary deployment steps including:
-- Docker container management
-- SSL certificate handling
+- Docker container management (using `docker compose`)
+- SSL certificate handling via Certbot
 - Service verification
-- Proper user permissions
+- Ensuring proper user permissions for critical files and directories.
 
 ## Quick Setup
 
@@ -24,14 +21,14 @@ ssh cloudllm@cloudtolocalllm.online
 cd /opt/cloudtolocalllm
 ```
 
-3. Pull the latest changes:
+3. Pull the latest changes from the `master` (or `main`) branch:
 ```bash
-git pull
+git pull origin master
 ```
 
-4. Run the deployment script:
+4. Run the main deployment/startup script (ensure you know the correct script name, e.g., `scripts/setup/docker_startup_vps.sh`):
 ```bash
-bash scripts/setup/docker_startup_vps.sh
+bash scripts/setup/docker_startup_vps.sh # Or your primary deployment script
 ```
 
 ## SSL Setup
@@ -45,11 +42,14 @@ bash scripts/ssl/manage_ssl.sh
 
 To check the status of your deployment:
 ```bash
-# Check running containers
-docker compose -f config/docker/docker-compose.yml ps
+# Check running containers (use v2 syntax)
+docker compose ps
 
-# View logs
-docker compose -f config/docker/docker-compose.yml logs -f
+# View logs for all services
+docker compose logs -f
+
+# View logs for a specific service (e.g., webapp)
+docker compose logs -f webapp
 ```
 
 ## Troubleshooting
@@ -58,28 +58,58 @@ If you encounter issues:
 
 1. Check container status:
 ```bash
-docker compose -f config/docker/docker-compose.yml ps
+docker compose ps
 ```
 
-2. Check container logs:
+2. Check container logs (especially for the `webapp` or `nginx` container if web access is the issue):
 ```bash
-docker compose -f config/docker/docker-compose.yml logs
+docker compose logs webapp
 ```
 
-3. Verify SSL certificates:
-```bash
-ls -la certbot/conf/live/cloudtolocalllm.online/
-```
+3. Verify Nginx Configuration:
+   - SSH into the VPS.
+   - Navigate to `/opt/cloudtolocalllm`.
+   - The Nginx configuration for the webapp is typically mounted from `config/nginx/nginx-webapp-internal.conf` to `/etc/nginx/conf.d/default.conf` inside the `webapp` container.
+   - To test the configuration from the host (if Nginx is also installed there, or by checking the config file syntax):
+     ```bash
+     # If nginx is on host:
+     # sudo nginx -t
+     # Or, more relevantly, check the config file that gets mounted:
+     # (No direct command, but ensure it's valid Nginx syntax)
+     ```
+   - Inside the container (if it's running):
+     ```bash
+     docker exec cloudtolocalllm-webapp nginx -t
+     ```
 
-4. Check web application health:
-```bash
-curl -f http://localhost:80/health_internal
-```
+4. Verify SSL certificates:
+   - Certificates are stored in `/opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online/` on the host.
+   - Ensure `fullchain.pem` and `privkey.pem` exist.
+   - Permissions: These files should be readable by the Nginx process inside the container. The `certbot` container usually sets these to be owned by user `101:101` or makes them world-readable (e.g., `644`).
+     ```bash
+     ls -la /opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online/
+     ls -la /opt/cloudtolocalllm/certbot/archive/cloudtolocalllm.online/ # Actual files are here
+     ```
+   - If permissions are incorrect, re-running the main deployment script or a specific certbot permission hook script (if available) should fix it. As a last resort, `root` can fix permissions on the host:
+     ```bash
+     # Example: ssh root@cloudtolocalllm.online "chown -R 101:101 /opt/cloudtolocalllm/certbot/archive/cloudtolocalllm.online && chmod -R 644 /opt/cloudtolocalllm/certbot/archive/cloudtolocalllm.online/*.pem"
+     # ssh root@cloudtolocalllm.online "chown -R 101:101 /opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online && chmod -R 755 /opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online"
+     # Ensure symlinks in 'live' are also owned by 101:101 or accessible.
+     ```
 
-5. Check API health:
-```bash
-curl -f http://localhost:8080/health
-```
+5. Check `static_homepage` Directory:
+   - The main domain `cloudtolocalllm.online` serves content from the `static_homepage` directory.
+   - If you see a 403 error for the main domain, ensure this directory exists at `/opt/cloudtolocalllm/static_homepage` and contains an `index.html` file.
+   - If it was accidentally deleted, it can be restored from git history:
+     ```bash
+     # On your local machine or on the VPS in /opt/cloudtolocalllm
+     git log -- static_homepage # Find commit that deleted it
+     git checkout <commit_hash_before_deletion>^ -- static_homepage
+     git add static_homepage
+     git commit -m "Restore static_homepage"
+     git push # (if local)
+     # Then on VPS: git pull
+     ```
 
 ## Important Notes
 
@@ -153,12 +183,12 @@ sudo usermod -aG docker $USER
 ### 3. Application Setup
 
 ```bash
-# Clone the repository
-cd /var/www/html
-git clone https://github.com/yourusername/CloudToLocalLLM.git .
+# Clone the repository (as cloudllm user)
+cd /opt/cloudtolocalllm # Ensure this is the chosen directory
+git clone https://github.com/imrightguy/CloudToLocalLLM.git . # Clone into current dir
 
 # Create CPU-only docker-compose.yml
-# (Remove GPU requirements and change port to 8080)
+# (The main docker-compose.yml should already be suitable)
 ```
 
 ### 4. Nginx Configuration
@@ -289,4 +319,4 @@ cd /var/www/html
 git pull
 sudo docker-compose down
 sudo docker-compose up -d
-``` 
+```
