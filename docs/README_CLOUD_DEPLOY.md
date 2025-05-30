@@ -130,29 +130,21 @@ For VPS deployments with a custom domain and SSL configuration:
 
 ### 6.2 Automated Deployment with SSL
 
-Use our automated deployment scripts:
-
-```powershell
-# Deploy the basic web server
-.\deploy_ssl_fix.ps1 "user@your-vps-ip"
-```
-
-The script handles:
-- SSL certificate acquisition via Certbot
-- Nginx configuration with proper SSL settings
-- Docker container setup
-- Automatic certificate renewal
+Use our automated deployment scripts as detailed in `VPS_DEPLOYMENT.md` and `DEPLOYMENT_INSTRUCTIONS.md`. The primary script (e.g., `scripts/setup/docker_startup_vps.sh`) on the VPS, when run by the `cloudllm` user, handles:
+- Docker container setup using `docker-compose.yml`.
+- SSL certificate acquisition and renewal via the `certbot` container.
+- Nginx configuration with proper SSL settings (mounted from `config/nginx/nginx-webapp-internal.conf`).
+- Ensuring correct file permissions for certificates and web content.
 
 ### 6.3 Manual SSL Setup
 
-For manual SSL configuration:
+For manual SSL configuration details, refer to `ssl_setup.md`. This typically involves:
+1. Installing Certbot on your VPS (usually done within the `certbot` Docker container).
+2. Obtaining SSL certificates.
+3. Configuring Nginx to use these certificates.
+4. Setting up automated renewal (handled by the `certbot` container).
 
-1. Install Certbot on your VPS
-2. Obtain SSL certificates in standalone mode
-3. Configure Nginx with SSL certificates
-4. Set up renewal hooks
-
-See `direct_ssl_fix.sh` for detailed implementation.
+See `scripts/ssl/manage_ssl.sh` or similar scripts if available for more direct Certbot interactions, though the main deployment script should be preferred.
 
 ---
 
