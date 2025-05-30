@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/auth0_options.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
-import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
 import 'package:auth0_flutter/auth0_flutter.dart' hide UserProfile;
 import 'dart:developer' as developer;
 import 'dart:async';
@@ -277,9 +275,18 @@ class CloudToLocalLLMApp extends StatelessWidget {
     return MaterialApp.router(
       routerConfig: _router,
       title: 'CloudToLocalLLM Portal',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark, // Force dark theme to match homepage design
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
     );
   }
@@ -341,8 +348,8 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const GradientAppBar(
-        title: 'CloudToLocalLLM',
+      appBar: AppBar(
+        title: const Text('CloudToLocalLLM'),
       ),
       body: Center(
         child: Padding(
@@ -351,16 +358,6 @@ class HomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -410,16 +407,6 @@ class LoginScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-            ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -445,13 +432,6 @@ class LoginScreen extends StatelessWidget {
                         }
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
                     child: const Text('Login'),
                   ),
                 ],
@@ -491,16 +471,6 @@ class ChatScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-            ),
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -508,10 +478,7 @@ class ChatScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Chat Interface',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
                   const Text('Chat functionality coming soon!'),
