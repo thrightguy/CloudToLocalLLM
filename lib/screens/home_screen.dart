@@ -96,9 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
 
                   // Main chat area
-                  Expanded(
-                    child: _buildChatArea(context),
-                  ),
+                  Expanded(child: _buildChatArea(context)),
                 ],
               ),
             ),
@@ -150,9 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             AppConfig.appName,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
 
           const Spacer(),
@@ -176,8 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     value: chatService.selectedModel,
                     hint: Text(
                       'Select Model',
-                      style:
-                          TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
                     ),
                     items: models.map((model) {
                       return DropdownMenuItem(
@@ -313,42 +312,54 @@ class _HomeScreenState extends State<HomeScreen> {
           return _buildEmptyState(context);
         }
 
-        return Column(
-          children: [
-            // Chat messages
-            Expanded(
-              child: conversation.messages.isEmpty
-                  ? _buildEmptyConversation(context)
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding:
-                          EdgeInsets.symmetric(vertical: AppTheme.spacingM),
-                      itemCount: conversation.messages.length,
-                      itemBuilder: (context, index) {
-                        final message = conversation.messages[index];
-                        return MessageBubble(
-                          message: message,
-                          showAvatar: true,
-                          showTimestamp: index == 0 ||
-                              conversation.messages[index - 1].role !=
-                                  message.role,
-                          onRetry: message.hasError
-                              ? () => _retryMessage(chatService, message)
-                              : null,
-                        );
-                      },
-                    ),
-            ),
+        return Container(
+          color: AppTheme.backgroundMain,
+          child: Column(
+            children: [
+              // Chat messages
+              Expanded(
+                child: Container(
+                  color: AppTheme.backgroundMain,
+                  child: conversation.messages.isEmpty
+                      ? _buildEmptyConversation(context)
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppTheme.spacingM,
+                          ),
+                          itemCount: conversation.messages.length,
+                          itemBuilder: (context, index) {
+                            final message = conversation.messages[index];
+                            return MessageBubble(
+                              message: message,
+                              showAvatar: true,
+                              showTimestamp:
+                                  index == 0 ||
+                                  conversation.messages[index - 1].role !=
+                                      message.role,
+                              onRetry: message.hasError
+                                  ? () => _retryMessage(chatService, message)
+                                  : null,
+                            );
+                          },
+                        ),
+                ),
+              ),
 
-            // Message input
-            MessageInput(
-              onSendMessage: (message) => _sendMessage(chatService, message),
-              isLoading: chatService.isLoading,
-              placeholder: chatService.selectedModel == null
-                  ? 'Please select a model first...'
-                  : 'Type your message...',
-            ),
-          ],
+              // Message input
+              Container(
+                color: AppTheme.backgroundMain,
+                child: MessageInput(
+                  onSendMessage: (message) =>
+                      _sendMessage(chatService, message),
+                  isLoading: chatService.isLoading,
+                  placeholder: chatService.selectedModel == null
+                      ? 'Please select a model first...'
+                      : 'Type your message...',
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -368,16 +379,16 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'Welcome to CloudToLocalLLM',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppTheme.textColor,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: AppTheme.textColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           SizedBox(height: AppTheme.spacingM),
           Text(
             'Start a new conversation to begin chatting with your local LLM',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppTheme.textColorLight),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppTheme.spacingXL),
@@ -408,25 +419,21 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.smart_toy,
-            size: 48,
-            color: AppTheme.textColorLight,
-          ),
+          Icon(Icons.smart_toy, size: 48, color: AppTheme.textColorLight),
           SizedBox(height: AppTheme.spacingM),
           Text(
             'How can I help you today?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.textColor,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: AppTheme.textColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           SizedBox(height: AppTheme.spacingS),
           Text(
             'Type a message below to start the conversation',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
           ),
         ],
       ),
