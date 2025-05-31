@@ -44,11 +44,24 @@ class AuthServiceWeb extends ChangeNotifier {
   /// Check current authentication status
   Future<void> _checkAuthenticationStatus() async {
     try {
+      AuthLogger.info('🔐 Checking authentication status');
+
+      // Check if we're on the callback URL
+      final currentUrl = web.window.location.href;
+      if (currentUrl.contains('/callback')) {
+        AuthLogger.info('🔐 Detected callback URL during initialization');
+        await handleCallback();
+        return;
+      }
+
       // For now, we'll implement a simple check
       // In a production app, you'd check for stored tokens
       _isAuthenticated.value = false;
+      AuthLogger.info('🔐 No existing authentication found');
     } catch (e) {
-      debugPrint('Error checking authentication status: $e');
+      AuthLogger.error('🔐 Error checking authentication status', {
+        'error': e.toString(),
+      });
       _isAuthenticated.value = false;
     }
   }
@@ -162,7 +175,12 @@ class AuthServiceWeb extends ChangeNotifier {
 
       // Get current URL parameters
       final uri = Uri.parse(web.window.location.href);
-      AuthLogger.info('🔐 Current URL', {'url': uri.toString()});
+      AuthLogger.info('🔐 Current URL', {
+        'url': uri.toString(),
+        'path': uri.path,
+        'query': uri.query,
+        'fragment': uri.fragment,
+      });
 
       // Check for error parameters
       if (uri.queryParameters.containsKey('error')) {
@@ -188,10 +206,14 @@ class AuthServiceWeb extends ChangeNotifier {
         // For now, just mark as authenticated
         // In a full implementation, you would exchange the code for tokens
         _isAuthenticated.value = true;
+        notifyListeners();
         AuthLogger.logAuthStateChange(true, 'Authorization code received');
 
-        // Clear the URL parameters
+        // Clear the URL parameters and redirect to home
         web.window.history.replaceState(null, '', '/');
+
+        // Force a page reload to trigger router redirect
+        web.window.location.href = '/';
 
         return true;
       }
