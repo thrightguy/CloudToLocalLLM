@@ -194,20 +194,10 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: AppTheme.spacingXL),
           GradientButton(
-            text: 'Get Started',
-            icon: Icons.rocket_launch,
+            text: 'Test Ollama Connection',
+            icon: Icons.computer,
             onPressed: () {
-              // Navigate to main functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Main functionality coming soon!'),
-                  backgroundColor: AppTheme.infoColor,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
-                  ),
-                ),
-              );
+              context.go('/ollama-test');
             },
           ),
         ],
