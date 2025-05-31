@@ -48,13 +48,17 @@ class AuthServiceWeb extends ChangeNotifier {
 
   /// Login using Auth0 redirect flow
   Future<void> login() async {
+    debugPrint('🔐 Web login method called');
     try {
       _isLoading.value = true;
       notifyListeners();
+      debugPrint('🔐 Loading state set to true');
 
       // For web, redirect directly to Auth0 login page
       final redirectUri = AppConfig.auth0WebRedirectUri;
       final state = DateTime.now().millisecondsSinceEpoch.toString();
+      debugPrint('🔐 Redirect URI: $redirectUri');
+      debugPrint('🔐 State: $state');
 
       final authUrl = Uri.https(
         AppConfig.auth0Domain,
@@ -70,9 +74,17 @@ class AuthServiceWeb extends ChangeNotifier {
       );
 
       debugPrint('Redirecting to Auth0: $authUrl');
+      debugPrint('Auth URL string: ${authUrl.toString()}');
 
       // For web, redirect the current window to Auth0
-      web.window.location.href = authUrl.toString();
+      try {
+        web.window.location.href = authUrl.toString();
+        debugPrint('Redirect initiated successfully');
+      } catch (redirectError) {
+        debugPrint('Redirect error: $redirectError');
+        // Fallback: try using window.open with _self
+        web.window.open(authUrl.toString(), '_self');
+      }
     } catch (e) {
       debugPrint('Login error: $e');
       _isAuthenticated.value = false;
