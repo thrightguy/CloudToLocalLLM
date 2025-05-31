@@ -54,8 +54,17 @@ class AuthServiceWeb extends ChangeNotifier {
         return;
       }
 
-      // For now, we'll implement a simple check
-      // In a production app, you'd check for stored tokens
+      // Check for stored authentication state
+      final storedAuth =
+          web.window.localStorage.getItem('cloudtolocalllm_authenticated');
+      if (storedAuth == 'true') {
+        _isAuthenticated.value = true;
+        AuthLogger.info('🔐 Found stored authentication state');
+        notifyListeners();
+        return;
+      }
+
+      // No authentication found
       _isAuthenticated.value = false;
       AuthLogger.info('🔐 No existing authentication found');
     } catch (e) {
@@ -159,8 +168,13 @@ class AuthServiceWeb extends ChangeNotifier {
       // Clear local state
       _currentUser = null;
       _isAuthenticated.value = false;
+
+      // Clear stored authentication state
+      web.window.localStorage.removeItem('cloudtolocalllm_authenticated');
+
+      AuthLogger.logAuthStateChange(false, 'User logged out');
     } catch (e) {
-      debugPrint('Logout error: $e');
+      AuthLogger.error('🔐 Logout error', {'error': e.toString()});
       rethrow;
     } finally {
       _isLoading.value = false;
@@ -206,14 +220,22 @@ class AuthServiceWeb extends ChangeNotifier {
         // For now, just mark as authenticated
         // In a full implementation, you would exchange the code for tokens
         _isAuthenticated.value = true;
-        notifyListeners();
-        AuthLogger.logAuthStateChange(true, 'Authorization code received');
 
-        // Clear the URL parameters and redirect to home
+        // Store authentication state in localStorage
+        web.window.localStorage
+            .setItem('cloudtolocalllm_authenticated', 'true');
+
+        notifyListeners();
+        AuthLogger.logAuthStateChange(
+            true, 'Authorization code received and stored');
+
+        // Clear the URL parameters
         web.window.history.replaceState(null, '', '/');
 
-        // Force a page reload to trigger router redirect
-        web.window.location.href = '/';
+        // Small delay to ensure state is updated
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        AuthLogger.info('🔐 Authentication completed successfully');
 
         return true;
       }
