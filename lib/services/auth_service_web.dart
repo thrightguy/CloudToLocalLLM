@@ -72,7 +72,6 @@ class AuthServiceWeb extends ChangeNotifier {
         'state': state,
         'domain': AppConfig.auth0Domain,
         'clientId': AppConfig.auth0ClientId,
-        'audience': AppConfig.auth0Audience,
         'scopes': AppConfig.auth0Scopes,
       });
 
@@ -84,7 +83,6 @@ class AuthServiceWeb extends ChangeNotifier {
           'redirect_uri': redirectUri,
           'response_type': 'code',
           'scope': AppConfig.auth0Scopes.join(' '),
-          'audience': AppConfig.auth0Audience,
           'state': state,
         },
       );
@@ -160,19 +158,51 @@ class AuthServiceWeb extends ChangeNotifier {
   /// Handle Auth0 callback
   Future<bool> handleCallback() async {
     try {
-      // For web, the callback is handled by the redirect
-      // This is a placeholder for future token processing
-      debugPrint('Web callback handling - checking authentication state');
+      AuthLogger.info('🔐 Web callback handling started');
 
-      // In a real implementation, you would:
-      // 1. Extract the authorization code from the URL
-      // 2. Exchange it for tokens
-      // 3. Store the tokens securely
-      // 4. Load user profile
+      // Get current URL parameters
+      final uri = Uri.parse(web.window.location.href);
+      AuthLogger.info('🔐 Current URL', {'url': uri.toString()});
 
-      return _isAuthenticated.value;
+      // Check for error parameters
+      if (uri.queryParameters.containsKey('error')) {
+        final error = uri.queryParameters['error'];
+        final errorDescription = uri.queryParameters['error_description'];
+        AuthLogger.error('🔐 Auth0 callback error', {
+          'error': error,
+          'error_description': errorDescription,
+        });
+        return false;
+      }
+
+      // Check for authorization code
+      if (uri.queryParameters.containsKey('code')) {
+        final code = uri.queryParameters['code'];
+        final state = uri.queryParameters['state'];
+
+        AuthLogger.info('🔐 Authorization code received', {
+          'code': code != null ? '${code.substring(0, 10)}...' : 'null',
+          'state': state,
+        });
+
+        // For now, just mark as authenticated
+        // In a full implementation, you would exchange the code for tokens
+        _isAuthenticated.value = true;
+        AuthLogger.logAuthStateChange(true, 'Authorization code received');
+
+        // Clear the URL parameters
+        web.window.history.replaceState(null, '', '/');
+
+        return true;
+      }
+
+      AuthLogger.warning('🔐 No authorization code or error in callback');
+      return false;
     } catch (e) {
-      debugPrint('Callback handling error: $e');
+      AuthLogger.error('🔐 Callback handling error', {
+        'error': e.toString(),
+        'stackTrace': StackTrace.current.toString(),
+      });
       return false;
     }
   }
