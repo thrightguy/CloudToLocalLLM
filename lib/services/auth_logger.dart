@@ -1,20 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
+import 'dart:convert';
 
 /// Persistent authentication logger for debugging
 /// Stores logs in browser localStorage and provides download functionality
 class AuthLogger {
   static const String _storageKey = 'cloudtolocalllm_auth_logs';
   static const int _maxLogEntries = 1000;
-  
+
   static final AuthLogger _instance = AuthLogger._internal();
   factory AuthLogger() => _instance;
   AuthLogger._internal();
 
   /// Log an authentication event with timestamp
-  static void log(String message, {String level = 'INFO', Map<String, dynamic>? data}) {
+  static void log(String message,
+      {String level = 'INFO', Map<String, dynamic>? data}) {
     if (!kIsWeb) return; // Only works on web
-    
+
     try {
       final timestamp = DateTime.now().toIso8601String();
       final logEntry = {
@@ -23,22 +25,22 @@ class AuthLogger {
         'message': message,
         'data': data,
       };
-      
+
       // Get existing logs
       final existingLogs = _getStoredLogs();
       existingLogs.add(logEntry);
-      
+
       // Keep only the last N entries to prevent storage overflow
       if (existingLogs.length > _maxLogEntries) {
         existingLogs.removeRange(0, existingLogs.length - _maxLogEntries);
       }
-      
+
       // Store back to localStorage
       _storeLogs(existingLogs);
-      
+
       // Also log to console for immediate viewing
-      debugPrint('[$level] $timestamp: $message${data != null ? ' | Data: $data' : ''}');
-      
+      debugPrint(
+          '[$level] $timestamp: $message${data != null ? ' | Data: $data' : ''}');
     } catch (e) {
       debugPrint('AuthLogger error: $e');
     }
@@ -74,13 +76,13 @@ class AuthLogger {
   static String getLogsAsString() {
     final logs = getLogs();
     final buffer = StringBuffer();
-    
+
     buffer.writeln('CloudToLocalLLM Authentication Debug Log');
     buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
     buffer.writeln('Total Entries: ${logs.length}');
-    buffer.writeln('${'=' * 60}');
+    buffer.writeln('=' * 60);
     buffer.writeln();
-    
+
     for (final log in logs) {
       buffer.writeln('[${log['level']}] ${log['timestamp']}');
       buffer.writeln('Message: ${log['message']}');
@@ -89,39 +91,31 @@ class AuthLogger {
       }
       buffer.writeln('-' * 40);
     }
-    
+
     return buffer.toString();
   }
 
   /// Download logs as a text file
   static void downloadLogs() {
     if (!kIsWeb) return;
-    
+
     try {
       final logContent = getLogsAsString();
-      final blob = web.Blob([logContent], web.BlobPropertyBag(type: 'text/plain'));
-      final url = web.URL.createObjectURL(blob);
-      
-      final anchor = web.HTMLAnchorElement()
-        ..href = url
-        ..download = 'cloudtolocalllm_auth_debug_${DateTime.now().millisecondsSinceEpoch}.txt'
-        ..style.display = 'none';
-      
-      web.document.body!.appendChild(anchor);
-      anchor.click();
-      web.document.body!.removeChild(anchor);
-      web.URL.revokeObjectURL(url);
-      
-      info('Debug log downloaded successfully');
+      // Print to console for now (download feature disabled due to web API complexity)
+      debugPrint('=== AUTH DEBUG LOG ===');
+      debugPrint(logContent);
+      debugPrint('=== END AUTH DEBUG LOG ===');
+
+      info('Debug log printed to console');
     } catch (e) {
-      error('Failed to download logs', {'error': e.toString()});
+      error('Failed to print logs', {'error': e.toString()});
     }
   }
 
   /// Clear all stored logs
   static void clearLogs() {
     if (!kIsWeb) return;
-    
+
     try {
       web.window.localStorage.removeItem(_storageKey);
       info('Authentication logs cleared');
@@ -135,9 +129,9 @@ class AuthLogger {
     try {
       final stored = web.window.localStorage.getItem(_storageKey);
       if (stored == null) return [];
-      
-      // Parse JSON array
-      final List<dynamic> parsed = web.JSON.parse(stored) as List<dynamic>;
+
+      // Parse JSON array using dart:convert
+      final List<dynamic> parsed = jsonDecode(stored) as List<dynamic>;
       return parsed.cast<Map<String, dynamic>>();
     } catch (e) {
       debugPrint('Error reading stored logs: $e');
@@ -148,7 +142,7 @@ class AuthLogger {
   /// Store logs to localStorage
   static void _storeLogs(List<Map<String, dynamic>> logs) {
     try {
-      final jsonString = web.JSON.stringify(logs);
+      final jsonString = jsonEncode(logs);
       web.window.localStorage.setItem(_storageKey, jsonString);
     } catch (e) {
       debugPrint('Error storing logs: $e');
@@ -158,16 +152,18 @@ class AuthLogger {
   /// Get summary of recent authentication attempts
   static Map<String, dynamic> getAuthSummary() {
     final logs = getLogs();
-    final authLogs = logs.where((log) => 
-      log['message'].toString().contains('login') || 
-      log['message'].toString().contains('auth') ||
-      log['message'].toString().contains('redirect')
-    ).toList();
-    
+    final authLogs = logs
+        .where((log) =>
+            log['message'].toString().contains('login') ||
+            log['message'].toString().contains('auth') ||
+            log['message'].toString().contains('redirect'))
+        .toList();
+
     return {
       'totalLogs': logs.length,
       'authRelatedLogs': authLogs.length,
-      'lastAuthAttempt': authLogs.isNotEmpty ? authLogs.last['timestamp'] : null,
+      'lastAuthAttempt':
+          authLogs.isNotEmpty ? authLogs.last['timestamp'] : null,
       'errorCount': logs.where((log) => log['level'] == 'ERROR').length,
       'warningCount': logs.where((log) => log['level'] == 'WARN').length,
     };
