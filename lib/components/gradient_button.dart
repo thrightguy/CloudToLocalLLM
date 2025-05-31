@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
+import '../config/theme.dart';
 
-/// Modern gradient button component following Material Design 3 principles
+/// Modern gradient button component with hover effects and animations
 class GradientButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
@@ -9,8 +9,8 @@ class GradientButton extends StatefulWidget {
   final bool isLoading;
   final double? width;
   final EdgeInsetsGeometry? padding;
-  final double? fontSize;
-  final FontWeight? fontWeight;
+  final double fontSize;
+  final FontWeight fontWeight;
 
   const GradientButton({
     super.key,
@@ -101,16 +101,21 @@ class _GradientButtonState extends State<GradientButton>
                           ],
                         )
                       : AppTheme.buttonGradient,
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
-                  boxShadow: _isHovered
-                      ? [AppTheme.boxShadowLarge]
-                      : [AppTheme.boxShadowSmall],
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor
+                          .withValues(alpha: _isHovered ? 0.4 : 0.2),
+                      blurRadius: _isHovered ? 16 : 8,
+                      offset: Offset(0, _isHovered ? 6 : 3),
+                    ),
+                  ],
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: widget.isLoading ? null : widget.onPressed,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                     child: Container(
                       alignment: Alignment.center,
                       child: widget.isLoading
@@ -132,7 +137,7 @@ class _GradientButtonState extends State<GradientButton>
                                   Icon(
                                     widget.icon,
                                     color: Colors.white,
-                                    size: widget.fontSize! + 2,
+                                    size: widget.fontSize + 2,
                                   ),
                                   SizedBox(width: AppTheme.spacingS),
                                 ],
@@ -166,9 +171,6 @@ class OutlinedGradientButton extends StatefulWidget {
   final IconData? icon;
   final bool isLoading;
   final double? width;
-  final EdgeInsetsGeometry? padding;
-  final double? fontSize;
-  final FontWeight? fontWeight;
 
   const OutlinedGradientButton({
     super.key,
@@ -177,9 +179,6 @@ class OutlinedGradientButton extends StatefulWidget {
     this.icon,
     this.isLoading = false,
     this.width,
-    this.padding,
-    this.fontSize = 16,
-    this.fontWeight = FontWeight.w600,
   });
 
   @override
@@ -197,25 +196,34 @@ class _OutlinedGradientButtonState extends State<OutlinedGradientButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: widget.width,
-        padding: widget.padding ??
-            EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingL,
-              vertical: AppTheme.spacingM,
-            ),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppTheme.spacingL,
+          vertical: AppTheme.spacingM,
+        ),
         decoration: BoxDecoration(
-          color: _isHovered ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+          color: _isHovered
+              ? AppTheme.primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
           border: Border.all(
             width: 2,
             color: _isHovered ? AppTheme.primaryColor : AppTheme.secondaryColor,
           ),
-          boxShadow: _isHovered ? [AppTheme.boxShadowSmall] : null,
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.isLoading ? null : widget.onPressed,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
             child: Container(
               alignment: Alignment.center,
               child: widget.isLoading
@@ -236,17 +244,21 @@ class _OutlinedGradientButtonState extends State<OutlinedGradientButton> {
                         if (widget.icon != null) ...[
                           Icon(
                             widget.icon,
-                            color: _isHovered ? AppTheme.primaryColor : AppTheme.secondaryColor,
-                            size: widget.fontSize! + 2,
+                            color: _isHovered
+                                ? AppTheme.primaryColor
+                                : AppTheme.secondaryColor,
+                            size: 18,
                           ),
                           SizedBox(width: AppTheme.spacingS),
                         ],
                         Text(
                           widget.text,
                           style: TextStyle(
-                            fontSize: widget.fontSize,
-                            fontWeight: widget.fontWeight,
-                            color: _isHovered ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: _isHovered
+                                ? AppTheme.primaryColor
+                                : AppTheme.secondaryColor,
                             letterSpacing: 0.5,
                           ),
                         ),

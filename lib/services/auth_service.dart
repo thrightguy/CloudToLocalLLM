@@ -1,186 +1,138 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:auth0_flutter/auth0_flutter.dart' as auth0;
+import 'package:flutter/material.dart';
+import 'package:auth0_flutter/auth0_flutter.dart';
+import '../config/app_config.dart';
+import '../models/user_model.dart';
 
-// Conditional imports for web-specific functionality
-import 'auth_service_stub.dart' if (dart.library.html) 'auth_service_web.dart'
-    as platform_auth;
+/// Authentication service using Auth0
+class AuthService extends ChangeNotifier {
+  late final Auth0 _auth0;
+  final ValueNotifier<bool> _isAuthenticated = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isLoading = ValueNotifier<bool>(false);
+  UserModel? _currentUser;
+  Credentials? _credentials;
 
-// User Profile class
-class UserProfile {
-  final String sub;
-  final String? email;
-  final String? name;
+  // Getters
+  ValueNotifier<bool> get isAuthenticated => _isAuthenticated;
+  ValueNotifier<bool> get isLoading => _isLoading;
+  UserModel? get currentUser => _currentUser;
+  Credentials? get credentials => _credentials;
 
-  UserProfile({
-    required this.sub,
-    this.email,
-    this.name,
-  });
-
-  factory UserProfile.fromAuth0User(auth0.UserProfile user) {
-    return UserProfile(
-      sub: user.sub,
-      email: user.email,
-      name: user.name,
-    );
+  AuthService() {
+    _initializeAuth0();
   }
-}
 
-class AuthService {
-  final auth0.Auth0 _auth0;
-  final auth0.CredentialsManager _credentialsManager;
-  final ValueNotifier<bool> isAuthenticated = ValueNotifier<bool>(false);
-  final ValueNotifier<UserProfile?> currentUser =
-      ValueNotifier<UserProfile?>(null);
+  /// Initialize Auth0
+  void _initializeAuth0() {
+    _auth0 = Auth0(AppConfig.auth0Domain, AppConfig.auth0ClientId);
+    _checkAuthenticationStatus();
+  }
 
-  AuthService(this._auth0) : _credentialsManager = _auth0.credentialsManager;
+  /// Check if user is already authenticated
+  Future<void> _checkAuthenticationStatus() async {
+    try {
+      _isLoading.value = true;
 
-  // Initialize the service
-  Future<void> initialize() async {
-    if (kIsWeb) {
-      // For web platform, use simplified initialization
-      try {
-        platform_auth.PlatformAuth.handleWebCallback();
-        debugPrint('Web auth callback handled');
-      } catch (e) {
-        debugPrint('No Auth0 callback detected: $e');
+      // Check if we have stored credentials
+      final hasValidCredentials =
+          await _auth0.credentialsManager.hasValidCredentials();
+
+      if (hasValidCredentials) {
+        _credentials = await _auth0.credentialsManager.credentials();
+        await _loadUserProfile();
+        _isAuthenticated.value = true;
       }
-    } else {
-      // For mobile/desktop platforms, use credentials manager
-      try {
-        final credentials = await _credentialsManager.credentials();
-        isAuthenticated.value = true;
-        currentUser.value = UserProfile.fromAuth0User(credentials.user);
-      } catch (e) {
-        debugPrint('Error initializing auth service: $e');
+    } catch (e) {
+      debugPrint('Error checking authentication status: $e');
+      _isAuthenticated.value = false;
+    } finally {
+      _isLoading.value = false;
+      notifyListeners();
+    }
+  }
+
+  /// Login with Auth0
+  Future<void> login() async {
+    try {
+      _isLoading.value = true;
+      notifyListeners();
+
+      _credentials = await _auth0.webAuthentication().login();
+
+      if (_credentials != null) {
+        // Store credentials securely
+        await _auth0.credentialsManager.storeCredentials(_credentials!);
+
+        // Load user profile
+        await _loadUserProfile();
+
+        _isAuthenticated.value = true;
       }
-    }
-  }
-
-  Future<UserProfile?> getUserProfile() async {
-    try {
-      final credentials = await _credentialsManager.credentials();
-      return UserProfile.fromAuth0User(credentials.user);
     } catch (e) {
-      debugPrint('Error getting user profile: $e');
-      return null;
-    }
-  }
-
-  Future<void> refreshToken() async {
-    try {
-      await _credentialsManager.credentials();
-    } catch (e) {
-      debugPrint('Error refreshing token: $e');
-    }
-  }
-
-  // Login methods
-  Future<UserProfile> login() async {
-    try {
-      final credentials = await _auth0.webAuthentication().login();
-      isAuthenticated.value = true;
-      final user = UserProfile.fromAuth0User(credentials.user);
-      currentUser.value = user;
-      return user;
-    } catch (e) {
-      debugPrint('Error during login: $e');
+      debugPrint('Login error: $e');
+      _isAuthenticated.value = false;
       rethrow;
+    } finally {
+      _isLoading.value = false;
+      notifyListeners();
     }
   }
 
-  Future<UserProfile> signInWithEmailAndPassword(
-      String email, String password) async {
-    try {
-      final credentials = await _auth0.api.login(
-        usernameOrEmail: email,
-        password: password,
-        connectionOrRealm: 'Username-Password-Authentication',
-      );
-      isAuthenticated.value = true;
-      final user = UserProfile.fromAuth0User(credentials.user);
-      currentUser.value = user;
-      return user;
-    } catch (e) {
-      debugPrint('Error signing in with email and password: $e');
-      rethrow;
-    }
-  }
-
-  Future<UserProfile> signInWithGoogle() async {
-    try {
-      final credentials = await _auth0.webAuthentication().login(
-        parameters: {'connection': 'google-oauth2'},
-      );
-      isAuthenticated.value = true;
-      final user = UserProfile.fromAuth0User(credentials.user);
-      currentUser.value = user;
-      return user;
-    } catch (e) {
-      debugPrint('Error signing in with Google: $e');
-      rethrow;
-    }
-  }
-
-  Future<UserProfile> handleRedirectAndLogin(Uri responseUri) async {
-    try {
-      final credentials = await _auth0.webAuthentication().login(
-            redirectUrl: responseUri.toString(),
-          );
-      isAuthenticated.value = true;
-      final user = UserProfile.fromAuth0User(credentials.user);
-      currentUser.value = user;
-      return user;
-    } catch (e) {
-      debugPrint('Error handling redirect and login: $e');
-      rethrow;
-    }
-  }
-
+  /// Logout
   Future<void> logout() async {
     try {
+      _isLoading.value = true;
+      notifyListeners();
+
+      // Clear stored credentials
+      await _auth0.credentialsManager.clearCredentials();
+
+      // Logout from Auth0
       await _auth0.webAuthentication().logout();
-      isAuthenticated.value = false;
-      currentUser.value = null;
+
+      // Clear local state
+      _credentials = null;
+      _currentUser = null;
+      _isAuthenticated.value = false;
     } catch (e) {
-      debugPrint('Error during logout: $e');
-    }
-  }
-
-  Future<String?> getAccessToken() async {
-    try {
-      final credentials = await _credentialsManager.credentials();
-      return credentials.accessToken;
-    } catch (e) {
-      debugPrint('Error getting access token: $e');
-      return null;
-    }
-  }
-
-  Future<UserProfile> createUserWithEmailAndPassword(
-      String email, String password) async {
-    try {
-      await _auth0.api.signup(
-        email: email,
-        password: password,
-        connection: 'Username-Password-Authentication',
-      );
-
-      // After signup, automatically sign in the user
-      final loginCredentials = await _auth0.api.login(
-        usernameOrEmail: email,
-        password: password,
-        connectionOrRealm: 'Username-Password-Authentication',
-      );
-
-      isAuthenticated.value = true;
-      final user = UserProfile.fromAuth0User(loginCredentials.user);
-      currentUser.value = user;
-      return user;
-    } catch (e) {
-      debugPrint('Error creating user with email and password: $e');
+      debugPrint('Logout error: $e');
       rethrow;
+    } finally {
+      _isLoading.value = false;
+      notifyListeners();
     }
+  }
+
+  /// Load user profile from Auth0
+  Future<void> _loadUserProfile() async {
+    if (_credentials?.accessToken == null) return;
+
+    try {
+      final userProfile = await _auth0.api.userProfile(
+        accessToken: _credentials!.accessToken,
+      );
+      _currentUser = UserModel.fromAuth0Profile(userProfile);
+    } catch (e) {
+      debugPrint('Error loading user profile: $e');
+    }
+  }
+
+  /// Refresh access token
+  Future<void> refreshToken() async {
+    try {
+      _credentials = await _auth0.credentialsManager.credentials();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error refreshing token: $e');
+      // If refresh fails, logout user
+      await logout();
+    }
+  }
+
+  @override
+  void dispose() {
+    _isAuthenticated.dispose();
+    _isLoading.dispose();
+    super.dispose();
   }
 }

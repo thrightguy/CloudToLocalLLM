@@ -1,135 +1,209 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloudtolocalllm/services/auth_service.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
-import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
-import 'package:cloudtolocalllm/components/gradient_button.dart';
-import 'package:cloudtolocalllm/components/modern_card.dart';
+import '../config/theme.dart';
+import '../config/app_config.dart';
+import '../services/auth_service.dart';
+import '../components/gradient_button.dart';
+import '../components/modern_card.dart';
 
-class LoginScreen extends StatelessWidget {
-  final AuthService authService;
-  final bool isRegistrationMode;
+/// Modern login screen with Auth0 integration
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
-  const LoginScreen({
-    super.key,
-    required this.authService,
-    this.isRegistrationMode = false,
-  });
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authService = context.read<AuthService>();
+      await authService.login();
+
+      if (mounted && authService.isAuthenticated.value) {
+        context.go('/');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: ${e.toString()}'),
+            backgroundColor: AppTheme.dangerColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > AppConfig.tabletBreakpoint;
+
     return Scaffold(
-      appBar: GradientAppBar(
-        title: _isLogin ? 'Login' : 'Create Account',
-      ),
+      backgroundColor: AppTheme.backgroundMain,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.backgroundMain,
-              Color(0xFF1a1c24),
-            ],
-          ),
+          gradient: AppTheme.headerGradient,
         ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: ModernCard(
-                padding: EdgeInsets.all(AppTheme.spacingXL),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Logo matching homepage design
-                    Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color: AppTheme.secondaryColor,
-                        borderRadius: BorderRadius.circular(35),
-                        border: Border.all(
-                          color: AppTheme.primaryColor,
-                          width: 3,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(AppTheme.spacingL),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 400 : double.infinity,
+                ),
+                child: ModernCard(
+                  padding: EdgeInsets.all(AppTheme.spacingXL),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo/Icon
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.buttonGradient,
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.borderRadiusM),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  AppTheme.primaryColor.withValues(alpha: 0.4),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        boxShadow: const [AppTheme.boxShadowSmall],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'LLM',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryColor,
-                          ),
+                        child: const Icon(
+                          Icons.cloud_download_outlined,
+                          color: Colors.white,
+                          size: 40,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
 
-                    // Title
-                    Text(
-                      'CloudToLocalLLM',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 28,
+                      SizedBox(height: AppTheme.spacingXL),
+
+                      // Welcome text
+                      Text(
+                        'Welcome to',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              color: AppTheme.textColorLight,
+                              fontSize: 18,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      SizedBox(height: AppTheme.spacingS),
+
+                      Text(
+                        AppConfig.appName,
+                        style:
+                            Theme.of(context).textTheme.displayMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      SizedBox(height: AppTheme.spacingM),
+
+                      Text(
+                        AppConfig.appDescription,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.textColorLight,
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      SizedBox(height: AppTheme.spacingXXL),
+
+                      // Login button
+                      GradientButton(
+                        text: 'Sign In with Auth0',
+                        icon: Icons.login,
+                        width: double.infinity,
+                        isLoading: _isLoading,
+                        onPressed: _handleLogin,
+                      ),
+
+                      SizedBox(height: AppTheme.spacingL),
+
+                      // Additional info
+                      Text(
+                        'Secure authentication powered by Auth0',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textColorLight,
+                              fontSize: 12,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      SizedBox(height: AppTheme.spacingM),
+
+                      // Links
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              // Open homepage in new tab
+                            },
+                            child: Text(
+                              'Learn More',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Subtitle
-                    Text(
-                      _isLogin ? 'Welcome back!' : 'Create your account',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: const Color(0xFFe0d7ff),
-                            fontSize: 16,
+                            ),
                           ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Content
-                    Text(
-                      _isLogin
-                          ? 'Sign in to access your CloudToLocalLLM dashboard and manage your local AI models.'
-                          : 'Join CloudToLocalLLM to start running powerful AI models locally with cloud-based management.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textColorLight,
-                            fontSize: 14,
-                            height: 1.5,
+                          Text(
+                            ' • ',
+                            style: TextStyle(
+                              color: AppTheme.textColorLight,
+                              fontSize: 14,
+                            ),
                           ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Auth Button
-                    GradientButton(
-                      text: _isLogin ? 'Sign In' : 'Create Account',
-                      icon: _isLogin ? Icons.login : Icons.person_add,
-                      width: double.infinity,
-                      onPressed: () async {
-                        try {
-                          await authService.login();
-                          if (context.mounted) {
-                            // Navigate to home after successful login
-                            GoRouter.of(context).go('/');
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Login error: $e'),
-                                backgroundColor: Colors.red,
+                          TextButton(
+                            onPressed: () {
+                              // Open GitHub in new tab
+                            },
+                            child: Text(
+                              'GitHub',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -138,7 +212,4 @@ class LoginScreen extends StatelessWidget {
       ),
     );
   }
-
-  // Keep _isLogin for title logic, can be simplified further if not needed by router
-  bool get _isLogin => !isRegistrationMode;
 }
