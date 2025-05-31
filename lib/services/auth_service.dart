@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:openid_client/openid_client_io.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../models/user_model.dart';
+
+// Conditional imports for platform-specific implementations
+import 'package:openid_client/openid_client_io.dart'
+    if (dart.library.html) 'package:openid_client/openid_client_browser.dart';
 
 /// Production-ready authentication service using OpenID Connect with Auth0
 /// Supports all platforms including Linux desktop
@@ -74,30 +77,12 @@ class AuthService extends ChangeNotifier {
       _isLoading.value = true;
       notifyListeners();
 
-      // Create authenticator with correct port for desktop
-      final authenticator = Authenticator(
-        _client!,
-        scopes: AppConfig.auth0Scopes,
-        port: 3025, // Use port 3025 for desktop
-        urlLancher: (url) async {
-          debugPrint('Launching auth URL: $url');
-          if (await canLaunchUrl(Uri.parse(url))) {
-            await launchUrl(
-              Uri.parse(url),
-              mode: LaunchMode.externalApplication,
-            );
-          } else {
-            throw 'Could not launch $url';
-          }
-        },
-      );
-
-      // Start authentication
-      _credential = await authenticator.authorize();
-
-      if (_credential != null) {
-        await _loadUserProfile();
-        _isAuthenticated.value = true;
+      if (kIsWeb) {
+        // Web-specific authentication flow
+        await _loginWeb();
+      } else {
+        // Desktop authentication flow
+        await _loginDesktop();
       }
     } catch (e) {
       debugPrint('Login error: $e');
@@ -106,6 +91,66 @@ class AuthService extends ChangeNotifier {
     } finally {
       _isLoading.value = false;
       notifyListeners();
+    }
+  }
+
+  /// Web-specific login implementation
+  Future<void> _loginWeb() async {
+    // For web, redirect to Auth0 login page
+    final redirectUri = AppConfig.auth0WebRedirectUri;
+    final state = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final authUrl = Uri.https(
+      AppConfig.auth0Domain,
+      '/authorize',
+      {
+        'client_id': AppConfig.auth0ClientId,
+        'redirect_uri': redirectUri,
+        'response_type': 'code',
+        'scope': AppConfig.auth0Scopes.join(' '),
+        'audience': AppConfig.auth0Audience,
+        'state': state,
+      },
+    );
+
+    debugPrint('Redirecting to Auth0: $authUrl');
+
+    // Redirect to Auth0 login page
+    if (await canLaunchUrl(authUrl)) {
+      await launchUrl(authUrl, mode: LaunchMode.platformDefault);
+    } else {
+      throw 'Could not launch Auth0 login URL';
+    }
+  }
+
+  /// Desktop-specific login implementation
+  Future<void> _loginDesktop() async {
+    if (_client == null) {
+      throw Exception('Auth client not initialized');
+    }
+
+    final authenticator = Authenticator(
+      _client!,
+      scopes: AppConfig.auth0Scopes,
+      port: 3025,
+      urlLancher: (url) async {
+        debugPrint('Launching auth URL: $url');
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(
+            Uri.parse(url),
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          throw 'Could not launch $url';
+        }
+      },
+    );
+
+    _credential = await authenticator.authorize();
+
+    if (_credential != null) {
+      await _loadUserProfile();
+      _isAuthenticated.value = true;
     }
   }
 
