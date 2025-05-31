@@ -1,0 +1,153 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
+import '../models/user_model.dart';
+
+// Platform-specific imports
+import 'auth_service_web.dart';
+import 'auth_service_desktop.dart';
+import 'auth_service_mobile.dart';
+
+/// Platform detection and service factory for authentication
+/// Automatically selects the appropriate authentication service based on platform
+class AuthServicePlatform extends ChangeNotifier {
+  late final dynamic _platformService;
+
+  // Platform detection
+  static bool get isWeb => kIsWeb;
+  static bool get isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  static bool get isDesktop =>
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+
+  // Getters that delegate to platform service
+  ValueNotifier<bool> get isAuthenticated => _platformService.isAuthenticated;
+  ValueNotifier<bool> get isLoading => _platformService.isLoading;
+  UserModel? get currentUser => _platformService.currentUser;
+
+  AuthServicePlatform() {
+    _initialize();
+  }
+
+  void _initialize() {
+    // Create platform-specific service
+    if (isWeb) {
+      _platformService = AuthServiceWeb();
+      debugPrint('🌐 Initialized Web Authentication Service');
+    } else if (isMobile) {
+      _platformService = AuthServiceMobile();
+      debugPrint('📱 Initialized Mobile Authentication Service');
+    } else if (isDesktop) {
+      _platformService = AuthServiceDesktop();
+      debugPrint('🖥️ Initialized Desktop Authentication Service');
+    } else {
+      // Fallback to web service
+      _platformService = AuthServiceWeb();
+      debugPrint(
+          '⚠️ Unknown platform, falling back to Web Authentication Service');
+    }
+
+    // Listen to platform service changes
+    _platformService.addListener(() {
+      notifyListeners();
+    });
+  }
+
+  /// Login using platform-specific implementation
+  Future<void> login() async {
+    return await _platformService.login();
+  }
+
+  /// Logout using platform-specific implementation
+  Future<void> logout() async {
+    return await _platformService.logout();
+  }
+
+  /// Handle authentication callback using platform-specific implementation
+  Future<bool> handleCallback() async {
+    return await _platformService.handleCallback();
+  }
+
+  /// Mobile-specific: Login with biometric authentication
+  /// Only available on mobile platforms
+  Future<void> loginWithBiometrics() async {
+    if (isMobile && _platformService is AuthServiceMobile) {
+      return await (_platformService as AuthServiceMobile)
+          .loginWithBiometrics();
+    } else {
+      throw UnsupportedError(
+          'Biometric authentication is only available on mobile platforms');
+    }
+  }
+
+  /// Mobile-specific: Check if biometric authentication is available
+  /// Returns false for non-mobile platforms
+  Future<bool> isBiometricAvailable() async {
+    if (isMobile && _platformService is AuthServiceMobile) {
+      return await (_platformService as AuthServiceMobile)
+          .isBiometricAvailable();
+    }
+    return false;
+  }
+
+  /// Mobile-specific: Refresh token if needed
+  /// Only available on mobile platforms
+  Future<void> refreshTokenIfNeeded() async {
+    if (isMobile && _platformService is AuthServiceMobile) {
+      return await (_platformService as AuthServiceMobile)
+          .refreshTokenIfNeeded();
+    }
+    // For other platforms, this is handled automatically or not needed
+  }
+
+  /// Get platform-specific information for debugging
+  Map<String, dynamic> getPlatformInfo() {
+    return {
+      'platform': getPlatformName(),
+      'isWeb': isWeb,
+      'isMobile': isMobile,
+      'isDesktop': isDesktop,
+      'serviceType': _platformService.runtimeType.toString(),
+      'isAuthenticated': isAuthenticated.value,
+      'isLoading': isLoading.value,
+      'hasUser': currentUser != null,
+    };
+  }
+
+  String getPlatformName() {
+    if (isWeb) return 'Web';
+    if (isMobile) {
+      if (!kIsWeb) {
+        if (Platform.isAndroid) return 'Android';
+        if (Platform.isIOS) return 'iOS';
+      }
+      return 'Mobile';
+    }
+    if (isDesktop) {
+      if (!kIsWeb) {
+        if (Platform.isWindows) return 'Windows';
+        if (Platform.isLinux) return 'Linux';
+        if (Platform.isMacOS) return 'macOS';
+      }
+      return 'Desktop';
+    }
+    return 'Unknown';
+  }
+
+  /// Platform capability checks
+  bool get supportsBiometrics => isMobile;
+  bool get supportsDeepLinking => isMobile || isDesktop;
+  bool get supportsSecureStorage => isMobile || isDesktop;
+
+  /// Get recommended authentication method for current platform
+  String get recommendedAuthMethod {
+    if (isWeb) return 'redirect';
+    if (isMobile) return 'universal_login';
+    if (isDesktop) return 'authorization_code_pkce';
+    return 'redirect';
+  }
+
+  @override
+  void dispose() {
+    _platformService.dispose();
+    super.dispose();
+  }
+}
