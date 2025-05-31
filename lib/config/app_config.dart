@@ -14,10 +14,24 @@ class AppConfig {
 
   // Auth0 Configuration
   static const String auth0Domain = 'dev-xafu7oedkd5wlrbo.us.auth0.com';
-  static const String auth0ClientId = 'H10eY1pG9e2g6MvFKPDFbJ3ASIhxDgNu';
-  static const String auth0RedirectUri =
-      'https://app.cloudtolocalllm.online/callback';
   static const String auth0Audience = 'https://api.cloudtolocalllm.online';
+  static const String auth0Issuer =
+      'https://dev-xafu7oedkd5wlrbo.us.auth0.com/';
+
+  // Universal Client Configuration (works for both web and desktop)
+  static const String auth0ClientId = 'ESfES9tnQ4qGxFlwzXpDuRVXCyk0KF29';
+
+  // Platform-specific redirect URIs
+  static const String auth0WebRedirectUri =
+      'https://app.cloudtolocalllm.online/callback';
+  static const String auth0DesktopRedirectUri = 'http://localhost:3025/';
+
+  // OAuth2 Scopes
+  static const List<String> auth0Scopes = ['openid', 'profile', 'email'];
+
+  // Development mode settings
+  static const bool enableDevMode = true; // Set to false for production
+  static const String devModeUser = 'dev@cloudtolocalllm.online';
 
   // API Configuration
   static const String apiBaseUrl = 'https://api.cloudtolocalllm.online';
@@ -32,4 +46,10 @@ class AppConfig {
   static const bool enableDarkMode = true;
   static const bool enableAnalytics = false; // Disabled for privacy
   static const bool enableDebugMode = false;
+
+  // Ollama Configuration
+  static const String defaultOllamaHost = 'localhost';
+  static const int defaultOllamaPort = 11434;
+  static const String defaultOllamaUrl = 'http://localhost:11434';
+  static const Duration ollamaTimeout = Duration(seconds: 60);
 }
