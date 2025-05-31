@@ -129,6 +129,11 @@ class AuthService extends ChangeNotifier {
       throw Exception('Auth client not initialized');
     }
 
+    // This method should only be called on desktop platforms
+    if (kIsWeb) {
+      throw Exception('Desktop login method called on web platform');
+    }
+
     final authenticator = Authenticator(
       _client!,
       scopes: AppConfig.auth0Scopes,
