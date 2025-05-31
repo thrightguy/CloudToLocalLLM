@@ -14,15 +14,11 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="/">
+  <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-  <!-- Content Security Policy to allow WebAssembly and Auth0 -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' *.auth0.com *.googleapis.com *.gstatic.com;">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -33,76 +29,10 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>CloudToLocalLLM Portal</title>
+  <title>cloudtolocalllm</title>
   <link rel="manifest" href="manifest.json">
-
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = {{flutter_service_worker_version}};
-  </script>
-  <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
-  <!-- This script bootstraps Flutter and starts the application -->
-  <script src="flutter_bootstrap.js" defer></script>
-
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Roboto', sans-serif;
-    }
-
-    /* Loading indicator styling */
-    .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      width: 100vw;
-      position: absolute;
-      top: 0;
-      left: 0;
-      flex-direction: column;
-    }
-
-    .loading-text {
-      margin-top: 20px;
-      font-size: 18px;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(0, 0, 0, 0.1);
-      border-radius: 50%;
-      border-top-color: #2196f3;
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
 </head>
 <body>
-  <!-- Loading indicator that will be replaced by Flutter -->
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <div class="loading-text">Loading CloudToLocalLLM...</div>
-  </div>
-
-  <script>
-    // Hide loading indicator once Flutter app is initialized
-    window.addEventListener('flutter-first-frame', function() {
-      const loadingIndicator = document.getElementById('loading');
-      if (loadingIndicator) {
-        loadingIndicator.style.opacity = '0';
-        loadingIndicator.style.transition = 'opacity 0.4s ease-out';
-        setTimeout(function() {
-          loadingIndicator.style.display = 'none';
-        }, 400);
-      }
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

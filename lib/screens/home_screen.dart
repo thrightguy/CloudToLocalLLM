@@ -1,146 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cloudtolocalllm/services/auth_service.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
-import 'package:cloudtolocalllm/components/gradient_app_bar.dart';
-import 'package:cloudtolocalllm/components/gradient_button.dart';
-import 'package:cloudtolocalllm/components/modern_card.dart';
+import '../config/theme.dart';
+import '../config/app_config.dart';
+import '../services/auth_service.dart';
+import '../components/gradient_button.dart';
+import '../components/modern_card.dart';
 
+/// Modern home screen with clean design
 class HomeScreen extends StatelessWidget {
-  final AuthService authService;
-
-  const HomeScreen({
-    super.key,
-    required this.authService,
-  });
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > AppConfig.tabletBreakpoint;
+
     return Scaffold(
-      appBar: GradientAppBar(
-        title: 'CloudToLocalLLM',
-        actions: [
-          ValueListenableBuilder<bool>(
-            valueListenable: authService.isAuthenticated,
-            builder: (context, isAuthenticated, child) {
-              if (isAuthenticated) {
-                return IconButton(
-                  icon: const Icon(Icons.logout),
-                  onPressed: () async {
-                    await authService.logout();
-                    if (context.mounted) {
-                      GoRouter.of(context).go('/');
-                    }
-                  },
-                  tooltip: 'Logout',
-                );
-              } else {
-                return TextButton(
-                  onPressed: () {
-                    GoRouter.of(context).go('/login');
-                  },
-                  child: const Text(
-                    'Login',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
+      backgroundColor: AppTheme.backgroundMain,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.backgroundMain,
-              Color(0xFF1a1c24),
-            ],
-          ),
+          gradient: AppTheme.headerGradient,
         ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo matching homepage design
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: AppTheme.secondaryColor,
-                      borderRadius: BorderRadius.circular(35),
-                      border: Border.all(
-                        color: AppTheme.primaryColor,
-                        width: 3,
-                      ),
-                      boxShadow: const [AppTheme.boxShadowSmall],
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Header
+                _buildHeader(context),
+
+                // Main content
+                Padding(
+                  padding: EdgeInsets.all(AppTheme.spacingL),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop
+                          ? AppConfig.maxContentWidth
+                          : double.infinity,
                     ),
-                    child: const Center(
-                      child: Text(
-                        'LLM',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Title
-                  Text(
-                    'CloudToLocalLLM',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 28,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Subtitle
-                  Text(
-                    'Run advanced AI models locally, managed by a cloud interface.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(0xFFe0d7ff),
-                          fontSize: 16,
-                        ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Main content card
-                  ModernCard(
-                    padding: EdgeInsets.all(AppTheme.spacingXL),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Content based on authentication status
-                        ValueListenableBuilder<bool>(
-                          valueListenable: authService.isAuthenticated,
-                          builder: (context, isAuthenticated, child) {
-                            if (isAuthenticated) {
-                              return _buildAuthenticatedContent(context);
-                            } else {
-                              return _buildUnauthenticatedContent(context);
-                            }
-                          },
-                        ),
+                        // Welcome card
+                        _buildWelcomeCard(context),
+
+                        SizedBox(height: AppTheme.spacingXL),
+
+                        // Feature cards
+                        if (isDesktop)
+                          _buildDesktopFeatures(context)
+                        else
+                          _buildMobileFeatures(context),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -148,72 +62,224 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAuthenticatedContent(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(AppTheme.spacingL),
+      child: Row(
+        children: [
+          // Logo
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+            ),
+            child: const Icon(
+              Icons.cloud_download_outlined,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+
+          SizedBox(width: AppTheme.spacingM),
+
+          // App name
+          Text(
+            AppConfig.appName,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+
+          const Spacer(),
+
+          // User menu
+          Consumer<AuthService>(
+            builder: (context, authService, child) {
+              final user = authService.currentUser;
+              return PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'logout') {
+                    await authService.logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.logout, size: 18),
+                        SizedBox(width: AppTheme.spacingS),
+                        const Text('Sign Out'),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  padding: EdgeInsets.all(AppTheme.spacingS),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: AppTheme.primaryColor,
+                        child: Text(
+                          user?.initials ?? '?',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: AppTheme.spacingS),
+                      Text(
+                        user?.displayName ?? 'User',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(width: AppTheme.spacingS),
+                      const Icon(
+                        Icons.arrow_drop_down,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard(BuildContext context) {
+    return ModernCard(
+      padding: EdgeInsets.all(AppTheme.spacingXL),
+      child: Column(
+        children: [
+          Text(
+            'Welcome to CloudToLocalLLM',
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          Text(
+            'Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textColorLight,
+                  fontSize: 18,
+                  height: 1.5,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: AppTheme.spacingXL),
+          GradientButton(
+            text: 'Get Started',
+            icon: Icons.rocket_launch,
+            onPressed: () {
+              // Navigate to main functionality
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Main functionality coming soon!'),
+                  backgroundColor: AppTheme.infoColor,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopFeatures(BuildContext context) {
+    return Row(
       children: [
-        Text(
-          'Welcome to CloudToLocalLLM',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Your AI models are ready to use. Start chatting with your local language models.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textColorLight,
-                fontSize: 14,
-                height: 1.5,
-              ),
-        ),
-        const SizedBox(height: 32),
-        GradientButton(
-          text: 'Start Chatting',
-          icon: Icons.chat_bubble_outline,
-          width: double.infinity,
-          onPressed: () {
-            GoRouter.of(context).go('/chat');
-          },
-        ),
+        Expanded(child: _buildFeatureCard1(context)),
+        SizedBox(width: AppTheme.spacingL),
+        Expanded(child: _buildFeatureCard2(context)),
+        SizedBox(width: AppTheme.spacingL),
+        Expanded(child: _buildFeatureCard3(context)),
       ],
     );
   }
 
-  Widget _buildUnauthenticatedContent(BuildContext context) {
+  Widget _buildMobileFeatures(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          'Please login to access your models and settings',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.primaryColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Authentication is required to use this application.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textColorLight,
-                fontSize: 14,
-                height: 1.5,
-              ),
-        ),
-        const SizedBox(height: 32),
-        GradientButton(
-          text: 'Login / Create Account',
-          icon: Icons.login,
-          width: double.infinity,
-          onPressed: () {
-            GoRouter.of(context).go('/login');
-          },
-        ),
+        _buildFeatureCard1(context),
+        SizedBox(height: AppTheme.spacingL),
+        _buildFeatureCard2(context),
+        SizedBox(height: AppTheme.spacingL),
+        _buildFeatureCard3(context),
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard1(BuildContext context) {
+    return InfoCard(
+      title: 'Local Models',
+      description:
+          'Run powerful LLMs directly on your hardware for maximum privacy and control.',
+      icon: Icons.computer,
+      iconColor: AppTheme.primaryColor,
+      features: const [
+        'Complete data privacy',
+        'No internet required',
+        'Custom model support',
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard2(BuildContext context) {
+    return InfoCard(
+      title: 'Cloud Interface',
+      description:
+          'Manage your local models through an intuitive web interface.',
+      icon: Icons.cloud,
+      iconColor: AppTheme.secondaryColor,
+      features: const [
+        'Remote management',
+        'Real-time monitoring',
+        'Easy configuration',
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard3(BuildContext context) {
+    return InfoCard(
+      title: 'High Performance',
+      description:
+          'Optimized for speed and efficiency across different hardware configurations.',
+      icon: Icons.speed,
+      iconColor: AppTheme.accentColor,
+      features: const [
+        'GPU acceleration',
+        'Memory optimization',
+        'Scalable architecture',
       ],
     );
   }

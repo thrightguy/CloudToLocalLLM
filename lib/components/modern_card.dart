@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cloudtolocalllm/config/theme.dart';
+import '../config/theme.dart';
 
-/// Modern card component matching homepage design with hover effects
+/// Modern card component with hover effects matching homepage design
 class ModernCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -10,10 +10,6 @@ class ModernCard extends StatefulWidget {
   final double? height;
   final VoidCallback? onTap;
   final bool enableHover;
-  final Color? backgroundColor;
-  final List<BoxShadow>? boxShadow;
-  final BorderRadius? borderRadius;
-  final Border? border;
 
   const ModernCard({
     super.key,
@@ -24,10 +20,6 @@ class ModernCard extends StatefulWidget {
     this.height,
     this.onTap,
     this.enableHover = true,
-    this.backgroundColor,
-    this.boxShadow,
-    this.borderRadius,
-    this.border,
   });
 
   @override
@@ -37,7 +29,6 @@ class ModernCard extends StatefulWidget {
 class _ModernCardState extends State<ModernCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _elevationAnimation;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
 
@@ -48,13 +39,6 @@ class _ModernCardState extends State<ModernCard>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _elevationAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 1.02,
@@ -72,7 +56,7 @@ class _ModernCardState extends State<ModernCard>
 
   void _onHover(bool isHovered) {
     if (!widget.enableHover) return;
-    
+
     setState(() => _isHovered = isHovered);
     if (isHovered) {
       _animationController.forward();
@@ -96,32 +80,33 @@ class _ModernCardState extends State<ModernCard>
               height: widget.height,
               margin: widget.margin ?? EdgeInsets.all(AppTheme.spacingS),
               decoration: BoxDecoration(
-                color: widget.backgroundColor ?? AppTheme.backgroundCard,
-                borderRadius: widget.borderRadius ?? 
-                    BorderRadius.circular(AppTheme.borderRadius),
-                border: widget.border ?? Border.all(
-                  color: _isHovered 
+                color: AppTheme.backgroundCard,
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+                border: Border.all(
+                  color: _isHovered
                       ? AppTheme.primaryColor
                       : AppTheme.secondaryColor.withValues(alpha: 0.27),
                   width: 1.5,
                 ),
-                boxShadow: widget.boxShadow ?? [
-                  if (_isHovered)
-                    AppTheme.boxShadowLarge
-                  else
-                    AppTheme.boxShadow,
+                boxShadow: [
+                  BoxShadow(
+                    color: _isHovered
+                        ? AppTheme.primaryColor.withValues(alpha: 0.4)
+                        : Colors.black.withValues(alpha: 0.4),
+                    blurRadius: _isHovered ? 32 : 24,
+                    offset: Offset(0, _isHovered ? 8 : 4),
+                  ),
                 ],
               ),
               child: Material(
                 color: Colors.transparent,
-                borderRadius: widget.borderRadius ?? 
-                    BorderRadius.circular(AppTheme.borderRadius),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
                 child: InkWell(
                   onTap: widget.onTap,
-                  borderRadius: widget.borderRadius ?? 
-                      BorderRadius.circular(AppTheme.borderRadius),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
                   child: Container(
-                    padding: widget.padding ?? EdgeInsets.all(AppTheme.spacingL),
+                    padding:
+                        widget.padding ?? EdgeInsets.all(AppTheme.spacingL),
                     child: widget.child,
                   ),
                 ),
@@ -134,7 +119,7 @@ class _ModernCardState extends State<ModernCard>
   }
 }
 
-/// Info card component matching homepage design
+/// Info card component for displaying feature information
 class InfoCard extends StatelessWidget {
   final String title;
   final String description;
@@ -167,8 +152,9 @@ class InfoCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(AppTheme.spacingS),
                   decoration: BoxDecoration(
-                    color: (iconColor ?? AppTheme.primaryColor).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                    color: (iconColor ?? AppTheme.primaryColor)
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                   ),
                   child: Icon(
                     icon,
@@ -182,139 +168,64 @@ class InfoCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                      ),
                 ),
               ),
             ],
           ),
-          
+
           SizedBox(height: AppTheme.spacingM),
-          
+
           // Description
           Text(
             description,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppTheme.textColorLight,
-              fontSize: 16,
-              height: 1.5,
-            ),
+                  color: AppTheme.textColorLight,
+                  fontSize: 16,
+                  height: 1.5,
+                ),
           ),
-          
+
           // Features list
           if (features != null && features!.isNotEmpty) ...[
             SizedBox(height: AppTheme.spacingL),
             ...features!.map((feature) => Padding(
-              padding: EdgeInsets.only(bottom: AppTheme.spacingS),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentColor,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  SizedBox(width: AppTheme.spacingM),
-                  Expanded(
-                    child: Text(
-                      feature,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textColor,
-                        fontSize: 15,
-                        height: 1.4,
+                  padding: EdgeInsets.only(bottom: AppTheme.spacingS),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentColor,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
                       ),
-                    ),
+                      SizedBox(width: AppTheme.spacingM),
+                      Expanded(
+                        child: Text(
+                          feature,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.textColor,
+                                    fontSize: 15,
+                                    height: 1.4,
+                                  ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
           ],
-          
+
           // Action button
           if (action != null) ...[
             SizedBox(height: AppTheme.spacingL),
             action!,
           ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Status card for displaying system information
-class StatusCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final String? subtitle;
-
-  const StatusCard({
-    super.key,
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-    this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ModernCard(
-      enableHover: false,
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(AppTheme.spacingM),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-          ),
-          SizedBox(width: AppTheme.spacingM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textColorLight,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: AppTheme.spacingXS),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  SizedBox(height: AppTheme.spacingXS),
-                  Text(
-                    subtitle!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textColorLight,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
         ],
       ),
     );

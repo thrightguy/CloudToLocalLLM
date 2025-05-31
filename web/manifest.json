@@ -1,11 +1,11 @@
 {
-    "name": "CloudToLocalLLM Portal",
-    "short_name": "CloudToLocalLLM",
+    "name": "cloudtolocalllm",
+    "short_name": "cloudtolocalllm",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#2196f3",
-    "description": "Run powerful Large Language Models locally with cloud-based management",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
