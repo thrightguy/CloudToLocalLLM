@@ -4,97 +4,207 @@ import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
-import '../components/gradient_button.dart';
-import '../components/modern_card.dart';
+import '../services/chat_service.dart';
+import '../services/ollama_service.dart';
+import '../components/conversation_list.dart';
+import '../components/message_bubble.dart';
+import '../components/message_input.dart';
+import '../components/app_logo.dart';
 
-/// Modern home screen with clean design
-class HomeScreen extends StatelessWidget {
+/// Modern ChatGPT-like chat interface
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late ChatService _chatService;
+  late OllamaService _ollamaService;
+  bool _isSidebarCollapsed = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _ollamaService = OllamaService();
+    _chatService = ChatService(_ollamaService);
+
+    // Initialize services
+    _ollamaService.testConnection();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > AppConfig.tabletBreakpoint;
+    final isMobile = size.width < AppConfig.mobileBreakpoint;
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundMain,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.headerGradient,
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Header
-                _buildHeader(context),
+    // Auto-collapse sidebar on mobile
+    if (isMobile && !_isSidebarCollapsed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _isSidebarCollapsed = true;
+        });
+      });
+    }
 
-                // Main content
-                Padding(
-                  padding: EdgeInsets.all(AppTheme.spacingL),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: isDesktop
-                          ? AppConfig.maxContentWidth
-                          : double.infinity,
-                    ),
-                    child: Column(
-                      children: [
-                        // Welcome card
-                        _buildWelcomeCard(context),
-
-                        SizedBox(height: AppTheme.spacingXL),
-
-                        // Feature cards
-                        if (isDesktop)
-                          _buildDesktopFeatures(context)
-                        else
-                          _buildMobileFeatures(context),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _chatService),
+        ChangeNotifierProvider.value(value: _ollamaService),
+      ],
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundMain,
+        body: Column(
+          children: [
+            // Header with gradient background
+            Container(
+              decoration: const BoxDecoration(
+                gradient: AppTheme.headerGradient,
+              ),
+              child: _buildHeader(context),
             ),
-          ),
+
+            // Main chat interface
+            Expanded(
+              child: Row(
+                children: [
+                  // Conversation sidebar
+                  if (!isMobile || !_isSidebarCollapsed)
+                    Consumer<ChatService>(
+                      builder: (context, chatService, child) {
+                        return ConversationList(
+                          conversations: chatService.conversations,
+                          selectedConversation: chatService.currentConversation,
+                          onConversationSelected:
+                              chatService.selectConversation,
+                          onConversationDeleted: chatService.deleteConversation,
+                          onConversationRenamed:
+                              chatService.updateConversationTitle,
+                          onNewConversation: () =>
+                              chatService.createConversation(),
+                          isCollapsed: _isSidebarCollapsed,
+                        );
+                      },
+                    ),
+
+                  // Main chat area
+                  Expanded(
+                    child: _buildChatArea(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
+        floatingActionButton: isMobile && _isSidebarCollapsed
+            ? Consumer<ChatService>(
+                builder: (context, chatService, child) {
+                  return FloatingActionButton(
+                    onPressed: () => chatService.createConversation(),
+                    backgroundColor: AppTheme.primaryColor,
+                    child: const Icon(Icons.add, color: Colors.white),
+                  );
+                },
+              )
+            : null,
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(AppTheme.spacingL),
+      padding: EdgeInsets.all(AppTheme.spacingM),
       child: Row(
         children: [
-          // Logo
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+          // Sidebar toggle (mobile)
+          if (MediaQuery.of(context).size.width < AppConfig.mobileBreakpoint)
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _isSidebarCollapsed = !_isSidebarCollapsed;
+                });
+              },
+              icon: Icon(
+                _isSidebarCollapsed ? Icons.menu : Icons.menu_open,
+                color: Colors.white,
+              ),
             ),
-            child: const Icon(
-              Icons.cloud_download_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
+
+          // Logo and app name
+          const AppLogo.small(
+            backgroundColor: Colors.white,
+            textColor: Color(0xFF6e8efb),
+            borderColor: Color(0xFFa777e3),
           ),
 
-          SizedBox(width: AppTheme.spacingM),
+          SizedBox(width: AppTheme.spacingS),
 
-          // App name
           Text(
             AppConfig.appName,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.white,
-                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
           ),
 
           const Spacer(),
+
+          // Model selector
+          Consumer2<ChatService, OllamaService>(
+            builder: (context, chatService, ollamaService, child) {
+              final models = ollamaService.models.map((m) => m.name).toList();
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: chatService.selectedModel,
+                    hint: Text(
+                      'Select Model',
+                      style:
+                          TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+                    ),
+                    items: models.map((model) {
+                      return DropdownMenuItem(
+                        value: model,
+                        child: Text(
+                          model,
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (model) {
+                      if (model != null) {
+                        chatService.setSelectedModel(model);
+                      }
+                    },
+                    dropdownColor: Colors.white,
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          SizedBox(width: AppTheme.spacingM),
 
           // User menu
           Consumer<AuthService>(
@@ -102,14 +212,30 @@ class HomeScreen extends StatelessWidget {
               final user = authService.currentUser;
               return PopupMenuButton<String>(
                 onSelected: (value) async {
-                  if (value == 'logout') {
-                    await authService.logout();
-                    if (context.mounted) {
-                      context.go('/login');
-                    }
+                  switch (value) {
+                    case 'settings':
+                      context.go('/settings');
+                      break;
+                    case 'logout':
+                      await authService.logout();
+                      if (context.mounted) {
+                        context.go('/login');
+                      }
+                      break;
                   }
                 },
                 itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.settings, size: 18),
+                        SizedBox(width: AppTheme.spacingS),
+                        const Text('Settings'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
                   PopupMenuItem(
                     value: 'logout',
                     child: Row(
@@ -121,11 +247,21 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+                ),
+                color: AppTheme.backgroundCard,
+                shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
                 child: Container(
                   padding: EdgeInsets.all(AppTheme.spacingS),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -168,36 +304,98 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context) {
-    return ModernCard(
-      padding: EdgeInsets.all(AppTheme.spacingXL),
+  Widget _buildChatArea(BuildContext context) {
+    return Consumer<ChatService>(
+      builder: (context, chatService, child) {
+        final conversation = chatService.currentConversation;
+
+        if (conversation == null) {
+          return _buildEmptyState(context);
+        }
+
+        return Column(
+          children: [
+            // Chat messages
+            Expanded(
+              child: conversation.messages.isEmpty
+                  ? _buildEmptyConversation(context)
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding:
+                          EdgeInsets.symmetric(vertical: AppTheme.spacingM),
+                      itemCount: conversation.messages.length,
+                      itemBuilder: (context, index) {
+                        final message = conversation.messages[index];
+                        return MessageBubble(
+                          message: message,
+                          showAvatar: true,
+                          showTimestamp: index == 0 ||
+                              conversation.messages[index - 1].role !=
+                                  message.role,
+                          onRetry: message.hasError
+                              ? () => _retryMessage(chatService, message)
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+
+            // Message input
+            MessageInput(
+              onSendMessage: (message) => _sendMessage(chatService, message),
+              isLoading: chatService.isLoading,
+              placeholder: chatService.selectedModel == null
+                  ? 'Please select a model first...'
+                  : 'Type your message...',
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: AppTheme.textColorLight,
+          ),
+          SizedBox(height: AppTheme.spacingL),
           Text(
             'Welcome to CloudToLocalLLM',
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                  color: Colors.white,
-                  fontSize: 32,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppTheme.textColor,
                   fontWeight: FontWeight.bold,
                 ),
-            textAlign: TextAlign.center,
           ),
           SizedBox(height: AppTheme.spacingM),
           Text(
-            'Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.',
+            'Start a new conversation to begin chatting with your local LLM',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppTheme.textColorLight,
-                  fontSize: 18,
-                  height: 1.5,
                 ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppTheme.spacingXL),
-          GradientButton(
-            text: 'Test Ollama Connection',
-            icon: Icons.computer,
-            onPressed: () {
-              context.go('/ollama-test');
+          Consumer<ChatService>(
+            builder: (context, chatService, child) {
+              return ElevatedButton.icon(
+                onPressed: () => chatService.createConversation(),
+                icon: const Icon(Icons.add),
+                label: const Text('Start New Conversation'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingL,
+                    vertical: AppTheme.spacingM,
+                  ),
+                ),
+              );
             },
           ),
         ],
@@ -205,72 +403,53 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDesktopFeatures(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _buildFeatureCard1(context)),
-        SizedBox(width: AppTheme.spacingL),
-        Expanded(child: _buildFeatureCard2(context)),
-        SizedBox(width: AppTheme.spacingL),
-        Expanded(child: _buildFeatureCard3(context)),
-      ],
+  Widget _buildEmptyConversation(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.smart_toy,
+            size: 48,
+            color: AppTheme.textColorLight,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          Text(
+            'How can I help you today?',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textColor,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+          SizedBox(height: AppTheme.spacingS),
+          Text(
+            'Type a message below to start the conversation',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textColorLight,
+                ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildMobileFeatures(BuildContext context) {
-    return Column(
-      children: [
-        _buildFeatureCard1(context),
-        SizedBox(height: AppTheme.spacingL),
-        _buildFeatureCard2(context),
-        SizedBox(height: AppTheme.spacingL),
-        _buildFeatureCard3(context),
-      ],
-    );
+  void _sendMessage(ChatService chatService, String message) async {
+    await chatService.sendMessage(message);
+
+    // Scroll to bottom after sending message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
-  Widget _buildFeatureCard1(BuildContext context) {
-    return InfoCard(
-      title: 'Local Models',
-      description:
-          'Run powerful LLMs directly on your hardware for maximum privacy and control.',
-      icon: Icons.computer,
-      iconColor: AppTheme.primaryColor,
-      features: const [
-        'Complete data privacy',
-        'No internet required',
-        'Custom model support',
-      ],
-    );
-  }
-
-  Widget _buildFeatureCard2(BuildContext context) {
-    return InfoCard(
-      title: 'Cloud Interface',
-      description:
-          'Manage your local models through an intuitive web interface.',
-      icon: Icons.cloud,
-      iconColor: AppTheme.secondaryColor,
-      features: const [
-        'Remote management',
-        'Real-time monitoring',
-        'Easy configuration',
-      ],
-    );
-  }
-
-  Widget _buildFeatureCard3(BuildContext context) {
-    return InfoCard(
-      title: 'High Performance',
-      description:
-          'Optimized for speed and efficiency across different hardware configurations.',
-      icon: Icons.speed,
-      iconColor: AppTheme.accentColor,
-      features: const [
-        'GPU acceleration',
-        'Memory optimization',
-        'Scalable architecture',
-      ],
-    );
+  void _retryMessage(ChatService chatService, message) {
+    // TODO: Implement retry functionality
+    // This would involve resending the last user message
   }
 }

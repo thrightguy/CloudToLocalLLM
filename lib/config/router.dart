@@ -7,6 +7,7 @@ import '../screens/login_screen.dart';
 import '../screens/loading_screen.dart';
 import '../screens/callback_screen.dart';
 import '../screens/ollama_test_screen.dart';
+import '../screens/settings_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -52,6 +53,13 @@ class AppRouter {
           path: '/ollama-test',
           name: 'ollama-test',
           builder: (context, state) => const OllamaTestScreen(),
+        ),
+
+        // Settings route
+        GoRoute(
+          path: '/settings',
+          name: 'settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
       ],
 
