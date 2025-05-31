@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/loading_screen.dart';
+import '../screens/callback_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -31,9 +32,7 @@ class AppRouter {
         GoRoute(
           path: '/callback',
           name: 'callback',
-          builder: (context, state) => const LoadingScreen(
-            message: 'Processing authentication...',
-          ),
+          builder: (context, state) => const CallbackScreen(),
         ),
 
         // Loading route

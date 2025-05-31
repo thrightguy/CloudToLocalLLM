@@ -13,12 +13,11 @@ class AppConfig {
       'https://github.com/imrightguy/CloudToLocalLLM';
 
   // Auth0 Configuration
-  static const String auth0Domain =
-      'dev-wnxnwx8wqnqnqnqn.us.auth0.com'; // Replace with actual domain
-  static const String auth0ClientId =
-      'your-client-id'; // Replace with actual client ID
+  static const String auth0Domain = 'dev-xafu7oedkd5wlrbo.us.auth0.com';
+  static const String auth0ClientId = 'H10eY1pG9e2g6MvFKPDFbJ3ASIhxDgNu';
   static const String auth0RedirectUri =
       'https://app.cloudtolocalllm.online/callback';
+  static const String auth0Audience = 'https://api.cloudtolocalllm.online';
 
   // API Configuration
   static const String apiBaseUrl = 'https://api.cloudtolocalllm.online';
