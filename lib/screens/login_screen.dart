@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 import '../services/auth_service.dart';
 import '../components/gradient_button.dart';
 import '../components/modern_card.dart';
+import '../widgets/auth_debug_panel.dart';
 
 /// Modern login screen with Auth0 integration
 class LoginScreen extends StatefulWidget {
@@ -57,21 +58,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundMain,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.headerGradient,
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppTheme.spacingL),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isDesktop ? 400 : double.infinity,
-                ),
-                child: ModernCard(
-                  padding: EdgeInsets.all(AppTheme.spacingXL),
-                  child: Column(
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.headerGradient,
+            ),
+            child: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(AppTheme.spacingL),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isDesktop ? 400 : double.infinity,
+                    ),
+                    child: ModernCard(
+                      padding: EdgeInsets.all(AppTheme.spacingXL),
+                      child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Logo/Icon
@@ -203,12 +206,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+
+          // Debug panel (only visible in debug mode)
+          const AuthDebugPanel(),
+        ],
       ),
     );
   }
