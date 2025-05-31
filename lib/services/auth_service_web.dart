@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 import '../config/app_config.dart';
 import '../models/user_model.dart';
+import 'auth_logger.dart';
 
 /// Web-specific authentication service using direct Auth0 redirect
 class AuthServiceWeb extends ChangeNotifier {
@@ -15,22 +16,28 @@ class AuthServiceWeb extends ChangeNotifier {
   UserModel? get currentUser => _currentUser;
 
   AuthServiceWeb() {
+    AuthLogger.initialize();
+    AuthLogger.info('AuthServiceWeb constructor called');
     _initialize();
   }
 
   /// Initialize authentication service
   Future<void> _initialize() async {
+    AuthLogger.info('Web authentication service initializing');
     try {
       _isLoading.value = true;
       notifyListeners();
+      AuthLogger.debug('Loading state set to true during initialization');
 
       // Check for existing authentication
       await _checkAuthenticationStatus();
+      AuthLogger.info('Authentication service initialized successfully');
     } catch (e) {
-      debugPrint('Error initializing Auth0: $e');
+      AuthLogger.error('Error initializing Auth0', {'error': e.toString()});
     } finally {
       _isLoading.value = false;
       notifyListeners();
+      AuthLogger.debug('Loading state set to false after initialization');
     }
   }
 
@@ -48,17 +55,26 @@ class AuthServiceWeb extends ChangeNotifier {
 
   /// Login using Auth0 redirect flow
   Future<void> login() async {
-    debugPrint('🔐 Web login method called');
+    AuthLogger.info('🔐 Web login method called');
+    AuthLogger.logAuthStateChange(false, 'Login attempt started');
+
     try {
       _isLoading.value = true;
       notifyListeners();
-      debugPrint('🔐 Loading state set to true');
+      AuthLogger.debug('🔐 Loading state set to true');
 
       // For web, redirect directly to Auth0 login page
       final redirectUri = AppConfig.auth0WebRedirectUri;
       final state = DateTime.now().millisecondsSinceEpoch.toString();
-      debugPrint('🔐 Redirect URI: $redirectUri');
-      debugPrint('🔐 State: $state');
+
+      AuthLogger.info('🔐 Building Auth0 URL', {
+        'redirectUri': redirectUri,
+        'state': state,
+        'domain': AppConfig.auth0Domain,
+        'clientId': AppConfig.auth0ClientId,
+        'audience': AppConfig.auth0Audience,
+        'scopes': AppConfig.auth0Scopes,
+      });
 
       final authUrl = Uri.https(
         AppConfig.auth0Domain,
@@ -73,25 +89,53 @@ class AuthServiceWeb extends ChangeNotifier {
         },
       );
 
-      debugPrint('Redirecting to Auth0: $authUrl');
-      debugPrint('Auth URL string: ${authUrl.toString()}');
+      AuthLogger.info('🔐 Auth0 URL constructed', {
+        'url': authUrl.toString(),
+        'length': authUrl.toString().length,
+      });
 
       // For web, redirect the current window to Auth0
       try {
+        AuthLogger.info('🔐 Attempting window.location.href redirect');
         web.window.location.href = authUrl.toString();
-        debugPrint('Redirect initiated successfully');
+        AuthLogger.info('🔐 Redirect initiated successfully');
+
+        // Add a small delay to ensure the redirect happens
+        await Future.delayed(const Duration(milliseconds: 100));
+        AuthLogger.warning(
+            '🔐 Still executing after redirect - this should not happen');
       } catch (redirectError) {
-        debugPrint('Redirect error: $redirectError');
+        AuthLogger.error('🔐 Primary redirect failed', {
+          'error': redirectError.toString(),
+          'errorType': redirectError.runtimeType.toString(),
+        });
+
         // Fallback: try using window.open with _self
-        web.window.open(authUrl.toString(), '_self');
+        try {
+          AuthLogger.info('🔐 Attempting fallback redirect with window.open');
+          web.window.open(authUrl.toString(), '_self');
+          AuthLogger.info('🔐 Fallback redirect initiated');
+        } catch (fallbackError) {
+          AuthLogger.error('🔐 Fallback redirect also failed', {
+            'error': fallbackError.toString(),
+            'errorType': fallbackError.runtimeType.toString(),
+          });
+          throw 'Both redirect methods failed: $redirectError, $fallbackError';
+        }
       }
     } catch (e) {
-      debugPrint('Login error: $e');
+      AuthLogger.error('🔐 Login error', {
+        'error': e.toString(),
+        'errorType': e.runtimeType.toString(),
+        'stackTrace': StackTrace.current.toString(),
+      });
       _isAuthenticated.value = false;
+      AuthLogger.logAuthStateChange(false, 'Login failed with error');
       rethrow;
     } finally {
       _isLoading.value = false;
       notifyListeners();
+      AuthLogger.debug('🔐 Login method finally block executed');
     }
   }
 
