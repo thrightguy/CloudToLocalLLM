@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:auth0_flutter/auth0_flutter.dart';
-import 'package:web/web.dart' as web;
+import 'package:auth0_flutter/auth0_flutter_web.dart';
 import '../config/app_config.dart';
 import '../models/user_model.dart';
 
 /// Authentication service using Auth0
 class AuthService extends ChangeNotifier {
-  late final Auth0 _auth0;
+  late final Auth0Web _auth0;
   final ValueNotifier<bool> _isAuthenticated = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _isLoading = ValueNotifier<bool>(false);
   UserModel? _currentUser;
@@ -24,7 +24,7 @@ class AuthService extends ChangeNotifier {
 
   /// Initialize Auth0
   void _initializeAuth0() {
-    _auth0 = Auth0(AppConfig.auth0Domain, AppConfig.auth0ClientId);
+    _auth0 = Auth0Web(AppConfig.auth0Domain, AppConfig.auth0ClientId);
     _checkAuthenticationStatus();
   }
 
@@ -33,12 +33,10 @@ class AuthService extends ChangeNotifier {
     try {
       _isLoading.value = true;
 
-      // Check if we have stored credentials
-      final hasValidCredentials =
-          await _auth0.credentialsManager.hasValidCredentials();
-
-      if (hasValidCredentials) {
-        _credentials = await _auth0.credentialsManager.credentials();
+      // For web, check if we have credentials from onLoad
+      final credentials = await _auth0.onLoad();
+      if (credentials != null) {
+        _credentials = credentials;
         await _loadUserProfile();
         _isAuthenticated.value = true;
       }
@@ -57,22 +55,15 @@ class AuthService extends ChangeNotifier {
       _isLoading.value = true;
       notifyListeners();
 
-      // Configure web authentication with proper parameters
-      _credentials = await _auth0.webAuthentication().login(
+      // Use Auth0Web loginWithRedirect method
+      await _auth0.loginWithRedirect(
         redirectUrl: AppConfig.auth0RedirectUri,
         audience: AppConfig.auth0Audience,
         scopes: {'openid', 'profile', 'email'},
       );
 
-      if (_credentials != null) {
-        // Store credentials securely
-        await _auth0.credentialsManager.storeCredentials(_credentials!);
-
-        // Load user profile
-        await _loadUserProfile();
-
-        _isAuthenticated.value = true;
-      }
+      // Note: After redirect, the user will be redirected back to the callback URL
+      // The actual credential handling happens in the callback processing
     } catch (e) {
       debugPrint('Login error: $e');
       _isAuthenticated.value = false;
@@ -89,11 +80,8 @@ class AuthService extends ChangeNotifier {
       _isLoading.value = true;
       notifyListeners();
 
-      // Clear stored credentials
-      await _auth0.credentialsManager.clearCredentials();
-
-      // Logout from Auth0
-      await _auth0.webAuthentication().logout();
+      // Logout from Auth0 with return URL
+      await _auth0.logout(returnToUrl: AppConfig.appUrl);
 
       // Clear local state
       _credentials = null;
@@ -110,13 +98,11 @@ class AuthService extends ChangeNotifier {
 
   /// Load user profile from Auth0
   Future<void> _loadUserProfile() async {
-    if (_credentials?.accessToken == null) return;
+    if (_credentials?.user == null) return;
 
     try {
-      final userProfile = await _auth0.api.userProfile(
-        accessToken: _credentials!.accessToken,
-      );
-      _currentUser = UserModel.fromAuth0Profile(userProfile);
+      // For Auth0Web, user profile is available directly from credentials
+      _currentUser = UserModel.fromAuth0Profile(_credentials!.user);
     } catch (e) {
       debugPrint('Error loading user profile: $e');
     }
@@ -130,26 +116,12 @@ class AuthService extends ChangeNotifier {
       _isLoading.value = true;
       notifyListeners();
 
-      // Check if we're on the callback URL and have the necessary parameters
-      final currentUrl = web.window.location.href;
-      if (!currentUrl.contains('/callback')) {
-        return false;
-      }
+      // For Auth0Web, use onLoad to handle the callback
+      final credentials = await _auth0.onLoad();
 
-      // Process the callback
-      _credentials = await _auth0.webAuthentication().login(
-        redirectUrl: AppConfig.auth0RedirectUri,
-        audience: AppConfig.auth0Audience,
-        scopes: {'openid', 'profile', 'email'},
-      );
-
-      if (_credentials != null) {
-        // Store credentials securely
-        await _auth0.credentialsManager.storeCredentials(_credentials!);
-
-        // Load user profile
+      if (credentials != null) {
+        _credentials = credentials;
         await _loadUserProfile();
-
         _isAuthenticated.value = true;
         return true;
       }
@@ -167,8 +139,16 @@ class AuthService extends ChangeNotifier {
   /// Refresh access token
   Future<void> refreshToken() async {
     try {
-      _credentials = await _auth0.credentialsManager.credentials();
-      notifyListeners();
+      // For Auth0Web, credentials are managed automatically
+      // We can try to get fresh credentials using onLoad
+      final credentials = await _auth0.onLoad();
+      if (credentials != null) {
+        _credentials = credentials;
+        notifyListeners();
+      } else {
+        // If no credentials available, logout user
+        await logout();
+      }
     } catch (e) {
       debugPrint('Error refreshing token: $e');
       // If refresh fails, logout user
