@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:auth0_flutter/auth0_flutter.dart';
+import 'package:web/web.dart' as web;
 import '../config/app_config.dart';
 import '../models/user_model.dart';
 
@@ -57,7 +57,12 @@ class AuthService extends ChangeNotifier {
       _isLoading.value = true;
       notifyListeners();
 
-      _credentials = await _auth0.webAuthentication().login();
+      // Configure web authentication with proper parameters
+      _credentials = await _auth0.webAuthentication().login(
+        redirectUrl: AppConfig.auth0RedirectUri,
+        audience: AppConfig.auth0Audience,
+        scopes: {'openid', 'profile', 'email'},
+      );
 
       if (_credentials != null) {
         // Store credentials securely
@@ -115,6 +120,48 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error loading user profile: $e');
     }
+  }
+
+  /// Handle Auth0 callback (for web)
+  Future<bool> handleCallback() async {
+    if (!kIsWeb) return false;
+
+    try {
+      _isLoading.value = true;
+      notifyListeners();
+
+      // Check if we're on the callback URL and have the necessary parameters
+      final currentUrl = web.window.location.href;
+      if (!currentUrl.contains('/callback')) {
+        return false;
+      }
+
+      // Process the callback
+      _credentials = await _auth0.webAuthentication().login(
+        redirectUrl: AppConfig.auth0RedirectUri,
+        audience: AppConfig.auth0Audience,
+        scopes: {'openid', 'profile', 'email'},
+      );
+
+      if (_credentials != null) {
+        // Store credentials securely
+        await _auth0.credentialsManager.storeCredentials(_credentials!);
+
+        // Load user profile
+        await _loadUserProfile();
+
+        _isAuthenticated.value = true;
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Callback processing error: $e');
+      _isAuthenticated.value = false;
+    } finally {
+      _isLoading.value = false;
+      notifyListeners();
+    }
+
+    return false;
   }
 
   /// Refresh access token
