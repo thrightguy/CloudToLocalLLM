@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:web/web.dart' as web;
 import '../config/app_config.dart';
 import '../models/user_model.dart';
 
@@ -55,7 +55,7 @@ class AuthServiceWeb extends ChangeNotifier {
       // For web, redirect directly to Auth0 login page
       final redirectUri = AppConfig.auth0WebRedirectUri;
       final state = DateTime.now().millisecondsSinceEpoch.toString();
-      
+
       final authUrl = Uri.https(
         AppConfig.auth0Domain,
         '/authorize',
@@ -70,13 +70,9 @@ class AuthServiceWeb extends ChangeNotifier {
       );
 
       debugPrint('Redirecting to Auth0: $authUrl');
-      
-      // Redirect to Auth0 login page
-      if (await canLaunchUrl(authUrl)) {
-        await launchUrl(authUrl, mode: LaunchMode.platformDefault);
-      } else {
-        throw 'Could not launch Auth0 login URL';
-      }
+
+      // For web, redirect the current window to Auth0
+      web.window.location.href = authUrl.toString();
     } catch (e) {
       debugPrint('Login error: $e');
       _isAuthenticated.value = false;
@@ -111,13 +107,13 @@ class AuthServiceWeb extends ChangeNotifier {
       // For web, the callback is handled by the redirect
       // This is a placeholder for future token processing
       debugPrint('Web callback handling - checking authentication state');
-      
+
       // In a real implementation, you would:
       // 1. Extract the authorization code from the URL
       // 2. Exchange it for tokens
       // 3. Store the tokens securely
       // 4. Load user profile
-      
+
       return _isAuthenticated.value;
     } catch (e) {
       debugPrint('Callback handling error: $e');
