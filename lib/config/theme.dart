@@ -121,6 +121,174 @@ class AppTheme {
         ),
       ),
 
+      // Input field themes
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: backgroundCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+          borderSide: BorderSide(
+            color: secondaryColor.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+          borderSide: BorderSide(
+            color: secondaryColor.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+          borderSide: BorderSide(
+            color: primaryColor,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+          borderSide: BorderSide(
+            color: dangerColor,
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+          borderSide: BorderSide(
+            color: dangerColor,
+            width: 2,
+          ),
+        ),
+        labelStyle: TextStyle(color: textColorLight),
+        hintStyle: TextStyle(color: textColorLight.withValues(alpha: 0.7)),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: spacingM,
+          vertical: spacingM,
+        ),
+      ),
+
+      // Dialog theme
+      dialogTheme: DialogThemeData(
+        backgroundColor: backgroundCard,
+        surfaceTintColor: Colors.transparent,
+        elevation: 16,
+        shadowColor: primaryColor.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadiusM),
+          side: BorderSide(
+            color: secondaryColor.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        contentTextStyle: TextStyle(
+          fontSize: 16,
+          color: textColor,
+          height: 1.5,
+        ),
+      ),
+
+      // Snackbar theme
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: backgroundCard,
+        contentTextStyle: TextStyle(color: textColor),
+        actionTextColor: primaryColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+        ),
+        elevation: 8,
+      ),
+
+      // Switch theme
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryColor;
+          }
+          return textColorLight;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryColor.withValues(alpha: 0.5);
+          }
+          return backgroundCard;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          return secondaryColor.withValues(alpha: 0.3);
+        }),
+      ),
+
+      // Checkbox theme
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryColor;
+          }
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        side: BorderSide(
+          color: secondaryColor.withValues(alpha: 0.5),
+          width: 2,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+
+      // Radio theme
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryColor;
+          }
+          return textColorLight;
+        }),
+      ),
+
+      // Progress indicator theme
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: primaryColor,
+        linearTrackColor: backgroundCard,
+        circularTrackColor: backgroundCard,
+      ),
+
+      // Popup menu theme
+      popupMenuTheme: PopupMenuThemeData(
+        color: backgroundCard,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shadowColor: primaryColor.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadiusS),
+          side: BorderSide(
+            color: secondaryColor.withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        textStyle: TextStyle(color: textColor),
+      ),
+
+      // Bottom sheet theme
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: backgroundCard,
+        surfaceTintColor: Colors.transparent,
+        elevation: 16,
+        shadowColor: primaryColor.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(borderRadiusM),
+            topRight: Radius.circular(borderRadiusM),
+          ),
+        ),
+      ),
+
       // Text theme
       textTheme: const TextTheme(
         displayLarge: TextStyle(
