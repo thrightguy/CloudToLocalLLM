@@ -15,7 +15,7 @@ migration:
     - platform: root
       create_revision: be698c48a6750c8cb8e61c740ca9991bb947aba2
       base_revision: be698c48a6750c8cb8e61c740ca9991bb947aba2
-    - platform: web
+    - platform: linux
       create_revision: be698c48a6750c8cb8e61c740ca9991bb947aba2
       base_revision: be698c48a6750c8cb8e61c740ca9991bb947aba2
 
