@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/auth_logger.dart';
-import '../theme/app_theme.dart';
 
 /// Debug panel for authentication logging
 /// Only visible in debug mode and on web platform
@@ -42,7 +41,7 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
       right: 16,
       child: Material(
         elevation: 8,
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           constraints: BoxConstraints(
             maxWidth: _isExpanded ? 400 : 200,
@@ -50,8 +49,8 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
           ),
           decoration: BoxDecoration(
             color: Colors.black87,
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
-            border: Border.all(color: AppTheme.primaryColor, width: 1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,12 +68,14 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    color: Colors.blue.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(AppTheme.borderRadiusM),
-                      topRight: Radius.circular(AppTheme.borderRadiusM),
-                      bottomLeft: _isExpanded ? Radius.zero : Radius.circular(AppTheme.borderRadiusM),
-                      bottomRight: _isExpanded ? Radius.zero : Radius.circular(AppTheme.borderRadiusM),
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                      bottomLeft:
+                          _isExpanded ? Radius.zero : Radius.circular(12),
+                      bottomRight:
+                          _isExpanded ? Radius.zero : Radius.circular(12),
                     ),
                   ),
                   child: Row(
@@ -82,7 +83,7 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                     children: [
                       Icon(
                         Icons.bug_report,
-                        color: AppTheme.primaryColor,
+                        color: Colors.blue,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
@@ -97,7 +98,7 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                       const SizedBox(width: 8),
                       Icon(
                         _isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: AppTheme.primaryColor,
+                        color: Colors.blue,
                         size: 16,
                       ),
                     ],
@@ -115,7 +116,8 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                     children: [
                       Text(
                         'Logs: ${_logs.length}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -143,7 +145,7 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: Colors.blue,
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             textStyle: const TextStyle(fontSize: 10),
                           ),
@@ -190,11 +192,12 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                     child: ListView.builder(
                       itemCount: _logs.length > 10 ? 10 : _logs.length,
                       itemBuilder: (context, index) {
-                        final log = _logs[_logs.length - 1 - index]; // Show newest first
+                        final log = _logs[
+                            _logs.length - 1 - index]; // Show newest first
                         final level = log['level'] as String;
                         final message = log['message'] as String;
                         final timestamp = log['timestamp'] as String;
-                        
+
                         Color levelColor = Colors.white70;
                         if (level == 'ERROR') levelColor = Colors.red;
                         if (level == 'WARN') levelColor = Colors.orange;
@@ -218,7 +221,8 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    timestamp.substring(11, 19), // Show only time
+                                    timestamp.substring(
+                                        11, 19), // Show only time
                                     style: const TextStyle(
                                       color: Colors.white54,
                                       fontSize: 9,

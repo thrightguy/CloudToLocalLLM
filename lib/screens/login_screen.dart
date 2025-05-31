@@ -75,137 +75,142 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ModernCard(
                       padding: EdgeInsets.all(AppTheme.spacingXL),
                       child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo/Icon
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.buttonGradient,
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.borderRadiusM),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  AppTheme.primaryColor.withValues(alpha: 0.4),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Logo/Icon
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.buttonGradient,
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.borderRadiusM),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryColor
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.cloud_download_outlined,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-
-                      SizedBox(height: AppTheme.spacingXL),
-
-                      // Welcome text
-                      Text(
-                        'Welcome to',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              color: AppTheme.textColorLight,
-                              fontSize: 18,
+                            child: const Icon(
+                              Icons.cloud_download_outlined,
+                              color: Colors.white,
+                              size: 40,
                             ),
-                        textAlign: TextAlign.center,
-                      ),
+                          ),
 
-                      SizedBox(height: AppTheme.spacingS),
+                          SizedBox(height: AppTheme.spacingXL),
 
-                      Text(
-                        AppConfig.appName,
-                        style:
-                            Theme.of(context).textTheme.displayMedium?.copyWith(
+                          // Welcome text
+                          Text(
+                            'Welcome to',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(
+                                  color: AppTheme.textColorLight,
+                                  fontSize: 18,
+                                ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          SizedBox(height: AppTheme.spacingS),
+
+                          Text(
+                            AppConfig.appName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayMedium
+                                ?.copyWith(
                                   color: Colors.white,
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
                                 ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      SizedBox(height: AppTheme.spacingM),
-
-                      Text(
-                        AppConfig.appDescription,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.textColorLight,
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      SizedBox(height: AppTheme.spacingXXL),
-
-                      // Login button
-                      GradientButton(
-                        text: 'Sign In with Auth0',
-                        icon: Icons.login,
-                        width: double.infinity,
-                        isLoading: _isLoading,
-                        onPressed: _handleLogin,
-                      ),
-
-                      SizedBox(height: AppTheme.spacingL),
-
-                      // Additional info
-                      Text(
-                        'Secure authentication powered by Auth0',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textColorLight,
-                              fontSize: 12,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      SizedBox(height: AppTheme.spacingM),
-
-                      // Links
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              // Open homepage in new tab
-                            },
-                            child: Text(
-                              'Learn More',
-                              style: TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                            textAlign: TextAlign.center,
                           ),
+
+                          SizedBox(height: AppTheme.spacingM),
+
                           Text(
-                            ' • ',
-                            style: TextStyle(
-                              color: AppTheme.textColorLight,
-                              fontSize: 14,
-                            ),
+                            AppConfig.appDescription,
+                            style:
+                                Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                      color: AppTheme.textColorLight,
+                                      fontSize: 16,
+                                      height: 1.5,
+                                    ),
+                            textAlign: TextAlign.center,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              // Open GitHub in new tab
-                            },
-                            child: Text(
-                              'GitHub',
-                              style: TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+
+                          SizedBox(height: AppTheme.spacingXXL),
+
+                          // Login button
+                          GradientButton(
+                            text: 'Sign In with Auth0',
+                            icon: Icons.login,
+                            width: double.infinity,
+                            isLoading: _isLoading,
+                            onPressed: _handleLogin,
+                          ),
+
+                          SizedBox(height: AppTheme.spacingL),
+
+                          // Additional info
+                          Text(
+                            'Secure authentication powered by Auth0',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.textColorLight,
+                                      fontSize: 12,
+                                    ),
+                            textAlign: TextAlign.center,
+                          ),
+
+                          SizedBox(height: AppTheme.spacingM),
+
+                          // Links
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  // Open homepage in new tab
+                                },
+                                child: Text(
+                                  'Learn More',
+                                  style: TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
+                              Text(
+                                ' • ',
+                                style: TextStyle(
+                                  color: AppTheme.textColorLight,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  // Open GitHub in new tab
+                                },
+                                child: Text(
+                                  'GitHub',
+                                  style: TextStyle(
+                                    color: AppTheme.primaryColor,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
                     ),
                   ),
                 ),

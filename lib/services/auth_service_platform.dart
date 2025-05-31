@@ -70,8 +70,7 @@ class AuthServicePlatform extends ChangeNotifier {
   /// Only available on mobile platforms
   Future<void> loginWithBiometrics() async {
     if (isMobile && _platformService is AuthServiceMobile) {
-      return await (_platformService as AuthServiceMobile)
-          .loginWithBiometrics();
+      return await _platformService.loginWithBiometrics();
     } else {
       throw UnsupportedError(
           'Biometric authentication is only available on mobile platforms');
@@ -82,8 +81,7 @@ class AuthServicePlatform extends ChangeNotifier {
   /// Returns false for non-mobile platforms
   Future<bool> isBiometricAvailable() async {
     if (isMobile && _platformService is AuthServiceMobile) {
-      return await (_platformService as AuthServiceMobile)
-          .isBiometricAvailable();
+      return await _platformService.isBiometricAvailable();
     }
     return false;
   }
@@ -92,8 +90,7 @@ class AuthServicePlatform extends ChangeNotifier {
   /// Only available on mobile platforms
   Future<void> refreshTokenIfNeeded() async {
     if (isMobile && _platformService is AuthServiceMobile) {
-      return await (_platformService as AuthServiceMobile)
-          .refreshTokenIfNeeded();
+      return await _platformService.refreshTokenIfNeeded();
     }
     // For other platforms, this is handled automatically or not needed
   }
