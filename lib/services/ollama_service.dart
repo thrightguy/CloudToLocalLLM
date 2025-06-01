@@ -72,7 +72,9 @@ class OllamaService extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final url = _isWeb ? '$_baseUrl/bridge/status' : '$_baseUrl/api/version';
+      final url = _isWeb
+          ? '$_baseUrl/api/ollama/bridge/status'
+          : '$_baseUrl/api/version';
       debugPrint(
           '[DEBUG] Making ${_isWeb ? 'authenticated' : 'direct'} request to: $url');
 
@@ -124,7 +126,8 @@ class OllamaService extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final url = '$_baseUrl/api/tags';
+      final url =
+          _isWeb ? '$_baseUrl/api/ollama/api/tags' : '$_baseUrl/api/tags';
       debugPrint('[DEBUG] Getting models from: $url');
 
       final response = await http
@@ -174,7 +177,8 @@ class OllamaService extends ChangeNotifier {
         {'role': 'user', 'content': message},
       ];
 
-      final url = '$_baseUrl/api/chat';
+      final url =
+          _isWeb ? '$_baseUrl/api/ollama/api/chat' : '$_baseUrl/api/chat';
       debugPrint('[DEBUG] Sending chat message to: $url');
 
       final response = await http
@@ -217,7 +221,8 @@ class OllamaService extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final url = '$_baseUrl/api/pull';
+      final url =
+          _isWeb ? '$_baseUrl/api/ollama/api/pull' : '$_baseUrl/api/pull';
       debugPrint('[DEBUG] Pulling model from: $url');
 
       final response = await http

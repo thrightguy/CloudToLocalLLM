@@ -266,7 +266,7 @@ app.get('/health', (req, res) => {
 });
 
 // Bridge status
-app.get('/api/ollama/bridge/status', authenticateToken, (req, res) => {
+app.get('/ollama/bridge/status', authenticateToken, (req, res) => {
   const userBridges = Array.from(bridgeConnections.values())
     .filter(bridge => bridge.userId === req.user.sub);
 
@@ -281,11 +281,11 @@ app.get('/api/ollama/bridge/status', authenticateToken, (req, res) => {
 });
 
 // Bridge registration
-app.post('/api/ollama/bridge/register', authenticateToken, (req, res) => {
+app.post('/ollama/bridge/register', authenticateToken, (req, res) => {
   const { bridge_id, version, platform } = req.body;
-  
+
   logger.info(`Bridge registration: ${bridge_id} v${version} on ${platform} for user ${req.user.sub}`);
-  
+
   res.json({
     success: true,
     message: 'Bridge registered successfully',
@@ -294,7 +294,7 @@ app.post('/api/ollama/bridge/register', authenticateToken, (req, res) => {
 });
 
 // Ollama proxy endpoints
-app.all('/api/ollama/*', authenticateToken, async (req, res) => {
+app.all('/ollama/*', authenticateToken, async (req, res) => {
   const userBridges = Array.from(bridgeConnections.values())
     .filter(bridge => bridge.userId === req.user.sub);
 
@@ -315,7 +315,7 @@ app.all('/api/ollama/*', authenticateToken, async (req, res) => {
     id: requestId,
     data: {
       method: req.method,
-      path: req.path.replace('/api/ollama', ''),
+      path: req.path.replace('/ollama', ''),
       headers: req.headers,
       body: req.body ? JSON.stringify(req.body) : undefined
     },
