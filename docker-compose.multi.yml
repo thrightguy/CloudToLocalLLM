@@ -78,8 +78,6 @@ services:
       - PORT=8080
       - AUTH0_DOMAIN=dev-xafu7oedkd5wlrbo.us.auth0.com
       - AUTH0_AUDIENCE=https://app.cloudtolocalllm.online
-    volumes:
-      - ./api-backend:/app:ro
     networks:
       - cloudllm-network
     restart: unless-stopped
