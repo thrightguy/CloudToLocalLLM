@@ -1,6 +1,6 @@
 pkgbase = cloudtolocalllm
 	pkgdesc = CloudToLocalLLM - Local LLM Management with System Tray Integration
-	pkgver = 1.0.0.r94ba1a5
+	pkgver = 1.0.0.r31e31f9
 	pkgrel = 1
 	url = https://github.com/imrightguy/CloudToLocalLLM
 	arch = x86_64
@@ -10,6 +10,7 @@ pkgbase = cloudtolocalllm
 	makedepends = ninja
 	makedepends = pkg-config
 	makedepends = clang
+	makedepends = imagemagick
 	depends = libayatana-appindicator
 	depends = gtk3
 	depends = glib2

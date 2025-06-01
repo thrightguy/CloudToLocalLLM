@@ -1,8 +1,8 @@
 # Maintainer: Christopher Maltais <christopher.maltais@gmail.com>
 pkgname=cloudtolocalllm
-pkgver=1.0.0.r31e31f9
+pkgver=2.0.0.r24a3821
 pkgrel=1
-pkgdesc="CloudToLocalLLM - Local LLM Management with System Tray Integration"
+pkgdesc="CloudToLocalLLM - Local LLM Management with Monochrome System Tray Icons and Enhanced Linux Desktop Integration"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
 license=('MIT')
