@@ -179,23 +179,32 @@ sudo apt-get purge cloudtolocalllm</code>
       <div class="installation-section">
         <div class="installation-title">Installation with AUR Helper</div>
         <div class="code-block">
-          <code># Using yay
+          <code># Install Flutter first (required build dependency)
+yay -S flutter
+
+# Then install CloudToLocalLLM
 yay -S cloudtolocalllm
 
-# Using paru
+# Or using paru
+paru -S flutter
 paru -S cloudtolocalllm
 
-# Using pamac
+# Or using pamac
+pamac install flutter
 pamac install cloudtolocalllm</code>
         </div>
         
         <div class="installation-title">Manual Installation</div>
         <div class="code-block">
-          <code># Clone the AUR repository
+          <code># Install Flutter first (required build dependency)
+git clone https://aur.archlinux.org/flutter.git
+cd flutter
+makepkg -si
+cd ..
+
+# Then install CloudToLocalLLM
 git clone https://aur.archlinux.org/cloudtolocalllm.git
 cd cloudtolocalllm
-
-# Build and install
 makepkg -si</code>
         </div>
         
