@@ -15,7 +15,6 @@ services:
       - ./certbot/www:/var/www/certbot:ro
       - ./certbot/live:/etc/letsencrypt/live:ro
       - ./certbot/archive:/etc/letsencrypt/archive:ro
-      - ./logs/nginx:/var/log/nginx
     networks:
       - cloudllm-network
     restart: unless-stopped
@@ -39,7 +38,6 @@ services:
       - ./static_homepage:/usr/share/nginx/html/static:ro
       - ./docs-site/dist:/usr/share/nginx/html/docs:ro
       - ./config/nginx/nginx-static.conf:/etc/nginx/nginx.conf:ro
-      - ./logs/static:/var/log/nginx
     networks:
       - cloudllm-network
     restart: unless-stopped
@@ -59,7 +57,6 @@ services:
     volumes:
       - ./build/web:/usr/share/nginx/html:ro
       - ./config/nginx/nginx-flutter.conf:/etc/nginx/nginx.conf:ro
-      - ./logs/flutter:/var/log/nginx
     networks:
       - cloudllm-network
     restart: unless-stopped
@@ -83,7 +80,6 @@ services:
       - AUTH0_AUDIENCE=https://app.cloudtolocalllm.online
     volumes:
       - ./api-backend:/app:ro
-      - ./logs/api:/app/logs
     networks:
       - cloudllm-network
     restart: unless-stopped
