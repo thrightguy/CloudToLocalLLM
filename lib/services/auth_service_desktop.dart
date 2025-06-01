@@ -72,7 +72,7 @@ class AuthServiceDesktop extends ChangeNotifier {
       final authenticator = Authenticator(
         _client!,
         scopes: AppConfig.auth0Scopes,
-        port: 3025,
+        port: 8080,
         urlLancher: (url) async {
           debugPrint('Launching auth URL: $url');
           if (await canLaunchUrl(Uri.parse(url))) {

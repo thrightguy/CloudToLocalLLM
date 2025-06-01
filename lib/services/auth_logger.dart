@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
 import 'dart:convert';
+
+// Conditional import for web package - only import on web platform
+import 'package:web/web.dart' as web if (dart.library.io) 'dart:io';
 
 /// Persistent authentication logger for debugging
 /// Stores logs in browser localStorage and provides download functionality
@@ -117,7 +119,9 @@ class AuthLogger {
     if (!kIsWeb) return;
 
     try {
-      web.window.localStorage.removeItem(_storageKey);
+      if (kIsWeb) {
+        web.window.localStorage.removeItem(_storageKey);
+      }
       info('Authentication logs cleared');
     } catch (e) {
       error('Failed to clear logs', {'error': e.toString()});
@@ -127,6 +131,8 @@ class AuthLogger {
   /// Get logs from localStorage
   static List<Map<String, dynamic>> _getStoredLogs() {
     try {
+      if (!kIsWeb) return [];
+
       final stored = web.window.localStorage.getItem(_storageKey);
       if (stored == null) return [];
 
@@ -142,6 +148,8 @@ class AuthLogger {
   /// Store logs to localStorage
   static void _storeLogs(List<Map<String, dynamic>> logs) {
     try {
+      if (!kIsWeb) return;
+
       final jsonString = jsonEncode(logs);
       web.window.localStorage.setItem(_storageKey, jsonString);
     } catch (e) {
@@ -172,9 +180,9 @@ class AuthLogger {
   /// Initialize logger and log startup
   static void initialize() {
     info('AuthLogger initialized', {
-      'platform': 'web',
-      'userAgent': kIsWeb ? web.window.navigator.userAgent : 'unknown',
-      'url': kIsWeb ? web.window.location.href : 'unknown',
+      'platform': kIsWeb ? 'web' : 'desktop',
+      'userAgent': kIsWeb ? web.window.navigator.userAgent : 'desktop-app',
+      'url': kIsWeb ? web.window.location.href : 'desktop-app',
     });
   }
 

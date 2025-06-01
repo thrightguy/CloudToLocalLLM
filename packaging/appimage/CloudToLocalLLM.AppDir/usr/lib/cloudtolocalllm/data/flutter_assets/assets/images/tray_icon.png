@@ -1,0 +1,4 @@
+# This is a placeholder for the tray icon
+# In a real implementation, you would place a proper PNG icon here
+# For now, we'll create a simple text-based representation
+# The system_tray package will handle the actual icon loading

@@ -26,7 +26,8 @@ class AppConfig {
   // Platform-specific redirect URIs
   static const String auth0WebRedirectUri =
       'https://app.cloudtolocalllm.online/callback';
-  static const String auth0DesktopRedirectUri = 'http://localhost:3025/';
+  static const String auth0DesktopRedirectUri =
+      'http://localhost:8080/callback';
 
   // OAuth2 Scopes
   static const List<String> auth0Scopes = ['openid', 'profile', 'email'];
@@ -49,12 +50,15 @@ class AppConfig {
   static const bool enableAnalytics = false; // Disabled for privacy
   static const bool enableDebugMode = false;
 
-  // Ollama Configuration (via Cloud Relay)
-  static const String defaultOllamaHost = 'app.cloudtolocalllm.online';
-  static const int defaultOllamaPort = 443;
-  static const String defaultOllamaUrl =
-      'https://app.cloudtolocalllm.online/api/ollama';
+  // Ollama Configuration (Direct Local Connection for Desktop)
+  static const String defaultOllamaHost = 'localhost';
+  static const int defaultOllamaPort = 11434;
+  static const String defaultOllamaUrl = 'http://localhost:11434';
   static const Duration ollamaTimeout = Duration(seconds: 60);
+
+  // Cloud Relay Configuration (for web/mobile)
+  static const String cloudOllamaUrl =
+      'https://app.cloudtolocalllm.online/api/ollama';
 
   // Debug logging for configuration
   static void logConfiguration() {
