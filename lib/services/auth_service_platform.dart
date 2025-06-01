@@ -1,5 +1,4 @@
-// Conditional import for Platform class - only available on non-web platforms
-import 'dart:io' show Platform if (dart.library.html) 'platform_stub.dart';
+// Platform detection using only Flutter foundation - no dart:io imports
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
@@ -16,12 +15,13 @@ import 'auth_service_web.dart'
 class AuthServicePlatform extends ChangeNotifier {
   late final dynamic _platformService;
 
-  // Platform detection - safe for web
+  // Platform detection - safe for web using Flutter's defaultTargetPlatform
   static bool get isWeb => kIsWeb;
   static bool get isMobile {
     if (kIsWeb) return false;
     try {
-      return Platform.isAndroid || Platform.isIOS;
+      return defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS;
     } catch (e) {
       return false;
     }
@@ -30,7 +30,9 @@ class AuthServicePlatform extends ChangeNotifier {
   static bool get isDesktop {
     if (kIsWeb) return false;
     try {
-      return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      return defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS;
     } catch (e) {
       return false;
     }
@@ -144,8 +146,8 @@ class AuthServicePlatform extends ChangeNotifier {
     if (isMobile) {
       if (!kIsWeb) {
         try {
-          if (Platform.isAndroid) return 'Android';
-          if (Platform.isIOS) return 'iOS';
+          if (defaultTargetPlatform == TargetPlatform.android) return 'Android';
+          if (defaultTargetPlatform == TargetPlatform.iOS) return 'iOS';
         } catch (e) {
           // Platform access failed, return generic
         }
@@ -155,9 +157,9 @@ class AuthServicePlatform extends ChangeNotifier {
     if (isDesktop) {
       if (!kIsWeb) {
         try {
-          if (Platform.isWindows) return 'Windows';
-          if (Platform.isLinux) return 'Linux';
-          if (Platform.isMacOS) return 'macOS';
+          if (defaultTargetPlatform == TargetPlatform.windows) return 'Windows';
+          if (defaultTargetPlatform == TargetPlatform.linux) return 'Linux';
+          if (defaultTargetPlatform == TargetPlatform.macOS) return 'macOS';
         } catch (e) {
           // Platform access failed, return generic
         }

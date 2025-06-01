@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'config/router.dart';
@@ -11,12 +12,23 @@ import 'services/window_manager_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize system tray for desktop platforms
-  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+  // Initialize system tray for desktop platforms (only on non-web)
+  if (!kIsWeb && _isDesktopPlatform()) {
     await _initializeSystemTray();
   }
 
   runApp(const CloudToLocalLLMApp());
+}
+
+/// Check if running on desktop platform using Flutter's platform detection
+bool _isDesktopPlatform() {
+  try {
+    return defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  } catch (e) {
+    return false;
+  }
 }
 
 /// Initialize system tray functionality
@@ -38,7 +50,7 @@ Future<void> _initializeSystemTray() async {
       },
       onQuit: () {
         debugPrint("System tray requested to quit application");
-        exit(0);
+        SystemNavigator.pop();
       },
     );
 
