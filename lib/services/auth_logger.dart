@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 // Conditional import for web package - only import on web platform
-import 'package:web/web.dart' as web if (dart.library.io) 'dart:io';
+import 'package:web/web.dart' as web;
 
 /// Persistent authentication logger for debugging
 /// Stores logs in browser localStorage and provides download functionality

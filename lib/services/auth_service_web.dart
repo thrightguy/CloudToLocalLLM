@@ -6,7 +6,7 @@ import '../models/user_model.dart';
 import 'auth_logger.dart';
 
 // Conditional import for web package - only import on web platform
-import 'package:web/web.dart' as web if (dart.library.io) 'dart:io';
+import 'package:web/web.dart' as web;
 
 /// Web-specific authentication service using direct Auth0 redirect with JWT tokens
 class AuthServiceWeb extends ChangeNotifier {
