@@ -1,5 +1,5 @@
 // Conditional import for Platform class - only available on non-web platforms
-import 'dart:io' show Platform;
+import 'dart:io' show Platform if (dart.library.html) 'platform_stub.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
