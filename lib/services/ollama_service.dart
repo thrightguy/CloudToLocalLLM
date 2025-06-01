@@ -24,7 +24,15 @@ class OllamaService extends ChangeNotifier {
     AuthService? authService,
   })  : _baseUrl = baseUrl ?? AppConfig.defaultOllamaUrl,
         _timeout = timeout ?? AppConfig.ollamaTimeout,
-        _authService = authService;
+        _authService = authService {
+    // Debug logging for service initialization
+    debugPrint('[DEBUG] OllamaService initialized:');
+    debugPrint('[DEBUG] - Base URL: $_baseUrl');
+    debugPrint('[DEBUG] - Timeout: $_timeout');
+    debugPrint(
+        '[DEBUG] - Auth Service: ${_authService != null ? 'provided' : 'null'}');
+    AppConfig.logConfiguration();
+  }
 
   // Getters
   bool get isConnected => _isConnected;
@@ -50,9 +58,13 @@ class OllamaService extends ChangeNotifier {
       }
 
       final headers = await _getAuthHeaders();
+      final url = '$_baseUrl/api/version';
+      debugPrint('[DEBUG] Making request to: $url');
+      debugPrint('[DEBUG] Headers: $headers');
+
       final response = await http
           .get(
-            Uri.parse('$_baseUrl/api/version'),
+            Uri.parse(url),
             headers: headers,
           )
           .timeout(_timeout);
