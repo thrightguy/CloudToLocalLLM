@@ -19,10 +19,8 @@ COPY static_homepage/ /usr/share/nginx/html/static/
 # Create docs directory (docs will be built separately if needed)
 RUN mkdir -p /usr/share/nginx/html/docs
 
-# Copy Linux packages for downloads
-COPY dist/*.deb /usr/share/nginx/html/downloads/
-COPY dist/*.AppImage /usr/share/nginx/html/downloads/
-COPY dist/*.tar.gz /usr/share/nginx/html/downloads/
+# Create downloads directory (packages will be added separately if available)
+RUN mkdir -p /usr/share/nginx/html/downloads
 
 # Copy nginx configuration
 COPY config/nginx/nginx-static.conf /etc/nginx/nginx.conf
