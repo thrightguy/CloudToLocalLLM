@@ -28,8 +28,8 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy application code
 COPY api-backend/ ./
 
-# Create logs directory
-RUN mkdir -p logs && chown -R nodejs:nodejs /app
+# Set proper ownership
+RUN chown -R nodejs:nodejs /app
 
 # Security: Run as non-root user
 USER nodejs
