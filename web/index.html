@@ -47,6 +47,19 @@
 
   <!-- Auth0 SPA JS SDK for Flutter Web -->
   <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js" defer></script>
+
+  <!-- Force service worker update -->
+  <script>
+    // Force service worker update on version change
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.update();
+          console.log('Forcing service worker update');
+        }
+      });
+    }
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
