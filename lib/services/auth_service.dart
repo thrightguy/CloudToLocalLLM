@@ -76,6 +76,12 @@ class AuthService extends ChangeNotifier {
     return _platformService.getPlatformInfo();
   }
 
+  /// Get the current access token for API authentication
+  /// Returns null if not authenticated or token is not available
+  String? getAccessToken() {
+    return _platformService.getAccessToken();
+  }
+
   /// Platform capability checks
   bool get supportsBiometrics => _platformService.supportsBiometrics;
   bool get supportsDeepLinking => _platformService.supportsDeepLinking;

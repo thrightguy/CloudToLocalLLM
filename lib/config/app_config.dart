@@ -47,9 +47,16 @@ class AppConfig {
   static const bool enableAnalytics = false; // Disabled for privacy
   static const bool enableDebugMode = false;
 
-  // Ollama Configuration
-  static const String defaultOllamaHost = 'localhost';
-  static const int defaultOllamaPort = 11434;
-  static const String defaultOllamaUrl = 'http://localhost:11434';
+  // Ollama Configuration (via Cloud Relay)
+  static const String defaultOllamaHost = 'app.cloudtolocalllm.online';
+  static const int defaultOllamaPort = 443;
+  static const String defaultOllamaUrl =
+      'https://app.cloudtolocalllm.online/api/ollama';
   static const Duration ollamaTimeout = Duration(seconds: 60);
+
+  // Bridge Configuration
+  static const String bridgeStatusUrl =
+      'https://app.cloudtolocalllm.online/api/ollama/bridge/status';
+  static const String bridgeRegisterUrl =
+      'https://app.cloudtolocalllm.online/api/ollama/bridge/register';
 }

@@ -6,7 +6,7 @@ import 'ollama_service.dart';
 /// Service for managing chat conversations and messages
 class ChatService extends ChangeNotifier {
   final OllamaService _ollamaService;
-  
+
   List<Conversation> _conversations = [];
   Conversation? _currentConversation;
   String? _selectedModel;
@@ -27,7 +27,7 @@ class ChatService extends ChangeNotifier {
   void _initializeService() {
     // Load conversations from local storage (placeholder)
     _loadConversations();
-    
+
     // Listen to Ollama service changes
     _ollamaService.addListener(_onOllamaServiceChanged);
   }
@@ -50,11 +50,12 @@ class ChatService extends ChangeNotifier {
         title: 'Welcome Chat',
         model: _selectedModel,
       );
-      
+
       final welcomeMessage = Message.system(
-        content: 'Welcome to CloudToLocalLLM! I\'m ready to help you with any questions or tasks. What would you like to talk about?',
+        content:
+            'Welcome to CloudToLocalLLM! I\'m ready to help you with any questions or tasks. What would you like to talk about?',
       );
-      
+
       _conversations = [sampleConversation.addMessage(welcomeMessage)];
       _currentConversation = _conversations.first;
     }
@@ -72,12 +73,12 @@ class ChatService extends ChangeNotifier {
       title: title,
       model: model ?? _selectedModel,
     );
-    
+
     _conversations.insert(0, conversation);
     _currentConversation = conversation;
     _saveConversations();
     notifyListeners();
-    
+
     return conversation;
   }
 
@@ -85,9 +86,10 @@ class ChatService extends ChangeNotifier {
   void selectConversation(String conversationId) {
     final conversation = _conversations.firstWhere(
       (c) => c.id == conversationId,
-      orElse: () => throw ArgumentError('Conversation not found: $conversationId'),
+      orElse: () =>
+          throw ArgumentError('Conversation not found: $conversationId'),
     );
-    
+
     _currentConversation = conversation;
     notifyListeners();
   }
@@ -95,7 +97,7 @@ class ChatService extends ChangeNotifier {
   /// Delete a conversation
   void deleteConversation(String conversationId) {
     _conversations.removeWhere((c) => c.id == conversationId);
-    
+
     // If deleted conversation was current, select another or create new
     if (_currentConversation?.id == conversationId) {
       if (_conversations.isNotEmpty) {
@@ -104,7 +106,7 @@ class ChatService extends ChangeNotifier {
         _currentConversation = createConversation();
       }
     }
-    
+
     _saveConversations();
     notifyListeners();
   }
@@ -114,11 +116,11 @@ class ChatService extends ChangeNotifier {
     final index = _conversations.indexWhere((c) => c.id == conversationId);
     if (index != -1) {
       _conversations[index] = _conversations[index].updateTitle(newTitle);
-      
+
       if (_currentConversation?.id == conversationId) {
         _currentConversation = _conversations[index];
       }
-      
+
       _saveConversations();
       notifyListeners();
     }
@@ -127,16 +129,17 @@ class ChatService extends ChangeNotifier {
   /// Set the selected model
   void setSelectedModel(String model) {
     _selectedModel = model;
-    
+
     // Update current conversation's default model
     if (_currentConversation != null) {
-      final index = _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+      final index =
+          _conversations.indexWhere((c) => c.id == _currentConversation!.id);
       if (index != -1) {
         _conversations[index] = _conversations[index].updateModel(model);
         _currentConversation = _conversations[index];
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -179,7 +182,8 @@ class ChatService extends ChangeNotifier {
         _addMessageToCurrentConversation(assistantMessage);
       } else {
         final errorMessage = Message.assistant(
-          content: 'Sorry, I encountered an error while processing your request.',
+          content:
+              'Sorry, I encountered an error while processing your request.',
           model: _selectedModel!,
           status: MessageStatus.error,
           error: _ollamaService.error ?? 'Unknown error',
@@ -189,7 +193,7 @@ class ChatService extends ChangeNotifier {
     } catch (e) {
       // Remove loading message and add error
       _removeLastMessage();
-      
+
       final errorMessage = Message.assistant(
         content: 'Sorry, I encountered an error: ${e.toString()}',
         model: _selectedModel!,
@@ -204,36 +208,67 @@ class ChatService extends ChangeNotifier {
 
   /// Add message to current conversation
   void _addMessageToCurrentConversation(Message message) {
-    if (_currentConversation == null) return;
-    
-    final index = _conversations.indexWhere((c) => c.id == _currentConversation!.id);
-    if (index != -1) {
-      _conversations[index] = _conversations[index].addMessage(message);
-      _currentConversation = _conversations[index];
-      _saveConversations();
-      notifyListeners();
+    try {
+      if (_currentConversation == null) {
+        debugPrint('Warning: Attempted to add message to null conversation');
+        return;
+      }
+
+      final index =
+          _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+      if (index != -1) {
+        _conversations[index] = _conversations[index].addMessage(message);
+        _currentConversation = _conversations[index];
+        _saveConversations();
+        notifyListeners();
+      } else {
+        debugPrint(
+            'Warning: Current conversation not found in conversations list');
+      }
+    } catch (e) {
+      debugPrint('Error adding message to conversation: $e');
     }
   }
 
   /// Remove the last message from current conversation
   void _removeLastMessage() {
-    if (_currentConversation == null || _currentConversation!.messages.isEmpty) return;
-    
-    final lastMessage = _currentConversation!.messages.last;
-    final index = _conversations.indexWhere((c) => c.id == _currentConversation!.id);
-    if (index != -1) {
-      _conversations[index] = _conversations[index].removeMessage(lastMessage.id);
-      _currentConversation = _conversations[index];
-      notifyListeners();
+    try {
+      if (_currentConversation == null) {
+        debugPrint(
+            'Warning: Attempted to remove message from null conversation');
+        return;
+      }
+
+      if (_currentConversation!.messages.isEmpty) {
+        debugPrint(
+            'Warning: Attempted to remove message from empty conversation');
+        return;
+      }
+
+      final lastMessage = _currentConversation!.messages.last;
+      final index =
+          _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+      if (index != -1) {
+        _conversations[index] =
+            _conversations[index].removeMessage(lastMessage.id);
+        _currentConversation = _conversations[index];
+        notifyListeners();
+      } else {
+        debugPrint(
+            'Warning: Current conversation not found when removing message');
+      }
+    } catch (e) {
+      debugPrint('Error removing last message: $e');
     }
   }
 
   /// Build message history for Ollama API
   List<Map<String, String>> _buildMessageHistory() {
     if (_currentConversation == null) return [];
-    
+
     return _currentConversation!.messages
-        .where((m) => m.role != MessageRole.system && m.status == MessageStatus.sent)
+        .where((m) =>
+            m.role != MessageRole.system && m.status == MessageStatus.sent)
         .map((m) => {
               'role': m.role == MessageRole.user ? 'user' : 'assistant',
               'content': m.content,

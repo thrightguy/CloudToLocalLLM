@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../config/app_config.dart';
+import '../models/conversation.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/ollama_service.dart';
@@ -20,19 +21,28 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late ChatService _chatService;
-  late OllamaService _ollamaService;
+  ChatService? _chatService;
+  OllamaService? _ollamaService;
   bool _isSidebarCollapsed = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _ollamaService = OllamaService();
-    _chatService = ChatService(_ollamaService);
+    // Initialize services after the first frame to access context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final ollamaService = OllamaService(authService: authService);
+      final chatService = ChatService(ollamaService);
 
-    // Initialize services
-    _ollamaService.testConnection();
+      setState(() {
+        _ollamaService = ollamaService;
+        _chatService = chatService;
+      });
+
+      // Initialize services
+      ollamaService.testConnection();
+    });
   }
 
   @override
@@ -53,6 +63,16 @@ class _HomeScreenState extends State<HomeScreen> {
           _isSidebarCollapsed = true;
         });
       });
+    }
+
+    // Show loading screen if services are not initialized yet
+    if (_chatService == null || _ollamaService == null) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundMain,
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     return MultiProvider(
@@ -148,9 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             AppConfig.appName,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
 
           const Spacer(),
@@ -320,29 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: Container(
                   color: AppTheme.backgroundMain,
-                  child: conversation.messages.isEmpty
-                      ? _buildEmptyConversation(context)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppTheme.spacingM,
-                          ),
-                          itemCount: conversation.messages.length,
-                          itemBuilder: (context, index) {
-                            final message = conversation.messages[index];
-                            return MessageBubble(
-                              message: message,
-                              showAvatar: true,
-                              showTimestamp:
-                                  index == 0 ||
-                                  conversation.messages[index - 1].role !=
-                                      message.role,
-                              onRetry: message.hasError
-                                  ? () => _retryMessage(chatService, message)
-                                  : null,
-                            );
-                          },
-                        ),
+                  child: _buildChatMessages(conversation),
                 ),
               ),
 
@@ -379,9 +377,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'Welcome to CloudToLocalLLM',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppTheme.textColor,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: AppTheme.textColor,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           SizedBox(height: AppTheme.spacingM),
           Text(
@@ -414,7 +412,57 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEmptyConversation(BuildContext context) {
+  /// Build chat messages with error handling
+  Widget _buildChatMessages(Conversation conversation) {
+    try {
+      if (conversation.messages.isEmpty) {
+        return _buildEmptyConversation();
+      }
+
+      return ListView.builder(
+        controller: _scrollController,
+        padding: EdgeInsets.symmetric(
+          vertical: AppTheme.spacingM,
+        ),
+        itemCount: conversation.messages.length,
+        itemBuilder: (context, index) {
+          try {
+            if (index >= conversation.messages.length) {
+              // Safety check to prevent index out of bounds
+              return const SizedBox.shrink();
+            }
+
+            final message = conversation.messages[index];
+            return MessageBubble(
+              message: message,
+              showAvatar: true,
+              showTimestamp: index == 0 ||
+                  (index > 0 &&
+                      conversation.messages[index - 1].role != message.role),
+              onRetry: message.hasError
+                  ? () => _retryMessage(
+                      Provider.of<ChatService>(context, listen: false), message)
+                  : null,
+            );
+          } catch (e) {
+            debugPrint('Error building message at index $index: $e');
+            return Container(
+              padding: EdgeInsets.all(AppTheme.spacingM),
+              child: Text(
+                'Error displaying message',
+                style: TextStyle(color: AppTheme.dangerColor),
+              ),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('Error building chat messages: $e');
+      return _buildErrorState('Error loading messages');
+    }
+  }
+
+  Widget _buildEmptyConversation() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -424,9 +472,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'How can I help you today?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: AppTheme.textColor,
-              fontWeight: FontWeight.w500,
-            ),
+                  color: AppTheme.textColor,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
           SizedBox(height: AppTheme.spacingS),
           Text(
@@ -434,6 +482,36 @@ class _HomeScreenState extends State<HomeScreen> {
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: AppTheme.dangerColor,
+          ),
+          SizedBox(height: AppTheme.spacingL),
+          Text(
+            'Something went wrong',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textColor,
+                ),
+          ),
+          SizedBox(height: AppTheme.spacingS),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textColorLight,
+                ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
