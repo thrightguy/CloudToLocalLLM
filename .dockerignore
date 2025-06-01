@@ -3,7 +3,12 @@
 # =============================================================================
 
 # Flutter/Dart build artifacts (reduces context size)
-build/
+# Note: build/web/ is needed for host-based builds, so exclude other build dirs
+build/android/
+build/ios/
+build/linux/
+build/macos/
+build/windows/
 .dart_tool/
 .packages
 .pub/
