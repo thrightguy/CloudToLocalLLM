@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
-import '../services/ollama_service.dart';
+import '../services/version_service.dart';
 import '../components/modern_card.dart';
 
 /// Modern settings screen with comprehensive configuration options
@@ -19,29 +19,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Settings state
   String _selectedTheme = 'dark';
   String _selectedLLMProvider = 'ollama';
-  String _ollamaHost = AppConfig.defaultOllamaHost;
-  int _ollamaPort = AppConfig.defaultOllamaPort;
-  bool _enableCloudSync = false;
-  bool _enableRemoteAccess = false;
   bool _enableNotifications = true;
-
-  // Ollama service for testing
-  late OllamaService _ollamaService;
-  String? _selectedModel;
-  final TextEditingController _messageController = TextEditingController();
-  String? _chatResponse;
 
   @override
   void initState() {
     super.initState();
-    _ollamaService = OllamaService();
-    _ollamaService.testConnection();
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
   }
 
   @override
@@ -91,6 +73,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _buildDesktopLayout(context)
                       else
                         _buildMobileLayout(context),
+
+                      SizedBox(height: AppTheme.spacingL),
+
+                      // Version information section
+                      _buildVersionSection(context),
                     ],
                   ),
                 ),
@@ -186,20 +173,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _buildAppearanceSettings(context)),
-            SizedBox(width: AppTheme.spacingL),
-            Expanded(child: _buildLLMSettings(context)),
-            SizedBox(width: AppTheme.spacingL),
-            Expanded(child: _buildCloudSettings(context)),
-          ],
-        ),
-        SizedBox(height: AppTheme.spacingL),
-        _buildOllamaTestingSection(context),
+        Expanded(child: _buildAppearanceSettings(context)),
+        SizedBox(width: AppTheme.spacingL),
+        Expanded(child: _buildLLMSettings(context)),
+        SizedBox(width: AppTheme.spacingL),
+        Expanded(child: _buildCloudSettings(context)),
       ],
     );
   }
@@ -212,8 +193,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _buildLLMSettings(context),
         SizedBox(height: AppTheme.spacingL),
         _buildCloudSettings(context),
-        SizedBox(height: AppTheme.spacingL),
-        _buildOllamaTestingSection(context),
       ],
     );
   }
@@ -306,51 +285,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          if (_selectedLLMProvider == 'ollama') ...[
-            SizedBox(height: AppTheme.spacingM),
+          SizedBox(height: AppTheme.spacingM),
 
-            // Ollama host
-            _buildSettingItem(
-              context,
-              'Host',
-              'Ollama server host address',
-              TextFormField(
-                initialValue: _ollamaHost,
-                decoration: const InputDecoration(
-                  hintText: 'localhost',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _ollamaHost = value;
-                  });
-                },
+          // Navigate to LLM Provider Settings button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go('/settings/llm-provider'),
+              icon: const Icon(Icons.settings),
+              label: const Text('Configure & Test Connection'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.all(AppTheme.spacingM),
               ),
             ),
+          ),
 
-            SizedBox(height: AppTheme.spacingM),
+          SizedBox(height: AppTheme.spacingS),
 
-            // Ollama port
-            _buildSettingItem(
-              context,
-              'Port',
-              'Ollama server port',
-              TextFormField(
-                initialValue: _ollamaPort.toString(),
-                decoration: const InputDecoration(
-                  hintText: '11434',
-                  border: OutlineInputBorder(),
+          // Quick info about what's in the detailed settings
+          Text(
+            'Configure connection settings, test connectivity, and manage models',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textColorLight,
                 ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  setState(() {
-                    _ollamaPort =
-                        int.tryParse(value) ?? AppConfig.defaultOllamaPort;
-                  });
-                },
-              ),
-            ),
-          ],
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -369,36 +328,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: AppTheme.spacingM),
 
-          // Cloud sync toggle
-          _buildSettingItem(
-            context,
-            'Cloud Sync',
-            'Synchronize data across devices',
-            Switch(
-              value: _enableCloudSync,
-              onChanged: (value) {
-                setState(() {
-                  _enableCloudSync = value;
-                });
-              },
+          // Coming Soon banner
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+              border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.construction,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    SizedBox(width: AppTheme.spacingS),
+                    Text(
+                      '🚧 Coming Soon',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppTheme.spacingS),
+                Text(
+                  'Cloud Sync - Coming Soon: Securely sync your conversations and settings across devices',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
 
           SizedBox(height: AppTheme.spacingM),
 
-          // Remote access toggle
-          _buildSettingItem(
+          // Cloud sync placeholder (disabled)
+          _buildComingSoonSettingItem(
+            context,
+            'Cloud Sync',
+            'Synchronize data across devices',
+            'This feature is under development and will be available in a future release',
+          ),
+
+          SizedBox(height: AppTheme.spacingM),
+
+          // Remote access placeholder (disabled)
+          _buildComingSoonSettingItem(
             context,
             'Remote Access',
             'Allow remote access to your LLM',
-            Switch(
-              value: _enableRemoteAccess,
-              onChanged: (value) {
-                setState(() {
-                  _enableRemoteAccess = value;
-                });
-              },
-            ),
+            'This feature is under development and will be available in a future release',
           ),
         ],
       ),
@@ -467,98 +460,163 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildOllamaTestingSection(BuildContext context) {
+  Widget _buildComingSoonSettingItem(
+    BuildContext context,
+    String title,
+    String description,
+    String tooltip,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).disabledColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingS,
+                vertical: AppTheme.spacingXS,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                '🚧 Coming Soon',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: AppTheme.spacingXS),
+        Text(
+          description,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).disabledColor,
+              ),
+        ),
+        SizedBox(height: AppTheme.spacingS),
+        Tooltip(
+          message: tooltip,
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: Theme.of(context).disabledColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+              border: Border.all(
+                color: Theme.of(context).disabledColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.toggle_off,
+                  color: Theme.of(context).disabledColor,
+                ),
+                SizedBox(width: AppTheme.spacingS),
+                Text(
+                  'Disabled - Feature in Development',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).disabledColor,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVersionSection(BuildContext context) {
     return ModernCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSectionHeader(
             context,
-            'Ollama Testing',
-            Icons.science,
-            AppTheme.infoColor,
+            'Application Information',
+            Icons.info_outline,
+            AppTheme.accentColor,
           ),
           SizedBox(height: AppTheme.spacingM),
 
-          // Connection status
-          ListenableBuilder(
-            listenable: _ollamaService,
-            builder: (context, child) {
-              return Container(
-                padding: EdgeInsets.all(AppTheme.spacingM),
-                decoration: BoxDecoration(
-                  color: _ollamaService.isConnected
-                      ? AppTheme.successColor.withValues(alpha: 0.1)
-                      : AppTheme.dangerColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
-                  border: Border.all(
-                    color: _ollamaService.isConnected
-                        ? AppTheme.successColor.withValues(alpha: 0.3)
-                        : AppTheme.dangerColor.withValues(alpha: 0.3),
-                    width: 1,
+          // Version display with FutureBuilder
+          FutureBuilder<String>(
+            future: VersionService.instance.getDisplayVersion(),
+            builder: (context, snapshot) {
+              return _buildSettingItem(
+                context,
+                'Version',
+                'Current application version and build information',
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingM,
+                    vertical: AppTheme.spacingS,
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _ollamaService.isConnected
-                          ? Icons.check_circle
-                          : Icons.error,
-                      color: _ollamaService.isConnected
-                          ? AppTheme.successColor
-                          : AppTheme.dangerColor,
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.2),
                     ),
-                    SizedBox(width: AppTheme.spacingS),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _ollamaService.isConnected
-                                ? 'Connected to Ollama (v${_ollamaService.version})'
-                                : 'Not connected to Ollama',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: _ollamaService.isConnected
-                                      ? AppTheme.successColor
-                                      : AppTheme.dangerColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                          ),
-                          if (_ollamaService.error != null) ...[
-                            SizedBox(height: AppTheme.spacingXS),
-                            Text(
-                              'Error: ${_ollamaService.error}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: AppTheme.dangerColor,
-                                  ),
-                            ),
-                          ],
-                        ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.tag,
+                        color: AppTheme.accentColor,
+                        size: 20,
                       ),
-                    ),
-                    ElevatedButton(
-                      onPressed:
-                          _ollamaService.isLoading ? null : _testConnection,
-                      child: _ollamaService.isLoading
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppTheme.primaryColor,
-                                ),
-                              ),
-                            )
-                          : const Text('Test Connection'),
-                    ),
-                  ],
+                      SizedBox(width: AppTheme.spacingS),
+                      Expanded(
+                        child: Text(
+                          snapshot.hasData ? snapshot.data! : 'Loading...',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: AppTheme.textColor,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'monospace',
+                                  ),
+                        ),
+                      ),
+                      if (snapshot.hasData)
+                        IconButton(
+                          onPressed: () => _showVersionDetails(context),
+                          icon: Icon(
+                            Icons.info_outline,
+                            color: AppTheme.accentColor,
+                            size: 20,
+                          ),
+                          tooltip: 'Show detailed version information',
+                        ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -566,154 +624,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           SizedBox(height: AppTheme.spacingM),
 
-          // Models list and chat test
-          ListenableBuilder(
-            listenable: _ollamaService,
-            builder: (context, child) {
-              if (!_ollamaService.isConnected ||
-                  _ollamaService.models.isEmpty) {
-                return Container(
-                  padding: EdgeInsets.all(AppTheme.spacingM),
+          // Build information
+          FutureBuilder<DateTime?>(
+            future: VersionService.instance.getBuildDate(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data == null) {
+                return SizedBox.shrink();
+              }
+
+              final buildDate = snapshot.data!;
+              final formattedDate =
+                  '${buildDate.day}/${buildDate.month}/${buildDate.year} ${buildDate.hour.toString().padLeft(2, '0')}:${buildDate.minute.toString().padLeft(2, '0')}';
+
+              return _buildSettingItem(
+                context,
+                'Build Date',
+                'When this version was compiled',
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingM,
+                    vertical: AppTheme.spacingS,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.warningColor.withValues(alpha: 0.1),
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                     border: Border.all(
-                      color: AppTheme.warningColor.withValues(alpha: 0.3),
-                      width: 1,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        Icons.warning_outlined,
-                        color: AppTheme.warningColor,
+                        Icons.schedule,
+                        color: AppTheme.accentColor,
+                        size: 20,
                       ),
                       SizedBox(width: AppTheme.spacingS),
-                      Expanded(
-                        child: Text(
-                          'No models available. Make sure Ollama is running and has models installed.',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.warningColor,
-                                  ),
-                        ),
+                      Text(
+                        formattedDate,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.textColor,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                     ],
                   ),
-                );
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Model selector
-                  _buildSettingItem(
-                    context,
-                    'Available Models (${_ollamaService.models.length})',
-                    'Select a model to test chat functionality',
-                    DropdownButton<String>(
-                      value: _selectedModel,
-                      isExpanded: true,
-                      hint: const Text('Select a model'),
-                      items: _ollamaService.models.map((model) {
-                        return DropdownMenuItem(
-                          value: model.name,
-                          child: Text(
-                              '${model.displayName} (${model.sizeFormatted})'),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedModel = value;
-                        });
-                      },
-                    ),
-                  ),
-
-                  // Chat test
-                  if (_selectedModel != null) ...[
-                    SizedBox(height: AppTheme.spacingM),
-                    _buildSettingItem(
-                      context,
-                      'Test Chat',
-                      'Send a test message to verify the model is working',
-                      Column(
-                        children: [
-                          TextField(
-                            controller: _messageController,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter a test message...',
-                              border: OutlineInputBorder(),
-                            ),
-                            maxLines: 2,
-                          ),
-                          SizedBox(height: AppTheme.spacingS),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _ollamaService.isLoading
-                                      ? null
-                                      : _sendTestMessage,
-                                  child: _ollamaService.isLoading
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        )
-                                      : const Text('Send Test Message'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_chatResponse != null) ...[
-                            SizedBox(height: AppTheme.spacingM),
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(AppTheme.spacingM),
-                              decoration: BoxDecoration(
-                                color: AppTheme.backgroundMain,
-                                borderRadius: BorderRadius.circular(
-                                    AppTheme.borderRadiusS),
-                                border: Border.all(
-                                  color: AppTheme.secondaryColor
-                                      .withValues(alpha: 0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Response:',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                          color: AppTheme.textColor,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                  ),
-                                  SizedBox(height: AppTheme.spacingS),
-                                  Text(
-                                    _chatResponse!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: AppTheme.textColor,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               );
             },
           ),
@@ -722,20 +682,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _testConnection() async {
-    await _ollamaService.testConnection();
-  }
+  void _showVersionDetails(BuildContext context) async {
+    final versionInfo = await VersionService.instance.getVersionInfo();
 
-  Future<void> _sendTestMessage() async {
-    if (_messageController.text.isEmpty || _selectedModel == null) return;
-
-    final response = await _ollamaService.chat(
-      model: _selectedModel!,
-      message: _messageController.text,
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: AppTheme.accentColor),
+            SizedBox(width: AppTheme.spacingS),
+            Text('Version Information'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: versionInfo.entries.map((entry) {
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: AppTheme.spacingXS),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      child: Text(
+                        '${entry.key}:',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textColorLight,
+                            ),
+                      ),
+                    ),
+                    Expanded(
+                      child: SelectableText(
+                        entry.value,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontFamily: 'monospace',
+                              color: AppTheme.textColor,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close'),
+          ),
+        ],
+      ),
     );
-
-    setState(() {
-      _chatResponse = response ?? 'No response received';
-    });
   }
 }

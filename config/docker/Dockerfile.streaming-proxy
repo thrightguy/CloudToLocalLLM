@@ -1,0 +1,53 @@
+# Multi-stage build for CloudToLocalLLM Streaming Proxy
+# Optimized for minimal footprint and security
+
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY streaming-proxy/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Production stage
+FROM node:20-alpine AS production
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S proxyuser && \
+    adduser -S -D -H -u 1001 -s /sbin/nologin -G proxyuser proxyuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependencies from builder stage
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy application files
+COPY streaming-proxy/proxy-server.js ./
+COPY streaming-proxy/package.json ./
+
+# Security: Set proper ownership and permissions
+RUN chown -R proxyuser:proxyuser /app && \
+    chmod -R 755 /app
+
+# Health check for container monitoring
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:8080/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
+
+# Security: Switch to non-root user
+USER proxyuser
+
+# Expose WebSocket proxy port
+EXPOSE 8080
+
+# Environment variables for configuration
+ENV NODE_ENV=production
+ENV PROXY_PORT=8080
+ENV LOG_LEVEL=info
+
+# Start the streaming proxy server
+CMD ["node", "proxy-server.js"]

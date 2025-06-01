@@ -8,6 +8,7 @@ import '../screens/loading_screen.dart';
 import '../screens/callback_screen.dart';
 import '../screens/ollama_test_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/settings/llm_provider_settings_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -60,6 +61,13 @@ class AppRouter {
           path: '/settings',
           name: 'settings',
           builder: (context, state) => const SettingsScreen(),
+        ),
+
+        // LLM Provider Settings route
+        GoRoute(
+          path: '/settings/llm-provider',
+          name: 'llm-provider-settings',
+          builder: (context, state) => const LLMProviderSettingsScreen(),
         ),
       ],
 

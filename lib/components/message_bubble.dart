@@ -67,7 +67,7 @@ class _MessageBubbleState extends State<MessageBubble>
                 _buildAvatar(),
                 SizedBox(width: AppTheme.spacingM),
               ],
-              
+
               // Message content
               Expanded(
                 child: Column(
@@ -76,10 +76,10 @@ class _MessageBubbleState extends State<MessageBubble>
                     // Message header
                     if (widget.message.isAssistant || widget.showTimestamp)
                       _buildMessageHeader(),
-                    
+
                     // Message bubble
                     _buildMessageContent(),
-                    
+
                     // Message actions
                     if (_isHovered && !widget.message.isLoading)
                       _buildMessageActions(),
@@ -123,7 +123,9 @@ class _MessageBubbleState extends State<MessageBubble>
       child: Row(
         children: [
           Text(
-            widget.message.isUser ? 'You' : (widget.message.model ?? 'Assistant'),
+            widget.message.isUser
+                ? 'You'
+                : (widget.message.model ?? 'Assistant'),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: AppTheme.textColorLight,
                   fontWeight: FontWeight.w600,

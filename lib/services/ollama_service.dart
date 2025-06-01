@@ -29,13 +29,15 @@ class OllamaService extends ChangeNotifier {
         _timeout = timeout ?? AppConfig.ollamaTimeout,
         _authService = authService {
     // Debug logging for service initialization
-    debugPrint('[DEBUG] OllamaService initialized:');
-    debugPrint('[DEBUG] - Platform: ${_isWeb ? 'Web' : 'Desktop'}');
-    debugPrint('[DEBUG] - Base URL: $_baseUrl');
-    debugPrint('[DEBUG] - Timeout: $_timeout');
-    debugPrint(
-        '[DEBUG] - Auth Service: ${_authService != null ? 'provided' : 'null'}');
-    AppConfig.logConfiguration();
+    if (kDebugMode) {
+      debugPrint('[DEBUG] OllamaService initialized:');
+      debugPrint('[DEBUG] - Platform: ${_isWeb ? 'Web' : 'Desktop'}');
+      debugPrint('[DEBUG] - Base URL: $_baseUrl');
+      debugPrint('[DEBUG] - Timeout: $_timeout');
+      debugPrint(
+          '[DEBUG] - Auth Service: ${_authService != null ? 'provided' : 'null'}');
+      AppConfig.logConfiguration();
+    }
   }
 
   // Getters
@@ -54,11 +56,13 @@ class OllamaService extends ChangeNotifier {
 
     // Add authentication header for web platform
     if (_isWeb && _authService != null) {
-      final accessToken = _authService!.getAccessToken();
+      final accessToken = _authService.getAccessToken();
       if (accessToken != null) {
         headers['Authorization'] = 'Bearer $accessToken';
-        debugPrint('[DEBUG] Added Authorization header for web request');
-      } else {
+        if (kDebugMode) {
+          debugPrint('[DEBUG] Added Authorization header for web request');
+        }
+      } else if (kDebugMode) {
         debugPrint('[DEBUG] No access token available for web request');
       }
     }
@@ -75,8 +79,10 @@ class OllamaService extends ChangeNotifier {
       final url = _isWeb
           ? '$_baseUrl/api/ollama/bridge/status'
           : '$_baseUrl/api/version';
-      debugPrint(
-          '[DEBUG] Making ${_isWeb ? 'authenticated' : 'direct'} request to: $url');
+      if (kDebugMode) {
+        debugPrint(
+            '[DEBUG] Making ${_isWeb ? 'authenticated' : 'direct'} request to: $url');
+      }
 
       final response = await http
           .get(

@@ -67,7 +67,7 @@ services:
       retries: 3
       start_period: 10s
 
-  # API Backend Container (for bridge communication)
+  # API Backend Container (for bridge communication and proxy management)
   api-backend:
     build:
       context: .
@@ -78,6 +78,8 @@ services:
       - PORT=8080
       - AUTH0_DOMAIN=dev-xafu7oedkd5wlrbo.us.auth0.com
       - AUTH0_AUDIENCE=https://app.cloudtolocalllm.online
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for proxy management
     networks:
       - cloudllm-network
     restart: unless-stopped
@@ -87,6 +89,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # Streaming Proxy Base Image (built but not run directly)
+  streaming-proxy-base:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.streaming-proxy
+    image: cloudtolocalllm-streaming-proxy:latest
+    profiles:
+      - build-only # Only built, not started
 
   # Certbot for SSL certificate management
   certbot:

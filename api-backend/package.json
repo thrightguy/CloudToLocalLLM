@@ -21,7 +21,8 @@
     "jwks-client": "^2.0.0",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "dockerode": "^4.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",

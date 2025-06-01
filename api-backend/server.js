@@ -9,6 +9,7 @@ import jwksClient from 'jwks-client';
 import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import dotenv from 'dotenv';
+import { StreamingProxyManager } from './streaming-proxy-manager.js';
 
 dotenv.config();
 
@@ -129,6 +130,9 @@ async function authenticateToken(req, res, next) {
 
 // Store for active bridge connections
 const bridgeConnections = new Map();
+
+// Initialize streaming proxy manager
+const proxyManager = new StreamingProxyManager();
 
 // WebSocket server for bridge connections
 const wss = new WebSocketServer({
@@ -291,6 +295,86 @@ app.post('/ollama/bridge/register', authenticateToken, (req, res) => {
     message: 'Bridge registered successfully',
     bridgeId: bridge_id
   });
+});
+
+// Streaming Proxy Management Endpoints
+
+// Start streaming proxy for user
+app.post('/api/proxy/start', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const userToken = req.headers.authorization;
+
+    logger.info(`Starting streaming proxy for user: ${userId}`);
+
+    const proxyMetadata = await proxyManager.provisionProxy(userId, userToken);
+
+    res.json({
+      success: true,
+      message: 'Streaming proxy started successfully',
+      proxy: {
+        proxyId: proxyMetadata.proxyId,
+        status: proxyMetadata.status,
+        createdAt: proxyMetadata.createdAt
+      }
+    });
+  } catch (error) {
+    logger.error(`Failed to start proxy for user ${req.user.sub}:`, error);
+    res.status(500).json({
+      error: 'Failed to start streaming proxy',
+      message: error.message
+    });
+  }
+});
+
+// Stop streaming proxy for user
+app.post('/api/proxy/stop', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    logger.info(`Stopping streaming proxy for user: ${userId}`);
+
+    const success = await proxyManager.terminateProxy(userId);
+
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Streaming proxy stopped successfully'
+      });
+    } else {
+      res.status(404).json({
+        error: 'No active proxy found',
+        message: 'No streaming proxy is currently running for this user'
+      });
+    }
+  } catch (error) {
+    logger.error(`Failed to stop proxy for user ${req.user.sub}:`, error);
+    res.status(500).json({
+      error: 'Failed to stop streaming proxy',
+      message: error.message
+    });
+  }
+});
+
+// Get streaming proxy status
+app.get('/api/proxy/status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const status = await proxyManager.getProxyStatus(userId);
+
+    // Update activity if proxy is running
+    if (status.status === 'running') {
+      proxyManager.updateProxyActivity(userId);
+    }
+
+    res.json(status);
+  } catch (error) {
+    logger.error(`Failed to get proxy status for user ${req.user.sub}:`, error);
+    res.status(500).json({
+      error: 'Failed to get proxy status',
+      message: error.message
+    });
+  }
 });
 
 // Ollama proxy endpoints

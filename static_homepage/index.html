@@ -29,11 +29,63 @@
       </ul>
     </div>
     
+    <div class="card" id="downloads-card" style="margin-top:2.5rem;">
+      <div class="card-title">Download CloudToLocalLLM</div>
+      <div class="card-desc">Get the desktop application for your Linux distribution</div>
+
+      <div class="download-grid">
+        <div class="download-item">
+          <div class="download-icon">📦</div>
+          <div class="download-title">AppImage</div>
+          <div class="download-subtitle">Universal Linux Package</div>
+          <div class="download-desc">Works on all Linux distributions. Just download and run.</div>
+          <a href="/releases/latest/CloudToLocalLLM-latest-x86_64.AppImage" class="download-btn" id="appimage-download">
+            Download AppImage
+          </a>
+          <div class="download-install">
+            <code>chmod +x CloudToLocalLLM-*.AppImage && ./CloudToLocalLLM-*.AppImage</code>
+          </div>
+        </div>
+
+        <div class="download-item">
+          <div class="download-icon">🐧</div>
+          <div class="download-title">Debian Package</div>
+          <div class="download-subtitle">Ubuntu, Debian & Derivatives</div>
+          <div class="download-desc">Native package with proper dependency management.</div>
+          <a href="/releases/latest/cloudtolocalllm-latest_amd64.deb" class="download-btn" id="deb-download">
+            Download .deb
+          </a>
+          <div class="download-install">
+            <code>sudo dpkg -i cloudtolocalllm_*.deb</code>
+          </div>
+        </div>
+
+        <div class="download-item">
+          <div class="download-icon">🏛️</div>
+          <div class="download-title">Arch User Repository</div>
+          <div class="download-subtitle">Arch Linux & Derivatives</div>
+          <div class="download-desc">Install from AUR with your favorite helper.</div>
+          <a href="https://aur.archlinux.org/packages/cloudtolocalllm" class="download-btn external-link">
+            View on AUR
+          </a>
+          <div class="download-install">
+            <code>yay -S cloudtolocalllm</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-detection" id="platform-info" style="display:none;">
+        <div class="platform-recommendation">
+          <strong>Recommended for your system:</strong> <span id="recommended-package"></span>
+        </div>
+      </div>
+    </div>
+
     <div class="card" style="margin-top:2.5rem;">
-      <div class="card-title">Getting Started</div>
-      <div class="card-desc">The CloudToLocalLLM App Portal is <span class="coming-soon">Coming Soon!</span></div>
+      <div class="card-title">Web Application</div>
+      <div class="card-desc">Access CloudToLocalLLM through your web browser with cloud streaming</div>
       <div style="width:100%;display:flex;justify-content:center;">
-        <a href="https://app.cloudtolocalllm.online" class="button" style="min-width:220px;text-align:center;">Go to App Portal (Coming Soon)</a>
+        <a href="https://app.cloudtolocalllm.online" class="button" style="min-width:220px;text-align:center;">Launch Web App</a>
       </div>
     </div>
   </main>
@@ -41,5 +93,65 @@
   <footer class="footer">
     <!-- Version info removed -->
   </footer>
+
+  <script>
+    // Platform detection and download recommendation
+    function detectPlatform() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const platformInfo = document.getElementById('platform-info');
+      const recommendedSpan = document.getElementById('recommended-package');
+
+      let recommendation = '';
+
+      if (userAgent.includes('ubuntu') || userAgent.includes('debian')) {
+        recommendation = 'Debian Package (.deb)';
+        highlightDownload('deb-download');
+      } else if (userAgent.includes('arch') || userAgent.includes('manjaro')) {
+        recommendation = 'Arch User Repository (AUR)';
+        highlightDownload('aur-link');
+      } else if (userAgent.includes('linux')) {
+        recommendation = 'AppImage (Universal)';
+        highlightDownload('appimage-download');
+      }
+
+      if (recommendation) {
+        recommendedSpan.textContent = recommendation;
+        platformInfo.style.display = 'block';
+      }
+    }
+
+    function highlightDownload(elementId) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        element.style.transform = 'scale(1.05)';
+        element.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.3)';
+      }
+    }
+
+    // Update download links with actual version when available
+    function updateDownloadLinks() {
+      // This would be populated by the build system or API
+      const version = 'latest'; // Placeholder
+
+      // Update AppImage link
+      const appimageLink = document.getElementById('appimage-download');
+      if (appimageLink && version !== 'latest') {
+        appimageLink.href = `/releases/v${version}/CloudToLocalLLM-v${version}-x86_64.AppImage`;
+      }
+
+      // Update Debian link
+      const debLink = document.getElementById('deb-download');
+      if (debLink && version !== 'latest') {
+        debLink.href = `/releases/v${version}/cloudtolocalllm_${version}_amd64.deb`;
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      detectPlatform();
+      updateDownloadLinks();
+    });
+  </script>
 </body>
-</html> 
+</html>
