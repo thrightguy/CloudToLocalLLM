@@ -96,34 +96,37 @@
     </div>
 
     <div class="card" style="max-width: 800px;">
-      <div class="card-title">📦 AppImage (Universal)</div>
+      <div class="card-title">📦 Snap Package (Universal)</div>
       <div class="card-desc">
-        Portable package that works on all Linux distributions. No installation required.
+        Universal Linux package with automatic updates and sandboxed security. Works on most Linux distributions.
       </div>
-      
-      <div class="installation-section">
-        <div class="installation-title">Download & Run</div>
-        <div class="code-block">
-          <code># Download the latest AppImage
-wget https://cloudtolocalllm.online/releases/latest/CloudToLocalLLM-latest-x86_64.AppImage
 
-# Make executable and run
-chmod +x CloudToLocalLLM-latest-x86_64.AppImage
-./CloudToLocalLLM-latest-x86_64.AppImage</code>
-        </div>
-        
-        <div class="installation-title">Optional: Desktop Integration</div>
+      <div class="installation-section">
+        <div class="installation-title">Installation from Snap Store (Coming Soon)</div>
         <div class="code-block">
-          <code># Create desktop entry (optional)
-mkdir -p ~/.local/share/applications
-cat > ~/.local/share/applications/cloudtolocalllm.desktop << 'EOF'
-[Desktop Entry]
-Name=CloudToLocalLLM
-Exec=/path/to/CloudToLocalLLM-latest-x86_64.AppImage
-Icon=cloudtolocalllm
-Type=Application
-Categories=Development;Network;
-EOF</code>
+          <code># Install from Snap Store (when available)
+sudo snap install cloudtolocalllm
+
+# Enable system tray access
+sudo snap connect cloudtolocalllm:system-observe</code>
+        </div>
+
+        <div class="installation-title">Manual Installation (Development)</div>
+        <div class="code-block">
+          <code># Download locally built snap
+wget https://cloudtolocalllm.online/dist/cloudtolocalllm_2.1.1_amd64.snap
+
+# Install with --dangerous flag (for locally built snaps)
+sudo snap install cloudtolocalllm_2.1.1_amd64.snap --dangerous</code>
+        </div>
+
+        <div class="installation-title">Running the Application</div>
+        <div class="code-block">
+          <code># Run from terminal
+cloudtolocalllm
+
+# Or launch from applications menu
+# Search for "CloudToLocalLLM"</code>
         </div>
       </div>
     </div>
@@ -138,10 +141,10 @@ EOF</code>
         <div class="installation-title">Installation</div>
         <div class="code-block">
           <code># Download the package
-wget https://cloudtolocalllm.online/releases/latest/cloudtolocalllm-latest_amd64.deb
+wget https://cloudtolocalllm.online/dist/debian/cloudtolocalllm_2.1.1_amd64.deb
 
 # Install with dpkg
-sudo dpkg -i cloudtolocalllm-latest_amd64.deb
+sudo dpkg -i cloudtolocalllm_2.1.1_amd64.deb
 
 # Install dependencies if needed
 sudo apt-get install -f</code>
@@ -216,14 +219,17 @@ sudo pacman -Rs cloudtolocalllm</code>
       <div class="checksum-section">
         <div class="installation-title">Verify Downloads</div>
         <div class="code-block">
-          <code># Download checksums file
-wget https://cloudtolocalllm.online/releases/latest/CloudToLocalLLM-latest-checksums.txt
+          <code># Download and verify Debian package checksum
+wget https://cloudtolocalllm.online/dist/debian/cloudtolocalllm_2.1.1_amd64.deb.sha256
+sha256sum -c cloudtolocalllm_2.1.1_amd64.deb.sha256
 
-# Verify AppImage
-sha256sum -c CloudToLocalLLM-latest-checksums.txt --ignore-missing
+# Or verify manually
+sha256sum cloudtolocalllm_2.1.1_amd64.deb
+# Expected: 5d31d8f195699b254385cb4b9c2f572f33a41291e8b9f66eabd508ffa06ea149
 
-# Verify Debian package
-sha256sum cloudtolocalllm-latest_amd64.deb</code>
+# Verify Snap package (when available)
+wget https://cloudtolocalllm.online/dist/cloudtolocalllm_2.1.1_amd64.snap.sha256
+sha256sum -c cloudtolocalllm_2.1.1_amd64.snap.sha256</code>
         </div>
       </div>
     </div>
@@ -279,11 +285,14 @@ ollama pull llama2</code>
         
         <div class="installation-title">Permission Issues</div>
         <div class="code-block">
-          <code># Fix AppImage permissions
-chmod +x CloudToLocalLLM-*.AppImage
+          <code># Check application permissions
+ls -la /usr/bin/cloudtolocalllm
 
 # Check user groups for system tray
-groups $USER</code>
+groups $USER
+
+# Snap permission issues
+sudo snap connect cloudtolocalllm:system-observe</code>
         </div>
       </div>
     </div>
