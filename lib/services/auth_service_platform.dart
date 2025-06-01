@@ -1,3 +1,4 @@
+// Conditional import for Platform class - only available on non-web platforms
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
@@ -15,11 +16,25 @@ import 'auth_service_web.dart'
 class AuthServicePlatform extends ChangeNotifier {
   late final dynamic _platformService;
 
-  // Platform detection
+  // Platform detection - safe for web
   static bool get isWeb => kIsWeb;
-  static bool get isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
-  static bool get isDesktop =>
-      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  static bool get isMobile {
+    if (kIsWeb) return false;
+    try {
+      return Platform.isAndroid || Platform.isIOS;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static bool get isDesktop {
+    if (kIsWeb) return false;
+    try {
+      return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+    } catch (e) {
+      return false;
+    }
+  }
 
   // Getters that delegate to platform service
   ValueNotifier<bool> get isAuthenticated => _platformService.isAuthenticated;
@@ -128,16 +143,24 @@ class AuthServicePlatform extends ChangeNotifier {
     if (isWeb) return 'Web';
     if (isMobile) {
       if (!kIsWeb) {
-        if (Platform.isAndroid) return 'Android';
-        if (Platform.isIOS) return 'iOS';
+        try {
+          if (Platform.isAndroid) return 'Android';
+          if (Platform.isIOS) return 'iOS';
+        } catch (e) {
+          // Platform access failed, return generic
+        }
       }
       return 'Mobile';
     }
     if (isDesktop) {
       if (!kIsWeb) {
-        if (Platform.isWindows) return 'Windows';
-        if (Platform.isLinux) return 'Linux';
-        if (Platform.isMacOS) return 'macOS';
+        try {
+          if (Platform.isWindows) return 'Windows';
+          if (Platform.isLinux) return 'Linux';
+          if (Platform.isMacOS) return 'macOS';
+        } catch (e) {
+          // Platform access failed, return generic
+        }
       }
       return 'Desktop';
     }

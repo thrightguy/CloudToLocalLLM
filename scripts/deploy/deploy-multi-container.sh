@@ -115,10 +115,10 @@ if [ ${#SERVICES[@]} -eq 0 ]; then
     SERVICES=("all")
 fi
 
-# Check if docker and docker-compose are available
+# Check if docker and docker compose are available
 check_dependencies() {
     log_info "Checking dependencies..."
-    
+
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed or not in PATH"
         exit 1
@@ -129,14 +129,23 @@ check_dependencies() {
         log_error "Docker Compose is not installed or not in PATH"
         exit 1
     fi
-    
+
     # Check if user is in docker group or has sudo access
     if ! docker ps &> /dev/null; then
         log_error "Cannot access Docker. Please ensure you're in the docker group or run with sudo."
         exit 1
     fi
-    
+
     log_success "Dependencies check passed"
+}
+
+# Helper function to run docker compose with correct command
+docker_compose() {
+    if command -v docker-compose &> /dev/null; then
+        docker-compose "$@"
+    else
+        docker compose "$@"
+    fi
 }
 
 # Create necessary directories
@@ -170,7 +179,7 @@ build_flutter_web() {
     flutter pub get
     
     # Build for web
-    flutter build web --release --web-renderer html
+    flutter build web --release
     
     log_success "Flutter web application built"
 }
@@ -178,11 +187,16 @@ build_flutter_web() {
 # Build documentation site
 build_docs() {
     log_info "Building documentation site..."
-    
+
     if [ -d "$PROJECT_ROOT/docs-site" ]; then
         cd "$PROJECT_ROOT/docs-site"
-        
+
         if [ -f "package.json" ]; then
+            # Check if package-lock.json exists, if not run npm install first
+            if [ ! -f "package-lock.json" ]; then
+                log_info "No package-lock.json found, running npm install..."
+                npm install
+            fi
             npm ci
             npm run build
             log_success "Documentation site built"
@@ -197,12 +211,12 @@ build_docs() {
 # Set up SSL certificates
 setup_ssl() {
     log_info "Setting up SSL certificates..."
-    
+
     cd "$PROJECT_ROOT"
-    
+
     # Run certbot container
-    docker-compose -f "$COMPOSE_FILE" --profile ssl-setup run --rm certbot
-    
+    docker_compose -f "$COMPOSE_FILE" --profile ssl-setup run --rm certbot
+
     log_success "SSL certificates set up"
 }
 
@@ -210,7 +224,7 @@ setup_ssl() {
 pull_images() {
     if [ "$PULL" = true ]; then
         log_info "Pulling latest base images..."
-        docker-compose -f "$COMPOSE_FILE" pull
+        docker_compose -f "$COMPOSE_FILE" pull
         log_success "Images pulled"
     fi
 }
@@ -229,13 +243,13 @@ build_containers() {
     
     if [ "$BUILD" = true ] || [ "$NO_CACHE" = true ]; then
         log_info "Building containers..."
-        
+
         if [ "${SERVICES[0]}" = "all" ]; then
-            docker-compose -f "$COMPOSE_FILE" build $build_args
+            docker_compose -f "$COMPOSE_FILE" build $build_args
         else
-            docker-compose -f "$COMPOSE_FILE" build $build_args "${SERVICES[@]}"
+            docker_compose -f "$COMPOSE_FILE" build $build_args "${SERVICES[@]}"
         fi
-        
+
         log_success "Containers built"
     fi
 }
@@ -243,15 +257,15 @@ build_containers() {
 # Deploy services
 deploy_services() {
     log_info "Deploying services..."
-    
+
     cd "$PROJECT_ROOT"
-    
+
     if [ "${SERVICES[0]}" = "all" ]; then
-        docker-compose -f "$COMPOSE_FILE" up -d
+        docker_compose -f "$COMPOSE_FILE" up -d
     else
-        docker-compose -f "$COMPOSE_FILE" up -d "${SERVICES[@]}"
+        docker_compose -f "$COMPOSE_FILE" up -d "${SERVICES[@]}"
     fi
-    
+
     log_success "Services deployed"
 }
 
@@ -270,9 +284,9 @@ check_health() {
     fi
     
     for service in "${services_to_check[@]}"; do
-        if docker-compose -f "$COMPOSE_FILE" ps "$service" | grep -q "Up (healthy)"; then
+        if docker_compose -f "$COMPOSE_FILE" ps "$service" | grep -q "Up (healthy)"; then
             log_success "$service is healthy"
-        elif docker-compose -f "$COMPOSE_FILE" ps "$service" | grep -q "Up"; then
+        elif docker_compose -f "$COMPOSE_FILE" ps "$service" | grep -q "Up"; then
             log_warning "$service is running but health check pending"
         else
             log_error "$service is not running properly"
@@ -284,11 +298,11 @@ check_health() {
 show_logs() {
     if [ "$SHOW_LOGS" = true ]; then
         log_info "Showing service logs..."
-        
+
         if [ "${SERVICES[0]}" = "all" ]; then
-            docker-compose -f "$COMPOSE_FILE" logs -f --tail=50
+            docker_compose -f "$COMPOSE_FILE" logs -f --tail=50
         else
-            docker-compose -f "$COMPOSE_FILE" logs -f --tail=50 "${SERVICES[@]}"
+            docker_compose -f "$COMPOSE_FILE" logs -f --tail=50 "${SERVICES[@]}"
         fi
     fi
 }
@@ -300,19 +314,19 @@ show_summary() {
     
     echo ""
     log_info "Services Status:"
-    docker-compose -f "$COMPOSE_FILE" ps
-    
+    docker_compose -f "$COMPOSE_FILE" ps
+
     echo ""
     log_info "URLs:"
     log_info "  Main Website: https://cloudtolocalllm.online"
     log_info "  Documentation: https://docs.cloudtolocalllm.online"
     log_info "  Web Application: https://app.cloudtolocalllm.online"
-    
+
     echo ""
     log_info "Useful Commands:"
-    log_info "  View logs: docker-compose -f $COMPOSE_FILE logs -f [service]"
-    log_info "  Restart service: docker-compose -f $COMPOSE_FILE restart [service]"
-    log_info "  Stop all: docker-compose -f $COMPOSE_FILE down"
+    log_info "  View logs: docker_compose -f $COMPOSE_FILE logs -f [service]"
+    log_info "  Restart service: docker_compose -f $COMPOSE_FILE restart [service]"
+    log_info "  Stop all: docker_compose -f $COMPOSE_FILE down"
     log_info "  Update service: $0 --build [service]"
 }
 
