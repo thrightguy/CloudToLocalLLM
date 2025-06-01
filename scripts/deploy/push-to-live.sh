@@ -242,7 +242,7 @@ deploy_multi_container() {
         # Build Flutter web application
         echo "Building Flutter web application..."
         flutter pub get
-        flutter build web --release --web-renderer html
+        flutter build web --release
         
         # Build documentation if it exists
         if [ -d "docs-site" ] && [ -f "docs-site/package.json" ]; then

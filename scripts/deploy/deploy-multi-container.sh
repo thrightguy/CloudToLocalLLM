@@ -123,8 +123,9 @@ check_dependencies() {
         log_error "Docker is not installed or not in PATH"
         exit 1
     fi
-    
-    if ! command -v docker-compose &> /dev/null; then
+
+    # Check for docker compose (v2) or docker-compose (v1)
+    if ! (docker compose version &> /dev/null || command -v docker-compose &> /dev/null); then
         log_error "Docker Compose is not installed or not in PATH"
         exit 1
     fi
