@@ -1,19 +1,26 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
+import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/user_model.dart';
 import 'auth_logger.dart';
 
-/// Web-specific authentication service using direct Auth0 redirect
+/// Web-specific authentication service using direct Auth0 redirect with JWT tokens
 class AuthServiceWeb extends ChangeNotifier {
   final ValueNotifier<bool> _isAuthenticated = ValueNotifier<bool>(false);
   final ValueNotifier<bool> _isLoading = ValueNotifier<bool>(false);
   UserModel? _currentUser;
+  String? _accessToken;
+  String? _idToken;
+  DateTime? _tokenExpiry;
 
   // Getters
   ValueNotifier<bool> get isAuthenticated => _isAuthenticated;
   ValueNotifier<bool> get isLoading => _isLoading;
   UserModel? get currentUser => _currentUser;
+  String? get accessToken => _accessToken;
+  String? get idToken => _idToken;
 
   AuthServiceWeb() {
     AuthLogger.initialize();
@@ -41,7 +48,7 @@ class AuthServiceWeb extends ChangeNotifier {
     }
   }
 
-  /// Check current authentication status
+  /// Check current authentication status and validate stored tokens
   Future<void> _checkAuthenticationStatus() async {
     try {
       AuthLogger.info('🔐 Checking authentication status');
@@ -54,24 +61,34 @@ class AuthServiceWeb extends ChangeNotifier {
         return;
       }
 
-      // Check for stored authentication state
-      final storedAuth =
-          web.window.localStorage.getItem('cloudtolocalllm_authenticated');
-      if (storedAuth == 'true') {
-        _isAuthenticated.value = true;
-        AuthLogger.info('🔐 Found stored authentication state');
-        notifyListeners();
-        return;
+      // Check for stored tokens
+      await _loadStoredTokens();
+
+      if (_accessToken != null) {
+        // Validate token expiry
+        if (_tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
+          // Token is valid, load user profile
+          await _loadUserProfile();
+          _isAuthenticated.value = true;
+          AuthLogger.info('🔐 Valid stored tokens found');
+          notifyListeners();
+          return;
+        } else {
+          // Token expired, clear stored data
+          AuthLogger.info('🔐 Stored tokens expired, clearing');
+          await _clearStoredTokens();
+        }
       }
 
-      // No authentication found
+      // No valid authentication found
       _isAuthenticated.value = false;
-      AuthLogger.info('🔐 No existing authentication found');
+      AuthLogger.info('🔐 No valid authentication found');
     } catch (e) {
       AuthLogger.error('🔐 Error checking authentication status', {
         'error': e.toString(),
       });
       _isAuthenticated.value = false;
+      await _clearStoredTokens();
     }
   }
 
@@ -105,6 +122,7 @@ class AuthServiceWeb extends ChangeNotifier {
           'redirect_uri': redirectUri,
           'response_type': 'code',
           'scope': AppConfig.auth0Scopes.join(' '),
+          'audience': AppConfig.auth0Audience,
           'state': state,
         },
       );
@@ -159,7 +177,7 @@ class AuthServiceWeb extends ChangeNotifier {
     }
   }
 
-  /// Logout
+  /// Logout and clear all stored tokens
   Future<void> logout() async {
     try {
       _isLoading.value = true;
@@ -167,10 +185,13 @@ class AuthServiceWeb extends ChangeNotifier {
 
       // Clear local state
       _currentUser = null;
+      _accessToken = null;
+      _idToken = null;
+      _tokenExpiry = null;
       _isAuthenticated.value = false;
 
-      // Clear stored authentication state
-      web.window.localStorage.removeItem('cloudtolocalllm_authenticated');
+      // Clear stored tokens
+      await _clearStoredTokens();
 
       AuthLogger.logAuthStateChange(false, 'User logged out');
     } catch (e) {
@@ -217,27 +238,31 @@ class AuthServiceWeb extends ChangeNotifier {
           'state': state,
         });
 
-        // For now, just mark as authenticated
-        // In a full implementation, you would exchange the code for tokens
-        _isAuthenticated.value = true;
+        if (code != null) {
+          // Exchange authorization code for tokens
+          final success = await _exchangeCodeForTokens(code);
 
-        // Store authentication state in localStorage
-        web.window.localStorage
-            .setItem('cloudtolocalllm_authenticated', 'true');
+          if (success) {
+            // Load user profile with the new access token
+            await _loadUserProfile();
 
-        notifyListeners();
-        AuthLogger.logAuthStateChange(
-            true, 'Authorization code received and stored');
+            _isAuthenticated.value = true;
+            notifyListeners();
+            AuthLogger.logAuthStateChange(true, 'Token exchange successful');
 
-        // Clear the URL parameters
-        web.window.history.replaceState(null, '', '/');
+            // Clear the URL parameters
+            web.window.history.replaceState(null, '', '/');
 
-        // Small delay to ensure state is updated
-        await Future.delayed(const Duration(milliseconds: 200));
+            // Small delay to ensure state is updated
+            await Future.delayed(const Duration(milliseconds: 200));
 
-        AuthLogger.info('🔐 Authentication completed successfully');
-
-        return true;
+            AuthLogger.info('🔐 Authentication completed successfully');
+            return true;
+          } else {
+            AuthLogger.error('🔐 Token exchange failed');
+            return false;
+          }
+        }
       }
 
       AuthLogger.warning('🔐 No authorization code or error in callback');
@@ -248,6 +273,157 @@ class AuthServiceWeb extends ChangeNotifier {
         'stackTrace': StackTrace.current.toString(),
       });
       return false;
+    }
+  }
+
+  /// Exchange authorization code for access and ID tokens
+  Future<bool> _exchangeCodeForTokens(String code) async {
+    try {
+      AuthLogger.info('🔐 Exchanging authorization code for tokens');
+
+      final response = await http.post(
+        Uri.https(AppConfig.auth0Domain, '/oauth/token'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'grant_type': 'authorization_code',
+          'client_id': AppConfig.auth0ClientId,
+          'code': code,
+          'redirect_uri': AppConfig.auth0WebRedirectUri,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        _accessToken = data['access_token'] as String?;
+        _idToken = data['id_token'] as String?;
+
+        // Calculate token expiry
+        final expiresIn = data['expires_in'] as int? ?? 3600;
+        _tokenExpiry = DateTime.now().add(Duration(seconds: expiresIn));
+
+        // Store tokens securely
+        await _storeTokens();
+
+        AuthLogger.info('🔐 Tokens received and stored successfully');
+        return true;
+      } else {
+        AuthLogger.error('🔐 Token exchange failed', {
+          'statusCode': response.statusCode,
+          'body': response.body,
+        });
+        return false;
+      }
+    } catch (e) {
+      AuthLogger.error('🔐 Token exchange error', {'error': e.toString()});
+      return false;
+    }
+  }
+
+  /// Load user profile from Auth0 Management API
+  Future<void> _loadUserProfile() async {
+    try {
+      if (_accessToken == null) {
+        AuthLogger.warning('🔐 No access token available for profile loading');
+        return;
+      }
+
+      AuthLogger.info('🔐 Loading user profile');
+
+      final response = await http.get(
+        Uri.https(AppConfig.auth0Domain, '/userinfo'),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        _currentUser = UserModel(
+          id: data['sub'] as String,
+          email: data['email'] as String? ?? '',
+          name: data['name'] as String? ?? '',
+          picture: data['picture'] as String?,
+          nickname: data['nickname'] as String?,
+          emailVerified: data['email_verified'] == true ? DateTime.now() : null,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        AuthLogger.info('🔐 User profile loaded successfully', {
+          'userId': _currentUser!.id,
+          'email': _currentUser!.email,
+        });
+      } else {
+        AuthLogger.error('🔐 Failed to load user profile', {
+          'statusCode': response.statusCode,
+          'body': response.body,
+        });
+      }
+    } catch (e) {
+      AuthLogger.error(
+          '🔐 User profile loading error', {'error': e.toString()});
+    }
+  }
+
+  /// Store tokens in localStorage
+  Future<void> _storeTokens() async {
+    try {
+      if (_accessToken != null) {
+        web.window.localStorage
+            .setItem('cloudtolocalllm_access_token', _accessToken!);
+      }
+      if (_idToken != null) {
+        web.window.localStorage.setItem('cloudtolocalllm_id_token', _idToken!);
+      }
+      if (_tokenExpiry != null) {
+        web.window.localStorage.setItem(
+            'cloudtolocalllm_token_expiry', _tokenExpiry!.toIso8601String());
+      }
+
+      AuthLogger.info('🔐 Tokens stored in localStorage');
+    } catch (e) {
+      AuthLogger.error('🔐 Error storing tokens', {'error': e.toString()});
+    }
+  }
+
+  /// Load tokens from localStorage
+  Future<void> _loadStoredTokens() async {
+    try {
+      _accessToken =
+          web.window.localStorage.getItem('cloudtolocalllm_access_token');
+      _idToken = web.window.localStorage.getItem('cloudtolocalllm_id_token');
+
+      final expiryString =
+          web.window.localStorage.getItem('cloudtolocalllm_token_expiry');
+      if (expiryString != null) {
+        _tokenExpiry = DateTime.tryParse(expiryString);
+      }
+
+      if (_accessToken != null) {
+        AuthLogger.info('🔐 Tokens loaded from localStorage');
+      }
+    } catch (e) {
+      AuthLogger.error(
+          '🔐 Error loading stored tokens', {'error': e.toString()});
+    }
+  }
+
+  /// Clear stored tokens from localStorage
+  Future<void> _clearStoredTokens() async {
+    try {
+      web.window.localStorage.removeItem('cloudtolocalllm_access_token');
+      web.window.localStorage.removeItem('cloudtolocalllm_id_token');
+      web.window.localStorage.removeItem('cloudtolocalllm_token_expiry');
+      web.window.localStorage
+          .removeItem('cloudtolocalllm_authenticated'); // Legacy cleanup
+
+      AuthLogger.info('🔐 Stored tokens cleared');
+    } catch (e) {
+      AuthLogger.error(
+          '🔐 Error clearing stored tokens', {'error': e.toString()});
     }
   }
 

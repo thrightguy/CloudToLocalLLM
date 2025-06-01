@@ -99,9 +99,8 @@ class Conversation {
 
   /// Update a message in the conversation
   Conversation updateMessage(String messageId, Message updatedMessage) {
-    final updatedMessages = messages
-        .map((m) => m.id == messageId ? updatedMessage : m)
-        .toList();
+    final updatedMessages =
+        messages.map((m) => m.id == messageId ? updatedMessage : m).toList();
     return copyWith(
       messages: updatedMessages,
       updatedAt: DateTime.now(),
@@ -140,10 +139,11 @@ class Conversation {
 
   /// Get the last user message
   Message? get lastUserMessage {
-    return messages.lastWhere(
-      (m) => m.isUser,
-      orElse: () => throw StateError('No user message found'),
-    );
+    try {
+      return messages.lastWhere((m) => m.isUser);
+    } catch (e) {
+      return null; // Return null instead of throwing error
+    }
   }
 
   /// Get the last assistant message
@@ -157,17 +157,14 @@ class Conversation {
 
   /// Get conversation preview (first few words of the first user message)
   String get preview {
-    final firstUserMessage = messages.firstWhere(
-      (m) => m.isUser,
-      orElse: () => throw StateError('No user message found'),
-    );
-    
     try {
+      final firstUserMessage = messages.firstWhere((m) => m.isUser);
       final content = firstUserMessage.content.trim();
       if (content.length <= 50) return content;
       return '${content.substring(0, 50)}...';
     } catch (e) {
-      return 'Empty conversation';
+      // Return default preview when no user messages exist
+      return 'New conversation';
     }
   }
 
@@ -219,10 +216,10 @@ class Conversation {
   /// Generate title from the first user message
   String _generateTitleFromMessage(Message message) {
     if (!message.isUser) return title;
-    
+
     final content = message.content.trim();
     if (content.isEmpty) return title;
-    
+
     // Take first 30 characters and add ellipsis if needed
     if (content.length <= 30) return content;
     return '${content.substring(0, 30)}...';

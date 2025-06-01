@@ -109,6 +109,18 @@ class AuthServicePlatform extends ChangeNotifier {
     };
   }
 
+  /// Get the current access token for API authentication
+  /// Returns null if not authenticated or token is not available
+  String? getAccessToken() {
+    // Check if the platform service has an accessToken getter
+    final service = _platformService;
+    if (service is AuthServiceWeb) {
+      return service.accessToken;
+    }
+    // For other platforms, implement as needed
+    return null;
+  }
+
   String getPlatformName() {
     if (isWeb) return 'Web';
     if (isMobile) {
