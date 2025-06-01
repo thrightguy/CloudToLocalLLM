@@ -16,7 +16,7 @@ class AppConfig {
 
   // Auth0 Configuration
   static const String auth0Domain = 'dev-xafu7oedkd5wlrbo.us.auth0.com';
-  static const String auth0Audience = 'https://api.cloudtolocalllm.online';
+  static const String auth0Audience = 'https://app.cloudtolocalllm.online';
   static const String auth0Issuer =
       'https://dev-xafu7oedkd5wlrbo.us.auth0.com/';
 
