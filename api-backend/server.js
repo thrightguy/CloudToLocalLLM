@@ -1,14 +1,16 @@
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-client');
-const { v4: uuidv4 } = require('uuid');
-const winston = require('winston');
-require('dotenv').config();
+import express from 'express';
+import http from 'http';
+import WebSocket from 'ws';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-client';
+import { v4 as uuidv4 } from 'uuid';
+import winston from 'winston';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Initialize logger
 const logger = winston.createLogger({
