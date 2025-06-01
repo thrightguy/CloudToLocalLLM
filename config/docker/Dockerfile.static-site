@@ -18,9 +18,9 @@ FROM nginx:1.25-alpine
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Create nginx user with specific UID/GID for security
-RUN addgroup -g 101 -S nginx && \
-    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+# Ensure nginx user exists with correct permissions (nginx user already exists in nginx:alpine)
+RUN id nginx || (addgroup -g 101 -S nginx && \
+    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx)
 
 # Create necessary directories
 RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/html/static /usr/share/nginx/html/docs /usr/share/nginx/html/downloads && \
