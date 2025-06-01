@@ -1,6 +1,6 @@
 # Maintainer: Christopher Maltais <christopher.maltais@gmail.com>
 pkgname=cloudtolocalllm
-pkgver=2.1.0.r$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+pkgver=2.1.1
 pkgrel=1
 pkgdesc="Multi-tenant streaming LLM management with system tray integration, platform-specific UI logic, and comprehensive Linux packaging"
 arch=('x86_64')
@@ -36,13 +36,8 @@ optdepends=(
 provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
-source=("git+https://github.com/imrightguy/CloudToLocalLLM.git")
+source=("git+https://github.com/imrightguy/CloudToLocalLLM.git#tag=v$pkgver")
 sha256sums=('SKIP')
-
-pkgver() {
-    cd "$srcdir/CloudToLocalLLM"
-    printf "2.1.0.r%s" "$(git rev-parse --short HEAD)"
-}
 
 prepare() {
     cd "$srcdir/CloudToLocalLLM"
