@@ -31,7 +31,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Initialize services after the first frame to access context
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('[DEBUG] HomeScreen: Initializing services...');
+
       final authService = Provider.of<AuthService>(context, listen: false);
+      debugPrint(
+          '[DEBUG] HomeScreen: AuthService obtained - isAuthenticated: ${authService.isAuthenticated.value}');
+
       final ollamaService = OllamaService(authService: authService);
       final chatService = ChatService(ollamaService);
 
@@ -40,6 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _chatService = chatService;
       });
 
+      debugPrint(
+          '[DEBUG] HomeScreen: Services initialized, testing connection...');
       // Initialize services
       ollamaService.testConnection();
     });

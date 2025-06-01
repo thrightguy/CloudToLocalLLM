@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Application configuration constants
 class AppConfig {
   // App Information
@@ -53,6 +55,14 @@ class AppConfig {
   static const String defaultOllamaUrl =
       'https://app.cloudtolocalllm.online/api/ollama';
   static const Duration ollamaTimeout = Duration(seconds: 60);
+
+  // Debug logging for configuration
+  static void logConfiguration() {
+    debugPrint('[DEBUG] AppConfig loaded:');
+    debugPrint('[DEBUG] - Ollama URL: $defaultOllamaUrl');
+    debugPrint('[DEBUG] - Bridge Status URL: $bridgeStatusUrl');
+    debugPrint('[DEBUG] - Bridge Register URL: $bridgeRegisterUrl');
+  }
 
   // Bridge Configuration
   static const String bridgeStatusUrl =
