@@ -1,18 +1,5 @@
-# Static Site Container (Homepage + Documentation)
-FROM node:18-alpine AS docs-builder
-
-# Set working directory
-WORKDIR /app
-
-# Copy documentation source
-COPY docs-site/package*.json ./
-RUN npm ci --only=production
-
-# Copy docs source and build
-COPY docs-site/ ./
-RUN npm run build
-
-# Production nginx container
+# Static Site Container (Homepage + Documentation) - Runtime Only
+# Expects pre-built documentation in docs-site/dist/ directory
 FROM nginx:1.25-alpine
 
 # Install curl for health checks
@@ -29,8 +16,8 @@ RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/htm
 # Copy static homepage files
 COPY static_homepage/ /usr/share/nginx/html/static/
 
-# Copy built documentation
-COPY --from=docs-builder /app/dist/ /usr/share/nginx/html/docs/
+# Create docs directory (docs will be built separately if needed)
+RUN mkdir -p /usr/share/nginx/html/docs
 
 # Copy Linux packages for downloads
 COPY dist/*.deb /usr/share/nginx/html/downloads/

@@ -1,40 +1,5 @@
-# Flutter Web Application Container
-FROM ubuntu:22.04 AS flutter-builder
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    unzip \
-    xz-utils \
-    zip \
-    libglu1-mesa \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Flutter
-ENV FLUTTER_HOME="/opt/flutter"
-ENV PATH="$FLUTTER_HOME/bin:$PATH"
-
-RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME && \
-    flutter doctor && \
-    flutter config --enable-web
-
-# Set working directory
-WORKDIR /app
-
-# Copy Flutter project
-COPY pubspec.yaml pubspec.lock ./
-RUN flutter pub get
-
-# Copy source code
-COPY lib/ lib/
-COPY web/ web/
-COPY assets/ assets/
-
-# Build Flutter web application
-RUN flutter build web --release
-
-# Production nginx container
+# Flutter Web Application Container - Runtime Only
+# Expects pre-built Flutter web app in build/web/ directory
 FROM nginx:1.25-alpine
 
 # Install curl for health checks
@@ -48,8 +13,8 @@ RUN id nginx || (addgroup -g 101 -S nginx && \
 RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/html
 
-# Copy built Flutter web app
-COPY --from=flutter-builder /app/build/web/ /usr/share/nginx/html/
+# Copy pre-built Flutter web app from host
+COPY build/web/ /usr/share/nginx/html/
 
 # Copy nginx configuration
 COPY config/nginx/nginx-flutter.conf /etc/nginx/nginx.conf

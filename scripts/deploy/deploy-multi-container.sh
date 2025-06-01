@@ -164,29 +164,42 @@ create_directories() {
     log_success "Directories created"
 }
 
-# Build Flutter web application
+# Build Flutter web application on host (pre-build phase)
 build_flutter_web() {
-    log_info "Building Flutter web application..."
-    
+    log_info "Building Flutter web application on host..."
+
     cd "$PROJECT_ROOT"
-    
+
     if [ ! -f "pubspec.yaml" ]; then
         log_error "pubspec.yaml not found. Please run this script from the Flutter project root."
         exit 1
     fi
-    
+
+    # Clean previous build
+    log_info "Cleaning previous Flutter build..."
+    flutter clean
+
     # Get dependencies
+    log_info "Getting Flutter dependencies..."
     flutter pub get
-    
-    # Build for web
+
+    # Build for web (host-based build)
+    log_info "Building Flutter web application..."
     flutter build web --release
-    
-    log_success "Flutter web application built"
+
+    # Verify build output
+    if [ ! -d "build/web" ]; then
+        log_error "Flutter web build failed - build/web directory not found"
+        exit 1
+    fi
+
+    log_success "Flutter web application built successfully on host"
+    log_info "Build output available in: $PROJECT_ROOT/build/web/"
 }
 
-# Build documentation site
+# Build documentation site (optional)
 build_docs() {
-    log_info "Building documentation site..."
+    log_info "Building documentation site (optional)..."
 
     if [ -d "$PROJECT_ROOT/docs-site" ]; then
         cd "$PROJECT_ROOT/docs-site"
@@ -195,10 +208,15 @@ build_docs() {
             # Check if package-lock.json exists, if not run npm install first
             if [ ! -f "package-lock.json" ]; then
                 log_info "No package-lock.json found, running npm install..."
-                npm install
+                npm install || {
+                    log_warning "npm install failed, skipping docs build"
+                    return 0
+                }
             fi
-            npm ci
-            npm run build
+            npm ci && npm run build || {
+                log_warning "Documentation build failed, continuing without docs"
+                return 0
+            }
             log_success "Documentation site built"
         else
             log_warning "Documentation package.json not found, skipping docs build"
@@ -321,6 +339,14 @@ show_summary() {
     log_info "  Main Website: https://cloudtolocalllm.online"
     log_info "  Documentation: https://docs.cloudtolocalllm.online"
     log_info "  Web Application: https://app.cloudtolocalllm.online"
+    log_info "  API Backend: https://app.cloudtolocalllm.online/api/"
+
+    echo ""
+    log_info "Architecture:"
+    log_info "  ✓ Host-based Flutter build (optimized)"
+    log_info "  ✓ Lightweight nginx containers (runtime only)"
+    log_info "  ✓ Dedicated API backend for bridge communication"
+    log_info "  ✓ Reverse proxy with SSL termination"
 
     echo ""
     log_info "Useful Commands:"
@@ -328,6 +354,7 @@ show_summary() {
     log_info "  Restart service: docker_compose -f $COMPOSE_FILE restart [service]"
     log_info "  Stop all: docker_compose -f $COMPOSE_FILE down"
     log_info "  Update service: $0 --build [service]"
+    log_info "  Rebuild Flutter: flutter build web --release && $0 --build flutter-app"
 }
 
 # Main deployment process
