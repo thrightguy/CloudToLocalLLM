@@ -198,7 +198,7 @@ push_code() {
     git commit -m "Deploy multi-container architecture to production" || log_warning "No changes to commit"
     
     log_info "Pushing to GitHub..."
-    git push origin main
+    git push origin master
     
     # Pull on VPS
     log_info "Pulling changes on VPS..."
@@ -209,7 +209,7 @@ push_code() {
         git stash push -m "Auto-stash before deployment $(date)"
         
         # Pull latest changes
-        git pull origin main
+        git pull origin master
         
         # Make scripts executable
         chmod +x scripts/deploy/*.sh
