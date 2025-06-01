@@ -47,9 +47,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
       debugPrint(
           '[DEBUG] HomeScreen: Services initialized, testing connection...');
-      // Initialize services
-      ollamaService.testConnection();
+
+      // Initialize services asynchronously (non-blocking)
+      _testConnectionAsync(ollamaService);
     });
+  }
+
+  /// Test Ollama connection asynchronously without blocking the UI
+  Future<void> _testConnectionAsync(OllamaService ollamaService) async {
+    try {
+      debugPrint('[DEBUG] Starting async Ollama connection test...');
+
+      // Test connection in background - don't await to avoid blocking UI
+      ollamaService.testConnection().then((connected) {
+        debugPrint('[DEBUG] Ollama connection test completed: $connected');
+        if (!connected) {
+          debugPrint(
+              '[DEBUG] Ollama connection failed, but UI remains functional');
+          // Could show a subtle notification to user about connection status
+        } else {
+          debugPrint('[DEBUG] Ollama connection successful');
+        }
+      }).catchError((error) {
+        debugPrint('[DEBUG] Ollama connection test error: $error');
+        // Don't show error to user - just log it
+        // The UI should remain functional even if Ollama is not available
+      });
+
+      debugPrint('[DEBUG] Connection test started (non-blocking)');
+    } catch (e) {
+      debugPrint('[DEBUG] Connection test initialization error: $e');
+      // Don't block the UI even if connection test fails to start
+    }
   }
 
   @override
