@@ -1,6 +1,6 @@
 import express from 'express';
 import http from 'http';
-import WebSocket from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -131,7 +131,7 @@ async function authenticateToken(req, res, next) {
 const bridgeConnections = new Map();
 
 // WebSocket server for bridge connections
-const wss = new WebSocket.Server({ 
+const wss = new WebSocketServer({
   server,
   path: '/ws/bridge',
   verifyClient: async (info) => {
