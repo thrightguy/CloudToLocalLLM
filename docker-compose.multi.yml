@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy - Entry point for all traffic
+  nginx-proxy:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.nginx-proxy
+    container_name: cloudtolocalllm-nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/live:/etc/letsencrypt/live:ro
+      - ./certbot/archive:/etc/letsencrypt/archive:ro
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - cloudllm-network
+    restart: unless-stopped
+    depends_on:
+      - static-site
+      - flutter-app
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Static Website and Documentation Container
+  static-site:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.static-site
+    container_name: cloudtolocalllm-static-site
+    volumes:
+      - ./static_homepage:/usr/share/nginx/html/static:ro
+      - ./docs-site/dist:/usr/share/nginx/html/docs:ro
+      - ./config/nginx/nginx-static.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/static:/var/log/nginx
+    networks:
+      - cloudllm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Flutter Web Application Container
+  flutter-app:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.flutter-app
+    container_name: cloudtolocalllm-flutter-app
+    volumes:
+      - ./build/web:/usr/share/nginx/html:ro
+      - ./config/nginx/nginx-flutter.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/flutter:/var/log/nginx
+    networks:
+      - cloudllm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # API Backend Container (for bridge communication)
+  api-backend:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.api-backend
+    container_name: cloudtolocalllm-api-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - AUTH0_DOMAIN=dev-xafu7oedkd5wlrbo.us.auth0.com
+      - AUTH0_AUDIENCE=https://app.cloudtolocalllm.online
+    volumes:
+      - ./api-backend:/app:ro
+      - ./logs/api:/app/logs
+    networks:
+      - cloudllm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Certbot for SSL certificate management
+  certbot:
+    image: certbot/certbot:latest
+    container_name: cloudtolocalllm-certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/live:/etc/letsencrypt/live
+      - ./certbot/archive:/etc/letsencrypt/archive
+      - ./certbot/logs:/var/log/letsencrypt
+    networks:
+      - cloudllm-network
+    command: certonly --webroot --webroot-path=/var/www/certbot --email support@cloudtolocalllm.online --agree-tos --no-eff-email -d cloudtolocalllm.online -d app.cloudtolocalllm.online -d docs.cloudtolocalllm.online
+    profiles:
+      - ssl-setup
+
+networks:
+  cloudllm-network:
+    driver: bridge
+    name: cloudtolocalllm-network
+
+volumes:
+  certbot-www:
+  certbot-live:
+  certbot-archive:
+  nginx-logs:
+  static-logs:
+  flutter-logs:
+  api-logs:

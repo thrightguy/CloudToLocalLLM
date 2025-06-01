@@ -1,0 +1,21 @@
+Package: cloudtolocalllm-bridge
+Version: 1.0.0
+Section: net
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.17), libgtk-3-0, libnotify4
+Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
+Description: CloudToLocalLLM Desktop Bridge
+ A secure bridge connecting your local Ollama instance to the CloudToLocalLLM
+ cloud service. Features include:
+ .
+  * Secure Auth0 authentication
+  * WebSocket tunnel to cloud relay
+  * System tray integration
+  * Automatic reconnection
+  * Linux desktop integration
+ .
+ This package provides the desktop bridge application that enables secure
+ communication between your local Ollama installation and the CloudToLocalLLM
+ cloud platform.
+Homepage: https://cloudtolocalllm.online

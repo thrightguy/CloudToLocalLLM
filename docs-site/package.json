@@ -1,0 +1,35 @@
+{
+  "name": "cloudtolocalllm-docs",
+  "version": "1.0.0",
+  "description": "CloudToLocalLLM Documentation Site",
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev docs",
+    "build": "vitepress build docs",
+    "preview": "vitepress preview docs",
+    "serve": "vitepress serve docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.0.0-rc.31",
+    "@types/node": "^20.10.0"
+  },
+  "dependencies": {
+    "vue": "^3.3.8"
+  },
+  "keywords": [
+    "cloudtolocalllm",
+    "documentation",
+    "ollama",
+    "llm",
+    "bridge",
+    "flutter"
+  ],
+  "author": "CloudToLocalLLM Team",
+  "license": "MIT",
+  "homepage": "https://docs.cloudtolocalllm.online",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imrightguy/CloudToLocalLLM.git",
+    "directory": "docs-site"
+  }
+}

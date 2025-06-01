@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+
+# Post-removal script for cloudtolocalllm-bridge
+
+case "$1" in
+    purge)
+        echo "Purging CloudToLocalLLM Bridge configuration..."
+        
+        # Remove user configuration directories (optional)
+        # Note: We don't automatically remove user data to preserve user settings
+        # Users can manually remove ~/.config/cloudtolocalllm if desired
+        
+        echo "CloudToLocalLLM Bridge purged."
+        echo ""
+        echo "Note: User configuration files in ~/.config/cloudtolocalllm"
+        echo "have been preserved. Remove manually if desired."
+        ;;
+        
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        # Update desktop database
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database /usr/share/applications
+        fi
+        
+        # Update icon cache
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -f -t /usr/share/pixmaps 2>/dev/null || true
+        fi
+        ;;
+        
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

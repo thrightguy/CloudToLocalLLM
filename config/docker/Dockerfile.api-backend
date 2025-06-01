@@ -1,0 +1,44 @@
+# API Backend Container (Node.js/Express)
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY api-backend/package*.json ./
+RUN npm ci --only=production
+
+# Production container
+FROM node:18-alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S -D -H -u 1001 -h /app -s /bin/sh -G nodejs -g nodejs nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy application code
+COPY api-backend/ ./
+
+# Create logs directory
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
+
+# Security: Run as non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl --fail http://localhost:8080/health || exit 1
+
+# Start the application
+CMD ["node", "server.js"]

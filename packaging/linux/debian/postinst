@@ -1,0 +1,51 @@
+#!/bin/bash
+set -e
+
+# Post-installation script for cloudtolocalllm-bridge
+
+case "$1" in
+    configure)
+        echo "Configuring CloudToLocalLLM Bridge..."
+        
+        # Create application directories
+        mkdir -p /opt/cloudtolocalllm-bridge
+        mkdir -p /usr/share/applications
+        mkdir -p /usr/share/pixmaps
+        
+        # Set permissions
+        chmod 755 /opt/cloudtolocalllm-bridge/cloudtolocalllm-bridge
+        
+        # Update desktop database
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database /usr/share/applications
+        fi
+        
+        # Update icon cache
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -f -t /usr/share/pixmaps 2>/dev/null || true
+        fi
+        
+        echo "CloudToLocalLLM Bridge installed successfully!"
+        echo ""
+        echo "To start the bridge:"
+        echo "  1. Launch from Applications menu, or"
+        echo "  2. Run: cloudtolocalllm-bridge"
+        echo ""
+        echo "For headless operation:"
+        echo "  cloudtolocalllm-bridge --daemon"
+        echo ""
+        echo "Configuration will be created at:"
+        echo "  ~/.config/cloudtolocalllm/bridge.yaml"
+        echo ""
+        ;;
+        
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+        
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
