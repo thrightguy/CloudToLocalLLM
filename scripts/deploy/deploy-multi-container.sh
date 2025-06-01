@@ -250,15 +250,11 @@ pull_images() {
 # Build containers
 build_containers() {
     local build_args=""
-    
-    if [ "$BUILD" = true ]; then
-        build_args="--build"
-    fi
-    
+
     if [ "$NO_CACHE" = true ]; then
-        build_args="$build_args --no-cache"
+        build_args="--no-cache"
     fi
-    
+
     if [ "$BUILD" = true ] || [ "$NO_CACHE" = true ]; then
         log_info "Building containers..."
 
