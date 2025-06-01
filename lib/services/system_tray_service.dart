@@ -79,9 +79,21 @@ class SystemTrayService with TrayListener {
   /// Try multiple approaches to set the tray icon
   Future<void> _setTrayIcon() async {
     if (Platform.isLinux) {
-      // Try different approaches for Linux
+      // Try different approaches for Linux - prioritize custom icons for branding
       final approaches = [
-        // Try system icons first (often works better on Linux)
+        // Try custom icons first for proper branding
+        () async {
+          final iconPath = _getTrayIconPath();
+          debugPrint("Trying custom CloudToLocalLLM icon: $iconPath");
+          await trayManager.setIcon(iconPath);
+        },
+        // Try app icon as fallback
+        () async {
+          final iconPath = _getAppIconPath();
+          debugPrint("Trying app icon: $iconPath");
+          await trayManager.setIcon(iconPath);
+        },
+        // Try system icons as last resort
         () async {
           debugPrint("Trying system icon: application-x-executable");
           await trayManager.setIcon("application-x-executable");
@@ -93,12 +105,6 @@ class SystemTrayService with TrayListener {
         () async {
           debugPrint("Trying system icon: computer");
           await trayManager.setIcon("computer");
-        },
-        // Try custom icons
-        () async {
-          final iconPath = _getTrayIconPath();
-          debugPrint("Trying custom icon: $iconPath");
-          await trayManager.setIcon(iconPath);
         },
       ];
 
@@ -118,6 +124,37 @@ class SystemTrayService with TrayListener {
       final iconPath = _getTrayIconPath();
       debugPrint("Setting tray icon with path: $iconPath");
       await trayManager.setIcon(iconPath);
+    }
+  }
+
+  /// Get the app icon path for fallback
+  String _getAppIconPath() {
+    if (Platform.isLinux) {
+      final iconPaths = [
+        // Try different sizes and locations for app icon
+        'data/flutter_assets/assets/images/app_icon.png',
+        '${Directory.current.path}/data/flutter_assets/assets/images/app_icon.png',
+        '${Directory.current.path}/assets/images/app_icon.png',
+        'assets/images/app_icon.png',
+        './app_icon.png',
+        'app_icon.png',
+      ];
+
+      for (final iconPath in iconPaths) {
+        final file = File(iconPath);
+        if (file.existsSync()) {
+          debugPrint("Found app icon at: $iconPath");
+          return iconPath;
+        }
+      }
+
+      debugPrint("No app icon found, using fallback path");
+      return 'assets/images/app_icon.png';
+    } else if (Platform.isWindows) {
+      return 'assets/images/app_icon.ico';
+    } else {
+      // macOS
+      return 'assets/images/app_icon.png';
     }
   }
 

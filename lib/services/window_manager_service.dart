@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 /// Service for managing window state and visibility
 class WindowManagerService {
-  static final WindowManagerService _instance = WindowManagerService._internal();
+  static final WindowManagerService _instance =
+      WindowManagerService._internal();
   factory WindowManagerService() => _instance;
   WindowManagerService._internal();
 
@@ -80,9 +80,8 @@ class WindowManagerService {
   /// Execute Linux-specific window management commands
   Future<void> _executeLinuxWindowCommand(String command) async {
     try {
-      // Get the current process ID to identify our window
-      final pid = Platform.environment['FLUTTER_APPLICATION_ID'] ?? 'cloudtolocalllm';
-      
+      // Use application name to identify our window
+
       switch (command) {
         case 'show':
           // Bring window to front and show it
@@ -90,13 +89,20 @@ class WindowManagerService {
           break;
         case 'hide':
           // Hide the window (this is tricky in Linux, might need different approach)
-          await Process.run('wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,hidden']);
+          await Process.run(
+              'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,hidden']);
           break;
         case 'minimize':
-          await Process.run('wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,minimized']);
+          await Process.run(
+              'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,minimized']);
           break;
         case 'maximize':
-          await Process.run('wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,maximized_vert,maximized_horz']);
+          await Process.run('wmctrl', [
+            '-r',
+            'CloudToLocalLLM',
+            '-b',
+            'add,maximized_vert,maximized_horz'
+          ]);
           break;
       }
     } catch (e) {

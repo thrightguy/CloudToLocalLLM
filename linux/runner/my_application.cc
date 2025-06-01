@@ -48,6 +48,36 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+
+  // Set window icon for better desktop integration
+  GError* error = nullptr;
+  GdkPixbuf* icon = nullptr;
+
+  // Try multiple paths for the icon
+  const char* icon_paths[] = {
+    "data/flutter_assets/assets/images/app_icon.png",
+    "assets/images/app_icon.png",
+    "/usr/share/pixmaps/cloudtolocalllm.png",
+    "/usr/share/icons/hicolor/128x128/apps/cloudtolocalllm.png",
+    nullptr
+  };
+
+  for (int i = 0; icon_paths[i] != nullptr && icon == nullptr; i++) {
+    error = nullptr;
+    icon = gdk_pixbuf_new_from_file(icon_paths[i], &error);
+    if (icon != nullptr) {
+      gtk_window_set_icon(window, icon);
+      g_object_unref(icon);
+      break;
+    } else if (error != nullptr) {
+      g_error_free(error);
+    }
+  }
+
+  if (icon == nullptr) {
+    g_warning("Failed to load window icon from any path");
+  }
+
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
