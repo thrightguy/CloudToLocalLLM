@@ -122,7 +122,6 @@ class AuthServiceWeb extends ChangeNotifier {
           'redirect_uri': redirectUri,
           'response_type': 'code',
           'scope': AppConfig.auth0Scopes.join(' '),
-          'audience': AppConfig.auth0Audience,
           'state': state,
         },
       );
