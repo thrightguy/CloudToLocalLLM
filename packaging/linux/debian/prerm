@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+# Pre-removal script for cloudtolocalllm-bridge
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        echo "Stopping CloudToLocalLLM Bridge..."
+        
+        # Stop any running instances
+        pkill -f cloudtolocalllm-bridge || true
+        
+        # Wait a moment for graceful shutdown
+        sleep 2
+        
+        # Force kill if still running
+        pkill -9 -f cloudtolocalllm-bridge || true
+        
+        echo "CloudToLocalLLM Bridge stopped."
+        ;;
+        
+    failed-upgrade)
+        ;;
+        
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

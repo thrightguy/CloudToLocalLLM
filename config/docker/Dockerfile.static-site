@@ -1,0 +1,65 @@
+# Static Site Container (Homepage + Documentation)
+FROM node:18-alpine AS docs-builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy documentation source
+COPY docs-site/package*.json ./
+RUN npm ci --only=production
+
+# Copy docs source and build
+COPY docs-site/ ./
+RUN npm run build
+
+# Production nginx container
+FROM nginx:1.25-alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Create nginx user with specific UID/GID for security
+RUN addgroup -g 101 -S nginx && \
+    adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+
+# Create necessary directories
+RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/html/static /usr/share/nginx/html/docs /usr/share/nginx/html/downloads && \
+    chown -R nginx:nginx /var/log/nginx /var/cache/nginx /var/run/nginx /usr/share/nginx/html
+
+# Copy static homepage files
+COPY static_homepage/ /usr/share/nginx/html/static/
+
+# Copy built documentation
+COPY --from=docs-builder /app/dist/ /usr/share/nginx/html/docs/
+
+# Copy Linux packages for downloads
+COPY dist/*.deb /usr/share/nginx/html/downloads/
+COPY dist/*.AppImage /usr/share/nginx/html/downloads/
+COPY dist/*.tar.gz /usr/share/nginx/html/downloads/
+
+# Copy nginx configuration
+COPY config/nginx/nginx-static.conf /etc/nginx/nginx.conf
+
+# Create health check endpoint
+RUN echo '<!DOCTYPE html><html><head><title>Health Check</title></head><body><h1>Static Site Healthy</h1></body></html>' > /usr/share/nginx/html/health.html
+
+# Create health check script
+RUN echo '#!/bin/sh' > /usr/local/bin/health-check.sh && \
+    echo 'curl --fail http://localhost/health || exit 1' >> /usr/local/bin/health-check.sh && \
+    chmod +x /usr/local/bin/health-check.sh
+
+# Set proper permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
+# Security: Run as non-root user
+USER nginx
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD /usr/local/bin/health-check.sh
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

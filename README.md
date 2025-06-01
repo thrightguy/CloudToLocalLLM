@@ -5,6 +5,25 @@
 
 Run powerful Large Language Models (LLMs) directly on your machine and seamlessly sync your conversations to the cloud. Experience the best of local control and cloud convenience.
 
+## 🏗️ Multi-Container Architecture
+
+CloudToLocalLLM now features a modern multi-container architecture that provides:
+
+- **Independent Deployments**: Update Flutter app, documentation, or API backend separately
+- **Zero-Downtime Updates**: Rolling updates with health checks
+- **Scalability**: Individual container scaling and load balancing
+- **Security**: Container isolation and non-root execution
+
+### Architecture Overview
+
+```
+Internet → Nginx Proxy → Static Site (docs.cloudtolocalllm.online)
+                      → Flutter App (app.cloudtolocalllm.online)
+                      → API Backend (WebSocket + REST)
+```
+
+For detailed information, see [MULTI_CONTAINER_ARCHITECTURE.md](docs/MULTI_CONTAINER_ARCHITECTURE.md).
+
 ## ✨ Features
 
 - Run LLMs locally using Ollama or LM Studio
@@ -66,7 +85,24 @@ The following premium features are planned for future releases. Some aspects may
 
 > For more details about upcoming premium features and their development status, see [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md)
 
-For instructions on self-hosting CloudToLocalLLM, including SSL setup, prerequisites, and advanced deployment, please see our [Self-Hosting Guide](docs/SELF_HOSTING.md).
+## 🚀 Deployment
+
+### Multi-Container Deployment (Recommended)
+
+Deploy all services with the new multi-container architecture:
+
+```bash
+# Full deployment with SSL setup
+./scripts/deploy/deploy-multi-container.sh --build --ssl-setup
+
+# Deploy specific services only
+./scripts/deploy/deploy-multi-container.sh flutter-app
+./scripts/deploy/update-service.sh static-site --no-downtime
+```
+
+### Legacy Single Container
+
+For instructions on self-hosting CloudToLocalLLM with the legacy single container, including SSL setup, prerequisites, and advanced deployment, please see our [Self-Hosting Guide](docs/SELF_HOSTING.md).
 
 ## 🚀 Getting Started
 
