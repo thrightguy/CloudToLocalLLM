@@ -1,0 +1,134 @@
+# Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
+pkgname=cloudtolocalllm-desktop
+pkgver=2.0.0
+pkgrel=1
+pkgdesc="Local LLM Management with Cloud Interface - Native Linux Desktop App"
+arch=('x86_64')
+url="https://cloudtolocalllm.online"
+license=('MIT')
+depends=('gtk3' 'glibc' 'libayatana-appindicator' 'curl')
+makedepends=('flutter' 'git' 'base-devel')
+optdepends=('ollama: Local LLM runtime for direct localhost:11434 connectivity'
+            'wmctrl: Enhanced window management support')
+provides=('cloudtolocalllm-desktop')
+conflicts=('cloudtolocalllm-desktop-bin')
+source=("$pkgname::git+https://github.com/imrightguy/CloudToLocalLLM.git")
+sha256sums=('SKIP')
+
+build() {
+    cd "$srcdir/$pkgname"
+    
+    # Configure Flutter for Linux desktop
+    flutter config --enable-linux-desktop
+    
+    # Get dependencies
+    flutter pub get
+    
+    # Build the application
+    flutter build linux --release
+}
+
+package() {
+    cd "$srcdir/$pkgname"
+    
+    # Install application files
+    install -dm755 "$pkgdir/opt/$pkgname"
+    cp -r build/linux/x64/release/bundle/* "$pkgdir/opt/$pkgname/"
+    
+    # Install launcher script
+    install -dm755 "$pkgdir/usr/bin"
+    cat > "$pkgdir/usr/bin/cloudtolocalllm" << 'EOF'
+#!/bin/bash
+cd /opt/cloudtolocalllm-desktop
+exec ./cloudtolocalllm "$@"
+EOF
+    chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
+    
+    # Install desktop entry
+    install -dm755 "$pkgdir/usr/share/applications"
+    cat > "$pkgdir/usr/share/applications/$pkgname.desktop" << 'EOF'
+[Desktop Entry]
+Name=CloudToLocalLLM
+Comment=Local LLM Management with Cloud Interface
+Exec=cloudtolocalllm
+Icon=cloudtolocalllm
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+StartupWMClass=cloudtolocalllm
+StartupNotify=true
+Keywords=LLM;AI;Ollama;Machine Learning;Local;
+EOF
+    
+    # Install icon
+    install -dm755 "$pkgdir/usr/share/pixmaps"
+    if [ -f "assets/images/app_icon.png" ]; then
+        install -m644 "assets/images/app_icon.png" "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
+    else
+        # Create a placeholder icon if none exists
+        install -m644 "assets/images/tray_icon.png" "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png" 2>/dev/null || {
+            # Create minimal placeholder
+            touch "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
+        }
+    fi
+    
+    # Install documentation
+    install -dm755 "$pkgdir/usr/share/doc/$pkgname"
+    install -m644 README.md "$pkgdir/usr/share/doc/$pkgname/"
+    
+    # Install license
+    install -dm755 "$pkgdir/usr/share/licenses/$pkgname"
+    cat > "$pkgdir/usr/share/licenses/$pkgname/LICENSE" << 'EOF'
+MIT License
+
+Copyright (c) 2024 CloudToLocalLLM Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+EOF
+}
+
+post_install() {
+    echo "CloudToLocalLLM Desktop has been installed successfully!"
+    echo ""
+    echo "Features:"
+    echo "  ✅ System tray integration"
+    echo "  ✅ Direct Ollama connectivity (localhost:11434)"
+    echo "  ✅ Auth0 authentication with desktop redirect"
+    echo "  ✅ Modern Flutter interface"
+    echo ""
+    echo "To start the application:"
+    echo "  1. Launch from Applications menu, or"
+    echo "  2. Run: cloudtolocalllm"
+    echo ""
+    echo "For Ollama integration:"
+    echo "  1. Install Ollama: sudo pacman -S ollama"
+    echo "  2. Start Ollama: systemctl --user start ollama"
+    echo "  3. Pull a model: ollama pull llama2"
+    echo ""
+    echo "The application will minimize to system tray when closed."
+}
+
+post_upgrade() {
+    post_install
+}
+
+pre_remove() {
+    # Stop any running instances
+    pkill -f cloudtolocalllm || true
+}

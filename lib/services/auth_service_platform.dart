@@ -2,10 +2,13 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
-// Platform-specific imports
-import 'auth_service_web.dart';
+// Platform-specific imports with conditional compilation
 import 'auth_service_desktop.dart';
 import 'auth_service_mobile.dart';
+
+// Conditional import: real web service on web, stub on other platforms
+import 'auth_service_web.dart'
+    if (dart.library.io) 'auth_service_web_stub.dart';
 
 /// Platform detection and service factory for authentication
 /// Automatically selects the appropriate authentication service based on platform
@@ -39,10 +42,10 @@ class AuthServicePlatform extends ChangeNotifier {
       _platformService = AuthServiceDesktop();
       debugPrint('🖥️ Initialized Desktop Authentication Service');
     } else {
-      // Fallback to web service
-      _platformService = AuthServiceWeb();
+      // Fallback to desktop service for unknown platforms
+      _platformService = AuthServiceDesktop();
       debugPrint(
-          '⚠️ Unknown platform, falling back to Web Authentication Service');
+          '⚠️ Unknown platform, falling back to Desktop Authentication Service');
     }
 
     // Listen to platform service changes

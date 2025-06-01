@@ -6,7 +6,10 @@ import '../config/app_config.dart';
 import '../services/auth_service.dart';
 import '../components/gradient_button.dart';
 import '../components/modern_card.dart';
-import '../widgets/auth_debug_panel.dart';
+
+// Conditional import for debug panel - only import on web platform
+import '../widgets/auth_debug_panel.dart'
+    if (dart.library.io) '../widgets/auth_debug_panel_stub.dart';
 
 /// Modern login screen with Auth0 integration
 class LoginScreen extends StatefulWidget {
@@ -218,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // Debug panel (only visible in debug mode)
+          // Debug panel (only visible in debug mode and on web)
           const AuthDebugPanel(),
         ],
       ),

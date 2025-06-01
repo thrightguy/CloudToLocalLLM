@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/user_model.dart';
 import 'auth_logger.dart';
+
+// Conditional import for web package - only import on web platform
+import 'package:web/web.dart' as web if (dart.library.io) 'dart:io';
 
 /// Web-specific authentication service using direct Auth0 redirect with JWT tokens
 class AuthServiceWeb extends ChangeNotifier {
@@ -53,12 +55,14 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       AuthLogger.info('🔐 Checking authentication status');
 
-      // Check if we're on the callback URL
-      final currentUrl = web.window.location.href;
-      if (currentUrl.contains('/callback')) {
-        AuthLogger.info('🔐 Detected callback URL during initialization');
-        await handleCallback();
-        return;
+      // Check if we're on the callback URL (web only)
+      if (kIsWeb) {
+        final currentUrl = web.window.location.href;
+        if (currentUrl.contains('/callback')) {
+          AuthLogger.info('🔐 Detected callback URL during initialization');
+          await handleCallback();
+          return;
+        }
       }
 
       // Check for stored tokens
@@ -132,33 +136,39 @@ class AuthServiceWeb extends ChangeNotifier {
       });
 
       // For web, redirect the current window to Auth0
-      try {
-        AuthLogger.info('🔐 Attempting window.location.href redirect');
-        web.window.location.href = authUrl.toString();
-        AuthLogger.info('🔐 Redirect initiated successfully');
-
-        // Add a small delay to ensure the redirect happens
-        await Future.delayed(const Duration(milliseconds: 100));
-        AuthLogger.warning(
-            '🔐 Still executing after redirect - this should not happen');
-      } catch (redirectError) {
-        AuthLogger.error('🔐 Primary redirect failed', {
-          'error': redirectError.toString(),
-          'errorType': redirectError.runtimeType.toString(),
-        });
-
-        // Fallback: try using window.open with _self
+      if (kIsWeb) {
         try {
-          AuthLogger.info('🔐 Attempting fallback redirect with window.open');
-          web.window.open(authUrl.toString(), '_self');
-          AuthLogger.info('🔐 Fallback redirect initiated');
-        } catch (fallbackError) {
-          AuthLogger.error('🔐 Fallback redirect also failed', {
-            'error': fallbackError.toString(),
-            'errorType': fallbackError.runtimeType.toString(),
+          AuthLogger.info('🔐 Attempting window.location.href redirect');
+          web.window.location.href = authUrl.toString();
+          AuthLogger.info('🔐 Redirect initiated successfully');
+
+          // Add a small delay to ensure the redirect happens
+          await Future.delayed(const Duration(milliseconds: 100));
+          AuthLogger.warning(
+              '🔐 Still executing after redirect - this should not happen');
+        } catch (redirectError) {
+          AuthLogger.error('🔐 Primary redirect failed', {
+            'error': redirectError.toString(),
+            'errorType': redirectError.runtimeType.toString(),
           });
-          throw 'Both redirect methods failed: $redirectError, $fallbackError';
+
+          // Fallback: try using window.open with _self
+          try {
+            AuthLogger.info('🔐 Attempting fallback redirect with window.open');
+            web.window.open(authUrl.toString(), '_self');
+            AuthLogger.info('🔐 Fallback redirect initiated');
+          } catch (fallbackError) {
+            AuthLogger.error('🔐 Fallback redirect also failed', {
+              'error': fallbackError.toString(),
+              'errorType': fallbackError.runtimeType.toString(),
+            });
+            throw 'Both redirect methods failed: $redirectError, $fallbackError';
+          }
         }
+      } else {
+        // For non-web platforms, this service shouldn't be used
+        throw UnsupportedError(
+            'Web authentication service is only supported on web platform');
       }
     } catch (e) {
       AuthLogger.error('🔐 Login error', {
@@ -207,6 +217,12 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       AuthLogger.info('🔐 Web callback handling started');
 
+      if (!kIsWeb) {
+        AuthLogger.error(
+            '🔐 Callback handling is only supported on web platform');
+        return false;
+      }
+
       // Get current URL parameters
       final uri = Uri.parse(web.window.location.href);
       AuthLogger.info('🔐 Current URL', {
@@ -249,8 +265,10 @@ class AuthServiceWeb extends ChangeNotifier {
             notifyListeners();
             AuthLogger.logAuthStateChange(true, 'Token exchange successful');
 
-            // Clear the URL parameters
-            web.window.history.replaceState(null, '', '/');
+            // Clear the URL parameters (web only)
+            if (kIsWeb) {
+              web.window.history.replaceState(null, '', '/');
+            }
 
             // Small delay to ensure state is updated
             await Future.delayed(const Duration(milliseconds: 200));
@@ -370,6 +388,8 @@ class AuthServiceWeb extends ChangeNotifier {
   /// Store tokens in localStorage
   Future<void> _storeTokens() async {
     try {
+      if (!kIsWeb) return;
+
       if (_accessToken != null) {
         web.window.localStorage
             .setItem('cloudtolocalllm_access_token', _accessToken!);
@@ -391,6 +411,8 @@ class AuthServiceWeb extends ChangeNotifier {
   /// Load tokens from localStorage
   Future<void> _loadStoredTokens() async {
     try {
+      if (!kIsWeb) return;
+
       _accessToken =
           web.window.localStorage.getItem('cloudtolocalllm_access_token');
       _idToken = web.window.localStorage.getItem('cloudtolocalllm_id_token');
@@ -413,6 +435,8 @@ class AuthServiceWeb extends ChangeNotifier {
   /// Clear stored tokens from localStorage
   Future<void> _clearStoredTokens() async {
     try {
+      if (!kIsWeb) return;
+
       web.window.localStorage.removeItem('cloudtolocalllm_access_token');
       web.window.localStorage.removeItem('cloudtolocalllm_id_token');
       web.window.localStorage.removeItem('cloudtolocalllm_token_expiry');
