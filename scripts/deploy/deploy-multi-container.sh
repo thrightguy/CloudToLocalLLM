@@ -258,6 +258,10 @@ build_containers() {
     if [ "$BUILD" = true ] || [ "$NO_CACHE" = true ]; then
         log_info "Building containers..."
 
+        # Always build streaming proxy base image
+        log_info "Building streaming proxy base image..."
+        docker_compose -f "$COMPOSE_FILE" --profile build-only build $build_args streaming-proxy-base
+
         if [ "${SERVICES[0]}" = "all" ]; then
             docker_compose -f "$COMPOSE_FILE" build $build_args
         else
@@ -341,7 +345,10 @@ show_summary() {
     log_info "Architecture:"
     log_info "  ✓ Host-based Flutter build (optimized)"
     log_info "  ✓ Lightweight nginx containers (runtime only)"
-    log_info "  ✓ Dedicated API backend for bridge communication"
+    log_info "  ✓ Multi-tenant streaming proxy architecture"
+    log_info "  ✓ Dedicated API backend with proxy management"
+    log_info "  ✓ Zero-storage ephemeral proxy containers"
+    log_info "  ✓ Isolated user networks for security"
     log_info "  ✓ Reverse proxy with SSL termination"
 
     echo ""

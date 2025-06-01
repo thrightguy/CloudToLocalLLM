@@ -93,15 +93,16 @@ class _ConversationListState extends State<ConversationList> {
               tooltip: 'New Conversation',
             ),
           ),
-          
+
           // Conversation indicators
           Expanded(
             child: ListView.builder(
               itemCount: widget.conversations.length,
               itemBuilder: (context, index) {
                 final conversation = widget.conversations[index];
-                final isSelected = widget.selectedConversation?.id == conversation.id;
-                
+                final isSelected =
+                    widget.selectedConversation?.id == conversation.id;
+
                 return Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppTheme.spacingS,
@@ -114,7 +115,8 @@ class _ConversationListState extends State<ConversationList> {
                       color: isSelected
                           ? AppTheme.primaryColor.withValues(alpha: 0.2)
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.borderRadiusS),
                       border: isSelected
                           ? Border.all(
                               color: AppTheme.primaryColor,
@@ -123,10 +125,13 @@ class _ConversationListState extends State<ConversationList> {
                           : null,
                     ),
                     child: IconButton(
-                      onPressed: () => widget.onConversationSelected(conversation.id),
+                      onPressed: () =>
+                          widget.onConversationSelected(conversation.id),
                       icon: const Icon(Icons.chat_bubble_outline),
                       iconSize: 20,
-                      color: isSelected ? AppTheme.primaryColor : AppTheme.textColorLight,
+                      color: isSelected
+                          ? AppTheme.primaryColor
+                          : AppTheme.textColorLight,
                       tooltip: conversation.title,
                     ),
                   ),
@@ -251,10 +256,14 @@ class _ConversationListState extends State<ConversationList> {
           color: isSelected ? AppTheme.primaryColor : AppTheme.textColorLight,
           size: 20,
         ),
-        title: isEditing ? _buildEditingTitle(conversation) : _buildTitle(conversation),
+        title: isEditing
+            ? _buildEditingTitle(conversation)
+            : _buildTitle(conversation),
         subtitle: _buildSubtitle(conversation),
         trailing: _buildTrailing(conversation),
-        onTap: isEditing ? null : () => widget.onConversationSelected(conversation.id),
+        onTap: isEditing
+            ? null
+            : () => widget.onConversationSelected(conversation.id),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
         ),
@@ -287,7 +296,8 @@ class _ConversationListState extends State<ConversationList> {
         isDense: true,
       ),
       onSubmitted: (value) => _finishEditing(conversation, value),
-      onEditingComplete: () => _finishEditing(conversation, _editController.text),
+      onEditingComplete: () =>
+          _finishEditing(conversation, _editController.text),
       autofocus: true,
     );
   }
@@ -369,7 +379,8 @@ class _ConversationListState extends State<ConversationList> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Conversation'),
-        content: Text('Are you sure you want to delete "${conversation.title}"?'),
+        content:
+            Text('Are you sure you want to delete "${conversation.title}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

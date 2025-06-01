@@ -1,0 +1,40 @@
+name: cloudtolocalllm
+description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
+publish_to: none
+homepage: https://cloudtolocalllm.online
+repository: https://github.com/imrightguy/CloudToLocalLLM
+version: 2.0.1+202506011655
+
+environment:
+  sdk: '>=3.5.4 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI and Navigation
+  cupertino_icons: ^1.0.8
+  go_router: ^15.1.2
+
+  # Authentication
+  openid_client: ^0.4.9
+  url_launcher: ^6.3.1
+
+  # HTTP and Web
+  http: ^1.2.0
+  web: ^1.1.1
+
+  # State Management
+  provider: ^6.1.1
+
+  # System Integration
+  tray_manager: ^0.5.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/

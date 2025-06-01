@@ -1,0 +1,29 @@
+{
+  "name": "cloudtolocalllm-streaming-proxy",
+  "version": "1.0.0",
+  "description": "Ultra-lightweight WebSocket streaming proxy for CloudToLocalLLM multi-tenant architecture",
+  "main": "proxy-server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "node --inspect proxy-server.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "websocket",
+    "proxy",
+    "streaming",
+    "multi-tenant",
+    "cloudtolocalllm"
+  ],
+  "author": "CloudToLocalLLM",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0",
+    "jsonwebtoken": "^9.0.2",
+    "winston": "^3.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

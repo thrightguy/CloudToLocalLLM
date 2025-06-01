@@ -6,6 +6,7 @@ import 'config/theme.dart';
 import 'config/router.dart';
 import 'config/app_config.dart';
 import 'services/auth_service.dart';
+import 'services/streaming_proxy_service.dart';
 import 'services/system_tray_service.dart';
 import 'services/window_manager_service.dart';
 
@@ -34,36 +35,55 @@ bool _isDesktopPlatform() {
 /// Initialize system tray functionality
 Future<void> _initializeSystemTray() async {
   try {
-    debugPrint("Initializing system tray...");
+    if (kDebugMode) {
+      debugPrint("Initializing system tray...");
+    }
 
     final systemTray = SystemTrayService();
     final windowManager = WindowManagerService();
 
     final success = await systemTray.initialize(
       onShowWindow: () async {
-        debugPrint("System tray requested to show window");
+        if (kDebugMode) {
+          debugPrint("System tray requested to show window");
+        }
         await windowManager.showWindow();
       },
       onHideWindow: () async {
-        debugPrint("System tray requested to hide window");
+        if (kDebugMode) {
+          debugPrint("System tray requested to hide window");
+        }
         await windowManager.hideToTray();
       },
       onQuit: () {
-        debugPrint("System tray requested to quit application");
+        if (kDebugMode) {
+          debugPrint("System tray requested to quit application");
+        }
         SystemNavigator.pop();
       },
     );
 
     if (success) {
-      await systemTray.setTooltip('CloudToLocalLLM - Local LLM Management');
-      debugPrint("System tray initialization completed successfully");
+      await systemTray.setTooltip('CloudToLocalLLM - Multi-Tenant Streaming');
+
+      // Start minimized to system tray by default
+      await windowManager.hideToTray();
+
+      if (kDebugMode) {
+        debugPrint("System tray initialization completed successfully");
+        debugPrint("Application started minimized to system tray");
+      }
     } else {
-      debugPrint(
-          "System tray initialization failed, continuing without system tray");
+      if (kDebugMode) {
+        debugPrint(
+            "System tray initialization failed, continuing without system tray");
+      }
     }
   } catch (e) {
-    debugPrint("System tray initialization error: $e");
-    debugPrint("Continuing without system tray functionality");
+    if (kDebugMode) {
+      debugPrint("System tray initialization error: $e");
+      debugPrint("Continuing without system tray functionality");
+    }
   }
 }
 
@@ -78,6 +98,12 @@ class CloudToLocalLLMApp extends StatelessWidget {
         // Authentication service
         ChangeNotifierProvider(
           create: (_) => AuthService(),
+        ),
+        // Streaming proxy service
+        ChangeNotifierProvider(
+          create: (context) => StreamingProxyService(
+            authService: context.read<AuthService>(),
+          ),
         ),
       ],
       child: Consumer<AuthService>(

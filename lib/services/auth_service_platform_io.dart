@@ -12,7 +12,8 @@ class AuthServicePlatform extends ChangeNotifier {
   // Platform detection using dart:io
   static bool get isWeb => false;
   static bool get isMobile => Platform.isAndroid || Platform.isIOS;
-  static bool get isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  static bool get isDesktop =>
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
   // Getters that delegate to platform service
   ValueNotifier<bool> get isAuthenticated => _platformService.isAuthenticated;
@@ -34,7 +35,8 @@ class AuthServicePlatform extends ChangeNotifier {
     } else {
       // Fallback to desktop service for unknown platforms
       _platformService = AuthServiceDesktop();
-      debugPrint('⚠️ Unknown platform, falling back to Desktop Authentication Service');
+      debugPrint(
+          '⚠️ Unknown platform, falling back to Desktop Authentication Service');
     }
 
     // Listen to platform service changes
@@ -63,7 +65,8 @@ class AuthServicePlatform extends ChangeNotifier {
     if (isMobile && _platformService is AuthServiceMobile) {
       return await _platformService.loginWithBiometrics();
     } else {
-      throw UnsupportedError('Biometric authentication is only available on mobile platforms');
+      throw UnsupportedError(
+          'Biometric authentication is only available on mobile platforms');
     }
   }
 
@@ -115,7 +118,8 @@ class AuthServicePlatform extends ChangeNotifier {
   /// Platform capability checks
   bool get supportsBiometrics => isMobile;
   bool get supportsDeepLinking => true; // Both mobile and desktop support this
-  bool get supportsSecureStorage => true; // Both mobile and desktop support this
+  bool get supportsSecureStorage =>
+      true; // Both mobile and desktop support this
 
   /// Get recommended authentication method for current platform
   String get recommendedAuthMethod {

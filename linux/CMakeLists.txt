@@ -42,13 +42,25 @@ endif()
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_14)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
-  # Allow deprecation warnings for tray_manager plugin to work around app_indicator_new deprecation
-  if("${TARGET}" STREQUAL "tray_manager_plugin")
-    target_compile_options(${TARGET} PRIVATE -Wno-error=deprecated-declarations)
-  endif()
+
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
 endfunction()
+
+# Apply tray_manager deprecation fix before building
+execute_process(
+  COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/fix_tray_manager_deprecation.sh" "apply"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.."
+  RESULT_VARIABLE TRAY_FIX_RESULT
+  OUTPUT_VARIABLE TRAY_FIX_OUTPUT
+  ERROR_VARIABLE TRAY_FIX_ERROR
+)
+
+if(NOT TRAY_FIX_RESULT EQUAL 0)
+  message(WARNING "Failed to apply tray_manager deprecation fix: ${TRAY_FIX_ERROR}")
+else()
+  message(STATUS "Applied tray_manager deprecation fix")
+endif()
 
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")

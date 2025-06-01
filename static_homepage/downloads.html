@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download CloudToLocalLLM - Linux Packages</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    .installation-section {
+      background: rgba(110, 142, 251, 0.05);
+      border: 1px solid rgba(110, 142, 251, 0.2);
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    
+    .installation-title {
+      color: var(--color-primary);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: var(--border-radius-sm);
+      padding: 1rem;
+      margin: 0.5rem 0;
+      overflow-x: auto;
+    }
+    
+    .code-block code {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      color: var(--color-accent);
+      font-size: 0.9rem;
+    }
+    
+    .requirements-list {
+      background: rgba(0, 197, 142, 0.1);
+      border: 1px solid rgba(0, 197, 142, 0.3);
+      border-radius: var(--border-radius-sm);
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .checksum-section {
+      background: rgba(255, 165, 0, 0.1);
+      border: 1px solid rgba(255, 165, 0, 0.3);
+      border-radius: var(--border-radius-sm);
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .nav-link {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .nav-link:hover {
+      color: var(--color-accent);
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">LLM</div>
+    <h1>Download CloudToLocalLLM</h1>
+    <h2>Complete installation guide for Linux distributions</h2>
+    <div style="margin-top: 1rem;">
+      <a href="/" class="nav-link">← Back to Home</a>
+    </div>
+  </div>
+  
+  <main class="main">
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">System Requirements</div>
+      <div class="requirements-list">
+        <strong>Minimum Requirements:</strong>
+        <ul>
+          <li><strong>OS:</strong> Any modern Linux distribution (kernel 4.15+)</li>
+          <li><strong>Architecture:</strong> x86_64 (64-bit)</li>
+          <li><strong>Memory:</strong> 512MB RAM minimum, 1GB recommended</li>
+          <li><strong>Storage:</strong> 200MB available space</li>
+          <li><strong>Desktop:</strong> GNOME, KDE Plasma, XFCE, or compatible</li>
+        </ul>
+        
+        <strong>For System Tray Support:</strong>
+        <ul>
+          <li><strong>Required:</strong> libayatana-appindicator</li>
+          <li><strong>GNOME Users:</strong> AppIndicator extension recommended</li>
+          <li><strong>Tiling WMs:</strong> Status bar with system tray support</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">📦 AppImage (Universal)</div>
+      <div class="card-desc">
+        Portable package that works on all Linux distributions. No installation required.
+      </div>
+      
+      <div class="installation-section">
+        <div class="installation-title">Download & Run</div>
+        <div class="code-block">
+          <code># Download the latest AppImage
+wget https://cloudtolocalllm.online/releases/latest/CloudToLocalLLM-latest-x86_64.AppImage
+
+# Make executable and run
+chmod +x CloudToLocalLLM-latest-x86_64.AppImage
+./CloudToLocalLLM-latest-x86_64.AppImage</code>
+        </div>
+        
+        <div class="installation-title">Optional: Desktop Integration</div>
+        <div class="code-block">
+          <code># Create desktop entry (optional)
+mkdir -p ~/.local/share/applications
+cat > ~/.local/share/applications/cloudtolocalllm.desktop << 'EOF'
+[Desktop Entry]
+Name=CloudToLocalLLM
+Exec=/path/to/CloudToLocalLLM-latest-x86_64.AppImage
+Icon=cloudtolocalllm
+Type=Application
+Categories=Development;Network;
+EOF</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">🐧 Debian Package (.deb)</div>
+      <div class="card-desc">
+        Native package for Ubuntu, Debian, and derivatives with proper dependency management.
+      </div>
+      
+      <div class="installation-section">
+        <div class="installation-title">Installation</div>
+        <div class="code-block">
+          <code># Download the package
+wget https://cloudtolocalllm.online/releases/latest/cloudtolocalllm-latest_amd64.deb
+
+# Install with dpkg
+sudo dpkg -i cloudtolocalllm-latest_amd64.deb
+
+# Install dependencies if needed
+sudo apt-get install -f</code>
+        </div>
+        
+        <div class="installation-title">Running the Application</div>
+        <div class="code-block">
+          <code># Run from terminal
+cloudtolocalllm
+
+# Or launch from applications menu
+# Search for "CloudToLocalLLM"</code>
+        </div>
+        
+        <div class="installation-title">Uninstallation</div>
+        <div class="code-block">
+          <code># Remove the package
+sudo apt-get remove cloudtolocalllm
+
+# Remove configuration files (optional)
+sudo apt-get purge cloudtolocalllm</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">🏛️ Arch User Repository (AUR)</div>
+      <div class="card-desc">
+        Community-maintained package for Arch Linux and derivatives.
+      </div>
+      
+      <div class="installation-section">
+        <div class="installation-title">Installation with AUR Helper</div>
+        <div class="code-block">
+          <code># Using yay
+yay -S cloudtolocalllm
+
+# Using paru
+paru -S cloudtolocalllm
+
+# Using pamac
+pamac install cloudtolocalllm</code>
+        </div>
+        
+        <div class="installation-title">Manual Installation</div>
+        <div class="code-block">
+          <code># Clone the AUR repository
+git clone https://aur.archlinux.org/cloudtolocalllm.git
+cd cloudtolocalllm
+
+# Build and install
+makepkg -si</code>
+        </div>
+        
+        <div class="installation-title">Uninstallation</div>
+        <div class="code-block">
+          <code># Remove the package
+sudo pacman -R cloudtolocalllm
+
+# Remove with dependencies
+sudo pacman -Rs cloudtolocalllm</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">🔒 Package Verification</div>
+      <div class="card-desc">
+        Verify package integrity using SHA256 checksums.
+      </div>
+      
+      <div class="checksum-section">
+        <div class="installation-title">Verify Downloads</div>
+        <div class="code-block">
+          <code># Download checksums file
+wget https://cloudtolocalllm.online/releases/latest/CloudToLocalLLM-latest-checksums.txt
+
+# Verify AppImage
+sha256sum -c CloudToLocalLLM-latest-checksums.txt --ignore-missing
+
+# Verify Debian package
+sha256sum cloudtolocalllm-latest_amd64.deb</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">🚀 Getting Started</div>
+      <div class="card-desc">
+        Quick setup guide after installation.
+      </div>
+      
+      <div class="installation-section">
+        <div class="installation-title">1. Launch the Application</div>
+        <p>CloudToLocalLLM will minimize to the system tray by default. Look for the LLM icon in your system tray.</p>
+        
+        <div class="installation-title">2. Configure LLM Provider</div>
+        <p>Go to Settings → LLM Provider Settings to configure your connection:</p>
+        <ul>
+          <li><strong>Desktop:</strong> Configure direct localhost:11434 connection to Ollama</li>
+          <li><strong>Web:</strong> Uses CloudToLocalLLM streaming proxy automatically</li>
+        </ul>
+        
+        <div class="installation-title">3. Install Ollama (Optional)</div>
+        <div class="code-block">
+          <code># Install Ollama for local LLM support
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Start Ollama service
+sudo systemctl enable --now ollama
+
+# Pull a model
+ollama pull llama2</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">🛠️ Troubleshooting</div>
+      
+      <div class="installation-section">
+        <div class="installation-title">System Tray Not Visible</div>
+        <ul>
+          <li><strong>GNOME:</strong> Install AppIndicator extension</li>
+          <li><strong>KDE:</strong> Check system tray widget configuration</li>
+          <li><strong>XFCE:</strong> Add notification area to panel</li>
+        </ul>
+        
+        <div class="installation-title">Connection Issues</div>
+        <ul>
+          <li>Verify Ollama is running: <code>systemctl status ollama</code></li>
+          <li>Check port availability: <code>netstat -tlnp | grep 11434</code></li>
+          <li>Test direct connection: <code>curl http://localhost:11434/api/version</code></li>
+        </ul>
+        
+        <div class="installation-title">Permission Issues</div>
+        <div class="code-block">
+          <code># Fix AppImage permissions
+chmod +x CloudToLocalLLM-*.AppImage
+
+# Check user groups for system tray
+groups $USER</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">📚 Additional Resources</div>
+      <ul>
+        <li><a href="https://github.com/imrightguy/CloudToLocalLLM" class="nav-link">GitHub Repository</a></li>
+        <li><a href="https://github.com/imrightguy/CloudToLocalLLM/issues" class="nav-link">Report Issues</a></li>
+        <li><a href="https://github.com/imrightguy/CloudToLocalLLM/discussions" class="nav-link">Community Discussions</a></li>
+        <li><a href="https://ollama.ai" class="nav-link">Ollama Documentation</a></li>
+      </ul>
+    </div>
+  </main>
+  
+  <footer class="footer">
+    <div style="text-align: center;">
+      <a href="/" class="nav-link">← Back to Home</a>
+    </div>
+  </footer>
+</body>
+</html>
