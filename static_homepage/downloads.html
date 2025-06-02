@@ -171,43 +171,66 @@ sudo apt-get purge cloudtolocalllm</code>
     </div>
 
     <div class="card" style="max-width: 800px;">
+      <div class="card-title">📱 AppImage (Portable)</div>
+      <div class="card-desc">
+        Portable application that runs on any Linux distribution without installation. No root access required.
+      </div>
+
+      <div class="installation-section">
+        <div class="installation-title">Download and Run</div>
+        <div class="code-block">
+          <code># Download AppImage
+wget https://cloudtolocalllm.online/cloudtolocalllm-2.1.1-x86_64.AppImage
+
+# Make executable
+chmod +x cloudtolocalllm-2.1.1-x86_64.AppImage
+
+# Run directly
+./cloudtolocalllm-2.1.1-x86_64.AppImage</code>
+        </div>
+
+        <div class="installation-title">Desktop Integration (Optional)</div>
+        <div class="code-block">
+          <code># Install to system (creates desktop entry)
+./cloudtolocalllm-2.1.1-x86_64.AppImage --appimage-integrate
+
+# Or move to applications directory
+mkdir -p ~/.local/bin
+mv cloudtolocalllm-2.1.1-x86_64.AppImage ~/.local/bin/cloudtolocalllm
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
       <div class="card-title">🏛️ Arch User Repository (AUR)</div>
       <div class="card-desc">
-        Community-maintained package for Arch Linux and derivatives.
+        Pre-built binary package for Arch Linux and derivatives. <strong>No Flutter dependency required!</strong>
       </div>
-      
-      <div class="installation-section">
-        <div class="installation-title">Installation with AUR Helper</div>
-        <div class="code-block">
-          <code># Install Flutter first (required build dependency)
-yay -S flutter
 
-# Then install CloudToLocalLLM
+      <div class="installation-section">
+        <div class="installation-title">Installation with AUR Helper (Recommended)</div>
+        <div class="code-block">
+          <code># Install with yay (no build dependencies needed)
 yay -S cloudtolocalllm
 
 # Or using paru
-paru -S flutter
 paru -S cloudtolocalllm
 
 # Or using pamac
-pamac install flutter
 pamac install cloudtolocalllm</code>
         </div>
-        
+
         <div class="installation-title">Manual Installation</div>
         <div class="code-block">
-          <code># Install Flutter first (required build dependency)
-git clone https://aur.archlinux.org/flutter.git
-cd flutter
-makepkg -si
-cd ..
-
-# Then install CloudToLocalLLM
+          <code># Clone AUR repository
 git clone https://aur.archlinux.org/cloudtolocalllm.git
 cd cloudtolocalllm
+
+# Build and install (downloads pre-built binary)
 makepkg -si</code>
         </div>
-        
+
         <div class="installation-title">Uninstallation</div>
         <div class="code-block">
           <code># Remove the package
@@ -215,6 +238,48 @@ sudo pacman -R cloudtolocalllm
 
 # Remove with dependencies
 sudo pacman -Rs cloudtolocalllm</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width: 800px;">
+      <div class="card-title">⚡ Pre-built Binary (Universal)</div>
+      <div class="card-desc">
+        Direct download of the compiled application for manual installation on any Linux distribution.
+      </div>
+
+      <div class="installation-section">
+        <div class="installation-title">Download and Install</div>
+        <div class="code-block">
+          <code># Download pre-built binary package
+wget https://cloudtolocalllm.online/cloudtolocalllm-2.1.1-x86_64.tar.gz
+
+# Extract to local directory
+tar -xzf cloudtolocalllm-2.1.1-x86_64.tar.gz
+cd cloudtolocalllm-2.1.1-x86_64
+
+# Run directly
+./cloudtolocalllm</code>
+        </div>
+
+        <div class="installation-title">System Installation (Optional)</div>
+        <div class="code-block">
+          <code># Install to system directories (requires root)
+sudo mkdir -p /opt/cloudtolocalllm
+sudo cp -r * /opt/cloudtolocalllm/
+sudo ln -sf /opt/cloudtolocalllm/cloudtolocalllm /usr/local/bin/cloudtolocalllm
+
+# Create desktop entry
+sudo tee /usr/share/applications/cloudtolocalllm.desktop << 'EOF'
+[Desktop Entry]
+Name=CloudToLocalLLM
+Comment=Multi-tenant streaming LLM management
+Exec=/usr/local/bin/cloudtolocalllm
+Icon=/opt/cloudtolocalllm/data/flutter_assets/assets/images/app_icon.png
+Type=Application
+Categories=Network;Chat;
+StartupNotify=true
+EOF</code>
         </div>
       </div>
     </div>
@@ -228,17 +293,19 @@ sudo pacman -Rs cloudtolocalllm</code>
       <div class="checksum-section">
         <div class="installation-title">Verify Downloads</div>
         <div class="code-block">
-          <code># Download and verify Debian package checksum
-wget https://cloudtolocalllm.online/dist/debian/cloudtolocalllm_2.1.1_amd64.deb.sha256
-sha256sum -c cloudtolocalllm_2.1.1_amd64.deb.sha256
+          <code># Verify pre-built binary package
+sha256sum cloudtolocalllm-2.1.1-x86_64.tar.gz
+# Expected checksum will be provided with each release
 
-# Or verify manually
+# Verify AppImage (when available)
+sha256sum cloudtolocalllm-2.1.1-x86_64.AppImage
+
+# Verify Debian package
 sha256sum cloudtolocalllm_2.1.1_amd64.deb
-# Expected: 5d31d8f195699b254385cb4b9c2f572f33a41291e8b9f66eabd508ffa06ea149
 
-# Verify Snap package (when available)
-wget https://cloudtolocalllm.online/dist/cloudtolocalllm_2.1.1_amd64.snap.sha256
-sha256sum -c cloudtolocalllm_2.1.1_amd64.snap.sha256</code>
+# Download checksums file (when available)
+wget https://cloudtolocalllm.online/checksums.txt
+sha256sum -c checksums.txt</code>
         </div>
       </div>
     </div>
