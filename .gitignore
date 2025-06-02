@@ -97,7 +97,6 @@ temp/
 
 # Build files
 build/
-dist/
 
 # Secrets
 cloudadmin_key
@@ -109,8 +108,17 @@ flutter-tools/
 
 # CloudToLocalLLM - Exclude large binary files from Git (>100MB GitHub limit)
 # Build outputs and distribution packages
-dist/
 build/linux/*/release/bundle/
+
+# Exclude dist directory but allow split parts
+dist/
+!dist/*.part*
+!dist/**/*.part*
+!dist/*.md5
+!dist/*.sha256
+!dist/DEPLOYMENT_SUMMARY.txt
+
+# Large uncompressed binary files (>100MB)
 *.AppImage
 
 # Large executable files in AppImage packaging
