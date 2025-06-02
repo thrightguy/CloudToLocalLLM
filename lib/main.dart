@@ -8,16 +8,20 @@ import 'config/router.dart';
 import 'config/app_config.dart';
 import 'services/auth_service.dart';
 import 'services/streaming_proxy_service.dart';
-import 'services/system_tray_service.dart';
+import 'services/system_tray_manager.dart';
 import 'services/window_manager_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize system tray for desktop platforms (only on non-web)
-  // Can be disabled with DISABLE_SYSTEM_TRAY=true environment variable for debugging
-  if (!kIsWeb && _isDesktopPlatform() && !_isSystemTrayDisabled()) {
+  // System tray is DISABLED by default due to Linux compatibility issues
+  // Can be enabled with ENABLE_SYSTEM_TRAY=true environment variable
+  if (!kIsWeb && _isDesktopPlatform() && _isSystemTrayEnabled()) {
     await _initializeSystemTray();
+  } else {
+    // Show main window by default for reliable operation
+    await _showMainWindow();
   }
 
   runApp(const CloudToLocalLLMApp());
@@ -34,47 +38,77 @@ bool _isDesktopPlatform() {
   }
 }
 
-/// Check if system tray should be disabled via environment variable
-bool _isSystemTrayDisabled() {
+/// Check if system tray should be enabled via environment variable
+/// System tray is DISABLED by default due to Linux compatibility issues
+bool _isSystemTrayEnabled() {
   try {
-    final disableSystemTray = Platform.environment['DISABLE_SYSTEM_TRAY'];
-    return disableSystemTray == 'true' || disableSystemTray == '1';
+    final enableSystemTray = Platform.environment['ENABLE_SYSTEM_TRAY'];
+    return enableSystemTray == 'true' || enableSystemTray == '1';
   } catch (e) {
-    // If Platform.environment is not available, default to false (enable system tray)
+    // If Platform.environment is not available, default to false (disable system tray)
     return false;
   }
 }
 
-/// Initialize system tray functionality
+/// Initialize system tray functionality with robust error handling and fallback
 Future<void> _initializeSystemTray() async {
   try {
     if (kDebugMode) {
-      debugPrint("Initializing system tray...");
+      debugPrint("Initializing system tray with enhanced error handling...");
     }
 
-    final systemTray = SystemTrayService();
+    final systemTray = SystemTrayManager();
     final windowManager = WindowManagerService();
 
-    final success = await systemTray.initialize(
-      onShowWindow: () async {
-        if (kDebugMode) {
-          debugPrint("System tray requested to show window");
-        }
-        await windowManager.showWindow();
-      },
-      onHideWindow: () async {
-        if (kDebugMode) {
-          debugPrint("System tray requested to hide window");
-        }
-        await windowManager.hideToTray();
-      },
-      onQuit: () {
-        if (kDebugMode) {
-          debugPrint("System tray requested to quit application");
-        }
-        SystemNavigator.pop();
-      },
-    );
+    // Check if system tray is supported before attempting initialization
+    if (!systemTray.isSupported) {
+      if (kDebugMode) {
+        debugPrint(
+            "System tray not supported on this platform, showing main window");
+      }
+      await _showMainWindow();
+      return;
+    }
+
+    // Attempt system tray initialization with timeout
+    bool success = false;
+    try {
+      success = await systemTray.initialize(
+        onShowWindow: () async {
+          if (kDebugMode) {
+            debugPrint("System tray requested to show window");
+          }
+          await windowManager.showWindow();
+        },
+        onHideWindow: () async {
+          if (kDebugMode) {
+            debugPrint("System tray requested to hide window");
+          }
+          await windowManager.hideToTray();
+        },
+        onSettings: () {
+          if (kDebugMode) {
+            debugPrint("System tray requested to open settings");
+          }
+          // TODO: Navigate to settings screen
+        },
+        onQuit: () {
+          if (kDebugMode) {
+            debugPrint("System tray requested to quit application");
+          }
+          SystemNavigator.pop();
+        },
+      ).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          debugPrint("System tray initialization timed out");
+          return false;
+        },
+      );
+    } catch (e) {
+      debugPrint("System tray initialization failed with error: $e");
+      success = false;
+    }
 
     if (success) {
       await systemTray.setTooltip('CloudToLocalLLM - Multi-Tenant Streaming');
@@ -89,13 +123,30 @@ Future<void> _initializeSystemTray() async {
     } else {
       if (kDebugMode) {
         debugPrint(
-            "System tray initialization failed, continuing without system tray");
+            "System tray initialization failed, showing main window as fallback");
       }
+      await _showMainWindow();
     }
   } catch (e) {
     if (kDebugMode) {
       debugPrint("System tray initialization error: $e");
-      debugPrint("Continuing without system tray functionality");
+      debugPrint("Falling back to main window mode");
+    }
+    await _showMainWindow();
+  }
+}
+
+/// Show the main window as fallback when system tray is not available
+Future<void> _showMainWindow() async {
+  try {
+    final windowManager = WindowManagerService();
+    await windowManager.showWindow();
+    if (kDebugMode) {
+      debugPrint("Main window shown as fallback");
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint("Failed to show main window: $e");
     }
   }
 }

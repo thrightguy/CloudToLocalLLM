@@ -23,6 +23,7 @@ depends=(
     'dbus'
     'xdg-utils'
     'hicolor-icon-theme'
+    'python'  # For tray daemon
 )
 makedepends=()
 optdepends=(
@@ -83,6 +84,13 @@ package() {
 
     # Make the binary executable
     chmod +x "$pkgdir/usr/share/cloudtolocalllm/cloudtolocalllm"
+
+    # Install tray daemon
+    if [[ -f "cloudtolocalllm-tray" ]]; then
+        install -Dm755 "cloudtolocalllm-tray" "$pkgdir/usr/bin/cloudtolocalllm-tray"
+    else
+        echo "Warning: Tray daemon binary not found in pre-built package"
+    fi
 
     # Create wrapper script in /usr/bin
     install -dm755 "$pkgdir/usr/bin"
