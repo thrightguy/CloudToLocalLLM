@@ -106,10 +106,23 @@ secrets/
 # Cursor IDE specific files
 .cursor/
 flutter-tools/
-# Exclude large binary files from git
+
+# CloudToLocalLLM - Exclude large binary files from Git (>100MB GitHub limit)
+# Build outputs and distribution packages
 dist/
-build/
+build/linux/*/release/bundle/
+*.AppImage
+
+# Large executable files in AppImage packaging
+packaging/appimage/CloudToLocalLLM.AppDir/cloudtolocalllm
 packaging/appimage/CloudToLocalLLM.AppDir/tray_daemon/cloudtolocalllm-enhanced-tray
 packaging/appimage/CloudToLocalLLM.AppDir/tray_daemon/cloudtolocalllm-settings
-packaging/appimage/CloudToLocalLLM.AppDir/cloudtolocalllm
-*.AppImage
+packaging/appimage/CloudToLocalLLM.AppDir/data/
+packaging/appimage/CloudToLocalLLM.AppDir/lib/
+
+# DEB package binaries
+packaging/deb/usr/lib/cloudtolocalllm/cloudtolocalllm
+packaging/deb/usr/bin/cloudtolocalllm-tray
+
+# Large binary assets
+packaging/deb/usr/lib/cloudtolocalllm/data/flutter_assets/NOTICES.Z
