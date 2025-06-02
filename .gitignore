@@ -106,3 +106,10 @@ secrets/
 # Cursor IDE specific files
 .cursor/
 flutter-tools/
+# Exclude large binary files from git
+dist/
+build/
+packaging/appimage/CloudToLocalLLM.AppDir/tray_daemon/cloudtolocalllm-enhanced-tray
+packaging/appimage/CloudToLocalLLM.AppDir/tray_daemon/cloudtolocalllm-settings
+packaging/appimage/CloudToLocalLLM.AppDir/cloudtolocalllm
+*.AppImage
