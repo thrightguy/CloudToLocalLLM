@@ -15,7 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize system tray for desktop platforms (only on non-web)
-  // Can be disabled with DISABLE_SYSTEM_TRAY=true environment variable
+  // Can be disabled with DISABLE_SYSTEM_TRAY=true environment variable for debugging
   if (!kIsWeb && _isDesktopPlatform() && !_isSystemTrayDisabled()) {
     await _initializeSystemTray();
   }
