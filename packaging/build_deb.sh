@@ -26,9 +26,18 @@ mkdir -p "$PACKAGE_DIR/usr/lib/$APP_NAME"
 echo "📦 Building Flutter application..."
 flutter build linux --release
 
+# Build the tray daemon
+echo "🔧 Building tray daemon..."
+./scripts/build/build_tray_daemon.sh
+
 # Copy application files
 echo "📋 Copying application files..."
 cp -r "$BUILD_DIR"/* "$PACKAGE_DIR/usr/lib/$APP_NAME/"
+
+# Copy tray daemon
+echo "📋 Copying tray daemon..."
+mkdir -p "$PACKAGE_DIR/usr/bin"
+cp "dist/tray_daemon/linux-x64/cloudtolocalllm-tray" "$PACKAGE_DIR/usr/bin/"
 
 # Create launcher script
 cat > "$PACKAGE_DIR/usr/bin/$APP_NAME" << 'EOF'

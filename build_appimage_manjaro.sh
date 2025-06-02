@@ -28,9 +28,18 @@ mkdir -p "$APPDIR/usr/share/pixmaps"
 echo "📦 Building Flutter application..."
 flutter build linux --release
 
+# Build the tray daemon
+echo "🔧 Building tray daemon..."
+./scripts/build/build_tray_daemon.sh
+
 # Copy application files
 echo "📋 Copying application files..."
 cp -r "$BUILD_DIR" "$APPDIR/usr/lib/cloudtolocalllm"
+
+# Copy tray daemon
+echo "📋 Copying tray daemon..."
+mkdir -p "$APPDIR/bin"
+cp "dist/tray_daemon/linux-x64/cloudtolocalllm-tray" "$APPDIR/bin/"
 
 # Create AppRun script
 cat > "$APPDIR/AppRun" << 'EOF'
