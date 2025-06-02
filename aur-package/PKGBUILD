@@ -24,9 +24,7 @@ depends=(
     'xdg-utils'
     'hicolor-icon-theme'
 )
-makedepends=(
-    'imagemagick'
-)
+makedepends=()
 optdepends=(
     'ollama: Local LLM server for direct desktop connectivity'
     'firefox: Web browser for authentication flow'
@@ -63,56 +61,8 @@ prepare() {
 }
 
 build() {
-    cd "$srcdir/CloudToLocalLLM-$pkgver"
-
-    # Generate icons from source assets for proper system integration
-    mkdir -p linux/icons
-
-    # Use monochrome tray icons if available, otherwise generate from app icon
-    if [[ -f "assets/images/tray_icon_contrast_32.png" ]]; then
-        echo "Using existing monochrome tray icons..."
-        # Copy existing monochrome icons
-        for size in 16 24 32; do
-            if [[ -f "assets/images/tray_icon_contrast_${size}.png" ]]; then
-                cp "assets/images/tray_icon_contrast_${size}.png" "linux/icons/cloudtolocalllm-${size}.png"
-            fi
-        done
-
-        # Generate larger sizes from the 32px monochrome icon
-        if command -v magick &> /dev/null; then
-            for size in 48 64 128; do
-                magick "assets/images/tray_icon_contrast_32.png" -resize "${size}x${size}" "linux/icons/cloudtolocalllm-${size}.png"
-            done
-        elif command -v convert &> /dev/null; then
-            for size in 48 64 128; do
-                convert "assets/images/tray_icon_contrast_32.png" -resize "${size}x${size}" "linux/icons/cloudtolocalllm-${size}.png"
-            done
-        else
-            echo "Warning: ImageMagick not found. Using base monochrome icon for all sizes."
-            for size in 48 64 128; do
-                cp "assets/images/tray_icon_contrast_32.png" "linux/icons/cloudtolocalllm-${size}.png"
-            done
-        fi
-    else
-        echo "Warning: Monochrome tray icons not found. Generating from app icon."
-        # Fallback to app icon if monochrome icons are not available
-        if command -v magick &> /dev/null; then
-            for size in 16 24 32 48 64 128; do
-                magick "assets/images/app_icon.png" -resize "${size}x${size}" "linux/icons/cloudtolocalllm-${size}.png"
-            done
-        elif command -v convert &> /dev/null; then
-            for size in 16 24 32 48 64 128; do
-                convert "assets/images/app_icon.png" -resize "${size}x${size}" "linux/icons/cloudtolocalllm-${size}.png"
-            done
-        else
-            echo "Warning: ImageMagick not found. Using original icon for all sizes."
-            for size in 16 24 32 48 64 128; do
-                cp "assets/images/app_icon.png" "linux/icons/cloudtolocalllm-${size}.png"
-            done
-        fi
-    fi
-
-    echo "Icons prepared for system integration"
+    # No build steps required - using pre-built binary
+    echo "Using pre-built binary package - no compilation needed"
 }
 
 package() {
@@ -147,23 +97,14 @@ EOF
     install -Dm644 "aur-package/cloudtolocalllm.desktop" \
         "$pkgdir/usr/share/applications/cloudtolocalllm.desktop"
 
-    # Install application icons in multiple sizes for better desktop integration
-    # Use monochrome tray icons for better Linux compatibility
-    if [[ -f "assets/images/tray_icon_contrast_32.png" ]]; then
-        install -Dm644 "assets/images/tray_icon_contrast_32.png" \
-            "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
-    else
-        install -Dm644 "assets/images/app_icon.png" \
-            "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
-    fi
+    # Install application icons for desktop integration
+    # Use the main app icon for pixmaps (fallback icon)
+    install -Dm644 "assets/images/app_icon.png" \
+        "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
 
-    # Install hicolor icon theme icons (including 24px for system tray)
-    for size in 16 24 32 48 64 128; do
-        if [[ -f "linux/icons/cloudtolocalllm-${size}.png" ]]; then
-            install -Dm644 "linux/icons/cloudtolocalllm-${size}.png" \
-                "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/cloudtolocalllm.png"
-        fi
-    done
+    # Install the main app icon for hicolor theme (most common size)
+    install -Dm644 "assets/images/app_icon.png" \
+        "$pkgdir/usr/share/icons/hicolor/48x48/apps/cloudtolocalllm.png"
 
     # Install documentation
     install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
