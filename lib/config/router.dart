@@ -9,6 +9,8 @@ import '../screens/callback_screen.dart';
 import '../screens/ollama_test_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/settings/llm_provider_settings_screen.dart';
+import '../screens/settings/daemon_settings_screen.dart';
+import '../screens/settings/connection_status_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -69,6 +71,20 @@ class AppRouter {
           path: '/settings/llm-provider',
           name: 'llm-provider-settings',
           builder: (context, state) => const LLMProviderSettingsScreen(),
+        ),
+
+        // Daemon Settings route
+        GoRoute(
+          path: '/settings/daemon',
+          name: 'daemon-settings',
+          builder: (context, state) => const DaemonSettingsScreen(),
+        ),
+
+        // Connection Status route
+        GoRoute(
+          path: '/settings/connection-status',
+          name: 'connection-status',
+          builder: (context, state) => const ConnectionStatusScreen(),
         ),
       ],
 
