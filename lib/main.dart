@@ -1,26 +1,29 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'config/theme.dart';
 import 'config/router.dart';
 import 'config/app_config.dart';
 import 'services/auth_service.dart';
 import 'services/streaming_proxy_service.dart';
-import 'services/system_tray_manager.dart';
+import 'services/enhanced_tray_service.dart';
+import 'services/unified_connection_service.dart';
 import 'services/window_manager_service.dart';
+
+// Global navigator key for navigation from system tray
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize system tray for desktop platforms (only on non-web)
-  // System tray is DISABLED by default due to Linux compatibility issues
-  // Can be enabled with ENABLE_SYSTEM_TRAY=true environment variable
-  if (!kIsWeb && _isDesktopPlatform() && _isSystemTrayEnabled()) {
-    await _initializeSystemTray();
+  // Connect to system tray daemon for desktop platforms (only on non-web)
+  // The tray daemon should be running independently as a service
+  if (!kIsWeb && _isDesktopPlatform()) {
+    await _connectToSystemTray();
   } else {
-    // Show main window by default for reliable operation
+    // Show main window by default for web and unsupported platforms
     await _showMainWindow();
   }
 
@@ -38,98 +41,83 @@ bool _isDesktopPlatform() {
   }
 }
 
-/// Check if system tray should be enabled via environment variable
-/// System tray is DISABLED by default due to Linux compatibility issues
-bool _isSystemTrayEnabled() {
-  try {
-    final enableSystemTray = Platform.environment['ENABLE_SYSTEM_TRAY'];
-    return enableSystemTray == 'true' || enableSystemTray == '1';
-  } catch (e) {
-    // If Platform.environment is not available, default to false (disable system tray)
-    return false;
-  }
-}
-
-/// Initialize system tray functionality with robust error handling and fallback
-Future<void> _initializeSystemTray() async {
+/// Connect to the independent system tray daemon
+Future<void> _connectToSystemTray() async {
   try {
     if (kDebugMode) {
-      debugPrint("Initializing system tray with enhanced error handling...");
+      debugPrint("Connecting to system tray daemon...");
     }
 
-    final systemTray = SystemTrayManager();
+    final enhancedTray = EnhancedTrayService();
     final windowManager = WindowManagerService();
+    final connectionService = UnifiedConnectionService();
 
-    // Check if system tray is supported before attempting initialization
-    if (!systemTray.isSupported) {
-      if (kDebugMode) {
-        debugPrint(
-            "System tray not supported on this platform, showing main window");
-      }
-      await _showMainWindow();
-      return;
-    }
-
-    // Attempt system tray initialization with timeout
+    // Initialize enhanced tray service
     bool success = false;
     try {
-      success = await systemTray.initialize(
+      success = await enhancedTray.initialize(
         onShowWindow: () async {
           if (kDebugMode) {
-            debugPrint("System tray requested to show window");
+            debugPrint("Enhanced tray requested to show window");
           }
           await windowManager.showWindow();
         },
         onHideWindow: () async {
           if (kDebugMode) {
-            debugPrint("System tray requested to hide window");
+            debugPrint("Enhanced tray requested to hide window");
           }
           await windowManager.hideToTray();
         },
         onSettings: () {
           if (kDebugMode) {
-            debugPrint("System tray requested to open settings");
+            debugPrint("Enhanced tray requested to open settings");
           }
-          // TODO: Navigate to settings screen
+          _navigateToSettings();
         },
         onQuit: () {
           if (kDebugMode) {
-            debugPrint("System tray requested to quit application");
+            debugPrint("Enhanced tray requested to quit application");
           }
           SystemNavigator.pop();
         },
       ).timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 10),
         onTimeout: () {
-          debugPrint("System tray initialization timed out");
+          debugPrint("Enhanced tray initialization timed out");
           return false;
         },
       );
     } catch (e) {
-      debugPrint("System tray initialization failed with error: $e");
+      debugPrint("Enhanced tray initialization failed with error: $e");
       success = false;
     }
 
     if (success) {
-      await systemTray.setTooltip('CloudToLocalLLM - Multi-Tenant Streaming');
-
-      // Start minimized to system tray by default
-      await windowManager.hideToTray();
+      await enhancedTray.setTooltip('CloudToLocalLLM - Connected');
 
       if (kDebugMode) {
-        debugPrint("System tray initialization completed successfully");
-        debugPrint("Application started minimized to system tray");
+        debugPrint("Connected to enhanced tray daemon successfully");
+        debugPrint("Application will be controlled by enhanced tray daemon");
       }
+
+      // Initialize connection service
+      await connectionService.initialize();
+
+      // Set up authentication status monitoring
+      _setupAuthenticationMonitoring(enhancedTray);
+
+      // Show main window
+      await _showMainWindow();
     } else {
       if (kDebugMode) {
         debugPrint(
-            "System tray initialization failed, showing main window as fallback");
+            "Could not connect to enhanced tray daemon, showing main window");
       }
       await _showMainWindow();
     }
   } catch (e) {
     if (kDebugMode) {
-      debugPrint("System tray initialization error: $e");
+      debugPrint("System tray connection error: $e");
       debugPrint("Falling back to main window mode");
     }
     await _showMainWindow();
@@ -169,6 +157,10 @@ class CloudToLocalLLMApp extends StatelessWidget {
             authService: context.read<AuthService>(),
           ),
         ),
+        // Unified connection service
+        ChangeNotifierProvider(
+          create: (_) => UnifiedConnectionService(),
+        ),
       ],
       child: Consumer<AuthService>(
         builder: (context, authService, child) {
@@ -184,7 +176,7 @@ class CloudToLocalLLMApp extends StatelessWidget {
                 AppConfig.enableDarkMode ? ThemeMode.dark : ThemeMode.light,
 
             // Router configuration
-            routerConfig: AppRouter.createRouter(),
+            routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
 
             // Builder for additional configuration
             builder: (context, child) {
@@ -205,5 +197,71 @@ class CloudToLocalLLMApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// Navigate to settings screen from system tray
+void _navigateToSettings() {
+  try {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      if (kDebugMode) {
+        debugPrint("Navigating to settings screen via system tray");
+      }
+      context.go('/settings');
+    } else {
+      if (kDebugMode) {
+        debugPrint("Cannot navigate to settings: no context available");
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint("Error navigating to settings: $e");
+    }
+  }
+}
+
+/// Set up authentication status monitoring for enhanced tray
+void _setupAuthenticationMonitoring(EnhancedTrayService enhancedTray) {
+  try {
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      final authService = Provider.of<AuthService>(context, listen: false);
+
+      // Send initial authentication status
+      enhancedTray.updateAuthStatus(authService.isAuthenticated.value);
+
+      // Listen for authentication changes
+      authService.isAuthenticated.addListener(() {
+        final isAuthenticated = authService.isAuthenticated.value;
+        if (kDebugMode) {
+          debugPrint(
+              "Auth status changed, updating enhanced tray daemon: $isAuthenticated");
+        }
+        enhancedTray.updateAuthStatus(isAuthenticated);
+
+        // Update auth token if authenticated
+        if (isAuthenticated) {
+          final token = authService.getAccessToken();
+          if (token != null) {
+            enhancedTray.updateAuthToken(token);
+          }
+        } else {
+          enhancedTray.updateAuthToken('');
+        }
+      });
+
+      if (kDebugMode) {
+        debugPrint("Authentication monitoring set up for enhanced tray");
+      }
+    } else {
+      if (kDebugMode) {
+        debugPrint("Cannot set up auth monitoring: no context available");
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint("Error setting up authentication monitoring: $e");
+    }
   }
 }

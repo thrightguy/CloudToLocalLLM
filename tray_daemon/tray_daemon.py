@@ -22,6 +22,8 @@ import logging
 import argparse
 import signal
 import base64
+import subprocess
+import psutil
 from pathlib import Path
 from typing import Optional, Dict, Any, Callable
 
@@ -62,7 +64,14 @@ class TrayDaemon:
         # State management
         self.tooltip = "CloudToLocalLLM"
         self.icon_state = "idle"  # idle, connected, error
-        
+
+        # Application management
+        self.app_process = None
+        self.app_monitoring_thread = None
+        self.app_is_running = False
+        self.app_is_authenticated = False
+        self.app_executable_path = None
+
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -92,6 +101,180 @@ class TrayDaemon:
         """Handle shutdown signals"""
         self.logger.info(f"Received signal {signum}, shutting down...")
         self.shutdown()
+
+    def _find_app_executable(self) -> Optional[str]:
+        """Find the CloudToLocalLLM executable"""
+        possible_paths = []
+
+        if sys.platform == "linux":
+            possible_paths = [
+                "/usr/bin/cloudtolocalllm",
+                "/usr/local/bin/cloudtolocalllm",
+                str(Path.home() / ".local/bin/cloudtolocalllm"),
+                "./cloudtolocalllm",
+                "./build/linux/x64/release/bundle/cloudtolocalllm",
+            ]
+        elif sys.platform == "win32":
+            possible_paths = [
+                str(Path(os.environ.get('PROGRAMFILES', '')) / "CloudToLocalLLM" / "cloudtolocalllm.exe"),
+                "./cloudtolocalllm.exe",
+                "./build/windows/x64/runner/Release/cloudtolocalllm.exe",
+            ]
+        elif sys.platform == "darwin":
+            possible_paths = [
+                "/Applications/CloudToLocalLLM.app/Contents/MacOS/cloudtolocalllm",
+                "./cloudtolocalllm",
+                "./build/macos/Build/Products/Release/cloudtolocalllm.app/Contents/MacOS/cloudtolocalllm",
+            ]
+
+        for path in possible_paths:
+            if Path(path).exists():
+                self.logger.info(f"Found app executable at: {path}")
+                return path
+
+        self.logger.warning("CloudToLocalLLM executable not found")
+        return None
+
+    def _is_app_running(self) -> bool:
+        """Check if CloudToLocalLLM application is currently running"""
+        try:
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    # Check if process name contains cloudtolocalllm
+                    if 'cloudtolocalllm' in proc.info['name'].lower():
+                        return True
+                    # Also check command line for Flutter apps
+                    if proc.info['cmdline']:
+                        cmdline = ' '.join(proc.info['cmdline']).lower()
+                        if 'cloudtolocalllm' in cmdline:
+                            return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            return False
+        except Exception as e:
+            self.logger.warning(f"Error checking if app is running: {e}")
+            return False
+
+    def _is_app_authenticated(self) -> bool:
+        """Check if the CloudToLocalLLM application is authenticated"""
+        try:
+            # Try to query the app's authentication status via IPC
+            # We'll send a status query and check the response
+            if not self.client_connections:
+                # No active connections, assume not authenticated
+                return False
+
+            # For now, we'll use a simple heuristic:
+            # If the app has been connected for more than 10 seconds, assume authenticated
+            # In a more sophisticated implementation, we could send a STATUS command
+            # and wait for a response with authentication state
+
+            # Check if we have any active client connections
+            active_connections = [conn for conn in self.client_connections if not conn._closed]
+            if active_connections:
+                # If we have active connections, the app is likely authenticated
+                # This is a simplified approach - in production you might want to
+                # implement a proper status query mechanism
+                return True
+
+            return False
+
+        except Exception as e:
+            self.logger.warning(f"Error checking app authentication status: {e}")
+            return False
+
+    def _launch_app(self) -> bool:
+        """Launch the CloudToLocalLLM application"""
+        if self.app_executable_path is None:
+            self.app_executable_path = self._find_app_executable()
+
+        if self.app_executable_path is None:
+            self.logger.error("Cannot launch app: executable not found")
+            return False
+
+        try:
+            self.logger.info(f"Launching CloudToLocalLLM: {self.app_executable_path}")
+
+            # Launch the application as a detached process
+            if sys.platform == "win32":
+                # Windows
+                self.app_process = subprocess.Popen(
+                    [self.app_executable_path],
+                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                )
+            else:
+                # Linux/macOS
+                self.app_process = subprocess.Popen(
+                    [self.app_executable_path],
+                    start_new_session=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+
+            self.logger.info(f"App launched with PID: {self.app_process.pid}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to launch app: {e}")
+            return False
+
+    def _start_app_monitoring(self):
+        """Start monitoring the application state"""
+        if self.app_monitoring_thread is not None:
+            return
+
+        self.app_monitoring_thread = threading.Thread(
+            target=self._monitor_app_state,
+            daemon=True
+        )
+        self.app_monitoring_thread.start()
+        self.logger.info("Started application monitoring")
+
+    def _monitor_app_state(self):
+        """Monitor application state and update tray menu accordingly"""
+        while self.running:
+            try:
+                current_running_state = self._is_app_running()
+                current_auth_state = self._is_app_authenticated() if current_running_state else False
+
+                # Check if running state changed
+                if current_running_state != self.app_is_running:
+                    self.app_is_running = current_running_state
+                    self.logger.info(f"App running state changed: {'running' if current_running_state else 'stopped'}")
+
+                    # Reset auth state if app stopped
+                    if not current_running_state:
+                        self.app_is_authenticated = False
+
+                # Check if authentication state changed
+                if current_auth_state != self.app_is_authenticated:
+                    self.app_is_authenticated = current_auth_state
+                    self.logger.info(f"App auth state changed: {'authenticated' if current_auth_state else 'not authenticated'}")
+
+                # Update tray menu if any state changed
+                if (current_running_state != self.app_is_running or
+                    current_auth_state != self.app_is_authenticated):
+                    if self.tray:
+                        self.tray.menu = self._create_menu()
+
+                # Update icon state
+                if current_running_state and current_auth_state:
+                    new_icon_state = "connected"
+                elif current_running_state:
+                    new_icon_state = "idle"  # Running but not authenticated
+                else:
+                    new_icon_state = "idle"  # Not running
+
+                if new_icon_state != self.icon_state:
+                    self.icon_state = new_icon_state
+                    if self.tray:
+                        self.tray.icon = self._create_icon_image(self.icon_state)
+
+                time.sleep(2)  # Check every 2 seconds
+
+            except Exception as e:
+                self.logger.error(f"Error in app monitoring: {e}")
+                time.sleep(5)  # Wait longer on error
     
     def _get_icon_data(self, state: str = "idle") -> bytes:
         """Get base64 encoded icon data for different states"""
@@ -146,36 +329,92 @@ class TrayDaemon:
             return img
     
     def _create_menu(self) -> pystray.Menu:
-        """Create the system tray context menu"""
-        return pystray.Menu(
-            Item("Show CloudToLocalLLM", self._on_show_window),
-            Item("Hide to Tray", self._on_hide_window),
+        """Create the system tray context menu based on application and authentication state"""
+        menu_items = []
+
+        if self.app_is_running:
+            # App is running - show control options
+            menu_items.extend([
+                Item("Show CloudToLocalLLM", self._on_show_window),
+                Item("Hide to Tray", self._on_hide_window),
+                pystray.Menu.SEPARATOR,
+            ])
+
+            # Add authentication-aware menu items
+            if self.app_is_authenticated:
+                menu_items.extend([
+                    Item("Settings", self._on_settings),
+                    Item("Ollama Test", self._on_ollama_test),
+                    pystray.Menu.SEPARATOR,
+                ])
+            else:
+                menu_items.extend([
+                    Item("Login Required", None, enabled=False),
+                    pystray.Menu.SEPARATOR,
+                ])
+
+            menu_items.append(Item("Quit Application", self._on_quit_app))
+        else:
+            # App is not running - show launch option
+            menu_items.extend([
+                Item("Launch CloudToLocalLLM", self._on_launch_app),
+                pystray.Menu.SEPARATOR,
+            ])
+
+        # Always show daemon quit option
+        menu_items.extend([
             pystray.Menu.SEPARATOR,
-            Item("Settings", self._on_settings),
-            pystray.Menu.SEPARATOR,
-            Item("Quit", self._on_quit)
-        )
+            Item("Quit Tray Daemon", self._on_quit_daemon)
+        ])
+
+        return pystray.Menu(*menu_items)
     
     def _on_show_window(self, icon, item):
         """Handle show window menu item"""
         self._send_to_clients({"command": "SHOW"})
-    
+
     def _on_hide_window(self, icon, item):
         """Handle hide window menu item"""
         self._send_to_clients({"command": "HIDE"})
-    
+
     def _on_settings(self, icon, item):
         """Handle settings menu item"""
-        self._send_to_clients({"command": "SETTINGS"})
-    
-    def _on_quit(self, icon, item):
-        """Handle quit menu item"""
+        if self.app_is_authenticated:
+            self.logger.info("Opening settings via tray menu")
+            self._send_to_clients({"command": "SETTINGS"})
+        else:
+            self.logger.warning("Settings requested but app is not authenticated")
+
+    def _on_ollama_test(self, icon, item):
+        """Handle Ollama test menu item"""
+        if self.app_is_authenticated:
+            self.logger.info("Opening Ollama test via tray menu")
+            self._send_to_clients({"command": "OLLAMA_TEST"})
+        else:
+            self.logger.warning("Ollama test requested but app is not authenticated")
+
+    def _on_launch_app(self, icon, item):
+        """Handle launch application menu item"""
+        if not self.app_is_running:
+            self.logger.info("Launching app via tray menu")
+            self._launch_app()
+
+    def _on_quit_app(self, icon, item):
+        """Handle quit application menu item"""
+        self.logger.info("Quitting app via tray menu")
         self._send_to_clients({"command": "QUIT"})
+
+    def _on_quit_daemon(self, icon, item):
+        """Handle quit daemon menu item"""
+        self.logger.info("Quitting tray daemon via menu")
         self.shutdown()
-    
+
     def _on_tray_click(self, icon):
         """Handle tray icon click"""
-        self._send_to_clients({"command": "SHOW"})
+        if self.app_is_running:
+            self._send_to_clients({"command": "SHOW"})
+        else:
+            self._launch_app()
     
     def _send_to_clients(self, message: Dict[str, Any]):
         """Send message to all connected clients"""
@@ -286,6 +525,16 @@ class TrayDaemon:
                     self.icon_state = new_state
                     if self.tray:
                         self.tray.icon = self._create_icon_image(new_state)
+            elif command == 'UPDATE_AUTH_STATUS':
+                authenticated = data.get('authenticated', False)
+                old_auth_state = self.app_is_authenticated
+                self.app_is_authenticated = authenticated
+                self.logger.info(f"Auth status updated: {authenticated}")
+
+                # Update tray menu if auth state changed
+                if old_auth_state != authenticated and self.tray:
+                    self.tray.menu = self._create_menu()
+                    self.logger.info("Tray menu updated due to auth state change")
             elif command == 'PING':
                 # Send pong response
                 response = {"response": "PONG"}
@@ -375,10 +624,20 @@ class TrayDaemon:
             self.logger.error("System tray is not supported on this platform")
             return 1
 
+        # Find app executable
+        self.app_executable_path = self._find_app_executable()
+
+        # Check initial app state
+        self.app_is_running = self._is_app_running()
+        self.logger.info(f"Initial app state: {'running' if self.app_is_running else 'stopped'}")
+
         # Start TCP server
         if not self.start_server():
             self.logger.error("Failed to start TCP server")
             return 1
+
+        # Start application monitoring
+        self._start_app_monitoring()
 
         # Start system tray (this blocks until shutdown)
         if not self.start_tray():
@@ -390,6 +649,21 @@ class TrayDaemon:
     def _is_tray_supported(self) -> bool:
         """Check if system tray is supported"""
         try:
+            # Basic platform check
+            if sys.platform not in ["linux", "win32", "darwin"]:
+                return False
+
+            # For Linux, check if we're in a graphical environment
+            if sys.platform == "linux":
+                display = os.environ.get('DISPLAY')
+                wayland = os.environ.get('WAYLAND_DISPLAY')
+                if not display and not wayland:
+                    self.logger.warning("No graphical display detected")
+                    return False
+
+                # Check available backends
+                self._check_available_backends()
+
             # Try to create a test icon to check support
             test_image = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
             test_icon = pystray.Icon("test", test_image)
@@ -398,6 +672,44 @@ class TrayDaemon:
         except Exception as e:
             self.logger.warning(f"System tray support check failed: {e}")
             return False
+
+    def _check_available_backends(self):
+        """Check and log available pystray backends"""
+        backends = []
+
+        try:
+            import pystray._xorg
+            backends.append("xorg")
+        except ImportError:
+            pass
+
+        try:
+            import pystray._gtk
+            backends.append("gtk")
+        except ImportError:
+            pass
+
+        try:
+            import pystray._appindicator
+            backends.append("appindicator")
+        except ImportError:
+            pass
+
+        self.logger.info(f"Available pystray backends: {', '.join(backends) if backends else 'none'}")
+
+        # Log desktop environment info
+        desktop = os.environ.get('XDG_CURRENT_DESKTOP', 'unknown')
+        session = os.environ.get('XDG_SESSION_TYPE', 'unknown')
+        self.logger.info(f"Desktop environment: {desktop}, Session type: {session}")
+
+        if 'appindicator' in backends:
+            self.logger.info("AppIndicator backend available - should work well with modern desktop environments")
+        elif 'gtk' in backends:
+            self.logger.info("GTK backend available - good fallback option")
+        elif 'xorg' in backends:
+            self.logger.warning("Only X11 backend available - may have compatibility issues with some desktop environments")
+        else:
+            self.logger.error("No pystray backends available - system tray will not work")
 
 
 def main():
