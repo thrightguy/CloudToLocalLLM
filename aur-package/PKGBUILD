@@ -5,8 +5,8 @@
 # don't need to install Flutter or any build dependencies.
 #
 pkgname=cloudtolocalllm
-pkgver=2.1.1
-pkgrel=6
+pkgver=2.1.2
+pkgrel=1
 pkgdesc="Multi-tenant streaming LLM management with system tray integration (pre-built binary)"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
@@ -40,7 +40,7 @@ source=(
 )
 sha256sums=(
     'SKIP'  # Source archive checksum
-    'SKIP'  # Binary package checksum
+    '86df4c6c4e324cd596b2c3e6c23949b4ba369769a84cafc8a21fb2e95c2f50ce'  # Binary package checksum
 )
 
 prepare() {

@@ -33,6 +33,7 @@ class SystemTrayManager {
   Function()? _onHideWindow;
   Function()? _onQuit;
   Function()? _onSettings;
+  Function()? _onOllamaTest;
 
   // Configuration
   static const Duration _healthCheckInterval = Duration(seconds: 30);
@@ -54,12 +55,64 @@ class SystemTrayManager {
     return "Running";
   }
 
-  /// Initialize the system tray manager
+  /// Connect to an existing tray daemon (new architecture)
+  Future<bool> connectToExistingDaemon({
+    Function()? onShowWindow,
+    Function()? onHideWindow,
+    Function()? onQuit,
+    Function()? onSettings,
+    Function()? onOllamaTest,
+  }) async {
+    if (_isInitialized) return true;
+
+    try {
+      debugPrint("Connecting to existing tray daemon...");
+
+      _onShowWindow = onShowWindow;
+      _onHideWindow = onHideWindow;
+      _onQuit = onQuit;
+      _onSettings = onSettings;
+      _onOllamaTest = onOllamaTest;
+
+      // Check if platform is supported
+      if (!isSupported) {
+        debugPrint("System tray not supported on this platform");
+        return false;
+      }
+
+      // Try to read existing daemon port
+      _daemonPort = await _readDaemonPort();
+      if (_daemonPort == null) {
+        debugPrint("No existing tray daemon found");
+        return false;
+      }
+
+      // Connect to the existing daemon
+      if (!await _connectToDaemon()) {
+        debugPrint("Failed to connect to existing tray daemon");
+        return false;
+      }
+
+      // Start health monitoring
+      _startHealthMonitoring();
+
+      _isInitialized = true;
+      _isDaemonRunning = true; // We connected to existing daemon
+      debugPrint("Connected to existing tray daemon successfully");
+      return true;
+    } catch (e) {
+      debugPrint("Failed to connect to existing tray daemon: $e");
+      return false;
+    }
+  }
+
+  /// Initialize the system tray manager (legacy method - starts own daemon)
   Future<bool> initialize({
     Function()? onShowWindow,
     Function()? onHideWindow,
     Function()? onQuit,
     Function()? onSettings,
+    Function()? onOllamaTest,
   }) async {
     if (_isInitialized) return true;
 
@@ -70,6 +123,7 @@ class SystemTrayManager {
       _onHideWindow = onHideWindow;
       _onQuit = onQuit;
       _onSettings = onSettings;
+      _onOllamaTest = onOllamaTest;
 
       // Check if platform is supported
       if (!isSupported) {
@@ -156,7 +210,7 @@ class SystemTrayManager {
         '/usr/bin/$executableName',
         '/usr/local/bin/$executableName',
         './bin/$executableName', // AppImage
-        path.join(Directory.current.path, 'tray_daemon', 'dist', 'linux-x64',
+        path.join(Directory.current.path, 'dist', 'tray_daemon', 'linux-x64',
             executableName),
       ]);
     } else if (platform == 'windows') {
@@ -165,7 +219,7 @@ class SystemTrayManager {
         path.join(Platform.environment['PROGRAMFILES'] ?? '', 'CloudToLocalLLM',
             'bin', executableName),
         path.join('.', 'bin', executableName),
-        path.join(Directory.current.path, 'tray_daemon', 'dist', 'windows-x64',
+        path.join(Directory.current.path, 'dist', 'tray_daemon', 'windows-x64',
             executableName),
       ]);
     } else if (platform == 'macos') {
@@ -173,7 +227,7 @@ class SystemTrayManager {
       possiblePaths.addAll([
         '/Applications/CloudToLocalLLM.app/Contents/MacOS/$executableName',
         path.join('.', 'bin', executableName),
-        path.join(Directory.current.path, 'tray_daemon', 'dist', 'macos-x64',
+        path.join(Directory.current.path, 'dist', 'tray_daemon', 'macos-x64',
             executableName),
       ]);
     }
@@ -284,15 +338,23 @@ class SystemTrayManager {
 
       switch (command) {
         case 'SHOW':
+          debugPrint("Tray daemon requested: Show window");
           _onShowWindow?.call();
           break;
         case 'HIDE':
+          debugPrint("Tray daemon requested: Hide window");
           _onHideWindow?.call();
           break;
         case 'SETTINGS':
+          debugPrint("Tray daemon requested: Open settings");
           _onSettings?.call();
           break;
+        case 'OLLAMA_TEST':
+          debugPrint("Tray daemon requested: Open Ollama test");
+          _onOllamaTest?.call();
+          break;
         case 'QUIT':
+          debugPrint("Tray daemon requested: Quit application");
           _onQuit?.call();
           break;
         default:
@@ -330,6 +392,15 @@ class SystemTrayManager {
     await _sendCommand({
       'command': 'UPDATE_ICON',
       'state': state, // idle, connected, error
+    });
+  }
+
+  /// Update the authentication status
+  Future<void> updateAuthenticationStatus(bool isAuthenticated) async {
+    debugPrint("Sending auth status to tray daemon: $isAuthenticated");
+    await _sendCommand({
+      'command': 'UPDATE_AUTH_STATUS',
+      'authenticated': isAuthenticated,
     });
   }
 

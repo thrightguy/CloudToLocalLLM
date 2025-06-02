@@ -1,15 +1,18 @@
 # Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
 pkgname=cloudtolocalllm-desktop
-pkgver=2.0.0
+pkgver=3.0.0
 pkgrel=1
-pkgdesc="Local LLM Management with Cloud Interface - Native Linux Desktop App"
+pkgdesc="Local LLM Management with Enhanced System Tray Architecture and Universal Connection Management"
 arch=('x86_64')
 url="https://cloudtolocalllm.online"
 license=('MIT')
-depends=('gtk3' 'glibc' 'libayatana-appindicator' 'curl')
-makedepends=('flutter' 'git' 'base-devel')
+depends=('gtk3' 'glibc' 'python' 'python-pip' 'curl')
+makedepends=('flutter' 'git' 'base-devel' 'python-pyinstaller')
 optdepends=('ollama: Local LLM runtime for direct localhost:11434 connectivity'
-            'wmctrl: Enhanced window management support')
+            'wmctrl: Enhanced window management support'
+            'python-pystray: System tray functionality (auto-installed)'
+            'python-pillow: Icon processing (auto-installed)'
+            'python-aiohttp: Async HTTP client (auto-installed)')
 provides=('cloudtolocalllm-desktop')
 conflicts=('cloudtolocalllm-desktop-bin')
 source=("$pkgname::git+https://github.com/imrightguy/CloudToLocalLLM.git")
@@ -17,24 +20,55 @@ sha256sums=('SKIP')
 
 build() {
     cd "$srcdir/$pkgname"
-    
+
     # Configure Flutter for Linux desktop
     flutter config --enable-linux-desktop
-    
+
     # Get dependencies
     flutter pub get
-    
-    # Build the application
+
+    # Build the Flutter application
     flutter build linux --release
+
+    # Build the enhanced tray daemon
+    cd tray_daemon
+
+    # Install Python dependencies
+    python -m pip install --user -r requirements.txt
+    python -m pip install --user pyinstaller aiohttp requests
+
+    # Build enhanced tray daemon
+    pyinstaller --onefile --name cloudtolocalllm-enhanced-tray \
+        --hidden-import pystray._xorg \
+        --console \
+        enhanced_tray_daemon.py
+
+    # Build settings application
+    pyinstaller --onefile --name cloudtolocalllm-settings \
+        --hidden-import tkinter \
+        --hidden-import tkinter.ttk \
+        --hidden-import tkinter.scrolledtext \
+        --windowed \
+        settings_app.py
+
+    cd ..
 }
 
 package() {
     cd "$srcdir/$pkgname"
-    
+
     # Install application files
     install -dm755 "$pkgdir/opt/$pkgname"
     cp -r build/linux/x64/release/bundle/* "$pkgdir/opt/$pkgname/"
-    
+
+    # Install enhanced tray daemon
+    install -dm755 "$pkgdir/opt/$pkgname/tray_daemon"
+    install -m755 tray_daemon/dist/cloudtolocalllm-enhanced-tray "$pkgdir/opt/$pkgname/tray_daemon/"
+    install -m755 tray_daemon/dist/cloudtolocalllm-settings "$pkgdir/opt/$pkgname/tray_daemon/"
+    install -m755 tray_daemon/start_enhanced_daemon.sh "$pkgdir/opt/$pkgname/tray_daemon/"
+    install -m644 tray_daemon/requirements.txt "$pkgdir/opt/$pkgname/tray_daemon/"
+    install -m644 tray_daemon/ENHANCED_ARCHITECTURE.md "$pkgdir/opt/$pkgname/tray_daemon/"
+
     # Install launcher script
     install -dm755 "$pkgdir/usr/bin"
     cat > "$pkgdir/usr/bin/cloudtolocalllm" << 'EOF'
@@ -43,7 +77,41 @@ cd /opt/cloudtolocalllm-desktop
 exec ./cloudtolocalllm "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
-    
+
+    # Install tray daemon launcher
+    cat > "$pkgdir/usr/bin/cloudtolocalllm-tray" << 'EOF'
+#!/bin/bash
+cd /opt/cloudtolocalllm-desktop/tray_daemon
+exec ./cloudtolocalllm-enhanced-tray "$@"
+EOF
+    chmod +x "$pkgdir/usr/bin/cloudtolocalllm-tray"
+
+    # Install settings launcher
+    cat > "$pkgdir/usr/bin/cloudtolocalllm-settings" << 'EOF'
+#!/bin/bash
+cd /opt/cloudtolocalllm-desktop/tray_daemon
+exec ./cloudtolocalllm-settings "$@"
+EOF
+    chmod +x "$pkgdir/usr/bin/cloudtolocalllm-settings"
+
+    # Install systemd user service for tray daemon
+    install -dm755 "$pkgdir/usr/lib/systemd/user"
+    cat > "$pkgdir/usr/lib/systemd/user/cloudtolocalllm-tray.service" << 'EOF'
+[Unit]
+Description=CloudToLocalLLM Enhanced Tray Daemon
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cloudtolocalllm-tray
+Restart=on-failure
+RestartSec=5
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=default.target
+EOF
+
     # Install desktop entry
     install -dm755 "$pkgdir/usr/share/applications"
     cat > "$pkgdir/usr/share/applications/$pkgname.desktop" << 'EOF'
@@ -104,24 +172,33 @@ EOF
 }
 
 post_install() {
-    echo "CloudToLocalLLM Desktop has been installed successfully!"
+    echo "CloudToLocalLLM Desktop with Enhanced System Tray Architecture has been installed successfully!"
     echo ""
-    echo "Features:"
-    echo "  ✅ System tray integration"
-    echo "  ✅ Direct Ollama connectivity (localhost:11434)"
+    echo "🚀 Enhanced Features:"
+    echo "  ✅ Independent System Tray Daemon with universal connection management"
+    echo "  ✅ Automatic failover between local Ollama and cloud connections"
+    echo "  ✅ Separate settings interface for daemon configuration"
+    echo "  ✅ Crash isolation between tray daemon and main application"
     echo "  ✅ Auth0 authentication with desktop redirect"
     echo "  ✅ Modern Flutter interface"
     echo ""
-    echo "To start the application:"
-    echo "  1. Launch from Applications menu, or"
-    echo "  2. Run: cloudtolocalllm"
+    echo "🎛️ Starting the Enhanced System:"
+    echo "  1. Start tray daemon: systemctl --user enable --now cloudtolocalllm-tray"
+    echo "  2. Launch main app from Applications menu, or run: cloudtolocalllm"
+    echo "  3. Configure connections: cloudtolocalllm-settings"
     echo ""
-    echo "For Ollama integration:"
+    echo "🔧 Manual Daemon Management:"
+    echo "  • Start daemon: cloudtolocalllm-tray"
+    echo "  • Settings GUI: cloudtolocalllm-settings"
+    echo "  • Check status: systemctl --user status cloudtolocalllm-tray"
+    echo ""
+    echo "🦙 For Ollama integration:"
     echo "  1. Install Ollama: sudo pacman -S ollama"
     echo "  2. Start Ollama: systemctl --user start ollama"
     echo "  3. Pull a model: ollama pull llama2"
     echo ""
-    echo "The application will minimize to system tray when closed."
+    echo "The enhanced tray daemon provides persistent system tray functionality"
+    echo "and intelligent connection management across app restarts."
 }
 
 post_upgrade() {
@@ -129,6 +206,11 @@ post_upgrade() {
 }
 
 pre_remove() {
+    # Stop systemd service
+    systemctl --user stop cloudtolocalllm-tray 2>/dev/null || true
+    systemctl --user disable cloudtolocalllm-tray 2>/dev/null || true
+
     # Stop any running instances
     pkill -f cloudtolocalllm || true
+    pkill -f enhanced_tray_daemon || true
 }

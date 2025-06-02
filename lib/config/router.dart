@@ -12,8 +12,9 @@ import '../screens/settings/llm_provider_settings_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
-  static GoRouter createRouter() {
+  static GoRouter createRouter({GlobalKey<NavigatorState>? navigatorKey}) {
     return GoRouter(
+      navigatorKey: navigatorKey,
       initialLocation: '/',
       debugLogDiagnostics: false,
       routes: [

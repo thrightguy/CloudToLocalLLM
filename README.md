@@ -59,20 +59,30 @@ CloudToLocalLLM automatically detects your hardware capabilities and recommends 
 > - We recommend keeping a secure backup of your access code
 > - Cloud storage is subject to our [Privacy Policy](docs/PRIVACY.md) and [Terms of Service](docs/TERMS.md)
 
-## Window and System Tray Behavior
+## 🎛️ Enhanced System Tray Architecture
 
-The application implements a user-friendly window management system:
+CloudToLocalLLM features an **Enhanced System Tray Architecture** that provides independent, reliable system tray functionality with universal connection management:
 
-- **Startup**: The main window is always visible when the application starts
-- **System Tray**: A persistent system tray icon provides quick access to:
-  - Show/Hide main window
-  - Check LLM status
-  - Manage tunnel connection
-  - Exit application
-- **Window Controls**:
-  - Close button (X) minimizes to system tray
-  - Minimize button minimizes to system tray
-  - System tray icon restores the window when clicked
+### Key Features
+- **Independent Operation**: System tray daemon operates independently of the main Flutter app
+- **Universal Connection Broker**: Handles ALL connections (local Ollama + cloud proxy) through a centralized broker
+- **Crash Isolation**: Tray daemon failures don't affect the main application
+- **Separate Settings Interface**: Independent configuration and monitoring GUI
+- **Automatic Failover**: Intelligent switching between local and cloud connections
+
+### System Tray Functionality
+- **Persistent Tray Icon**: Always available with connection status indicators
+- **Quick Actions**: Show/Hide window, Settings, Connection status, Quit
+- **Authentication-Aware Menus**: Dynamic menu based on login status
+- **Real-time Status**: Live connection monitoring and health checks
+
+### Connection Management
+- **Unified API**: Single interface for both local Ollama and cloud connections
+- **Automatic Discovery**: Detects and connects to the best available service
+- **Health Monitoring**: Continuous connection health checks with automatic recovery
+- **Request Proxying**: All API calls routed through the connection broker
+
+For detailed information about the enhanced architecture, see [Enhanced System Tray Architecture](tray_daemon/ENHANCED_ARCHITECTURE.md).
 
 ## Planned Premium Features
 
@@ -144,6 +154,12 @@ CloudToLocalLLM provides comprehensive model management features:
 ## 🏗️ Project Structure
 
 - `lib/`: Main Flutter application code (client-side UI and logic).
+- `tray_daemon/`: **Enhanced System Tray Architecture** - Independent tray daemon with universal connection management.
+  - `enhanced_tray_daemon.py`: Main enhanced tray daemon with connection broker.
+  - `connection_broker.py`: Universal connection broker for local and cloud services.
+  - `settings_app.py`: Independent GUI for daemon configuration.
+  - `start_enhanced_daemon.sh`: Startup script for the enhanced daemon.
+  - `ENHANCED_ARCHITECTURE.md`: Comprehensive architecture documentation.
 - `admin_control_daemon/`: Dart-based daemon for managing the application stack on a server.
   - `bin/server.dart`: Entrypoint for the admin daemon.
 - `admin-ui/`: Vue.js based admin interface. (Status: Potentially for specific admin tasks, primary user interface is the Flutter app).
@@ -243,6 +259,7 @@ Instructions for building and packaging client applications for different platfo
 Refer to the `docs/` directory for detailed documentation. Key documents include:
 
 **Core Concepts & Setup:**
+- [ENHANCED_ARCHITECTURE.md](docs/ENHANCED_ARCHITECTURE.md): **Enhanced System Tray Architecture** with universal connection management.
 - [OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md): Ollama integration, hardware detection, model naming.
 - [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md): Premium features and subscription details.
 - [CONTAINER_ARCHITECTURE.md](docs/CONTAINER_ARCHITECTURE.md): Overview of the Docker container setup.

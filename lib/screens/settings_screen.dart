@@ -685,6 +685,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showVersionDetails(BuildContext context) async {
     final versionInfo = await VersionService.instance.getVersionInfo();
 
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
