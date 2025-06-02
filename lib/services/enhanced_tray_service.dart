@@ -35,6 +35,9 @@ class EnhancedTrayService {
   VoidCallback? _onHideWindow;
   VoidCallback? _onSettings;
   VoidCallback? _onQuit;
+  VoidCallback? _onDaemonSettings;
+  VoidCallback? _onConnectionStatus;
+  VoidCallback? _onOllamaTest;
 
   /// Stream of messages from the tray daemon
   Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
@@ -45,6 +48,9 @@ class EnhancedTrayService {
     VoidCallback? onHideWindow,
     VoidCallback? onSettings,
     VoidCallback? onQuit,
+    VoidCallback? onDaemonSettings,
+    VoidCallback? onConnectionStatus,
+    VoidCallback? onOllamaTest,
   }) async {
     if (_isInitialized) return _isConnected;
 
@@ -52,6 +58,9 @@ class EnhancedTrayService {
     _onHideWindow = onHideWindow;
     _onSettings = onSettings;
     _onQuit = onQuit;
+    _onDaemonSettings = onDaemonSettings;
+    _onConnectionStatus = onConnectionStatus;
+    _onOllamaTest = onOllamaTest;
 
     debugPrint("Initializing enhanced tray service...");
 
@@ -287,8 +296,14 @@ class EnhancedTrayService {
       case 'SETTINGS':
         _onSettings?.call();
         break;
+      case 'DAEMON_SETTINGS':
+        _onDaemonSettings?.call();
+        break;
+      case 'CONNECTION_STATUS':
+        _onConnectionStatus?.call();
+        break;
       case 'OLLAMA_TEST':
-        // Navigate to Ollama test screen
+        _onOllamaTest?.call();
         break;
       case 'QUIT':
         _onQuit?.call();

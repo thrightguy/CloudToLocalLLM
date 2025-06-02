@@ -448,15 +448,27 @@ class EnhancedTrayDaemon:
     def _on_daemon_settings(self, icon, item):
         """Handle daemon settings menu item"""
         self.logger.info("Opening daemon settings")
-        self._launch_settings()
+        if self.app_is_running:
+            # Send command to Flutter app to open daemon settings
+            self._send_to_clients({"command": "DAEMON_SETTINGS"})
+        else:
+            # Launch the standalone settings app if Flutter app is not running
+            self._launch_settings()
 
     def _on_connection_status(self, icon, item):
         """Handle connection status menu item"""
         self.logger.info("Showing connection status")
-        if self.connection_broker:
-            status = self.connection_broker.get_connection_status()
-            self.logger.info(f"Connection status: {status}")
-            # TODO: Show a status dialog or send to connected clients
+        if self.app_is_running:
+            # Send command to Flutter app to show connection status
+            self._send_to_clients({"command": "CONNECTION_STATUS"})
+        else:
+            # Show connection status in a simple dialog if Flutter app is not running
+            if self.connection_broker:
+                status = self.connection_broker.get_connection_status()
+                self.logger.info(f"Connection status: {status}")
+                # Could show a simple notification or dialog here
+            else:
+                self.logger.warning("Connection broker not available")
 
     def _on_quit_daemon(self, icon, item):
         """Handle quit daemon menu item"""

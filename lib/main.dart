@@ -1,16 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'screens/loading_screen.dart';
 import 'config/theme.dart';
 import 'config/router.dart';
 import 'config/app_config.dart';
 import 'services/auth_service.dart';
 import 'services/streaming_proxy_service.dart';
-import 'services/enhanced_tray_service.dart';
 import 'services/unified_connection_service.dart';
-import 'services/window_manager_service.dart';
+import 'services/enhanced_tray_service.dart';
 
 // Global navigator key for navigation from system tray
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -18,130 +17,115 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Connect to system tray daemon for desktop platforms (only on non-web)
-  // The tray daemon should be running independently as a service
-  if (!kIsWeb && _isDesktopPlatform()) {
-    await _connectToSystemTray();
-  } else {
-    // Show main window by default for web and unsupported platforms
-    await _showMainWindow();
-  }
-
   runApp(const CloudToLocalLLMApp());
 }
 
-/// Check if running on desktop platform using Flutter's platform detection
-bool _isDesktopPlatform() {
-  try {
-    return defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.macOS;
-  } catch (e) {
-    return false;
-  }
+/// Main application widget with comprehensive loading screen
+class CloudToLocalLLMApp extends StatefulWidget {
+  const CloudToLocalLLMApp({super.key});
+
+  @override
+  State<CloudToLocalLLMApp> createState() => _CloudToLocalLLMAppState();
 }
 
-/// Connect to the independent system tray daemon
-Future<void> _connectToSystemTray() async {
-  try {
-    if (kDebugMode) {
-      debugPrint("Connecting to system tray daemon...");
+class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize system tray for desktop platforms
+    if (!kIsWeb) {
+      await _initializeSystemTray();
     }
 
-    final enhancedTray = EnhancedTrayService();
-    final windowManager = WindowManagerService();
-    final connectionService = UnifiedConnectionService();
+    // Simulate initialization delay
+    await Future.delayed(const Duration(seconds: 2));
 
-    // Initialize enhanced tray service
-    bool success = false;
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
+  }
+
+  Future<void> _initializeSystemTray() async {
     try {
-      success = await enhancedTray.initialize(
-        onShowWindow: () async {
+      final enhancedTray = EnhancedTrayService();
+      await enhancedTray.initialize(
+        onShowWindow: () {
           if (kDebugMode) {
             debugPrint("Enhanced tray requested to show window");
           }
-          await windowManager.showWindow();
+          // Show window logic would go here
         },
-        onHideWindow: () async {
+        onHideWindow: () {
           if (kDebugMode) {
             debugPrint("Enhanced tray requested to hide window");
           }
-          await windowManager.hideToTray();
+          // Hide window logic would go here
         },
         onSettings: () {
           if (kDebugMode) {
             debugPrint("Enhanced tray requested to open settings");
           }
-          _navigateToSettings();
+          _navigateToRoute('/settings');
+        },
+        onDaemonSettings: () {
+          if (kDebugMode) {
+            debugPrint("Enhanced tray requested to open daemon settings");
+          }
+          _navigateToRoute('/settings/daemon');
+        },
+        onConnectionStatus: () {
+          if (kDebugMode) {
+            debugPrint("Enhanced tray requested to show connection status");
+          }
+          _navigateToRoute('/settings/connection-status');
+        },
+        onOllamaTest: () {
+          if (kDebugMode) {
+            debugPrint("Enhanced tray requested to open Ollama test");
+          }
+          _navigateToRoute('/ollama-test');
         },
         onQuit: () {
           if (kDebugMode) {
             debugPrint("Enhanced tray requested to quit application");
           }
-          SystemNavigator.pop();
-        },
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint("Enhanced tray initialization timed out");
-          return false;
+          // Quit application logic would go here
         },
       );
     } catch (e) {
-      debugPrint("Enhanced tray initialization failed with error: $e");
-      success = false;
-    }
-
-    if (success) {
-      await enhancedTray.setTooltip('CloudToLocalLLM - Connected');
-
       if (kDebugMode) {
-        debugPrint("Connected to enhanced tray daemon successfully");
-        debugPrint("Application will be controlled by enhanced tray daemon");
+        debugPrint("Failed to initialize system tray: $e");
       }
-
-      // Initialize connection service
-      await connectionService.initialize();
-
-      // Set up authentication status monitoring
-      _setupAuthenticationMonitoring(enhancedTray);
-
-      // Show main window
-      await _showMainWindow();
-    } else {
-      if (kDebugMode) {
-        debugPrint(
-            "Could not connect to enhanced tray daemon, showing main window");
-      }
-      await _showMainWindow();
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint("System tray connection error: $e");
-      debugPrint("Falling back to main window mode");
-    }
-    await _showMainWindow();
-  }
-}
-
-/// Show the main window as fallback when system tray is not available
-Future<void> _showMainWindow() async {
-  try {
-    final windowManager = WindowManagerService();
-    await windowManager.showWindow();
-    if (kDebugMode) {
-      debugPrint("Main window shown as fallback");
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint("Failed to show main window: $e");
     }
   }
-}
 
-/// Main application widget with clean architecture
-class CloudToLocalLLMApp extends StatelessWidget {
-  const CloudToLocalLLMApp({super.key});
+  void _navigateToRoute(String route) {
+    try {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        if (kDebugMode) {
+          debugPrint("Navigating to route: $route");
+        }
+        context.go(route);
+      } else {
+        if (kDebugMode) {
+          debugPrint("Cannot navigate to $route: no context available");
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("Error navigating to $route: $e");
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,106 +146,57 @@ class CloudToLocalLLMApp extends StatelessWidget {
           create: (_) => UnifiedConnectionService(),
         ),
       ],
-      child: Consumer<AuthService>(
-        builder: (context, authService, child) {
-          return MaterialApp.router(
-            // App configuration
-            title: AppConfig.appName,
-            debugShowCheckedModeBanner: false,
+      child: MaterialApp(
+        // App configuration
+        title: AppConfig.appName,
+        debugShowCheckedModeBanner: false,
 
-            // Theme configuration
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode:
-                AppConfig.enableDarkMode ? ThemeMode.dark : ThemeMode.light,
+        // Theme configuration
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: AppConfig.enableDarkMode ? ThemeMode.dark : ThemeMode.light,
 
-            // Router configuration
-            routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
-
-            // Builder for additional configuration
-            builder: (context, child) {
-              return MediaQuery(
-                // Ensure text scaling doesn't break the UI
-                data: MediaQuery.of(context).copyWith(
-                  textScaler: TextScaler.linear(
-                    MediaQuery.of(context)
-                        .textScaler
-                        .scale(1.0)
-                        .clamp(0.8, 1.2),
-                  ),
-                ),
-                child: child!,
-              );
-            },
-          );
-        },
+        // Show loading screen until initialization is complete
+        home: _isInitialized
+            ? _buildMainApp()
+            : const LoadingScreen(
+                message: 'Initializing CloudToLocalLLM...',
+              ),
       ),
     );
   }
-}
 
-/// Navigate to settings screen from system tray
-void _navigateToSettings() {
-  try {
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      if (kDebugMode) {
-        debugPrint("Navigating to settings screen via system tray");
-      }
-      context.go('/settings');
-    } else {
-      if (kDebugMode) {
-        debugPrint("Cannot navigate to settings: no context available");
-      }
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint("Error navigating to settings: $e");
-    }
-  }
-}
+  Widget _buildMainApp() {
+    return Consumer<AuthService>(
+      builder: (context, authService, child) {
+        return MaterialApp.router(
+          // App configuration
+          title: AppConfig.appName,
+          debugShowCheckedModeBanner: false,
 
-/// Set up authentication status monitoring for enhanced tray
-void _setupAuthenticationMonitoring(EnhancedTrayService enhancedTray) {
-  try {
-    final context = navigatorKey.currentContext;
-    if (context != null) {
-      final authService = Provider.of<AuthService>(context, listen: false);
+          // Theme configuration
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode:
+              AppConfig.enableDarkMode ? ThemeMode.dark : ThemeMode.light,
 
-      // Send initial authentication status
-      enhancedTray.updateAuthStatus(authService.isAuthenticated.value);
+          // Router configuration
+          routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
 
-      // Listen for authentication changes
-      authService.isAuthenticated.addListener(() {
-        final isAuthenticated = authService.isAuthenticated.value;
-        if (kDebugMode) {
-          debugPrint(
-              "Auth status changed, updating enhanced tray daemon: $isAuthenticated");
-        }
-        enhancedTray.updateAuthStatus(isAuthenticated);
-
-        // Update auth token if authenticated
-        if (isAuthenticated) {
-          final token = authService.getAccessToken();
-          if (token != null) {
-            enhancedTray.updateAuthToken(token);
-          }
-        } else {
-          enhancedTray.updateAuthToken('');
-        }
-      });
-
-      if (kDebugMode) {
-        debugPrint("Authentication monitoring set up for enhanced tray");
-      }
-    } else {
-      if (kDebugMode) {
-        debugPrint("Cannot set up auth monitoring: no context available");
-      }
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint("Error setting up authentication monitoring: $e");
-    }
+          // Builder for additional configuration
+          builder: (context, child) {
+            return MediaQuery(
+              // Ensure text scaling doesn't break the UI
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(
+                  MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.2),
+                ),
+              ),
+              child: child!,
+            );
+          },
+        );
+      },
+    );
   }
 }
