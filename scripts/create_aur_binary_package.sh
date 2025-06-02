@@ -42,21 +42,32 @@ print_error() {
 # Check prerequisites
 check_prerequisites() {
     print_status "Checking prerequisites..."
-    
+
     # Check if Flutter app is built
     if [ ! -f "$BUILD_DIR/cloudtolocalllm" ]; then
         print_error "Flutter app not found: $BUILD_DIR/cloudtolocalllm"
         print_error "Please run: flutter build linux --release"
         exit 1
     fi
-    
-    # Check if daemon is built
+
+    # Check if daemon is built (try both original and reassembled)
     if [ ! -f "$DAEMON_EXECUTABLE" ]; then
-        print_error "Tray daemon not found: $DAEMON_EXECUTABLE"
-        print_error "Please run: ./scripts/build/build_tray_daemon.sh"
-        exit 1
+        # Try to reassemble if parts exist
+        if ls "$PROJECT_ROOT/dist/tray_daemon/linux-x64/cloudtolocalllm-enhanced-tray.gz.part"* >/dev/null 2>&1; then
+            print_status "Reassembling tray daemon from split parts..."
+            cd "$PROJECT_ROOT/dist/tray_daemon/linux-x64"
+            cat cloudtolocalllm-enhanced-tray.gz.part* > cloudtolocalllm-enhanced-tray.gz
+            gunzip cloudtolocalllm-enhanced-tray.gz
+            chmod +x cloudtolocalllm-enhanced-tray
+            ln -sf cloudtolocalllm-enhanced-tray cloudtolocalllm-tray
+            cd "$PROJECT_ROOT"
+        else
+            print_error "Tray daemon not found: $DAEMON_EXECUTABLE"
+            print_error "Please run: ./scripts/build/build_tray_daemon.sh"
+            exit 1
+        fi
     fi
-    
+
     print_status "Prerequisites check passed"
 }
 
