@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,7 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize system tray for desktop platforms (only on non-web)
-  if (!kIsWeb && _isDesktopPlatform()) {
+  // Can be disabled with DISABLE_SYSTEM_TRAY=true environment variable
+  if (!kIsWeb && _isDesktopPlatform() && !_isSystemTrayDisabled()) {
     await _initializeSystemTray();
   }
 
@@ -28,6 +30,17 @@ bool _isDesktopPlatform() {
         defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.macOS;
   } catch (e) {
+    return false;
+  }
+}
+
+/// Check if system tray should be disabled via environment variable
+bool _isSystemTrayDisabled() {
+  try {
+    final disableSystemTray = Platform.environment['DISABLE_SYSTEM_TRAY'];
+    return disableSystemTray == 'true' || disableSystemTray == '1';
+  } catch (e) {
+    // If Platform.environment is not available, default to false (enable system tray)
     return false;
   }
 }
