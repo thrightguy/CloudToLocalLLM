@@ -16,7 +16,8 @@ class WindowManagerService {
     try {
       if (Platform.isLinux) {
         // For Linux, we can use platform channels or system calls
-        await _executeLinuxWindowCommand('show');
+        // Run window command asynchronously to avoid blocking UI
+        _executeLinuxWindowCommand('show');
       }
       _isWindowVisible = true;
       _isMinimizedToTray = false;
@@ -30,7 +31,7 @@ class WindowManagerService {
   Future<void> hideToTray() async {
     try {
       if (Platform.isLinux) {
-        await _executeLinuxWindowCommand('hide');
+        _executeLinuxWindowCommand('hide');
       }
       _isWindowVisible = false;
       _isMinimizedToTray = true;
@@ -44,7 +45,7 @@ class WindowManagerService {
   Future<void> minimizeWindow() async {
     try {
       if (Platform.isLinux) {
-        await _executeLinuxWindowCommand('minimize');
+        _executeLinuxWindowCommand('minimize');
       }
       _isWindowVisible = false;
       _isMinimizedToTray = false;
@@ -58,7 +59,7 @@ class WindowManagerService {
   Future<void> maximizeWindow() async {
     try {
       if (Platform.isLinux) {
-        await _executeLinuxWindowCommand('maximize');
+        _executeLinuxWindowCommand('maximize');
       }
       _isWindowVisible = true;
       _isMinimizedToTray = false;
@@ -78,37 +79,54 @@ class WindowManagerService {
   }
 
   /// Execute Linux-specific window management commands
-  Future<void> _executeLinuxWindowCommand(String command) async {
-    try {
-      // Use application name to identify our window
-
-      switch (command) {
-        case 'show':
-          // Bring window to front and show it
-          await Process.run('wmctrl', ['-a', 'CloudToLocalLLM']);
-          break;
-        case 'hide':
-          // Hide the window (this is tricky in Linux, might need different approach)
-          await Process.run(
-              'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,hidden']);
-          break;
-        case 'minimize':
-          await Process.run(
-              'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,minimized']);
-          break;
-        case 'maximize':
-          await Process.run('wmctrl', [
-            '-r',
-            'CloudToLocalLLM',
-            '-b',
-            'add,maximized_vert,maximized_horz'
-          ]);
-          break;
+  void _executeLinuxWindowCommand(String command) {
+    // Run window commands asynchronously to avoid blocking UI
+    () async {
+      try {
+        // Use application name to identify our window
+        switch (command) {
+          case 'show':
+            // Bring window to front and show it with timeout
+            await Process.run('wmctrl', ['-a', 'CloudToLocalLLM'])
+                .timeout(const Duration(seconds: 3), onTimeout: () {
+              debugPrint("Window show command timed out");
+              return ProcessResult(0, 1, '', 'Timeout');
+            });
+            break;
+          case 'hide':
+            // Hide the window (this is tricky in Linux, might need different approach)
+            await Process.run(
+                    'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,hidden'])
+                .timeout(const Duration(seconds: 3), onTimeout: () {
+              debugPrint("Window hide command timed out");
+              return ProcessResult(0, 1, '', 'Timeout');
+            });
+            break;
+          case 'minimize':
+            await Process.run(
+                    'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,minimized'])
+                .timeout(const Duration(seconds: 3), onTimeout: () {
+              debugPrint("Window minimize command timed out");
+              return ProcessResult(0, 1, '', 'Timeout');
+            });
+            break;
+          case 'maximize':
+            await Process.run('wmctrl', [
+              '-r',
+              'CloudToLocalLLM',
+              '-b',
+              'add,maximized_vert,maximized_horz'
+            ]).timeout(const Duration(seconds: 3), onTimeout: () {
+              debugPrint("Window maximize command timed out");
+              return ProcessResult(0, 1, '', 'Timeout');
+            });
+            break;
+        }
+      } catch (e) {
+        debugPrint("Failed to execute window command '$command': $e");
+        // Fallback: try alternative methods or ignore
       }
-    } catch (e) {
-      debugPrint("Failed to execute window command '$command': $e");
-      // Fallback: try alternative methods or ignore
-    }
+    }();
   }
 
   /// Check if window is currently visible
