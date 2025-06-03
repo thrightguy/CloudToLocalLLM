@@ -5,9 +5,9 @@
 # don't need to install Flutter or any build dependencies.
 #
 pkgname=cloudtolocalllm
-pkgver=3.0.1
+pkgver=3.0.2
 pkgrel=1
-pkgdesc="Multi-tenant streaming LLM management with system tray integration (GitHub split binary)"
+pkgdesc="Local LLM interface with cloud synchronization and essential tunneling functionality (Unified 126MB package)"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
 license=('MIT')
@@ -36,94 +36,43 @@ provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
 
-# GitHub repository for split binary files
-_github_repo="imrightguy/CloudToLocalLLM"
-_github_base="https://raw.githubusercontent.com/${_github_repo}/master/dist"
-
+# Unified optimized package from SourceForge
 source=(
     "https://github.com/imrightguy/CloudToLocalLLM/archive/v$pkgver.tar.gz"
-    "${_github_base}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.partaa"
-    "${_github_base}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.partab"
-    "${_github_base}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.partac"
-    "${_github_base}/binary_checksums.txt"
+    "https://sourceforge.net/projects/cloudtolocalllm/files/releases/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 )
 sha256sums=(
     'SKIP'  # Source archive checksum
-    'SKIP'  # cloudtolocalllm-3.0.1-x86_64.tar.gz.partaa
-    'SKIP'  # cloudtolocalllm-3.0.1-x86_64.tar.gz.partab
-    'SKIP'  # cloudtolocalllm-3.0.1-x86_64.tar.gz.partac
-    'SKIP'  # binary_checksums.txt
+    'aa245738361bf3b44dbd98d3d47db5b0d0aaa5a932bc0c06cf3acf66a4a0ab98'  # Unified package checksum
 )
 
 prepare() {
     cd "$srcdir"
 
-    msg "Reassembling split binary files from GitHub..."
+    msg "Extracting unified CloudToLocalLLM package..."
 
-    # Reassemble the main package from split parts
+    # Extract the unified package
     local package_file="cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 
-    # Check if all parts are present
-    local parts=(
-        "cloudtolocalllm-${pkgver}-x86_64.tar.gz.partaa"
-        "cloudtolocalllm-${pkgver}-x86_64.tar.gz.partab"
-        "cloudtolocalllm-${pkgver}-x86_64.tar.gz.partac"
-    )
-
-    for part in "${parts[@]}"; do
-        if [[ ! -f "$part" ]]; then
-            error "Missing split part: $part"
-            return 1
-        fi
-    done
-
-    # Reassemble the package
-    msg "Combining split parts into $package_file..."
-    cat "${parts[@]}" > "$package_file"
-
-    # Verify the reassembled file
     if [[ ! -f "$package_file" ]]; then
-        error "Failed to reassemble $package_file"
+        error "Unified package not found: $package_file"
         return 1
     fi
 
-    # Verify checksum if available
-    if [[ -f "binary_checksums.txt" ]]; then
-        local expected_checksum
-        expected_checksum=$(grep "$package_file.*original" binary_checksums.txt | cut -d' ' -f1 || echo "")
-
-        if [[ -n "$expected_checksum" ]]; then
-            local actual_checksum
-            actual_checksum=$(sha256sum "$package_file" | cut -d' ' -f1)
-
-            if [[ "$expected_checksum" == "$actual_checksum" ]]; then
-                msg "Checksum verification passed for $package_file"
-            else
-                error "Checksum verification failed for $package_file"
-                error "Expected: $expected_checksum"
-                error "Actual:   $actual_checksum"
-                return 1
-            fi
-        else
-            warning "No checksum found for verification"
-        fi
-    fi
-
-    # Extract the reassembled package
-    msg "Extracting $package_file..."
+    # Extract the package
     tar -xzf "$package_file" || {
-        error "Failed to extract binary package"
+        error "Failed to extract unified package"
         return 1
     }
 
     # Verify extraction
-    local extracted_dir="cloudtolocalllm-${pkgver}-x86_64"
+    local extracted_dir="cloudtolocalllm-${pkgver}"
     if [[ ! -d "$extracted_dir" ]]; then
         error "Failed to extract package or unexpected directory structure"
         return 1
     fi
 
-    msg "Package reassembly and extraction completed successfully"
+    msg "Unified package extraction completed successfully"
 }
 
 build() {
@@ -134,68 +83,60 @@ build() {
 package() {
     cd "$srcdir"
 
-    # Install the pre-built binary to /usr/share/cloudtolocalllm
+    # Install the unified CloudToLocalLLM application
     install -dm755 "$pkgdir/usr/share/cloudtolocalllm"
 
-    # Copy the pre-built application files from the extracted binary package
-    local binary_dir="cloudtolocalllm-$pkgver-x86_64"
+    # Copy the unified application files from the extracted package
+    local binary_dir="cloudtolocalllm-$pkgver"
     if [[ -d "$binary_dir" ]]; then
         cd "$binary_dir"
-        if [[ -f "cloudtolocalllm" && -d "data" && -d "lib" ]]; then
-            cp -r cloudtolocalllm data lib "$pkgdir/usr/share/cloudtolocalllm/"
-        else
-            echo "Error: Pre-built binary files not found in $binary_dir"
-            echo "Expected: cloudtolocalllm binary, data/, lib/ directories"
-            ls -la
-            exit 1
-        fi
+        # Copy all files from unified package
+        cp -r * "$pkgdir/usr/share/cloudtolocalllm/"
 
-        # Make the binary executable
+        # Make the Flutter binary executable
         chmod +x "$pkgdir/usr/share/cloudtolocalllm/cloudtolocalllm"
 
-        # Install tray daemon
-        if [[ -f "cloudtolocalllm-tray" ]]; then
-            install -Dm755 "cloudtolocalllm-tray" "$pkgdir/usr/bin/cloudtolocalllm-tray"
+        # Install essential tray daemon (core component)
+        install -dm755 "$pkgdir/usr/bin"
+        if [[ -f "cloudtolocalllm-enhanced-tray" ]]; then
+            install -Dm755 "cloudtolocalllm-enhanced-tray" "$pkgdir/usr/bin/cloudtolocalllm-tray"
         else
-            echo "Warning: Tray daemon binary not found in pre-built package"
+            echo "Warning: Essential tray daemon not found in unified package"
         fi
+
+        # Install settings application
+        if [[ -f "cloudtolocalllm-settings" ]]; then
+            install -Dm755 "cloudtolocalllm-settings" "$pkgdir/usr/bin/cloudtolocalllm-settings"
+        fi
+
         cd "$srcdir"
     else
-        echo "Error: Binary package directory not found: $binary_dir"
+        echo "Error: Unified package directory not found: $binary_dir"
         echo "Available directories:"
         ls -la
         exit 1
     fi
 
-    # Create wrapper script in /usr/bin
-    install -dm755 "$pkgdir/usr/bin"
+    # Create unified wrapper script in /usr/bin
     cat > "$pkgdir/usr/bin/cloudtolocalllm" << 'EOF'
 #!/bin/bash
-# CloudToLocalLLM wrapper script with robust system tray integration
-# System tray is enabled by default with proper error handling
-# To disable system tray for debugging, run: DISABLE_SYSTEM_TRAY=true cloudtolocalllm
+# CloudToLocalLLM v3.0.2 unified wrapper script
+# Manages essential tray daemon and Flutter application
 
 cd /usr/share/cloudtolocalllm
 
-# Enable debug logging for system tray issues if requested
-if [[ "${DEBUG_SYSTEM_TRAY}" == "true" ]]; then
-    export G_MESSAGES_DEBUG=all
-    echo "Debug mode enabled for system tray troubleshooting"
+# Start essential tray daemon (core tunneling functionality)
+if [[ -x "/usr/bin/cloudtolocalllm-tray" ]]; then
+    # Start tray daemon if not already running
+    if ! pgrep -f "cloudtolocalllm-enhanced-tray" > /dev/null; then
+        /usr/bin/cloudtolocalllm-tray --daemon &
+        sleep 1
+    fi
+else
+    echo "Warning: Essential tray daemon not found. Some functionality may be limited."
 fi
 
-# Check for system tray support
-if [[ "${DISABLE_SYSTEM_TRAY}" != "true" ]]; then
-    # Verify desktop environment supports system tray
-    if [[ -z "$XDG_CURRENT_DESKTOP" ]]; then
-        echo "Warning: XDG_CURRENT_DESKTOP not set, system tray may not work properly"
-    fi
-
-    # Check for required libraries
-    if ! ldconfig -p | grep -q libayatana-appindicator; then
-        echo "Warning: libayatana-appindicator not found, system tray may not work"
-    fi
-fi
-
+# Launch main Flutter application
 exec ./cloudtolocalllm "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
