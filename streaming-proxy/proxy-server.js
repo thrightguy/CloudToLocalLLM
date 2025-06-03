@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
 import http from 'http';
 import jwt from 'jsonwebtoken';
 import winston from 'winston';
@@ -17,7 +17,7 @@ const logger = winston.createLogger({
     winston.format.errors({ stack: true }),
     winston.format.json()
   ),
-  defaultMeta: { 
+  defaultMeta: {
     service: 'streaming-proxy',
     userId: USER_ID,
     proxyId: PROXY_ID
@@ -39,33 +39,33 @@ let connectionCount = 0;
 // HTTP server for health checks and basic endpoints
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  
+
   switch (url.pathname) {
-    case '/health':
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        status: 'healthy',
-        userId: USER_ID,
-        proxyId: PROXY_ID,
-        connections: connectionCount,
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString()
-      }));
-      break;
-      
-    case '/metrics':
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        connections: connectionCount,
-        activeStreams: connections.size,
-        memoryUsage: process.memoryUsage(),
-        uptime: process.uptime()
-      }));
-      break;
-      
-    default:
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Not found' }));
+  case '/health':
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'healthy',
+      userId: USER_ID,
+      proxyId: PROXY_ID,
+      connections: connectionCount,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    }));
+    break;
+
+  case '/metrics':
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      connections: connectionCount,
+      activeStreams: connections.size,
+      memoryUsage: process.memoryUsage(),
+      uptime: process.uptime()
+    }));
+    break;
+
+  default:
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found' }));
   }
 });
 
@@ -77,7 +77,7 @@ const wss = new WebSocketServer({
     try {
       const url = new URL(info.req.url, `http://${info.req.headers.host}`);
       const token = url.searchParams.get('token');
-      
+
       if (!token) {
         logger.warn('WebSocket connection rejected: No token provided');
         return false;
@@ -102,13 +102,13 @@ const wss = new WebSocketServer({
 wss.on('connection', (ws, req) => {
   const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   connectionCount++;
-  
+
   logger.info(`New streaming connection: ${connectionId}`, {
     connectionId,
     userAgent: req.headers['user-agent'],
     origin: req.headers.origin
   });
-  
+
   // Store connection metadata
   connections.set(connectionId, {
     ws,
@@ -123,7 +123,7 @@ wss.on('connection', (ws, req) => {
     if (connection) {
       connection.lastActivity = new Date();
       connection.bytesTransferred += data.length;
-      
+
       // Forward streaming data to other connections (if needed)
       // This is where streaming relay logic would be implemented
       logger.debug(`Received ${data.length} bytes from ${connectionId}`);
@@ -134,7 +134,7 @@ wss.on('connection', (ws, req) => {
   ws.on('close', (code, reason) => {
     connectionCount--;
     const connection = connections.get(connectionId);
-    
+
     if (connection) {
       const duration = Date.now() - connection.connectedAt.getTime();
       logger.info(`Streaming connection closed: ${connectionId}`, {
@@ -144,7 +144,7 @@ wss.on('connection', (ws, req) => {
         duration,
         bytesTransferred: connection.bytesTransferred
       });
-      
+
       connections.delete(connectionId);
     }
   });
@@ -168,12 +168,12 @@ wss.on('connection', (ws, req) => {
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully');
-  
+
   // Close all WebSocket connections
-  connections.forEach((connection, connectionId) => {
+  connections.forEach((connection, _connectionId) => {
     connection.ws.close(1001, 'Server shutting down');
   });
-  
+
   // Close server
   server.close(() => {
     logger.info('Streaming proxy server closed');
@@ -200,7 +200,7 @@ server.listen(PORT, () => {
 setInterval(() => {
   const now = Date.now();
   const staleThreshold = 5 * 60 * 1000; // 5 minutes
-  
+
   connections.forEach((connection, connectionId) => {
     if (now - connection.lastActivity.getTime() > staleThreshold) {
       logger.warn(`Closing stale connection: ${connectionId}`);

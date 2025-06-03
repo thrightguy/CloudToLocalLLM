@@ -33,7 +33,7 @@ export class StreamingProxyManager {
     this.activeProxies = new Map(); // userId -> proxy metadata
     this.proxyNetworks = new Map(); // userId -> network info
     this.cleanupInterval = null;
-    
+
     // Start periodic cleanup
     this.startCleanupProcess();
   }
@@ -59,13 +59,13 @@ export class StreamingProxyManager {
    */
   async createUserNetwork(userId) {
     const networkName = this.generateNetworkName(userId);
-    
+
     try {
       // Check if network already exists
       const networks = await docker.listNetworks({
         filters: { name: [networkName] }
       });
-      
+
       if (networks.length > 0) {
         logger.info(`User network already exists: ${networkName}`);
         return networks[0];
@@ -100,9 +100,9 @@ export class StreamingProxyManager {
   /**
    * Provision streaming proxy container for user
    */
-  async provisionProxy(userId, userToken) {
+  async provisionProxy(userId, _userToken) {
     const proxyId = this.generateProxyId(userId);
-    
+
     try {
       // Check if proxy already exists
       if (this.activeProxies.has(userId)) {
@@ -122,8 +122,8 @@ export class StreamingProxyManager {
         Env: [
           `USER_ID=${userId}`,
           `PROXY_ID=${proxyId}`,
-          `NODE_ENV=production`,
-          `LOG_LEVEL=info`
+          'NODE_ENV=production',
+          'LOG_LEVEL=info'
         ],
         Labels: {
           'cloudtolocalllm.user': userId,
@@ -149,10 +149,10 @@ export class StreamingProxyManager {
       const container = await docker.createContainer(containerConfig);
       await container.start();
 
-      // Get container info
-      const containerInfo = await container.inspect();
+      // Get container info and set up proxy
+      await container.inspect(); // Ensure container is running
       const proxyPort = 8080; // Internal port
-      
+
       // Store proxy metadata
       const proxyMetadata = {
         userId,
@@ -196,7 +196,7 @@ export class StreamingProxyManager {
       // Stop and remove container
       const container = docker.getContainer(proxyMetadata.containerId);
       await container.stop({ t: 10 }); // 10 second grace period
-      
+
       // Container will auto-remove due to AutoRemove: true
 
       // Clean up network
@@ -239,7 +239,7 @@ export class StreamingProxyManager {
       // Check container health
       const container = docker.getContainer(proxyMetadata.containerId);
       const containerInfo = await container.inspect();
-      
+
       return {
         status: containerInfo.State.Running ? 'running' : 'stopped',
         userId,
@@ -268,7 +268,7 @@ export class StreamingProxyManager {
    * Start periodic cleanup process
    */
   startCleanupProcess() {
-    this.cleanupInterval = setInterval(async () => {
+    this.cleanupInterval = setInterval(async() => {
       await this.cleanupStaleProxies();
     }, 60000); // Check every minute
 
@@ -284,13 +284,13 @@ export class StreamingProxyManager {
 
     for (const [userId, proxyMetadata] of this.activeProxies.entries()) {
       const inactiveTime = now - proxyMetadata.lastActivity.getTime();
-      
+
       if (inactiveTime > staleThreshold) {
         logger.info(`Cleaning up stale proxy for user: ${userId}`, {
           proxyId: proxyMetadata.proxyId,
           inactiveTime: Math.floor(inactiveTime / 1000) + 's'
         });
-        
+
         await this.terminateProxy(userId);
       }
     }

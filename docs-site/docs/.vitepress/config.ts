@@ -1,9 +1,9 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'CloudToLocalLLM',
   description: 'Secure bridge for local Ollama to cloud service',
-  
+
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }],
     ['meta', { name: 'theme-color', content: '#2563eb' }],
@@ -12,19 +12,19 @@ export default defineConfig({
     ['meta', { property: 'og:title', content: 'CloudToLocalLLM Documentation' }],
     ['meta', { property: 'og:site_name', content: 'CloudToLocalLLM' }],
     ['meta', { property: 'og:image', content: 'https://docs.cloudtolocalllm.online/og-image.png' }],
-    ['meta', { property: 'og:url', content: 'https://docs.cloudtolocalllm.online/' }],
+    ['meta', { property: 'og:url', content: 'https://docs.cloudtolocalllm.online/' }]
   ],
 
   themeConfig: {
     logo: '/logo.svg',
-    
+
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Installation', link: '/installation/' },
       { text: 'API', link: '/api/' },
       { text: 'Downloads', link: '/downloads/' },
-      { 
+      {
         text: 'v1.0.0',
         items: [
           { text: 'Changelog', link: '/changelog' },
@@ -145,4 +145,4 @@ export default defineConfig({
   sitemap: {
     hostname: 'https://docs.cloudtolocalllm.online'
   }
-})
+});

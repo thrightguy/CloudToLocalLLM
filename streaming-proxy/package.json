@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node proxy-server.js",
     "dev": "node --inspect proxy-server.js",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "eslint .",
+    "format": "eslint . --fix"
   },
   "keywords": [
     "websocket",
@@ -19,11 +21,15 @@
   "author": "CloudToLocalLLM",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.16.0",
     "jsonwebtoken": "^9.0.2",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "ws": "^8.16.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "eslint": "^9.28.0"
   }
 }

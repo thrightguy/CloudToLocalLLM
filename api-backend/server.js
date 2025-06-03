@@ -44,7 +44,6 @@ const jwksClientInstance = jwksClient({
   timeout: 30000,
   cache: true,
   rateLimit: true,
-  jwksRequestsPerMinute: 5,
   jwksRequestsPerMinute: 5
 });
 
@@ -56,13 +55,13 @@ const server = http.createServer(app);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "wss:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
+      defaultSrc: ['\'self\''],
+      connectSrc: ['\'self\'', 'wss:', 'https:'],
+      scriptSrc: ['\'self\'', '\'unsafe-inline\''],
+      styleSrc: ['\'self\'', '\'unsafe-inline\''],
+      imgSrc: ['\'self\'', 'data:', 'https:']
+    }
+  }
 }));
 
 // CORS configuration
@@ -85,7 +84,7 @@ const limiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders: false
 });
 
 app.use(limiter);
@@ -138,11 +137,11 @@ const proxyManager = new StreamingProxyManager();
 const wss = new WebSocketServer({
   server,
   path: '/ws/bridge',
-  verifyClient: async (info) => {
+  verifyClient: async(info) => {
     try {
       const url = new URL(info.req.url, `http://${info.req.headers.host}`);
       const token = url.searchParams.get('token');
-      
+
       if (!token) {
         logger.warn('WebSocket connection rejected: No token provided');
         return false;
@@ -177,9 +176,9 @@ const wss = new WebSocketServer({
 wss.on('connection', (ws, req) => {
   const bridgeId = uuidv4();
   const userId = req.user.sub;
-  
+
   logger.info(`Bridge connected: ${bridgeId} for user: ${userId}`);
-  
+
   // Store connection
   bridgeConnections.set(bridgeId, {
     ws,
@@ -244,17 +243,17 @@ function handleBridgeMessage(bridgeId, message) {
   bridge.lastPing = new Date();
 
   switch (message.type) {
-    case 'pong':
-      // Update last ping time
-      break;
-    
-    case 'response':
-      // Handle Ollama response - forward to web client if needed
-      logger.debug(`Received Ollama response from bridge ${bridgeId}`);
-      break;
-    
-    default:
-      logger.warn(`Unknown message type from bridge ${bridgeId}: ${message.type}`);
+  case 'pong':
+    // Update last ping time
+    break;
+
+  case 'response':
+    // Handle Ollama response - forward to web client if needed
+    logger.debug(`Received Ollama response from bridge ${bridgeId}`);
+    break;
+
+  default:
+    logger.warn(`Unknown message type from bridge ${bridgeId}: ${message.type}`);
   }
 }
 
@@ -262,8 +261,8 @@ function handleBridgeMessage(bridgeId, message) {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     bridges: bridgeConnections.size
   });
@@ -300,7 +299,7 @@ app.post('/ollama/bridge/register', authenticateToken, (req, res) => {
 // Streaming Proxy Management Endpoints
 
 // Start streaming proxy for user
-app.post('/api/proxy/start', authenticateToken, async (req, res) => {
+app.post('/api/proxy/start', authenticateToken, async(req, res) => {
   try {
     const userId = req.user.sub;
     const userToken = req.headers.authorization;
@@ -328,7 +327,7 @@ app.post('/api/proxy/start', authenticateToken, async (req, res) => {
 });
 
 // Stop streaming proxy for user
-app.post('/api/proxy/stop', authenticateToken, async (req, res) => {
+app.post('/api/proxy/stop', authenticateToken, async(req, res) => {
   try {
     const userId = req.user.sub;
 
@@ -357,7 +356,7 @@ app.post('/api/proxy/stop', authenticateToken, async (req, res) => {
 });
 
 // Get streaming proxy status
-app.get('/api/proxy/status', authenticateToken, async (req, res) => {
+app.get('/api/proxy/status', authenticateToken, async(req, res) => {
   try {
     const userId = req.user.sub;
     const status = await proxyManager.getProxyStatus(userId);
@@ -378,12 +377,12 @@ app.get('/api/proxy/status', authenticateToken, async (req, res) => {
 });
 
 // Ollama proxy endpoints
-app.all('/ollama/*', authenticateToken, async (req, res) => {
+app.all('/ollama/*', authenticateToken, async(req, res) => {
   const userBridges = Array.from(bridgeConnections.values())
     .filter(bridge => bridge.userId === req.user.sub);
 
   if (userBridges.length === 0) {
-    return res.status(503).json({ 
+    return res.status(503).json({
       error: 'No bridge connected',
       message: 'Please ensure the CloudToLocalLLM desktop bridge is running and connected.'
     });
@@ -408,10 +407,10 @@ app.all('/ollama/*', authenticateToken, async (req, res) => {
 
   try {
     bridge.ws.send(JSON.stringify(bridgeMessage));
-    
+
     // For now, return a placeholder response
     // In a full implementation, you'd wait for the bridge response
-    res.json({ 
+    res.json({
       message: 'Request forwarded to bridge',
       requestId,
       bridgeId: bridge.bridgeId
@@ -423,9 +422,9 @@ app.all('/ollama/*', authenticateToken, async (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   logger.error('Unhandled error:', error);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
   });
