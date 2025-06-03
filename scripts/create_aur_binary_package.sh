@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="3.0.0"  # Enhanced System Tray Architecture
+VERSION="3.0.1"  # Black Screen Fix + Enhanced System Tray Architecture
 BUILD_DIR="$PROJECT_ROOT/build/linux/x64/release/bundle"
 DAEMON_EXECUTABLE="$PROJECT_ROOT/dist/tray_daemon/linux-x64/cloudtolocalllm-tray"
 OUTPUT_DIR="$PROJECT_ROOT/dist"
