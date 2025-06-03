@@ -24,6 +24,9 @@ dependencies:
   http: ^1.2.0
   web: ^1.1.1
 
+  # App Information
+  package_info_plus: ^8.0.2
+
   # File System
   path: ^1.9.0
 

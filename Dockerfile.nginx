@@ -27,6 +27,9 @@ RUN mkdir -p \
 COPY config/docker/entrypoint-with-ssl-fallback.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Switch to nginx user for security
+USER nginx
+
 # Expose ports
 EXPOSE 80 443
 

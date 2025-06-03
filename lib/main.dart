@@ -78,34 +78,40 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         },
         onSettings: () {
           debugPrint(
-              "⚙️ [SystemTray] Enhanced tray requested to open settings");
+            "⚙️ [SystemTray] Enhanced tray requested to open settings",
+          );
           _navigateToRoute('/settings');
         },
         onDaemonSettings: () {
           debugPrint(
-              "🔧 [SystemTray] Enhanced tray requested to open daemon settings");
+            "🔧 [SystemTray] Enhanced tray requested to open daemon settings",
+          );
           _navigateToRoute('/settings/daemon');
         },
         onConnectionStatus: () {
           debugPrint(
-              "📊 [SystemTray] Enhanced tray requested to show connection status");
+            "📊 [SystemTray] Enhanced tray requested to show connection status",
+          );
           _navigateToRoute('/settings/connection-status');
         },
         onOllamaTest: () {
           debugPrint(
-              "🧪 [SystemTray] Enhanced tray requested to open Ollama test");
+            "🧪 [SystemTray] Enhanced tray requested to open Ollama test",
+          );
           _navigateToRoute('/ollama-test');
         },
         onQuit: () {
           debugPrint(
-              "🚪 [SystemTray] Enhanced tray requested to quit application");
+            "🚪 [SystemTray] Enhanced tray requested to quit application",
+          );
           // Quit application logic would go here
         },
       );
 
       if (success) {
         debugPrint(
-            "✅ [SystemTray] Enhanced tray service initialized successfully");
+          "✅ [SystemTray] Enhanced tray service initialized successfully",
+        );
       } else {
         debugPrint("❌ [SystemTray] Failed to initialize enhanced tray service");
       }
@@ -122,22 +128,26 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
       final context = navigatorKey.currentContext;
       if (context != null) {
         debugPrint(
-            "✅ [Navigation] Context available, executing navigation to: $route");
+          "✅ [Navigation] Context available, executing navigation to: $route",
+        );
         context.go(route);
         debugPrint("✅ [Navigation] Navigation command sent for route: $route");
       } else {
         debugPrint(
-            "❌ [Navigation] Cannot navigate to $route: no context available");
+          "❌ [Navigation] Cannot navigate to $route: no context available",
+        );
         debugPrint("❌ [Navigation] navigatorKey.currentContext is null");
 
         // Try to get context from the current app state
         final appContext = _getCurrentAppContext();
         if (appContext != null) {
           debugPrint(
-              "🔄 [Navigation] Found alternative context, retrying navigation");
+            "🔄 [Navigation] Found alternative context, retrying navigation",
+          );
           appContext.go(route);
           debugPrint(
-              "✅ [Navigation] Alternative navigation executed for route: $route");
+            "✅ [Navigation] Alternative navigation executed for route: $route",
+          );
         } else {
           debugPrint("❌ [Navigation] No alternative context available");
         }
@@ -163,19 +173,14 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
     return MultiProvider(
       providers: [
         // Authentication service
-        ChangeNotifierProvider(
-          create: (_) => AuthService(),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthService()),
         // Streaming proxy service
         ChangeNotifierProvider(
-          create: (context) => StreamingProxyService(
-            authService: context.read<AuthService>(),
-          ),
+          create: (context) =>
+              StreamingProxyService(authService: context.read<AuthService>()),
         ),
         // Unified connection service
-        ChangeNotifierProvider(
-          create: (_) => UnifiedConnectionService(),
-        ),
+        ChangeNotifierProvider(create: (_) => UnifiedConnectionService()),
       ],
       child: MaterialApp(
         // App configuration
@@ -190,9 +195,7 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         // Show loading screen until initialization is complete
         home: _isInitialized
             ? _buildMainApp()
-            : const LoadingScreen(
-                message: 'Initializing CloudToLocalLLM...',
-              ),
+            : const LoadingScreen(message: 'Initializing CloudToLocalLLM...'),
       ),
     );
   }
@@ -208,8 +211,9 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
           // Theme configuration
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode:
-              AppConfig.enableDarkMode ? ThemeMode.dark : ThemeMode.light,
+          themeMode: AppConfig.enableDarkMode
+              ? ThemeMode.dark
+              : ThemeMode.light,
 
           // Router configuration
           routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
