@@ -5,9 +5,9 @@
 # don't need to install Flutter or any build dependencies.
 #
 pkgname=cloudtolocalllm
-pkgver=3.0.0
+pkgver=3.0.1
 pkgrel=1
-pkgdesc="Multi-tenant streaming LLM management with system tray integration (pre-built binary)"
+pkgdesc="Multi-tenant streaming LLM management with system tray integration (GitHub split binary)"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
 license=('MIT')
@@ -24,6 +24,7 @@ depends=(
     'xdg-utils'
     'hicolor-icon-theme'
     'python'  # For tray daemon
+    'wmctrl'  # For window management
 )
 makedepends=()
 optdepends=(
@@ -34,31 +35,95 @@ optdepends=(
 provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
+
+# GitHub repository for split binary files
+_github_repo="imrightguy/CloudToLocalLLM"
+_github_base="https://raw.githubusercontent.com/${_github_repo}/master/dist"
+
 source=(
     "https://github.com/imrightguy/CloudToLocalLLM/archive/v$pkgver.tar.gz"
-    "cloudtolocalllm-$pkgver-x86_64.tar.gz::https://cloudtolocalllm.online/cloudtolocalllm-$pkgver-x86_64.tar.gz"
+    "${_github_base}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.partaa"
+    "${_github_base}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.partab"
+    "${_github_base}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.partac"
+    "${_github_base}/binary_checksums.txt"
 )
 sha256sums=(
     'SKIP'  # Source archive checksum
-    '91c5d0251acbb7b8ad294755face057591daa909540e7ef182cdd2d213d25977'  # Binary package checksum for v3.0.0
+    'SKIP'  # cloudtolocalllm-3.0.1-x86_64.tar.gz.partaa
+    'SKIP'  # cloudtolocalllm-3.0.1-x86_64.tar.gz.partab
+    'SKIP'  # cloudtolocalllm-3.0.1-x86_64.tar.gz.partac
+    'SKIP'  # binary_checksums.txt
 )
 
 prepare() {
     cd "$srcdir"
 
-    # Extract the pre-built binary package
-    if [[ -f "cloudtolocalllm-$pkgver-x86_64.tar.gz" ]]; then
-        echo "Extracting pre-built binary package..."
-        tar -xzf "cloudtolocalllm-$pkgver-x86_64.tar.gz" || {
-            echo "Error: Failed to extract binary package"
-            exit 1
-        }
-    else
-        echo "Error: Pre-built binary package not found"
-        exit 1
+    msg "Reassembling split binary files from GitHub..."
+
+    # Reassemble the main package from split parts
+    local package_file="cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+
+    # Check if all parts are present
+    local parts=(
+        "cloudtolocalllm-${pkgver}-x86_64.tar.gz.partaa"
+        "cloudtolocalllm-${pkgver}-x86_64.tar.gz.partab"
+        "cloudtolocalllm-${pkgver}-x86_64.tar.gz.partac"
+    )
+
+    for part in "${parts[@]}"; do
+        if [[ ! -f "$part" ]]; then
+            error "Missing split part: $part"
+            return 1
+        fi
+    done
+
+    # Reassemble the package
+    msg "Combining split parts into $package_file..."
+    cat "${parts[@]}" > "$package_file"
+
+    # Verify the reassembled file
+    if [[ ! -f "$package_file" ]]; then
+        error "Failed to reassemble $package_file"
+        return 1
     fi
 
-    echo "Pre-built binary package extracted successfully"
+    # Verify checksum if available
+    if [[ -f "binary_checksums.txt" ]]; then
+        local expected_checksum
+        expected_checksum=$(grep "$package_file.*original" binary_checksums.txt | cut -d' ' -f1 || echo "")
+
+        if [[ -n "$expected_checksum" ]]; then
+            local actual_checksum
+            actual_checksum=$(sha256sum "$package_file" | cut -d' ' -f1)
+
+            if [[ "$expected_checksum" == "$actual_checksum" ]]; then
+                msg "Checksum verification passed for $package_file"
+            else
+                error "Checksum verification failed for $package_file"
+                error "Expected: $expected_checksum"
+                error "Actual:   $actual_checksum"
+                return 1
+            fi
+        else
+            warning "No checksum found for verification"
+        fi
+    fi
+
+    # Extract the reassembled package
+    msg "Extracting $package_file..."
+    tar -xzf "$package_file" || {
+        error "Failed to extract binary package"
+        return 1
+    }
+
+    # Verify extraction
+    local extracted_dir="cloudtolocalllm-${pkgver}-x86_64"
+    if [[ ! -d "$extracted_dir" ]]; then
+        error "Failed to extract package or unexpected directory structure"
+        return 1
+    fi
+
+    msg "Package reassembly and extraction completed successfully"
 }
 
 build() {
