@@ -65,17 +65,26 @@ class EnhancedTrayService {
     debugPrint("Initializing enhanced tray service...");
 
     try {
-      // Try to connect to existing daemon first
-      if (await _connectToExistingDaemon()) {
+      // Try to connect to existing daemon first with timeout
+      final connectResult = await _connectToExistingDaemon()
+          .timeout(const Duration(seconds: 5), onTimeout: () => false);
+
+      if (connectResult) {
         _isInitialized = true;
         _startHealthCheck();
         debugPrint("Connected to existing tray daemon");
         return true;
       }
 
-      // Start new daemon if no existing one found
-      if (await _startDaemon()) {
-        if (await _connectToDaemon()) {
+      // Start new daemon if no existing one found with timeout
+      final startResult = await _startDaemon()
+          .timeout(const Duration(seconds: 10), onTimeout: () => false);
+
+      if (startResult) {
+        final connectNewResult = await _connectToDaemon()
+            .timeout(const Duration(seconds: 5), onTimeout: () => false);
+
+        if (connectNewResult) {
           _isInitialized = true;
           _startHealthCheck();
           debugPrint("Started and connected to new tray daemon");
@@ -83,10 +92,12 @@ class EnhancedTrayService {
         }
       }
 
-      debugPrint("Failed to initialize enhanced tray service");
+      debugPrint(
+          "Failed to initialize enhanced tray service - continuing without system tray");
       return false;
     } catch (e) {
-      debugPrint("Error initializing enhanced tray service: $e");
+      debugPrint(
+          "Error initializing enhanced tray service: $e - continuing without system tray");
       return false;
     }
   }
@@ -284,36 +295,89 @@ class EnhancedTrayService {
   void _processMessage(Map<String, dynamic> message) {
     final command = message['command'] as String?;
 
-    debugPrint("Received command from daemon: $command");
+    debugPrint(
+        "🔄 [EnhancedTrayService] Received command from daemon: $command");
+    debugPrint("🔄 [EnhancedTrayService] Full message: $message");
 
     switch (command) {
       case 'SHOW':
-        _onShowWindow?.call();
+        debugPrint("🪟 [EnhancedTrayService] Executing SHOW command");
+        if (_onShowWindow != null) {
+          _onShowWindow!.call();
+          debugPrint("✅ [EnhancedTrayService] SHOW callback executed");
+        } else {
+          debugPrint("❌ [EnhancedTrayService] SHOW callback is null");
+        }
         break;
       case 'HIDE':
-        _onHideWindow?.call();
+        debugPrint("🫥 [EnhancedTrayService] Executing HIDE command");
+        if (_onHideWindow != null) {
+          _onHideWindow!.call();
+          debugPrint("✅ [EnhancedTrayService] HIDE callback executed");
+        } else {
+          debugPrint("❌ [EnhancedTrayService] HIDE callback is null");
+        }
         break;
       case 'SETTINGS':
-        _onSettings?.call();
+        debugPrint("⚙️ [EnhancedTrayService] Executing SETTINGS command");
+        if (_onSettings != null) {
+          _onSettings!.call();
+          debugPrint("✅ [EnhancedTrayService] SETTINGS callback executed");
+        } else {
+          debugPrint("❌ [EnhancedTrayService] SETTINGS callback is null");
+        }
         break;
       case 'DAEMON_SETTINGS':
-        _onDaemonSettings?.call();
+        debugPrint(
+            "🔧 [EnhancedTrayService] Executing DAEMON_SETTINGS command");
+        if (_onDaemonSettings != null) {
+          _onDaemonSettings!.call();
+          debugPrint(
+              "✅ [EnhancedTrayService] DAEMON_SETTINGS callback executed");
+        } else {
+          debugPrint(
+              "❌ [EnhancedTrayService] DAEMON_SETTINGS callback is null");
+        }
         break;
       case 'CONNECTION_STATUS':
-        _onConnectionStatus?.call();
+        debugPrint(
+            "📊 [EnhancedTrayService] Executing CONNECTION_STATUS command");
+        if (_onConnectionStatus != null) {
+          _onConnectionStatus!.call();
+          debugPrint(
+              "✅ [EnhancedTrayService] CONNECTION_STATUS callback executed");
+        } else {
+          debugPrint(
+              "❌ [EnhancedTrayService] CONNECTION_STATUS callback is null");
+        }
         break;
       case 'OLLAMA_TEST':
-        _onOllamaTest?.call();
+        debugPrint("🧪 [EnhancedTrayService] Executing OLLAMA_TEST command");
+        if (_onOllamaTest != null) {
+          _onOllamaTest!.call();
+          debugPrint("✅ [EnhancedTrayService] OLLAMA_TEST callback executed");
+        } else {
+          debugPrint("❌ [EnhancedTrayService] OLLAMA_TEST callback is null");
+        }
         break;
       case 'QUIT':
-        _onQuit?.call();
+        debugPrint("🚪 [EnhancedTrayService] Executing QUIT command");
+        if (_onQuit != null) {
+          _onQuit!.call();
+          debugPrint("✅ [EnhancedTrayService] QUIT callback executed");
+        } else {
+          debugPrint("❌ [EnhancedTrayService] QUIT callback is null");
+        }
         break;
       case 'CONNECTION_STATUS_CHANGED':
+        debugPrint(
+            "📡 [EnhancedTrayService] Broadcasting connection status change");
         // Broadcast connection status changes
         _messageController.add(message);
         break;
       default:
-        debugPrint("Unknown command from daemon: $command");
+        debugPrint(
+            "❓ [EnhancedTrayService] Unknown command from daemon: $command");
     }
   }
 

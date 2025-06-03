@@ -38,92 +38,123 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
   }
 
   Future<void> _initializeApp() async {
-    // Initialize system tray for desktop platforms
-    if (!kIsWeb) {
-      await _initializeSystemTray();
-    }
+    try {
+      // Show the UI immediately to prevent black screen
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
 
-    // Simulate initialization delay
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      setState(() {
-        _isInitialized = true;
-      });
+      // Initialize system tray for desktop platforms in background
+      if (!kIsWeb) {
+        // Run system tray initialization asynchronously without blocking UI
+        _initializeSystemTray();
+      }
+    } catch (e) {
+      debugPrint("💥 [App] Error during app initialization: $e");
+      // Still show the UI even if initialization fails
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     }
   }
 
   Future<void> _initializeSystemTray() async {
     try {
+      debugPrint("🚀 [SystemTray] Initializing enhanced tray service...");
+
       final enhancedTray = EnhancedTrayService();
-      await enhancedTray.initialize(
+      final success = await enhancedTray.initialize(
         onShowWindow: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to show window");
-          }
+          debugPrint("🪟 [SystemTray] Enhanced tray requested to show window");
           // Show window logic would go here
         },
         onHideWindow: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to hide window");
-          }
+          debugPrint("🫥 [SystemTray] Enhanced tray requested to hide window");
           // Hide window logic would go here
         },
         onSettings: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to open settings");
-          }
+          debugPrint(
+              "⚙️ [SystemTray] Enhanced tray requested to open settings");
           _navigateToRoute('/settings');
         },
         onDaemonSettings: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to open daemon settings");
-          }
+          debugPrint(
+              "🔧 [SystemTray] Enhanced tray requested to open daemon settings");
           _navigateToRoute('/settings/daemon');
         },
         onConnectionStatus: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to show connection status");
-          }
+          debugPrint(
+              "📊 [SystemTray] Enhanced tray requested to show connection status");
           _navigateToRoute('/settings/connection-status');
         },
         onOllamaTest: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to open Ollama test");
-          }
+          debugPrint(
+              "🧪 [SystemTray] Enhanced tray requested to open Ollama test");
           _navigateToRoute('/ollama-test');
         },
         onQuit: () {
-          if (kDebugMode) {
-            debugPrint("Enhanced tray requested to quit application");
-          }
+          debugPrint(
+              "🚪 [SystemTray] Enhanced tray requested to quit application");
           // Quit application logic would go here
         },
       );
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Failed to initialize system tray: $e");
+
+      if (success) {
+        debugPrint(
+            "✅ [SystemTray] Enhanced tray service initialized successfully");
+      } else {
+        debugPrint("❌ [SystemTray] Failed to initialize enhanced tray service");
       }
+    } catch (e, stackTrace) {
+      debugPrint("💥 [SystemTray] Failed to initialize system tray: $e");
+      debugPrint("💥 [SystemTray] Stack trace: $stackTrace");
     }
   }
 
   void _navigateToRoute(String route) {
     try {
+      debugPrint("🧭 [Navigation] Attempting to navigate to route: $route");
+
       final context = navigatorKey.currentContext;
       if (context != null) {
-        if (kDebugMode) {
-          debugPrint("Navigating to route: $route");
-        }
+        debugPrint(
+            "✅ [Navigation] Context available, executing navigation to: $route");
         context.go(route);
+        debugPrint("✅ [Navigation] Navigation command sent for route: $route");
       } else {
-        if (kDebugMode) {
-          debugPrint("Cannot navigate to $route: no context available");
+        debugPrint(
+            "❌ [Navigation] Cannot navigate to $route: no context available");
+        debugPrint("❌ [Navigation] navigatorKey.currentContext is null");
+
+        // Try to get context from the current app state
+        final appContext = _getCurrentAppContext();
+        if (appContext != null) {
+          debugPrint(
+              "🔄 [Navigation] Found alternative context, retrying navigation");
+          appContext.go(route);
+          debugPrint(
+              "✅ [Navigation] Alternative navigation executed for route: $route");
+        } else {
+          debugPrint("❌ [Navigation] No alternative context available");
         }
       }
+    } catch (e, stackTrace) {
+      debugPrint("💥 [Navigation] Error navigating to $route: $e");
+      debugPrint("💥 [Navigation] Stack trace: $stackTrace");
+    }
+  }
+
+  BuildContext? _getCurrentAppContext() {
+    try {
+      // Try to get context from the current widget tree
+      return navigatorKey.currentState?.context;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint("Error navigating to $route: $e");
-      }
+      debugPrint("🔍 [Navigation] Could not get alternative context: $e");
+      return null;
     }
   }
 
