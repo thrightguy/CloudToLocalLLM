@@ -23,6 +23,7 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint("🔧 [DaemonSettingsScreen] Initializing screen");
     _loadSettings();
   }
 
@@ -98,6 +99,7 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("🔧 [DaemonSettingsScreen] Building widget");
     return Scaffold(
       backgroundColor: AppTheme.backgroundMain,
       appBar: AppBar(

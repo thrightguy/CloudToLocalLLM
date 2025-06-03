@@ -77,14 +77,20 @@ class AppRouter {
         GoRoute(
           path: '/settings/daemon',
           name: 'daemon-settings',
-          builder: (context, state) => const DaemonSettingsScreen(),
+          builder: (context, state) {
+            debugPrint("🔧 [Router] Building DaemonSettingsScreen");
+            return const DaemonSettingsScreen();
+          },
         ),
 
         // Connection Status route
         GoRoute(
           path: '/settings/connection-status',
           name: 'connection-status',
-          builder: (context, state) => const ConnectionStatusScreen(),
+          builder: (context, state) {
+            debugPrint("📊 [Router] Building ConnectionStatusScreen");
+            return const ConnectionStatusScreen();
+          },
         ),
       ],
 

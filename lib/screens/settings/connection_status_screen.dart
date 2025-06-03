@@ -22,6 +22,7 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint("📊 [ConnectionStatusScreen] Initializing screen");
     _refreshStatus();
   }
 
@@ -58,6 +59,7 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("📊 [ConnectionStatusScreen] Building widget");
     return Scaffold(
       backgroundColor: AppTheme.backgroundMain,
       appBar: AppBar(

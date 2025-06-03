@@ -447,28 +447,29 @@ class EnhancedTrayDaemon:
 
     def _on_daemon_settings(self, icon, item):
         """Handle daemon settings menu item"""
-        self.logger.info("Opening daemon settings")
-        if self.app_is_running:
-            # Send command to Flutter app to open daemon settings
-            self._send_to_clients({"command": "DAEMON_SETTINGS"})
-        else:
-            # Launch the standalone settings app if Flutter app is not running
-            self._launch_settings()
+        self.logger.info("🔧 [TrayDaemon] Opening daemon settings")
+
+        # ALWAYS try to send command to Flutter app first
+        # If there are connected clients, this will work regardless of app_is_running state
+        self.logger.info("🔧 [TrayDaemon] Sending DAEMON_SETTINGS command to connected clients")
+        self._send_to_clients({"command": "DAEMON_SETTINGS"})
+        self.logger.info("🔧 [TrayDaemon] DAEMON_SETTINGS command sent")
+
+        # If no clients are connected, the command will be ignored
+        # We could add fallback logic here if needed, but for now let's see if this fixes the issue
 
     def _on_connection_status(self, icon, item):
         """Handle connection status menu item"""
-        self.logger.info("Showing connection status")
-        if self.app_is_running:
-            # Send command to Flutter app to show connection status
-            self._send_to_clients({"command": "CONNECTION_STATUS"})
-        else:
-            # Show connection status in a simple dialog if Flutter app is not running
-            if self.connection_broker:
-                status = self.connection_broker.get_connection_status()
-                self.logger.info(f"Connection status: {status}")
-                # Could show a simple notification or dialog here
-            else:
-                self.logger.warning("Connection broker not available")
+        self.logger.info("📊 [TrayDaemon] Showing connection status")
+
+        # ALWAYS try to send command to Flutter app first
+        # If there are connected clients, this will work regardless of app_is_running state
+        self.logger.info("📊 [TrayDaemon] Sending CONNECTION_STATUS command to connected clients")
+        self._send_to_clients({"command": "CONNECTION_STATUS"})
+        self.logger.info("📊 [TrayDaemon] CONNECTION_STATUS command sent")
+
+        # If no clients are connected, the command will be ignored
+        # We could add fallback logic here if needed, but for now let's see if this fixes the issue
 
     def _on_quit_daemon(self, icon, item):
         """Handle quit daemon menu item"""
@@ -484,23 +485,31 @@ class EnhancedTrayDaemon:
 
     def _send_to_clients(self, message: Dict[str, Any]):
         """Send message to all connected clients"""
+        self.logger.info(f"📤 [TrayDaemon] Sending message to clients: {message}")
+        self.logger.info(f"📤 [TrayDaemon] Number of connected clients: {len(self.client_connections)}")
+
         message_json = json.dumps(message) + "\n"
         disconnected_clients = []
 
-        for client in self.client_connections:
+        for i, client in enumerate(self.client_connections):
             try:
+                self.logger.info(f"📤 [TrayDaemon] Sending to client {i}: {message_json.strip()}")
                 client.send(message_json.encode('utf-8'))
+                self.logger.info(f"✅ [TrayDaemon] Successfully sent to client {i}")
             except Exception as e:
-                self.logger.warning(f"Failed to send to client: {e}")
+                self.logger.warning(f"❌ [TrayDaemon] Failed to send to client {i}: {e}")
                 disconnected_clients.append(client)
 
         # Remove disconnected clients
         for client in disconnected_clients:
+            self.logger.info(f"🗑️ [TrayDaemon] Removing disconnected client")
             self.client_connections.remove(client)
             try:
                 client.close()
             except:
                 pass
+
+        self.logger.info(f"📤 [TrayDaemon] Message sending complete. Active clients: {len(self.client_connections)}")
 
     def start_server(self) -> bool:
         """Start the TCP server for IPC communication"""
@@ -736,15 +745,19 @@ class EnhancedTrayDaemon:
 
     def _monitor_app_state(self):
         """Monitor application state and update tray menu accordingly"""
+        self.logger.info("🔍 [TrayDaemon] Starting app state monitoring thread")
+
         while self.running:
             try:
                 current_running_state = self._is_app_running()
                 current_auth_state = self._is_app_authenticated() if current_running_state else False
 
+                self.logger.debug(f"🔍 [TrayDaemon] App state check: running={current_running_state}, auth={current_auth_state}, stored_running={self.app_is_running}")
+
                 # Check if running state changed
                 if current_running_state != self.app_is_running:
                     self.app_is_running = current_running_state
-                    self.logger.info(f"App running state changed: {'running' if current_running_state else 'stopped'}")
+                    self.logger.info(f"🔄 [TrayDaemon] App running state changed: {'running' if current_running_state else 'stopped'}")
 
                     # Reset auth state if app stopped
                     if not current_running_state:
@@ -753,18 +766,19 @@ class EnhancedTrayDaemon:
                 # Check if authentication state changed
                 if current_auth_state != self.app_is_authenticated:
                     self.app_is_authenticated = current_auth_state
-                    self.logger.info(f"App auth state changed: {'authenticated' if current_auth_state else 'not authenticated'}")
+                    self.logger.info(f"🔄 [TrayDaemon] App auth state changed: {'authenticated' if current_auth_state else 'not authenticated'}")
 
                 # Update tray menu if any state changed
                 if (current_running_state != self.app_is_running or
                     current_auth_state != self.app_is_authenticated):
+                    self.logger.info(f"🔄 [TrayDaemon] Updating tray menu due to state change")
                     if self.tray:
                         self.tray.menu = self._create_menu()
 
                 time.sleep(2)  # Check every 2 seconds
 
             except Exception as e:
-                self.logger.error(f"Error in app monitoring: {e}")
+                self.logger.error(f"💥 [TrayDaemon] Error in app monitoring: {e}")
                 time.sleep(5)  # Wait longer on error
 
     def shutdown(self):
