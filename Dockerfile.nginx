@@ -27,15 +27,12 @@ RUN mkdir -p \
 COPY config/docker/entrypoint-with-ssl-fallback.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Switch to nginx user for security
-USER nginx
-
 # Expose ports
 EXPOSE 80 443
 
-# Health check
+# Health check (run as root since nginx user might not have curl access)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:80/ || exit 1
 
-# Use entrypoint script to handle SSL certificates
+# Use entrypoint script to handle SSL certificates and drop privileges
 ENTRYPOINT ["/entrypoint.sh"]
