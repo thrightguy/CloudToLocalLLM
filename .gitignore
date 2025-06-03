@@ -134,3 +134,14 @@ packaging/deb/usr/bin/cloudtolocalllm-tray
 
 # Large binary assets
 packaging/deb/usr/lib/cloudtolocalllm/data/flutter_assets/NOTICES.Z
+
+# CloudToLocalLLM Binary File Management
+# Exclude large original files (>50MB) but include split parts
+dist/*.tar.gz
+dist/*.AppImage
+dist/**/cloudtolocalllm-enhanced-tray
+dist/**/cloudtolocalllm-settings
+# Include split parts and checksums
+!dist/*.part*
+!dist/**/binary_checksums.txt
+!dist/binary_checksums.txt

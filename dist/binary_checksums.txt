@@ -1,0 +1,8 @@
+# CloudToLocalLLM Binary Files Checksums
+# Generated: Mon 02 Jun 2025 08:37:27 PM EDT
+# Format: SHA256 checksum, filename, file type (original/part)
+
+647471594bc4f374316fe9fb15de5bfa38daaa1bddeb1cd2ec49a47b02493380  cloudtolocalllm-3.0.1-x86_64.tar.gz  original
+2a9c6704b80fef5884767b7b25fc87b1835362672229b78f0cef5b82f707c2c4  cloudtolocalllm-3.0.1-x86_64.tar.gz.partaa  part
+c8873796b1fc75a73db813f48168c879d43b300769861ab1b139501854dc96e0  cloudtolocalllm-3.0.1-x86_64.tar.gz.partab  part
+6167a2c7c80bfbe9a1f30590297a287a0c88aad2455beb32f559b397c970d02d  cloudtolocalllm-3.0.1-x86_64.tar.gz.partac  part

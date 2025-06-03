@@ -257,8 +257,25 @@ display_package_info() {
     cd "$PROJECT_ROOT"
 }
 
+# Manage binary files for GitHub compatibility
+manage_binary_files() {
+    print_status "Managing binary files for GitHub compatibility..."
+
+    # Run binary file management to ensure files are properly split
+    if [ -f "$PROJECT_ROOT/scripts/manage_binary_files.sh" ]; then
+        if ! "$PROJECT_ROOT/scripts/manage_binary_files.sh" auto; then
+            print_error "Failed to manage binary files"
+            exit 1
+        fi
+        print_status "Binary files managed successfully"
+    else
+        print_warning "Binary management script not found, skipping file splitting"
+    fi
+}
+
 # Main execution
 main() {
+    manage_binary_files
     check_prerequisites
     create_package_structure
     copy_flutter_app
@@ -267,9 +284,16 @@ main() {
     generate_checksums
     test_package
     display_package_info
-    
+
     echo -e "${GREEN}✅ AUR binary package created successfully!${NC}"
     echo -e "${GREEN}📦 Ready for distribution: $OUTPUT_DIR/$PACKAGE_NAME.tar.gz${NC}"
+
+    # Final binary file management after package creation
+    print_status "Final binary file management..."
+    if [ -f "$PROJECT_ROOT/scripts/manage_binary_files.sh" ]; then
+        "$PROJECT_ROOT/scripts/manage_binary_files.sh" auto --force
+        print_status "All binary files are GitHub-ready"
+    fi
 }
 
 # Run main function
