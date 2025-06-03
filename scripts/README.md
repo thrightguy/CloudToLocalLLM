@@ -30,13 +30,42 @@ cd /opt/cloudtolocalllm
 - `docker_startup_vps.sh` - **Container startup script** (uses existing Let's Encrypt certs)
 - `update_deployment.sh` - **Update script** for regular deployments
 
-### Supporting Directories
+### Organized Script Directories
+
+#### `/build/` - Build Scripts
+- `build_appimage_manjaro.sh` - AppImage build script for Manjaro Linux
+- `build_webapp_verbose.sh` - Verbose web application build script
+
+#### `/deploy/` - Deployment Scripts
+- `EXECUTE_VPS_DEPLOYMENT.sh` - VPS deployment execution script
+- `VPS_DEPLOYMENT_COMMANDS.sh` - VPS deployment commands
+- `VPS_DEPLOYMENT_VERIFICATION.sh` - VPS deployment verification
+
+#### `/setup/` - Initial Setup Scripts
+- `initial_server_setup.sh` - Initial server configuration
+- `vps_initial_setup.sh` - VPS initial setup and configuration
+
+#### `/release/` - Release Management
+- `sf_upload.sh` - SourceForge file upload script for binary distribution
+
+#### Other Directories
 - `auth0/` - Auth0 integration scripts
-- `build/` - Build scripts for different platforms
-- `deploy/` - Additional deployment utilities
-- `setup/` - Initial server setup scripts
+- `docker/` - Docker-related utilities
+- `install/` - Installation scripts for various components
+- `maintenance/` - System maintenance scripts
+- `packaging/` - Package creation scripts
+- `powershell/` - Windows PowerShell scripts
 - `ssl/` - SSL certificate management
+- `utils/` - General utility scripts
 - `verification/` - Deployment verification tools
+
+### Root Scripts (Moved to Organized Folders)
+Scripts previously in the project root have been moved to their appropriate directories:
+- Debug scripts → `/scripts/`
+- Deployment scripts → `/scripts/deploy/`
+- Build scripts → `/scripts/build/`
+- Setup scripts → `/scripts/setup/`
+- Release scripts → `/scripts/release/`
 
 ## 🔧 Script Details
 
@@ -88,6 +117,30 @@ cd /opt/cloudtolocalllm
 ```bash
 ./scripts/update_deployment.sh
 ```
+
+### `release/sf_upload.sh` - SourceForge Upload
+**Purpose**: Upload binary distribution files to SourceForge for AUR packaging
+
+**Features**:
+- ✅ Creates versioned binary archives
+- ✅ Generates SHA256 checksums
+- ✅ Uploads to SourceForge file hosting
+- ✅ Provides AUR PKGBUILD integration URLs
+- ✅ Automatic cleanup of local files
+
+**Usage**:
+```bash
+# Upload with default version (v3.0.1)
+./scripts/release/sf_upload.sh
+
+# Upload with specific version
+./scripts/release/sf_upload.sh v3.1.0
+```
+
+**Output**:
+- Binary archive: `cloudtolocalllm-v3.0.1-binaries.tar.gz`
+- Checksum file: `cloudtolocalllm-v3.0.1-binaries.tar.gz.sha256`
+- SourceForge download URLs for AUR PKGBUILD integration
 
 ## 🔒 Security Features
 

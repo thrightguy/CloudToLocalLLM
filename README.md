@@ -114,6 +114,47 @@ Deploy all services with the new multi-container architecture:
 
 For instructions on self-hosting CloudToLocalLLM with the legacy single container, including SSL setup, prerequisites, and advanced deployment, please see our [Self-Hosting Guide](docs/SELF_HOSTING.md).
 
+## 📁 Project Structure
+
+CloudToLocalLLM follows an organized directory structure for better maintainability and development:
+
+### Core Directories
+- `lib/` - Flutter application source code
+- `api-backend/` - Node.js backend server
+- `tray_daemon/` - System tray daemon implementation
+- `web/` - Web-specific Flutter assets
+
+### Documentation
+- `docs/` - Comprehensive project documentation
+  - Architecture guides, deployment instructions, troubleshooting
+  - User guides, setup instructions, and API documentation
+
+### Scripts & Automation
+- `scripts/` - Organized build, deployment, and utility scripts
+  - `build/` - Build scripts for different platforms
+  - `deploy/` - Deployment and VPS scripts
+  - `setup/` - Initial server setup scripts
+  - `release/` - Release management and distribution
+  - `ssl/` - SSL certificate management
+  - `verification/` - Testing and verification tools
+
+### Packaging & Distribution
+- `packaging/` - Platform-specific packaging configurations
+  - DEB packages, AppImage, Windows installers
+- `installers/` - Installation scripts and packages
+- `aur-package/` - Arch User Repository (AUR) package files
+
+### Configuration & Infrastructure
+- `config/` - Configuration files for various platforms
+- `docker/` - Docker containers and build contexts
+- `static_homepage/` - Project website and documentation site
+
+### Development Tools
+- `.vscode/` - VS Code workspace configuration
+- `linux/`, `assets/` - Platform-specific assets and configurations
+
+For detailed information about any component, see the respective README files in each directory.
+
 ## 🚀 Getting Started
 
 ### Connecting to Local LLM
