@@ -125,7 +125,7 @@ build_daemon() {
     # Executable name
     EXE_NAME="cloudtolocalllm-enhanced-tray"
     
-    # PyInstaller arguments
+    # PyInstaller arguments with size optimization
     PYINSTALLER_ARGS=(
         "--onefile"
         "--name" "$EXE_NAME"
@@ -133,6 +133,21 @@ build_daemon() {
         "--workpath" "$BUILD_DIR"
         "--specpath" "$BUILD_DIR"
         "--clean"
+        "--strip"
+        "--optimize" "2"
+        "--exclude-module" "tkinter"
+        "--exclude-module" "matplotlib"
+        "--exclude-module" "numpy"
+        "--exclude-module" "scipy"
+        "--exclude-module" "pandas"
+        "--exclude-module" "jupyter"
+        "--exclude-module" "IPython"
+        "--exclude-module" "test"
+        "--exclude-module" "unittest"
+        "--exclude-module" "doctest"
+        "--exclude-module" "pdb"
+        "--exclude-module" "profile"
+        "--exclude-module" "pstats"
     )
     
     # Platform-specific arguments
@@ -195,7 +210,7 @@ build_settings_app() {
     # Settings app executable name
     SETTINGS_EXE_NAME="cloudtolocalllm-settings"
 
-    # PyInstaller arguments for settings app
+    # PyInstaller arguments for settings app with size optimization
     SETTINGS_PYINSTALLER_ARGS=(
         "--onefile"
         "--name" "$SETTINGS_EXE_NAME"
@@ -203,6 +218,21 @@ build_settings_app() {
         "--workpath" "$BUILD_DIR/settings"
         "--specpath" "$BUILD_DIR/settings"
         "--clean"
+        "--strip"
+        "--optimize" "2"
+        "--exclude-module" "matplotlib"
+        "--exclude-module" "numpy"
+        "--exclude-module" "scipy"
+        "--exclude-module" "pandas"
+        "--exclude-module" "jupyter"
+        "--exclude-module" "IPython"
+        "--exclude-module" "test"
+        "--exclude-module" "unittest"
+        "--exclude-module" "doctest"
+        "--exclude-module" "pdb"
+        "--exclude-module" "profile"
+        "--exclude-module" "pstats"
+        "--exclude-module" "pystray"
     )
 
     # Platform-specific arguments for settings app
