@@ -6,3 +6,7 @@
 2a9c6704b80fef5884767b7b25fc87b1835362672229b78f0cef5b82f707c2c4  cloudtolocalllm-3.0.1-x86_64.tar.gz.partaa  part
 c8873796b1fc75a73db813f48168c879d43b300769861ab1b139501854dc96e0  cloudtolocalllm-3.0.1-x86_64.tar.gz.partab  part
 6167a2c7c80bfbe9a1f30590297a287a0c88aad2455beb32f559b397c970d02d  cloudtolocalllm-3.0.1-x86_64.tar.gz.partac  part
+d3f21a7e79a3fff315b8de22b668782116bd00de27f00af663a176da19c32906  cloudtolocalllm-tray-3.0.2-x86_64.tar.gz  original
+85bbf0cb353cda318ccd667ab8519e3bf49473ec79f7ee3295b697b119dff6ea  cloudtolocalllm-tray-3.0.2-x86_64.tar.gz.partaa  part
+7e772c231fdfafe7b0fc7e02737beb539c572d235f884887929227ef314e349b  cloudtolocalllm-tray-3.0.2-x86_64.tar.gz.partab  part
+bd3d7e0927047d74ff0fa6b9c7ad51f1df7d6d03a0712866831086f207326f94  cloudtolocalllm-tray-3.0.2-x86_64.tar.gz.partac  part

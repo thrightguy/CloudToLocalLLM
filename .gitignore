@@ -145,3 +145,14 @@ packaging/deb/usr/lib/cloudtolocalllm/data/
 dist/
 !dist/sourceforge/
 !dist/sourceforge/metadata/
+
+# CloudToLocalLLM Binary File Management
+# Exclude large original files (>50MB) but include split parts
+dist/*.tar.gz
+dist/*.AppImage
+dist/**/cloudtolocalllm-enhanced-tray
+dist/**/cloudtolocalllm-settings
+# Include split parts and checksums
+!dist/*.part*
+!dist/**/binary_checksums.txt
+!dist/binary_checksums.txt
