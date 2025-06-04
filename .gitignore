@@ -106,10 +106,10 @@ secrets/
 .cursor/
 flutter-tools/
 
-# Files >25MB excluded from Git (use SourceForge file hosting)
+# Files >25MB excluded from Git (use GitHub Releases for distribution)
 # This follows Git best practices and prevents repository bloat
 
-# Distribution files >25MB - use SourceForge file hosting instead
+# Distribution files >25MB - use GitHub Releases instead
 dist/*.tar.gz
 dist/*.AppImage
 dist/**/*.part*
@@ -141,10 +141,10 @@ packaging/deb/usr/lib/cloudtolocalllm/data/
 !dist/**/*.txt
 !dist/**/checksums.txt
 
-# Exclude entire dist directory but allow sourceforge metadata
+# Exclude entire dist directory but allow metadata and checksums
 dist/
-!dist/sourceforge/
-!dist/sourceforge/metadata/
+!dist/binary_checksums.txt
+!dist/metadata/
 
 # CloudToLocalLLM Binary File Management
 # Exclude large original files (>50MB) but include split parts

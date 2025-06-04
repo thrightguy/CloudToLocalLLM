@@ -5,9 +5,9 @@
 # don't need to install Flutter or any build dependencies.
 #
 pkgname=cloudtolocalllm
-pkgver=3.0.2
+pkgver=3.0.3
 pkgrel=1
-pkgdesc="Local LLM interface with cloud synchronization and essential tunneling functionality (Unified 126MB package)"
+pkgdesc="CloudToLocalLLM - Enhanced Architecture with System Tray Integration and Local LLM Management (Unified 145MB package)"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
 license=('MIT')
@@ -36,12 +36,14 @@ provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
 
-# Unified binary package from SourceForge (no compilation required)
+# Unified binary package from GitHub Releases (no compilation required)
 source=(
-    "https://sourceforge.net/projects/cloudtolocalllm/files/releases/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz/download"
+    "https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+    "https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256"
 )
 sha256sums=(
-    '89580ece63ad63076d4ce5c0760ef0c10b1616e2ca324309c5818e61ef1edd24'  # v3.0.2 unified package checksum (verified from SourceForge)
+    '4fcef8f2e38a2408c83a52feffa8b9d98af221bbbaf3dd8fdda13338bd29e636'  # v3.0.3 unified package checksum (verified from GitHub Releases)
+    'SKIP'  # Checksum file verification
 )
 
 prepare() {
@@ -49,12 +51,23 @@ prepare() {
 
     msg "Extracting unified CloudToLocalLLM binary package..."
 
-    # The SourceForge download creates a file without the /download suffix
+    # Verify checksum using downloaded SHA256 file
     local package_file="cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+    local checksum_file="${package_file}.sha256"
 
     if [[ ! -f "$package_file" ]]; then
         error "Unified binary package not found: $package_file"
         return 1
+    fi
+
+    # Verify integrity using the downloaded checksum file
+    if [[ -f "$checksum_file" ]]; then
+        msg "Verifying package integrity..."
+        if ! sha256sum -c "$checksum_file"; then
+            error "Package integrity verification failed"
+            return 1
+        fi
+        msg "Package integrity verified successfully"
     fi
 
     # Extract the package
@@ -111,7 +124,7 @@ package() {
     # Create unified wrapper script in /usr/bin
     cat > "$pkgdir/usr/bin/cloudtolocalllm" << 'EOF'
 #!/bin/bash
-# CloudToLocalLLM v3.0.2 unified wrapper script
+# CloudToLocalLLM v3.0.3 unified wrapper script
 # Manages essential tray daemon and Flutter application
 
 cd /usr/share/cloudtolocalllm

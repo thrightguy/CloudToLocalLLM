@@ -10,8 +10,8 @@ NC='\033[0m'
 
 echo -e "${YELLOW}Updating CloudToLocalLLM portal...${NC}"
 
-# Pull latest changes
-echo -e "${BLUE}Pulling latest changes from git...${NC}"
+# Pull latest changes from GitHub (primary source of truth)
+echo -e "${BLUE}Pulling latest changes from GitHub...${NC}"
 git pull origin master
 
 # Build Flutter web application
