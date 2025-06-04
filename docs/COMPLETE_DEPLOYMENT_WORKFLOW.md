@@ -4,16 +4,61 @@
 
 This is the **ONE AND ONLY** deployment document for CloudToLocalLLM. Follow this exactly or you'll end up with the same version mismatch bullshit that's been plaguing this project.
 
+**📊 Estimated Total Time: 45-90 minutes** (First-time: 90 min, Updates: 45 min)
+
+---
+
+## 🔍 **PRE-FLIGHT CHECKS** (⏱️ 5 minutes)
+
+**MANDATORY: Complete ALL checks before starting deployment**
+
+### **Environment Verification**
+```bash
+# 1. Verify you're in the correct directory
+pwd
+# Expected: /path/to/CloudToLocalLLM
+
+# 2. Check Git status
+git status
+# Expected: "working tree clean" or only untracked files
+
+# 3. Verify Flutter installation
+flutter --version
+# Expected: Flutter 3.x.x or higher
+
+# 4. Check version manager script
+./scripts/version_manager.sh help
+# Expected: Help output with commands listed
+
+# 5. Verify current version
+./scripts/version_manager.sh info
+# Expected: Current version information display
+```
+
+### **Required Tools Checklist**
+- [ ] Flutter SDK installed and in PATH
+- [ ] Git configured with proper credentials
+- [ ] SSH access to VPS (test: `ssh cloudllm@cloudtolocalllm.online "echo 'Connection OK'"`)
+- [ ] AUR SSH key configured (if updating AUR)
+- [ ] SourceForge access configured (if uploading binaries)
+
+### **Deployment Type Selection**
+Choose your deployment scenario:
+- **🆕 First-Time Deployment**: Complete setup from scratch
+- **🔄 Version Update**: Increment version and deploy changes
+- **🐛 Hotfix Deployment**: Critical bug fix deployment
+- **🔧 Configuration Update**: No version change, config only
+
 ---
 
 ## 📋 **Version Management - THE SINGLE SOURCE OF TRUTH**
 
-### **pubspec.yaml is KING**
+### **pubspec.yaml is KING** 👑
 - **ALL** version information comes from `pubspec.yaml`
 - Format: `MAJOR.MINOR.PATCH+BUILD` (e.g., `3.1.3+001`)
 - **NEVER** manually edit version numbers anywhere else
 
-### **Version Increment Process**
+### **Version Increment Process** (⏱️ 2 minutes)
 ```bash
 # Use the version manager script - ALWAYS
 ./scripts/version_manager.sh increment <type>
@@ -21,415 +66,1037 @@ This is the **ONE AND ONLY** deployment document for CloudToLocalLLM. Follow thi
 # Types:
 # - major: Creates GitHub release (x.0.0) - significant changes
 # - minor: Feature additions (x.y.0) - no GitHub release
-# - patch: Bug fixes (x.y.z) - no GitHub release  
+# - patch: Bug fixes (x.y.z) - no GitHub release
 # - build: Build increments (x.y.z+nnn) - no GitHub release
+```
+
+**Expected Output:**
+```
+✅ Version updated from 3.1.2+001 to 3.1.3+001
+📋 Updated files:
+  - pubspec.yaml
+  - assets/version.json
 ```
 
 ### **Version Consistency Requirements**
 Before ANY deployment, verify these files match pubspec.yaml version:
-- `assets/version.json`
-- `aur-package/PKGBUILD` (pkgver field)
-- All build scripts and documentation
+- `assets/version.json` ✅
+- `aur-package/PKGBUILD` (pkgver field) ✅
+- All build scripts and documentation ✅
+
+### **Automated Version Synchronization**
+```bash
+# Synchronize all version references automatically
+./scripts/deploy/sync_versions.sh
+
+# Expected output:
+# ✅ All versions synchronized to 3.1.3+001
+```
 
 ---
 
 ## 🔄 **COMPLETE DEPLOYMENT PROCESS**
 
-### **Phase 1: Local Development & Version Management**
+### **Phase 1: Local Development & Version Management** (⏱️ 10 minutes)
 
-1. **Increment Version**
-   ```bash
-   # Determine increment type based on changes
-   ./scripts/version_manager.sh increment patch  # or minor/major
-   
-   # Verify version updated correctly
-   ./scripts/version_manager.sh info
-   ```
+#### **Step 1.1: Increment Version** ✅
+```bash
+# Determine increment type based on changes
+./scripts/version_manager.sh increment patch  # or minor/major/build
 
-2. **Update All Version References**
-   ```bash
-   # Update assets/version.json to match pubspec.yaml
-   # Update aur-package/PKGBUILD pkgver field
-   # This should be automated but verify manually
-   ```
+# Verify version updated correctly
+./scripts/version_manager.sh info
+```
 
-3. **Commit Version Changes**
-   ```bash
-   git add pubspec.yaml assets/version.json aur-package/PKGBUILD
-   git commit -m "Version bump to $(./scripts/version_manager.sh get)"
-   ```
+**Expected Output:**
+```
+=== CloudToLocalLLM Version Information ===
+Full Version:     3.1.3+001
+Semantic Version: 3.1.3
+Build Number:     001
+Source File:      pubspec.yaml
+```
 
-4. **Push to SourceForge Git (PRIMARY)**
-   ```bash
-   # SourceForge is the single source of truth for deployments
-   git push sourceforge master
-   
-   # Verify push succeeded
-   git log --oneline -5
-   ```
+#### **Step 1.2: Synchronize All Version References** ✅
+```bash
+# Automated synchronization (RECOMMENDED)
+./scripts/deploy/sync_versions.sh
 
-### **Phase 2: Build & Package Creation**
+# Manual verification (if sync script fails)
+grep "version:" pubspec.yaml
+grep "version" assets/version.json
+grep "pkgver=" aur-package/PKGBUILD
+```
 
-5. **Build Flutter Application**
-   ```bash
-   # Clean build
-   flutter clean
-   flutter pub get
-   
-   # Build for Linux desktop
-   flutter build linux --release
-   
-   # Build for web (VPS deployment)
-   flutter build web --release --no-tree-shake-icons
-   ```
+**Expected Output:**
+```
+🔄 Synchronizing all version references...
+📋 Current version: 3.1.3+001
+📝 Updating assets/version.json...
+✅ Updated assets/version.json
+📝 Updating AUR PKGBUILD...
+✅ Updated AUR PKGBUILD pkgver to 3.1.3
+🎉 All versions synchronized to 3.1.3+001
+```
 
-6. **Create Binary Package**
-   ```bash
-   # Create unified binary package for AUR
-   ./scripts/build/create_unified_package.sh
-   
-   # Verify package created in dist/
-   ls -la dist/cloudtolocalllm-*.tar.gz
-   ```
+#### **Step 1.3: Commit Version Changes** ✅
+```bash
+# Add all version-related files
+git add pubspec.yaml assets/version.json aur-package/PKGBUILD
 
-7. **Upload to SourceForge File Hosting**
-   ```bash
-   # Upload binary package to SourceForge
-   sftp imrightguy@frs.sourceforge.net
-   # Navigate to /home/frs/project/cloudtolocalllm/releases/
-   # Upload the tar.gz file and SHA256 checksum
-   ```
+# Commit with standardized message
+git commit -m "Version bump to $(./scripts/version_manager.sh get)"
 
-### **Phase 3: AUR Package Deployment**
+# Verify commit
+git log --oneline -1
+```
 
-8. **Update AUR PKGBUILD**
-   ```bash
-   cd aur-package/
-   
-   # Update PKGBUILD with new version and checksums
-   # Update source URLs to point to new SourceForge files
-   # Update sha256sums with new checksums
-   ```
+#### **Step 1.4: Push to Git Repository** ✅
+```bash
+# Push to GitHub (primary for development)
+git push origin master
 
-9. **Test AUR Package Locally**
-   ```bash
-   # CRITICAL: Test before submission
-   makepkg -si --noconfirm
-   
-   # Verify installation
-   yay -U cloudtolocalllm-*.pkg.tar.zst
-   
-   # Test the installed package
-   cloudtolocalllm --version
-   ```
+# Alternative: Push to SourceForge (if configured)
+# git push sourceforge master
 
-10. **Submit to AUR**
-    ```bash
-    # Only after local testing passes
-    git add PKGBUILD .SRCINFO
-    git commit -m "Update to version $(./scripts/version_manager.sh get)"
-    git push origin master
-    ```
+# Verify push succeeded
+git log --oneline -5
+```
 
-### **Phase 4: VPS Deployment**
+**⚠️ CHECKPOINT:** All version references must be synchronized before proceeding!
 
-11. **Deploy to VPS**
-    ```bash
-    # SSH to VPS as cloudllm user
-    ssh cloudllm@cloudtolocalllm.online
-    
-    # Navigate to project directory
-    cd /opt/cloudtolocalllm
-    
-    # Run deployment script
-    ./scripts/deploy/update_and_deploy.sh
-    ```
+### **Phase 2: Build & Package Creation** (⏱️ 15-25 minutes)
 
-12. **Verify VPS Deployment**
-    ```bash
-    # Check container status
-    docker-compose -f docker-compose.yml ps
-    
-    # Verify web accessibility
-    curl -I https://app.cloudtolocalllm.online
-    curl -I https://cloudtolocalllm.online
-    
-    # Check version endpoint
-    curl https://api.cloudtolocalllm.online/version
-    ```
+#### **Step 2.1: Clean Build Environment** ✅
+```bash
+# Clean previous builds
+flutter clean
+
+# Get dependencies
+flutter pub get
+
+# Verify no dependency issues
+flutter doctor
+```
+
+**Expected Output:**
+```
+Deleting build...                                                    7ms
+Deleting .dart_tool...                                               5ms
+Deleting ephemeral...                                                3ms
+Running "flutter pub get" in CloudToLocalLLM...
+Got dependencies!
+```
+
+#### **Step 2.2: Build Flutter Applications** ✅
+```bash
+# Build for Linux desktop (AUR package)
+flutter build linux --release
+
+# Build for web (VPS deployment)
+flutter build web --release --no-tree-shake-icons
+```
+
+**Expected Output:**
+```
+Building Linux application...
+✓ Built build/linux/x64/release/bundle/cloudtolocalllm
+
+Compiling lib/main.dart for the Web...
+✓ Built build/web
+```
+
+**Build Verification:**
+```bash
+# Verify Linux build
+ls -la build/linux/x64/release/bundle/
+# Expected: cloudtolocalllm executable and data/ lib/ directories
+
+# Verify web build
+ls -la build/web/
+# Expected: index.html, main.dart.js, assets/, etc.
+```
+
+#### **Step 2.3: Create Binary Package** ✅
+```bash
+# Create unified binary package for AUR
+VERSION=$(./scripts/version_manager.sh get-semantic)
+mkdir -p dist/v${VERSION}
+cp -r build/linux/x64/release/bundle dist/v${VERSION}/cloudtolocalllm-${VERSION}
+
+# Create tarball
+cd dist/v${VERSION}
+tar -czf cloudtolocalllm-${VERSION}-x86_64.tar.gz cloudtolocalllm-${VERSION}/
+
+# Generate checksum
+sha256sum cloudtolocalllm-${VERSION}-x86_64.tar.gz > cloudtolocalllm-${VERSION}-x86_64.tar.gz.sha256
+
+# Verify package
+ls -la cloudtolocalllm-${VERSION}-x86_64.tar.gz*
+```
+
+**Expected Output:**
+```
+-rw-r--r-- 1 user user 145000000 Jun  4 10:00 cloudtolocalllm-3.1.3-x86_64.tar.gz
+-rw-r--r-- 1 user user       102 Jun  4 10:00 cloudtolocalllm-3.1.3-x86_64.tar.gz.sha256
+```
+
+#### **Step 2.4: Upload to SourceForge File Hosting** (Optional) ⚠️
+```bash
+# Upload binary package to SourceForge (if using SourceForge distribution)
+sftp imrightguy@frs.sourceforge.net
+# Commands in SFTP session:
+# cd /home/frs/project/cloudtolocalllm/releases/
+# put cloudtolocalllm-3.1.3-x86_64.tar.gz
+# put cloudtolocalllm-3.1.3-x86_64.tar.gz.sha256
+# quit
+```
+
+**⚠️ CHECKPOINT:** Verify both Linux and web builds completed successfully!
+
+### **Phase 3: AUR Package Deployment** (⏱️ 15-20 minutes)
+
+#### **Step 3.1: Update AUR PKGBUILD** ✅
+```bash
+cd aur-package/
+
+# Verify current PKGBUILD version
+grep "pkgver=" PKGBUILD
+
+# Update checksums if using new binaries
+NEW_CHECKSUM=$(sha256sum ../dist/v*/cloudtolocalllm-*-x86_64.tar.gz | cut -d' ' -f1)
+echo "New checksum: $NEW_CHECKSUM"
+
+# Update PKGBUILD manually or verify sync_versions.sh updated it
+# The version should already be updated by sync_versions.sh
+```
+
+**Manual PKGBUILD Updates (if needed):**
+```bash
+# Update version
+sed -i "s/^pkgver=.*/pkgver=$(./scripts/version_manager.sh get-semantic)/" PKGBUILD
+
+# Update checksum (if using new binaries)
+sed -i "s/^sha256sums=.*/sha256sums=('$NEW_CHECKSUM' 'SKIP')/" PKGBUILD
+```
+
+#### **Step 3.2: Test AUR Package Locally** ✅ **CRITICAL**
+```bash
+# Clean previous builds
+rm -rf src/ pkg/ *.pkg.tar.zst
+
+# Build package
+makepkg -si --noconfirm
+
+# Expected output:
+# ==> Making package: cloudtolocalllm 3.1.3-1
+# ==> Checking runtime dependencies...
+# ==> Checking buildtime dependencies...
+# ==> Retrieving sources...
+# ==> Validating source files with sha256sums...
+# ==> Extracting sources...
+# ==> Starting build()...
+# ==> Entering fakeroot environment...
+# ==> Starting package()...
+# ==> Finished making: cloudtolocalllm 3.1.3-1
+```
+
+**Package Verification:**
+```bash
+# Test installation with yay (if available)
+yay -U cloudtolocalllm-*.pkg.tar.zst --noconfirm
+
+# Test the installed package
+cloudtolocalllm --version
+# Expected: Version 3.1.3 or similar
+
+# Test basic functionality
+cloudtolocalllm --help
+```
+
+#### **Step 3.3: Generate .SRCINFO** ✅
+```bash
+# Generate updated .SRCINFO
+makepkg --printsrcinfo > .SRCINFO
+
+# Verify .SRCINFO content
+head -10 .SRCINFO
+# Expected: pkgver = 3.1.3
+```
+
+#### **Step 3.4: Submit to AUR** ✅
+```bash
+# Add updated files
+git add PKGBUILD .SRCINFO
+
+# Commit with version info
+git commit -m "Update to version $(./scripts/version_manager.sh get-semantic)"
+
+# Push to AUR (requires SSH key setup)
+git push origin master
+```
+
+**Expected Output:**
+```
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Writing objects: 100% (3/3), 1.05 KiB | 1.05 MiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0)
+To ssh://aur.archlinux.org/cloudtolocalllm.git
+   abc1234..def5678  master -> master
+```
+
+**⚠️ CHECKPOINT:** AUR package must build and install successfully before proceeding!
+
+### **Phase 4: VPS Deployment** (⏱️ 10-15 minutes)
+
+#### **Step 4.1: Deploy to VPS** ✅
+```bash
+# SSH to VPS as cloudllm user
+ssh cloudllm@cloudtolocalllm.online
+
+# Navigate to project directory
+cd /opt/cloudtolocalllm
+
+# Pull latest changes
+git pull origin master
+
+# Run deployment script
+./scripts/deploy/update_and_deploy.sh
+```
+
+**Expected Output:**
+```
+Updating CloudToLocalLLM portal...
+Pulling latest changes from GitHub...
+From https://github.com/imrightguy/CloudToLocalLLM
+ * branch            master     -> FETCH_HEAD
+Already up to date.
+Building Flutter web application...
+✓ Built build/web
+Stopping existing containers...
+SSL certificates already exist. Starting services...
+✅ Web app is accessible at https://app.cloudtolocalllm.online
+Deployment complete!
+```
+
+#### **Step 4.2: Verify VPS Deployment** ✅
+```bash
+# Check container status
+docker compose ps
+# Alternative for older systems: docker-compose ps
+
+# Expected output:
+# NAME                     IMAGE               COMMAND             STATUS
+# cloudtolocalllm-webapp   nginx:alpine        "/entrypoint.sh"    Up (healthy)
+```
+
+**Web Accessibility Tests:**
+```bash
+# Test main application
+curl -I https://app.cloudtolocalllm.online
+# Expected: HTTP/1.1 200 OK
+
+# Test homepage
+curl -I https://cloudtolocalllm.online
+# Expected: HTTP/1.1 200 OK
+
+# Check version endpoint
+curl -s https://app.cloudtolocalllm.online/version.json
+# Expected: {"app_name":"cloudtolocalllm","version":"3.1.3","build_number":"001",...}
+```
+
+**Container Health Check:**
+```bash
+# Check container logs for errors
+docker compose logs webapp --tail 20
+
+# Verify nginx is serving files
+docker compose exec webapp ls -la /usr/share/nginx/html/
+```
+
+#### **Step 4.3: VPS Deployment Verification** ✅
+```bash
+# Exit VPS SSH session
+exit
+
+# Test from local machine
+curl -s https://app.cloudtolocalllm.online/version.json | grep version
+# Expected: "version":"3.1.3"
+
+# Test full application load
+curl -s https://app.cloudtolocalllm.online | grep -o "<title>.*</title>"
+# Expected: <title>CloudToLocalLLM</title>
+```
+
+**⚠️ CHECKPOINT:** VPS must be accessible and serving the correct version!
 
 ---
 
-## ✅ **VERIFICATION REQUIREMENTS**
+## ✅ **COMPREHENSIVE VERIFICATION** (⏱️ 10 minutes)
 
-### **Cross-Component Synchronization Check**
+### **Automated Verification Script** 🤖
+```bash
+# Run comprehensive verification
+./scripts/deploy/verify_deployment.sh
+```
 
-**ALL THREE COMPONENTS MUST MATCH THE SAME VERSION:**
+**Expected Output:**
+```
+🔍 CloudToLocalLLM Deployment Verification
+===========================================
+📋 Expected version: 3.1.3+001
 
-1. **Git Repository**
-   ```bash
-   # Check current version
-   ./scripts/version_manager.sh get
-   
-   # Verify latest commit pushed
-   git log --oneline -1
-   ```
+📂 Checking Git repository...
+✅ Git repository version: 3.1.3+001
+✅ All changes committed
+✅ Latest changes pushed to remote
 
-2. **VPS Deployment**
-   ```bash
-   # Check deployed version
-   curl https://api.cloudtolocalllm.online/version
-   
-   # Verify container health
-   ssh cloudllm@cloudtolocalllm.online "docker-compose ps"
-   ```
+📄 Checking assets/version.json...
+✅ assets/version.json: 3.1.3+001
 
-3. **AUR Package**
-   ```bash
-   # Check AUR package version
-   yay -Si cloudtolocalllm | grep Version
-   
-   # Verify package builds
-   yay -G cloudtolocalllm && cd cloudtolocalllm && makepkg
-   ```
+📦 Checking AUR package...
+✅ AUR package version: 3.1.3
+✅ AUR PKGBUILD is valid
 
-### **Functional Testing Requirements**
+🌐 Checking VPS deployment...
+✅ VPS web app accessible
+✅ VPS deployment version: 3.1.3
+✅ VPS main site accessible
 
-- [ ] Desktop application launches and shows correct version
-- [ ] Web application accessible and shows correct version  
-- [ ] AUR package installs without errors
+🎯 Verification Summary
+======================
+🎉 DEPLOYMENT VERIFICATION PASSED!
+All components are synchronized with version 3.1.3+001
+✅ Deployment is complete and ready for production use.
+```
+
+### **Manual Cross-Component Verification**
+
+#### **1. Git Repository Status** ✅
+```bash
+# Check current version
+./scripts/version_manager.sh get
+# Expected: 3.1.3+001
+
+# Verify latest commit pushed
+git log --oneline -1
+# Expected: Latest commit with version bump message
+
+# Check working directory status
+git status
+# Expected: "working tree clean"
+```
+
+#### **2. VPS Deployment Status** ✅
+```bash
+# Check deployed version
+curl -s https://app.cloudtolocalllm.online/version.json | jq '.version'
+# Expected: "3.1.3"
+
+# Verify container health
+ssh cloudllm@cloudtolocalllm.online "docker compose ps"
+# Expected: All containers "Up" and "healthy"
+
+# Test application functionality
+curl -s https://app.cloudtolocalllm.online | grep -q "CloudToLocalLLM"
+echo $?
+# Expected: 0 (success)
+```
+
+#### **3. AUR Package Status** ✅
+```bash
+# Check AUR package version (online)
+curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=cloudtolocalllm" | grep "pkgver="
+# Expected: pkgver=3.1.3
+
+# Verify local package builds
+cd aur-package && makepkg --printsrcinfo | grep "pkgver ="
+# Expected: pkgver = 3.1.3
+
+# Test package installation (if on Arch Linux)
+# yay -Si cloudtolocalllm | grep Version
+# Expected: Version: 3.1.3-1
+```
+
+### **Functional Testing Checklist** 📋
+
+#### **Desktop Application Testing**
+- [ ] Desktop application launches without errors
+- [ ] Version displayed correctly in UI: `cloudtolocalllm --version`
 - [ ] System tray functionality works (if applicable)
+- [ ] Application connects to local Ollama (if running)
+
+#### **Web Application Testing**
+- [ ] Web application loads at https://app.cloudtolocalllm.online
+- [ ] Version displayed correctly in browser
 - [ ] Authentication flow completes successfully
-- [ ] Local Ollama connectivity works
-- [ ] Cloud proxy functionality works
+- [ ] No console errors in browser developer tools
+
+#### **Package Distribution Testing**
+- [ ] AUR package installs without errors: `yay -S cloudtolocalllm`
+- [ ] Installed package shows correct version
+- [ ] Desktop entry appears in application menu
+- [ ] Uninstall works cleanly: `yay -R cloudtolocalllm`
 
 ---
 
 ## 🚫 **DEPLOYMENT COMPLETION CRITERIA**
 
-### **DEPLOYMENT IS NOT COMPLETE UNTIL:**
+### **🎯 DEPLOYMENT IS NOT COMPLETE UNTIL ALL CRITERIA ARE MET:**
 
-1. **Version Consistency Verified**
-   - pubspec.yaml, assets/version.json, PKGBUILD all match
-   - Git repository shows latest version committed and pushed
-   - VPS deployment shows correct version in API response
-   - AUR package shows correct version and builds successfully
+#### **1. Version Consistency Verified** ✅
+- [ ] `pubspec.yaml` version matches target version
+- [ ] `assets/version.json` version matches target version
+- [ ] `aur-package/PKGBUILD` pkgver matches target version
+- [ ] Git repository shows latest version committed and pushed
+- [ ] VPS deployment shows correct version in `/version.json` endpoint
+- [ ] AUR package shows correct version and builds successfully
 
-2. **All Components Deployed**
-   - SourceForge Git repository updated
-   - Binary packages uploaded to SourceForge file hosting
-   - AUR package submitted and building
-   - VPS deployment completed and verified
+**Verification Command:**
+```bash
+./scripts/deploy/verify_deployment.sh
+# Must show: "🎉 DEPLOYMENT VERIFICATION PASSED!"
+```
 
-3. **Comprehensive Testing Completed**
-   - Local testing of all packages passed
-   - VPS accessibility verified
-   - AUR package installation tested
-   - Functional testing completed
+#### **2. All Components Deployed** ✅
+- [ ] Git repository updated with version changes
+- [ ] Binary packages created and available (if applicable)
+- [ ] AUR package submitted and building successfully
+- [ ] VPS deployment completed and accessible
+- [ ] All services responding correctly
 
-4. **Explicit Confirmation Given**
-   - User has explicitly confirmed deployment completion
-   - All verification steps documented and signed off
-   - No outstanding issues or version mismatches
+#### **3. Comprehensive Testing Completed** ✅
+- [ ] Local testing of all packages passed
+- [ ] VPS accessibility verified from external network
+- [ ] AUR package installation tested (if on Arch Linux)
+- [ ] Functional testing completed without critical issues
+- [ ] No version-related errors in logs
 
-### **FAILURE CONDITIONS**
+#### **4. Documentation and Confirmation** ✅
+- [ ] Deployment process documented (this checklist completed)
+- [ ] All verification steps completed successfully
+- [ ] No outstanding issues or version mismatches
+- [ ] User has explicitly confirmed deployment completion
 
-**DEPLOYMENT FAILS IF:**
+### **🚨 CRITICAL FAILURE CONDITIONS**
+
+**DEPLOYMENT FAILS IMMEDIATELY IF:**
+
+#### **Version Mismatch Scenarios** ❌
 - Any component shows different version numbers
-- VPS deployment is inaccessible
-- AUR package fails to build
-- Functional testing reveals critical issues
-- User has not explicitly confirmed completion
+- Git repository version ≠ VPS version ≠ AUR version
+- `pubspec.yaml` version ≠ `assets/version.json` version
+- Build artifacts contain wrong version information
+
+#### **Accessibility Failures** ❌
+- VPS deployment is inaccessible (HTTP 5xx errors)
+- Web application fails to load or shows errors
+- API endpoints return incorrect responses
+- SSL certificate issues preventing HTTPS access
+
+#### **Package Build Failures** ❌
+- AUR package fails to build with `makepkg`
+- Binary packages are corrupted or incomplete
+- Dependencies are missing or incompatible
+- Installation process fails on target systems
+
+#### **Functional Failures** ❌
+- Desktop application crashes on startup
+- Authentication system is broken
+- Core functionality is non-operational
+- Data loss or corruption detected
+
+### **🔄 ROLLBACK PROCEDURES**
+
+#### **Git Rollback** 🔙
+```bash
+# Rollback to previous version
+git log --oneline -10  # Find previous good commit
+git reset --hard <previous-commit-hash>
+git push --force-with-lease origin master
+```
+
+#### **VPS Rollback** 🔙
+```bash
+# SSH to VPS and rollback
+ssh cloudllm@cloudtolocalllm.online
+cd /opt/cloudtolocalllm
+git reset --hard <previous-commit-hash>
+./scripts/deploy/update_and_deploy.sh
+```
+
+#### **AUR Rollback** 🔙
+```bash
+# Rollback AUR package
+cd aur-package/
+git reset --hard <previous-commit-hash>
+git push --force-with-lease origin master
+```
 
 ---
 
-## 🔧 **Troubleshooting Common Issues**
+## 🔧 **TROUBLESHOOTING GUIDE**
 
-### **Version Mismatch Issues**
+### **🔄 Version Mismatch Issues**
+
+#### **Symptom:** Different versions across components
+```bash
+# Diagnosis
+./scripts/version_manager.sh info
+grep "version" assets/version.json
+grep "pkgver=" aur-package/PKGBUILD
+curl -s https://app.cloudtolocalllm.online/version.json | jq '.version'
+```
+
+#### **Solution:** Automated synchronization
 ```bash
 # Reset all versions to pubspec.yaml
 ./scripts/version_manager.sh validate
-./scripts/version_manager.sh info
+./scripts/deploy/sync_versions.sh
 
-# Update assets/version.json manually if needed
-# Update PKGBUILD manually if needed
+# Manual fix if automation fails
+CORRECT_VERSION=$(./scripts/version_manager.sh get-semantic)
+sed -i "s/\"version\": \".*\"/\"version\": \"$CORRECT_VERSION\"/" assets/version.json
+sed -i "s/^pkgver=.*/pkgver=$CORRECT_VERSION/" aur-package/PKGBUILD
 ```
 
-### **AUR Package Issues**
+### **📦 AUR Package Issues**
+
+#### **Symptom:** `makepkg` fails with checksum errors
+```bash
+# Diagnosis
+makepkg -si --noconfirm 2>&1 | grep -i "failed\|error"
+```
+
+#### **Solution:** Update checksums
 ```bash
 # Clean build environment
 rm -rf src/ pkg/ *.pkg.tar.zst
+
+# Update checksums
+NEW_CHECKSUM=$(sha256sum ../dist/v*/cloudtolocalllm-*-x86_64.tar.gz | cut -d' ' -f1)
+sed -i "s/sha256sums=.*/sha256sums=('$NEW_CHECKSUM' 'SKIP')/" PKGBUILD
 
 # Rebuild from scratch
 makepkg -si --noconfirm
 ```
 
-### **VPS Deployment Issues**
+#### **Symptom:** Package builds but installation fails
 ```bash
-# Check container logs
-docker-compose -f docker-compose.yml logs
+# Diagnosis
+pacman -Qi cloudtolocalllm  # Check if already installed
+ldd /usr/share/cloudtolocalllm/cloudtolocalllm  # Check dependencies
+```
 
-# Restart services
-docker-compose -f docker-compose.yml down
-docker-compose -f docker-compose.yml up -d
+#### **Solution:** Dependency and conflict resolution
+```bash
+# Remove conflicting packages
+yay -R cloudtolocalllm-git  # Remove git version if exists
+
+# Install missing dependencies
+yay -S libayatana-appindicator gtk3 glib2
+
+# Reinstall package
+yay -U cloudtolocalllm-*.pkg.tar.zst --overwrite '*'
+```
+
+### **🌐 VPS Deployment Issues**
+
+#### **Symptom:** Containers fail to start
+```bash
+# Diagnosis
+ssh cloudllm@cloudtolocalllm.online
+cd /opt/cloudtolocalllm
+docker compose ps
+docker compose logs webapp --tail 50
+```
+
+#### **Solution:** Container troubleshooting
+```bash
+# Check disk space
+df -h
+
+# Check container logs for specific errors
+docker compose logs webapp | grep -i "error\|failed\|exception"
+
+# Restart services with fresh build
+docker compose down
+flutter clean && flutter pub get && flutter build web --release
+docker compose up -d
+
+# Verify container health
+docker compose ps
+curl -I https://app.cloudtolocalllm.online
+```
+
+#### **Symptom:** Web application shows wrong version
+```bash
+# Diagnosis
+curl -s https://app.cloudtolocalllm.online/version.json
+ls -la build/web/version.json
+```
+
+#### **Solution:** Force rebuild and redeploy
+```bash
+# On VPS
+cd /opt/cloudtolocalllm
+git pull origin master
+rm -rf build/web
+flutter build web --release --no-tree-shake-icons
+docker compose restart webapp
+```
+
+### **🔐 SSH and Access Issues**
+
+#### **Symptom:** Cannot SSH to VPS
+```bash
+# Diagnosis
+ssh -v cloudllm@cloudtolocalllm.online
+```
+
+#### **Solution:** SSH troubleshooting
+```bash
+# Check SSH key
+ssh-add -l
+
+# Test with password authentication
+ssh -o PreferredAuthentications=password cloudllm@cloudtolocalllm.online
+
+# Check VPS status from hosting provider
+```
+
+#### **Symptom:** Cannot push to AUR
+```bash
+# Diagnosis
+ssh -T aur@aur.archlinux.org
+```
+
+#### **Solution:** AUR SSH setup
+```bash
+# Add AUR SSH key
+ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+# Upload your public key to AUR account settings
+```
+
+### **🚨 Emergency Recovery Procedures**
+
+#### **Complete Deployment Failure**
+```bash
+# 1. Stop all deployment processes
+# 2. Rollback to last known good state
+git log --oneline -10
+git reset --hard <last-good-commit>
+
+# 3. Verify rollback
+./scripts/deploy/verify_deployment.sh
+
+# 4. Document the failure
+echo "Deployment failed at $(date): <reason>" >> deployment_failures.log
+```
+
+#### **VPS Complete Outage**
+```bash
+# 1. Check VPS provider status
+# 2. Access VPS console if available
+# 3. Restart VPS if necessary
+# 4. Verify services after restart
+ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && ./scripts/deploy/update_and_deploy.sh"
+```
+
+---
+
+## 📋 **QUICK REFERENCE CHECKLIST**
+
+### **🚀 First-Time Deployment Checklist**
+```
+□ Pre-flight checks completed
+□ Environment verified (Flutter, Git, SSH)
+□ Version incremented and synchronized
+□ Git changes committed and pushed
+□ Flutter builds completed (Linux + Web)
+□ Binary packages created
+□ AUR package tested locally
+□ AUR package submitted
+□ VPS deployment completed
+□ Comprehensive verification passed
+□ All functional tests passed
+□ Deployment completion confirmed
+```
+
+### **🔄 Update Deployment Checklist**
+```
+□ Pre-flight checks completed
+□ Version incremented appropriately
+□ Version synchronization completed
+□ Git changes committed and pushed
+□ Flutter web build completed
+□ AUR package updated and tested
+□ VPS deployment completed
+□ Verification script passed
+□ Deployment completion confirmed
+```
+
+### **⚡ Quick Commands Reference**
+
+#### **Version Management**
+```bash
+# Show current version
+./scripts/version_manager.sh info
+
+# Increment version
+./scripts/version_manager.sh increment patch
+
+# Synchronize versions
+./scripts/deploy/sync_versions.sh
+
+# Verify deployment
+./scripts/deploy/verify_deployment.sh
+```
+
+#### **Build Commands**
+```bash
+# Clean and build
+flutter clean && flutter pub get
+flutter build linux --release
+flutter build web --release --no-tree-shake-icons
+```
+
+#### **AUR Commands**
+```bash
+# Test package
+cd aur-package && makepkg -si --noconfirm
+
+# Generate .SRCINFO
+makepkg --printsrcinfo > .SRCINFO
+
+# Submit to AUR
+git add PKGBUILD .SRCINFO && git commit -m "Update to v$(./scripts/version_manager.sh get-semantic)" && git push origin master
+```
+
+#### **VPS Commands**
+```bash
+# Deploy to VPS
+ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull origin master && ./scripts/deploy/update_and_deploy.sh"
+
+# Check VPS status
+curl -s https://app.cloudtolocalllm.online/version.json | jq '.version'
 ```
 
 ---
 
 ## 📞 **Support & Escalation**
 
-If deployment fails or version mismatches occur:
+### **🆘 When Deployment Fails**
 
-1. **STOP** - Do not continue with partial deployment
-2. **Document** the exact error and current state
-3. **Rollback** if necessary to last known good state
-4. **Fix** the root cause before proceeding
-5. **Restart** the deployment process from Phase 1
+1. **🛑 STOP** - Do not continue with partial deployment
+2. **📝 Document** the exact error and current state
+3. **🔙 Rollback** if necessary to last known good state
+4. **🔧 Fix** the root cause before proceeding
+5. **🔄 Restart** the deployment process from Phase 1
+
+### **📋 Failure Documentation Template**
+```
+Deployment Failure Report
+========================
+Date: $(date)
+Version Attempted: $(./scripts/version_manager.sh get)
+Phase Failed: [1-4]
+Error Message: [exact error]
+Current State: [describe current state]
+Rollback Required: [yes/no]
+Resolution: [steps taken]
+```
+
+### **🚨 Emergency Contacts**
+- **Repository Issues**: Check GitHub Issues
+- **VPS Issues**: Contact hosting provider
+- **AUR Issues**: Check AUR package comments
 
 **Remember: A partial deployment with version mismatches is worse than no deployment at all.**
 
 ---
 
-## 🤖 **Automation Scripts**
+## 🤖 **AUTOMATION SCRIPTS REFERENCE**
 
-### **Version Synchronization Script**
+### **📁 Available Scripts**
+- `scripts/version_manager.sh` - Version management operations
+- `scripts/deploy/sync_versions.sh` - Synchronize version references
+- `scripts/deploy/verify_deployment.sh` - Comprehensive verification
+- `scripts/deploy/complete_deployment.sh` - Guided deployment workflow
+- `scripts/deploy/cleanup_docs.sh` - Documentation cleanup
+
+### **🔧 Script Usage Examples**
+
+#### **Version Management**
 ```bash
-#!/bin/bash
-# scripts/deploy/sync_versions.sh
-# Ensures all version references match pubspec.yaml
+# Show detailed version information
+./scripts/version_manager.sh info
 
-PUBSPEC_VERSION=$(./scripts/version_manager.sh get-semantic)
-PUBSPEC_BUILD=$(./scripts/version_manager.sh get-build)
+# Increment version types
+./scripts/version_manager.sh increment build    # 3.1.3+001 → 3.1.3+002
+./scripts/version_manager.sh increment patch    # 3.1.3+001 → 3.1.4+001
+./scripts/version_manager.sh increment minor    # 3.1.3+001 → 3.2.0+001
+./scripts/version_manager.sh increment major    # 3.1.3+001 → 4.0.0+001
 
-# Update assets/version.json
-cat > assets/version.json << EOF
-{
-  "version": "$PUBSPEC_VERSION",
-  "build_number": "$PUBSPEC_BUILD",
-  "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "git_commit": "$(git rev-parse --short HEAD)"
-}
-EOF
+# Set specific version
+./scripts/version_manager.sh set 3.2.0
 
-# Update AUR PKGBUILD
-sed -i "s/^pkgver=.*/pkgver=$PUBSPEC_VERSION/" aur-package/PKGBUILD
-
-echo "✅ All versions synchronized to $PUBSPEC_VERSION+$PUBSPEC_BUILD"
+# Validate version format
+./scripts/version_manager.sh validate
 ```
 
-### **Complete Deployment Script**
+#### **Deployment Automation**
+```bash
+# Automated version synchronization
+./scripts/deploy/sync_versions.sh
+# Output: ✅ All versions synchronized to 3.1.3+001
+
+# Comprehensive deployment verification
+./scripts/deploy/verify_deployment.sh
+# Output: 🎉 DEPLOYMENT VERIFICATION PASSED!
+
+# Guided deployment workflow
+./scripts/deploy/complete_deployment.sh
+# Interactive script with prompts and automation
+```
+
+### **🔄 Custom Automation Examples**
+
+#### **One-Command Update Deployment**
 ```bash
 #!/bin/bash
-# scripts/deploy/complete_deployment.sh
-# Executes the full deployment workflow
-
+# Custom script: quick_update.sh
 set -e
 
-echo "🚀 Starting CloudToLocalLLM Complete Deployment"
-
-# Phase 1: Version Management
-echo "📋 Phase 1: Version Management"
-read -p "Increment type (major/minor/patch/build): " INCREMENT_TYPE
-./scripts/version_manager.sh increment "$INCREMENT_TYPE"
+echo "🚀 Quick Update Deployment"
+./scripts/version_manager.sh increment patch
 ./scripts/deploy/sync_versions.sh
-
-# Phase 2: Build & Package
-echo "🔨 Phase 2: Build & Package"
-flutter clean && flutter pub get
-flutter build linux --release
-flutter build web --release --no-tree-shake-icons
-./scripts/build/create_unified_package.sh
-
-# Phase 3: Git Operations
-echo "📤 Phase 3: Git Operations"
-git add pubspec.yaml assets/version.json aur-package/PKGBUILD
-git commit -m "Version bump to $(./scripts/version_manager.sh get)"
-git push sourceforge master
-
-echo "✅ Deployment preparation complete!"
-echo "🔄 Next steps:"
-echo "1. Upload binaries to SourceForge file hosting"
-echo "2. Test and submit AUR package"
-echo "3. Deploy to VPS"
-echo "4. Run verification checks"
+git add -A && git commit -m "Quick update to $(./scripts/version_manager.sh get)"
+git push origin master
+flutter build web --release
+ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull && ./scripts/deploy/update_and_deploy.sh"
+./scripts/deploy/verify_deployment.sh
+echo "✅ Quick update completed!"
 ```
 
-### **Verification Script**
+#### **AUR-Only Update**
 ```bash
 #!/bin/bash
-# scripts/deploy/verify_deployment.sh
-# Comprehensive deployment verification
+# Custom script: aur_update.sh
+set -e
 
-EXPECTED_VERSION=$(./scripts/version_manager.sh get-semantic)
+echo "📦 AUR Package Update"
+cd aur-package
+makepkg --printsrcinfo > .SRCINFO
+git add PKGBUILD .SRCINFO
+git commit -m "Update AUR package to $(./scripts/version_manager.sh get-semantic)"
+git push origin master
+echo "✅ AUR package updated!"
+```
 
-echo "🔍 Verifying CloudToLocalLLM Deployment v$EXPECTED_VERSION"
+#### **VPS-Only Deployment**
+```bash
+#!/bin/bash
+# Custom script: vps_deploy.sh
+set -e
 
-# Check Git repository
-echo "📂 Checking Git repository..."
-CURRENT_VERSION=$(./scripts/version_manager.sh get-semantic)
-if [ "$CURRENT_VERSION" = "$EXPECTED_VERSION" ]; then
-    echo "✅ Git repository version: $CURRENT_VERSION"
-else
-    echo "❌ Git repository version mismatch: $CURRENT_VERSION != $EXPECTED_VERSION"
-    exit 1
-fi
-
-# Check VPS deployment
-echo "🌐 Checking VPS deployment..."
-VPS_VERSION=$(curl -s https://api.cloudtolocalllm.online/version | jq -r '.version' 2>/dev/null || echo "ERROR")
-if [ "$VPS_VERSION" = "$EXPECTED_VERSION" ]; then
-    echo "✅ VPS deployment version: $VPS_VERSION"
-else
-    echo "❌ VPS deployment version mismatch: $VPS_VERSION != $EXPECTED_VERSION"
-fi
-
-# Check AUR package
-echo "📦 Checking AUR package..."
-AUR_VERSION=$(grep "^pkgver=" aur-package/PKGBUILD | cut -d'=' -f2)
-if [ "$AUR_VERSION" = "$EXPECTED_VERSION" ]; then
-    echo "✅ AUR package version: $AUR_VERSION"
-else
-    echo "❌ AUR package version mismatch: $AUR_VERSION != $EXPECTED_VERSION"
-fi
-
-echo "🎯 Deployment verification complete!"
+echo "🌐 VPS Deployment Only"
+flutter build web --release --no-tree-shake-icons
+ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull origin master && ./scripts/deploy/update_and_deploy.sh"
+curl -s https://app.cloudtolocalllm.online/version.json | jq '.version'
+echo "✅ VPS deployment completed!"
 ```
 
 ---
 
-## 📚 **Documentation Cleanup**
+## 📚 **DOCUMENTATION HIERARCHY**
 
-### **Deprecated Documents**
-The following documents are **OBSOLETE** and should be ignored:
-- `docs/DEPLOYMENT.md` (generic, outdated)
-- `docs/DEPLOYMENT_CHECKLIST_ENHANCED.md` (too complex, outdated)
-- `docs/DEPLOYMENT_INSTRUCTIONS.md` (incomplete)
-- `docs/DEPLOYMENT_SUMMARY.md` (partial information)
-- `docs/VPS_DEPLOYMENT.md` (VPS-only, incomplete)
-
-### **Active Documents**
+### **🎯 Primary Documentation (ACTIVE)**
 - **THIS DOCUMENT** (`docs/COMPLETE_DEPLOYMENT_WORKFLOW.md`) - **THE ONLY DEPLOYMENT GUIDE**
-- `docs/VERSIONING_STRATEGY.md` - Version format reference
-- `scripts/version_manager.sh` - Version management tool
+- `docs/VERSIONING_STRATEGY.md` - Version format reference and strategy
+- `scripts/version_manager.sh` - Version management tool documentation
+
+### **🗂️ Supporting Documentation**
+- `scripts/deploy/README.md` - Deployment scripts overview
+- `aur-package/README.md` - AUR package specific instructions
+- `docs/SYSTEM_TRAY_ARCHITECTURE.md` - System tray implementation details
+
+### **🗄️ Archived Documentation (OBSOLETE)**
+Located in `docs/archive/obsolete-*/`:
+- `DEPLOYMENT.md` (generic, outdated)
+- `DEPLOYMENT_CHECKLIST_ENHANCED.md` (too complex, outdated)
+- `DEPLOYMENT_INSTRUCTIONS.md` (incomplete)
+- `DEPLOYMENT_SUMMARY.md` (partial information)
+- `VPS_DEPLOYMENT.md` (VPS-only, incomplete)
+
+**⚠️ DO NOT USE ARCHIVED DOCUMENTS - They contain outdated information that will cause version mismatches!**
 
 ---
 
-## 🎯 **Success Metrics**
+## 🎯 **SUCCESS METRICS & KPIs**
 
-### **Deployment Success Indicators**
-- All three components show identical version numbers
-- VPS responds with correct version in API
-- AUR package builds without errors
-- Desktop application launches with correct version
-- No version-related support tickets
+### **✅ Deployment Success Indicators**
+- **Version Consistency**: All components show identical version numbers
+- **Accessibility**: VPS responds with correct version in API endpoints
+- **Package Quality**: AUR package builds without errors on clean systems
+- **Functionality**: Desktop application launches with correct version display
+- **User Experience**: No version-related support tickets or confusion
+- **Automation**: Verification script passes without manual intervention
 
-### **Failure Indicators**
-- Version mismatches between any components
-- VPS deployment shows wrong version
-- AUR package fails to build
-- User reports version confusion
-- Multiple deployment attempts needed
+### **📊 Performance Metrics**
+- **Deployment Time**: Complete deployment in under 90 minutes
+- **Error Rate**: Less than 5% deployment failures
+- **Rollback Time**: Ability to rollback within 15 minutes
+- **Verification Coverage**: 100% automated verification of critical components
+
+### **❌ Failure Indicators**
+- **Version Mismatches**: Any component showing different version numbers
+- **Accessibility Issues**: VPS deployment shows wrong version or is inaccessible
+- **Build Failures**: AUR package fails to build on target systems
+- **User Confusion**: Reports of version confusion or installation issues
+- **Multiple Attempts**: Requiring multiple deployment attempts for success
+
+### **🔍 Monitoring Commands**
+```bash
+# Quick health check
+./scripts/deploy/verify_deployment.sh
+
+# Detailed status check
+echo "Git: $(./scripts/version_manager.sh get)"
+echo "VPS: $(curl -s https://app.cloudtolocalllm.online/version.json | jq -r '.version')"
+echo "AUR: $(curl -s 'https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=cloudtolocalllm' | grep 'pkgver=' | cut -d'=' -f2)"
+```
+
+### **📈 Continuous Improvement**
+- **Documentation Updates**: Keep this guide updated with lessons learned
+- **Script Enhancement**: Improve automation scripts based on failure patterns
+- **Process Optimization**: Reduce deployment time and complexity
+- **Error Prevention**: Add more pre-flight checks and validations
 
 ---
 
-*This document eliminates the confusion and ensures consistent, complete deployments. Follow it exactly or face the wrath of version mismatch hell.*
+## 🏆 **DEPLOYMENT COMPLETION CERTIFICATE**
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║                    DEPLOYMENT COMPLETED                     ║
+║                                                              ║
+║  Project: CloudToLocalLLM                                    ║
+║  Version: $(./scripts/version_manager.sh get)               ║
+║  Date: $(date)                                               ║
+║  Deployer: [Your Name]                                       ║
+║                                                              ║
+║  ✅ All verification checks passed                           ║
+║  ✅ Cross-platform synchronization confirmed                ║
+║  ✅ No version mismatches detected                           ║
+║                                                              ║
+║  Status: DEPLOYMENT SUCCESSFUL                               ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**🎉 Congratulations! You have successfully completed a CloudToLocalLLM deployment without falling into the version mismatch hell that plagued this project before.**
+
+---
+
+*This enhanced documentation eliminates confusion, prevents version mismatches, and ensures consistent, complete deployments across all platforms. Follow it exactly and deployment will be smooth, predictable, and successful every time.*
