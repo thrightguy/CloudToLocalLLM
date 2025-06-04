@@ -221,3 +221,21 @@ cloudtolocalllm-*.tar.gz
 cloudtolocalllm-*-stable.tar.gz
 cloudtolocalllm-*-robust.tar.gz
 cloudtolocalllm-*-fixed.tar.gz
+
+# ============================================================================
+# AUR PACKAGE BUILD ARTIFACTS - EXCLUDED
+# ============================================================================
+
+# AUR package build directories and artifacts
+aur-package/pkg/
+aur-package/src/
+aur-package/test-package/
+aur-package/*.pkg.tar.zst
+aur-package/*.tar.gz
+aur-package/*.tar.gz.sha256
+
+# Allow only essential AUR files
+!aur-package/PKGBUILD
+!aur-package/.SRCINFO
+!aur-package/cloudtolocalllm.install
+!aur-package/*.md

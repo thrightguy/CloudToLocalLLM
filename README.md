@@ -34,6 +34,28 @@ For detailed information, see [MULTI_CONTAINER_ARCHITECTURE.md](docs/MULTI_CONTA
 - Modern, responsive UI
 - Cross-platform support
 
+## 📸 Screenshots
+
+### Desktop Application (Linux)
+
+#### Chat Interface
+![CloudToLocalLLM Linux Chat Interface](app_screenshots/cloudtolocalllm_linux_chat.png)
+*Modern chat interface with dark theme, showing conversation with local LLM*
+
+#### Login Screen
+![CloudToLocalLLM Linux Login](app_screenshots/cloudtolocalllm_linux_login.png)
+*Clean authentication interface with Auth0 integration*
+
+### Web Application
+
+#### Web Chat Interface
+![CloudToLocalLLM Web Chat](app_screenshots/cloudtolocalllm_web_chat.png)
+*Responsive web interface accessible from any browser*
+
+#### Settings Panel
+![CloudToLocalLLM Web Settings](app_screenshots/cloudtolocalllm_web_settings.png)
+*Comprehensive settings panel for configuration and preferences*
+
 ## Hardware Detection & Model Recommendations
 
 CloudToLocalLLM automatically detects your hardware capabilities and recommends appropriate models:
@@ -84,16 +106,38 @@ CloudToLocalLLM features an **Enhanced System Tray Architecture** that provides 
 
 For detailed information about the enhanced architecture, see [Enhanced System Tray Architecture](tray_daemon/ENHANCED_ARCHITECTURE.md).
 
-## Planned Premium Features
+## Core Features vs Premium Features
 
-The following premium features are planned for future releases. Some aspects may be available during development for testing purposes:
+### ✅ **Core Features (Included)**
+- **Basic Sync**: Conversation synchronization across devices
+- **Local LLM Management**: Full Ollama and LM Studio integration
+- **System Tray Integration**: Enhanced desktop experience with Python-based daemon
+- **Cross-Platform Support**: Linux, Windows, macOS, and web
+- **Modern UI**: Dark theme with Material Design 3
 
-- **Cloud LLM Access**: Access to leading models like OpenAI (GPT-4o, GPT-4 Turbo) and Anthropic (Claude 3). *(Planned)*
-- **Cloud Synchronization**: Sync conversations across devices. *(Partially available for testing)*
-- **Remote Access**: Access your local LLM from anywhere. *(Partially available for testing)*
-- **Advanced Model Management**: Tools for optimizing model performance. *(Partially available for testing)*
+### 💎 **Premium Features (Future Paid Upgrades)**
+- **Advanced Cloud Sync**: Settings and preferences synchronization across devices
+- **Cloud LLM Access**: Access to leading models like OpenAI (GPT-4o, GPT-4 Turbo) and Anthropic (Claude 3)
+- **Remote Access**: Secure access to your local LLM from anywhere
+- **Advanced Model Management**: Performance optimization tools and analytics
+- **Priority Support**: Dedicated technical support and feature requests
 
 > For more details about upcoming premium features and their development status, see [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md)
+
+## 📋 Versioning Strategy
+
+CloudToLocalLLM uses a granular build numbering system:
+
+**Format**: `MAJOR.MINOR.PATCH+BUILD`
+
+- **Major (x.0.0)**: Creates GitHub releases - significant changes
+- **Minor (x.y.0)**: No GitHub release - feature additions
+- **Patch (x.y.z)**: No GitHub release - bug fixes
+- **Build (x.y.z+nnn)**: No GitHub release - incremental builds
+
+**Examples**: `3.1.1+001` → `3.1.1+002` → `3.1.2+001` → `4.0.0+001`
+
+For detailed information, see [Versioning Strategy](docs/VERSIONING_STRATEGY.md).
 
 ## 🚀 Deployment
 

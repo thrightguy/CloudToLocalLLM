@@ -75,16 +75,68 @@ generate_build_number() {
     date +"%Y%m%d%H%M"
 }
 
-# Increment version based on type (major, minor, patch)
+# Increment build number for patch releases
+increment_build_number() {
+    local current_build=$(get_build_number)
+
+    # If current build is numeric, increment it
+    if [[ "$current_build" =~ ^[0-9]+$ ]]; then
+        printf "%03d" $((current_build + 1))
+    else
+        # If it's a timestamp format, generate new one
+        generate_build_number
+    fi
+}
+
+# Check if version qualifies for GitHub release
+should_create_github_release() {
+    local version="$1"
+    local major=$(echo "$version" | cut -d. -f1)
+    local minor=$(echo "$version" | cut -d. -f2)
+    local patch=$(echo "$version" | cut -d. -f3)
+
+    # Only create GitHub releases for major version updates (x.0.0)
+    if [[ "$minor" == "0" && "$patch" == "0" ]]; then
+        return 0  # true
+    else
+        return 1  # false
+    fi
+}
+
+# Get release type based on version change
+get_release_type() {
+    local old_version="$1"
+    local new_version="$2"
+
+    local old_major=$(echo "$old_version" | cut -d. -f1)
+    local old_minor=$(echo "$old_version" | cut -d. -f2)
+    local old_patch=$(echo "$old_version" | cut -d. -f3)
+
+    local new_major=$(echo "$new_version" | cut -d. -f1)
+    local new_minor=$(echo "$new_version" | cut -d. -f2)
+    local new_patch=$(echo "$new_version" | cut -d. -f3)
+
+    if [[ "$new_major" != "$old_major" ]]; then
+        echo "major"
+    elif [[ "$new_minor" != "$old_minor" ]]; then
+        echo "minor"
+    elif [[ "$new_patch" != "$old_patch" ]]; then
+        echo "patch"
+    else
+        echo "build"
+    fi
+}
+
+# Increment version based on type (major, minor, patch, build)
 increment_version() {
     local increment_type="$1"
     local current_version=$(get_semantic_version)
-    
+
     # Parse current version
     local major=$(echo "$current_version" | cut -d. -f1)
     local minor=$(echo "$current_version" | cut -d. -f2)
     local patch=$(echo "$current_version" | cut -d. -f3)
-    
+
     # Increment based on type
     case "$increment_type" in
         "major")
@@ -99,12 +151,15 @@ increment_version() {
         "patch")
             patch=$((patch + 1))
             ;;
+        "build")
+            # Don't change semantic version for build increments
+            ;;
         *)
-            log_error "Invalid increment type. Use: major, minor, or patch"
+            log_error "Invalid increment type. Use: major, minor, patch, or build"
             exit 1
             ;;
     esac
-    
+
     echo "$major.$minor.$patch"
 }
 
@@ -188,14 +243,37 @@ main() {
             ;;
         "increment")
             if [[ -z "${2:-}" ]]; then
-                log_error "Usage: $0 increment <major|minor|patch>"
+                log_error "Usage: $0 increment <major|minor|patch|build>"
                 exit 1
             fi
-            local new_version=$(increment_version "$2")
-            local new_build_number=$(generate_build_number)
-            validate_version_format "$new_version"
-            update_pubspec_version "$new_version" "$new_build_number"
-            update_app_config_version "$new_version"
+
+            local current_version=$(get_semantic_version)
+            local increment_type="$2"
+
+            if [[ "$increment_type" == "build" ]]; then
+                # For build increments, keep same semantic version but increment build number
+                local new_build_number=$(increment_build_number)
+                validate_version_format "$current_version"
+                update_pubspec_version "$current_version" "$new_build_number"
+                update_app_config_version "$current_version"
+                log_info "Build number incremented (no GitHub release needed)"
+            else
+                # For semantic version changes, generate new build number
+                local new_version=$(increment_version "$increment_type")
+                local new_build_number="001"  # Reset build number for new semantic version
+                validate_version_format "$new_version"
+                update_pubspec_version "$new_version" "$new_build_number"
+                update_app_config_version "$new_version"
+
+                # Check if GitHub release should be created
+                if should_create_github_release "$new_version"; then
+                    log_warning "This is a MAJOR version update - GitHub release should be created!"
+                    log_info "Run: git tag v$new_version && git push origin v$new_version"
+                else
+                    log_info "Minor/patch update - no GitHub release needed"
+                fi
+            fi
+
             show_version_info
             ;;
         "set")
@@ -223,15 +301,23 @@ main() {
             echo "  get-semantic     Get semantic version (MAJOR.MINOR.PATCH)"
             echo "  get-build        Get build number"
             echo "  info             Show detailed version information"
-            echo "  increment <type> Increment version (major|minor|patch)"
+            echo "  increment <type> Increment version (major|minor|patch|build)"
             echo "  set <version>    Set specific version (MAJOR.MINOR.PATCH)"
             echo "  validate         Validate current version format"
             echo "  help             Show this help message"
             echo ""
+            echo "Version Strategy:"
+            echo "  major            Creates GitHub release (x.0.0) - significant changes"
+            echo "  minor            No GitHub release (x.y.0) - feature additions"
+            echo "  patch            No GitHub release (x.y.z) - bug fixes"
+            echo "  build            No GitHub release (x.y.z+nnn) - incremental builds"
+            echo ""
             echo "Examples:"
             echo "  $0 info                    # Show current version info"
+            echo "  $0 increment build         # Increment build number only"
             echo "  $0 increment patch         # Increment patch version"
-            echo "  $0 set 2.1.0              # Set version to 2.1.0"
+            echo "  $0 increment major         # Increment major (creates GitHub release)"
+            echo "  $0 set 3.1.0              # Set version to 3.1.0"
             ;;
         *)
             log_error "Unknown command: $1"

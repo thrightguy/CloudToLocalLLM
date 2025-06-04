@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -180,7 +181,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SizedBox(width: AppTheme.spacingL),
         Expanded(child: _buildLLMSettings(context)),
         SizedBox(width: AppTheme.spacingL),
-        Expanded(child: _buildCloudSettings(context)),
+        Expanded(child: _buildSystemTraySettings(context)),
       ],
     );
   }
@@ -191,6 +192,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _buildAppearanceSettings(context),
         SizedBox(height: AppTheme.spacingL),
         _buildLLMSettings(context),
+        SizedBox(height: AppTheme.spacingL),
+        _buildSystemTraySettings(context),
         SizedBox(height: AppTheme.spacingL),
         _buildCloudSettings(context),
       ],
@@ -315,6 +318,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildSystemTraySettings(BuildContext context) {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+            context,
+            'System Tray',
+            Icons.desktop_windows,
+            AppTheme.accentColor,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          // Tray daemon status indicator
+          _buildTrayStatusIndicator(context),
+
+          SizedBox(height: AppTheme.spacingM),
+
+          // Launch settings app button
+          _buildSettingButton(
+            context,
+            'Advanced Settings',
+            'Configure tray daemon and connections',
+            Icons.settings_applications,
+            () => _launchTraySettings(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCloudSettings(BuildContext context) {
     return ModernCard(
       child: Column(
@@ -328,7 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: AppTheme.spacingM),
 
-          // Coming Soon banner
+          // Basic sync info
           Container(
             width: double.infinity,
             padding: EdgeInsets.all(AppTheme.spacingM),
@@ -348,13 +382,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.construction,
+                      Icons.sync,
                       color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
                     SizedBox(width: AppTheme.spacingS),
                     Text(
-                      '🚧 Coming Soon',
+                      'Basic Sync Available',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -364,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SizedBox(height: AppTheme.spacingS),
                 Text(
-                  'Cloud Sync - Coming Soon: Securely sync your conversations and settings across devices',
+                  'Basic conversation sync is included. Advanced cloud sync of settings and preferences will be available as a premium feature.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -376,22 +410,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           SizedBox(height: AppTheme.spacingM),
 
-          // Cloud sync placeholder (disabled)
-          _buildComingSoonSettingItem(
+          // Premium features placeholder
+          _buildPremiumFeatureItem(
             context,
-            'Cloud Sync',
-            'Synchronize data across devices',
-            'This feature is under development and will be available in a future release',
+            'Advanced Cloud Sync',
+            'Sync settings and preferences across devices',
+            'Premium feature - coming soon',
           ),
 
           SizedBox(height: AppTheme.spacingM),
 
-          // Remote access placeholder (disabled)
-          _buildComingSoonSettingItem(
+          // Remote access placeholder
+          _buildPremiumFeatureItem(
             context,
             'Remote Access',
             'Allow remote access to your LLM',
-            'This feature is under development and will be available in a future release',
+            'Premium feature - coming soon',
           ),
         ],
       ),
@@ -460,7 +494,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildComingSoonSettingItem(
+  Widget _buildTrayStatusIndicator(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.circle,
+            color: Colors.green,
+            size: 12,
+          ),
+          SizedBox(width: AppTheme.spacingS),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tray Daemon Status',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                Text(
+                  'Connected and running',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textColorLight,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingButton(
+    BuildContext context,
+    String title,
+    String description,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+      child: Container(
+        padding: EdgeInsets.all(AppTheme.spacingM),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+            SizedBox(width: AppTheme.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textColorLight,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: AppTheme.textColorLight,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumFeatureItem(
     BuildContext context,
     String title,
     String description,
@@ -499,7 +631,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               child: Text(
-                '🚧 Coming Soon',
+                '💎 Premium',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w500,
@@ -515,38 +647,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Theme.of(context).disabledColor,
               ),
         ),
-        SizedBox(height: AppTheme.spacingS),
-        Tooltip(
-          message: tooltip,
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppTheme.spacingM),
-            decoration: BoxDecoration(
-              color: Theme.of(context).disabledColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
-              border: Border.all(
-                color: Theme.of(context).disabledColor.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.toggle_off,
-                  color: Theme.of(context).disabledColor,
-                ),
-                SizedBox(width: AppTheme.spacingS),
-                Text(
-                  'Disabled - Feature in Development',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).disabledColor,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
+  }
+
+  void _launchTraySettings() async {
+    try {
+      // Launch the separate settings application
+      final result = await Process.run('cloudtolocalllm-settings', []);
+      if (result.exitCode != 0) {
+        // Fallback: try to launch from the system path
+        await Process.run('python3', ['-m', 'cloudtolocalllm_settings']);
+      }
+    } catch (e) {
+      // Show error dialog if settings app can't be launched
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Settings App Not Available'),
+            content: Text(
+              'The advanced settings application could not be launched. '
+              'Please ensure the system tray daemon is properly installed.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildVersionSection(BuildContext context) {

@@ -22,12 +22,12 @@ flutter build web --no-tree-shake-icons
 
 # Stop running containers
 echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker compose -f docker-compose.yml down
+docker-compose -f docker-compose.yml down
 
 # Check if SSL certs exist and start services
 if [ -d "certbot/live/cloudtolocalllm.online" ]; then
     echo -e "${YELLOW}SSL certificates already exist. Starting services...${NC}"
-    docker compose -f docker-compose.yml up -d
+    docker-compose -f docker-compose.yml up -d
 else
     echo -e "${RED}SSL certificates not found. Please set up SSL certificates first.${NC}"
     echo -e "${YELLOW}You can use: certbot certonly --webroot -w /var/www/html -d cloudtolocalllm.online -d app.cloudtolocalllm.online${NC}"
@@ -40,14 +40,14 @@ sleep 10
 
 # Check container health
 echo -e "${BLUE}Checking container health...${NC}"
-docker compose -f docker-compose.yml ps
+docker-compose -f docker-compose.yml ps
 
 # Verify web app accessibility
 echo -e "${BLUE}Verifying web app accessibility...${NC}"
 if curl -s -o /dev/null -w "%{http_code}" https://app.cloudtolocalllm.online | grep -q "200\|301\|302"; then
     echo -e "${GREEN}✓ Web app is accessible at https://app.cloudtolocalllm.online${NC}"
 else
-    echo -e "${RED}✗ Web app may not be accessible. Check logs with: docker compose -f docker-compose.yml logs${NC}"
+    echo -e "${RED}✗ Web app may not be accessible. Check logs with: docker-compose -f docker-compose.yml logs${NC}"
 fi
 
 echo -e "${GREEN}Deployment complete!${NC}"

@@ -5,7 +5,7 @@
 # don't need to install Flutter or any build dependencies.
 #
 pkgname=cloudtolocalllm
-pkgver=3.0.3
+pkgver=3.1.3
 pkgrel=1
 pkgdesc="CloudToLocalLLM - Enhanced Architecture with System Tray Integration and Local LLM Management (Unified 145MB package)"
 arch=('x86_64')
@@ -36,13 +36,18 @@ provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
 
-# Unified binary package from GitHub Releases (no compilation required)
+# NOTE: CloudToLocalLLM v3.1.1 uses new versioning strategy
+# GitHub releases are only created for major versions (x.0.0)
+# Minor/patch versions use build increments without GitHub releases
+# For v3.1.1, binaries are distributed via alternative methods
+
+# Temporary source until proper distribution method is established
 source=(
-    "https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
-    "https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v3.0.3/cloudtolocalllm-3.0.3-x86_64.tar.gz"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v3.0.3/cloudtolocalllm-3.0.3-x86_64.tar.gz.sha256"
 )
 sha256sums=(
-    '4fcef8f2e38a2408c83a52feffa8b9d98af221bbbaf3dd8fdda13338bd29e636'  # v3.0.3 unified package checksum (verified from GitHub Releases)
+    '4fcef8f2e38a2408c83a52feffa8b9d98af221bbbaf3dd8fdda13338bd29e636'  # v3.0.3 unified package checksum (will be updated for v3.1.1)
     'SKIP'  # Checksum file verification
 )
 
@@ -76,8 +81,8 @@ prepare() {
         return 1
     }
 
-    # Verify extraction - the package should contain the application files directly
-    if [[ ! -f "cloudtolocalllm" ]]; then
+    # Verify extraction - the package extracts to a subdirectory
+    if [[ ! -f "cloudtolocalllm-${pkgver}/cloudtolocalllm" ]]; then
         error "Main executable not found after extraction"
         return 1
     fi
@@ -91,13 +96,13 @@ build() {
 }
 
 package() {
-    cd "$srcdir"
+    cd "$srcdir/cloudtolocalllm-${pkgver}"
 
     # Install the unified CloudToLocalLLM application
     install -dm755 "$pkgdir/usr/share/cloudtolocalllm"
 
     # Copy all files from the extracted binary package
-    # The package extracts directly to srcdir, not to a subdirectory
+    # The package extracts to a subdirectory
     cp -r * "$pkgdir/usr/share/cloudtolocalllm/" 2>/dev/null || {
         # If that fails, try copying specific files
         for file in cloudtolocalllm data lib VERSION PACKAGE_INFO.txt; do
@@ -145,8 +150,8 @@ exec ./cloudtolocalllm "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
 
-    # Install desktop entry from the current directory (copied from aur-package)
-    cd "$srcdir"
+    # Install desktop entry from the aur-package directory
+    cd "$srcdir/.."
     if [[ -f "cloudtolocalllm.desktop" ]]; then
         install -Dm644 "cloudtolocalllm.desktop" \
             "$pkgdir/usr/share/applications/cloudtolocalllm.desktop"

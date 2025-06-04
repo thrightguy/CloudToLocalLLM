@@ -49,7 +49,7 @@ Access the drawer by clicking the hamburger icon (≡) in the top-left corner. T
 
 - **Select a Conversation**: Click on it in the drawer menu
 - **Delete a Conversation**: Click the trash icon next to the conversation in the drawer
-- **Rename a Conversation**: (Feature coming soon)
+- **Rename a Conversation**: Available in settings menu (right-click conversation)
 
 ### Chat Interface
 
