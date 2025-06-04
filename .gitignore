@@ -1,23 +1,73 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
+# ============================================================================
+# CloudToLocalLLM .gitignore - Comprehensive Binary Exclusion
+# ============================================================================
+# This file prevents repository bloat by excluding large binaries and build artifacts
+# Use GitHub Releases for binary distribution instead of Git repository
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# ============================================================================
+# BINARY FILES AND ARCHIVES (>25MB) - EXCLUDED FROM GIT
+# ============================================================================
 
-# Visual Studio Code related
-.vscode/
+# All binary archives and packages
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+*.7z
+*.rar
+*.AppImage
+*.deb
+*.rpm
+*.dmg
+*.pkg
+*.msi
+*.exe
+
+# Split archive parts
+*.part*
+*.partaa
+*.partab
+*.partac
+
+# ============================================================================
+# DISTRIBUTION AND BUILD DIRECTORIES - EXCLUDED
+# ============================================================================
+
+# Complete exclusion of distribution directory
+dist/
+# Allow only small metadata files
+!dist/metadata/
+!dist/**/*.md5
+!dist/**/*.sha256
+!dist/**/*.txt
+!dist/**/checksums.txt
+!dist/binary_checksums.txt
+
+# Build directories
+build/
+!build/web/  # Allow web build for deployment
+
+# Tray daemon build artifacts
+tray_daemon/build/
+tray_daemon/dist/
+tray_daemon/venv/
+
+# ============================================================================
+# PACKAGING ARTIFACTS - EXCLUDED
+# ============================================================================
+
+# AppImage packaging
+packaging/appimage/CloudToLocalLLM.AppDir/
+packaging/appimage/tools/*.AppImage
+packaging/appimagetool-*
+
+# DEB packaging
+packaging/deb/usr/bin/cloudtolocalllm-tray
+packaging/deb/usr/lib/cloudtolocalllm/
+
+# ============================================================================
+# DEVELOPMENT ENVIRONMENT
+# ============================================================================
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -28,28 +78,6 @@ migrate_working_dir/
 .packages
 .pub-cache/
 .pub/
-/build/
-build/web/ # Allow web build
-
-# Web related
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# Exceptions to above rules.
-!**/ios/**/default.mode1v3
-!**/ios/**/default.mode2v3
-!**/ios/**/default.pbxuser
-!**/ios/**/default.perspectivev3
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
 # Python
 __pycache__/
@@ -70,89 +98,126 @@ wheels/
 .installed.cfg
 *.egg
 
-# Node
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# ============================================================================
+# IDE AND EDITOR FILES
+# ============================================================================
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Cursor IDE
+.cursor/
+flutter-tools/
+
+# Other editors
+*.swp
+*.swo
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ============================================================================
+# TEMPORARY AND LOG FILES
+# ============================================================================
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+tmp/
+temp/
+
+# ============================================================================
+# SECURITY AND SECRETS
+# ============================================================================
 
 # Environment variables
 .env
 .env.local
 .env.*.local
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Temporary files
-tmp/
-temp/
-
-# Build files
-build/
-
-# Secrets
+# Secrets and keys
 cloudadmin_key
 secrets/
+*.key
+*.pem
+*.p12
+*.pfx
 
-# Cursor IDE specific files
-.cursor/
-flutter-tools/
+# ============================================================================
+# FLUTTER SPECIFIC
+# ============================================================================
 
-# Files >25MB excluded from Git (use GitHub Releases for distribution)
-# This follows Git best practices and prevents repository bloat
+# Symbolication related
+app.*.symbols
 
-# Distribution files >25MB - use GitHub Releases instead
-dist/*.tar.gz
-dist/*.AppImage
-dist/**/*.part*
-dist/**/cloudtolocalllm-enhanced-tray*
-dist/**/cloudtolocalllm-settings*
+# Obfuscation related
+app.*.map.json
 
-# Build outputs >25MB
-build/linux/x64/release/bundle/cloudtolocalllm
-build/linux/x64/release/bundle/lib/
-build/linux/x64/release/bundle/data/
+# Android Studio build artifacts
+/android/app/debug
+/android/app/profile
+/android/app/release
 
-# Packaging artifacts >25MB
-packaging/appimage/CloudToLocalLLM.AppDir/lib/libflutter_linux_gtk.so
-packaging/appimage/CloudToLocalLLM.AppDir/cloudtolocalllm
-packaging/appimage/CloudToLocalLLM.AppDir/tray_daemon/
-packaging/appimage/CloudToLocalLLM.AppDir/data/
-packaging/appimage/CloudToLocalLLM.AppDir/lib/
+# Exceptions to above rules
+!**/ios/**/default.mode1v3
+!**/ios/**/default.mode2v3
+!**/ios/**/default.pbxuser
+!**/ios/**/default.perspectivev3
+!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
-# DEB package large files >25MB
-packaging/deb/usr/lib/cloudtolocalllm/lib/libflutter_linux_gtk.so
-packaging/deb/usr/lib/cloudtolocalllm/cloudtolocalllm
-packaging/deb/usr/bin/cloudtolocalllm-tray
-packaging/deb/usr/lib/cloudtolocalllm/data/
+# ============================================================================
+# THIRD-PARTY TOOLS AND INSTALLERS
+# ============================================================================
 
-# Allow metadata and small files
-!dist/metadata/
-!dist/**/*.md5
-!dist/**/*.sha256
-!dist/**/*.txt
-!dist/**/checksums.txt
+# Large third-party installers and tools
+tools/third_party_installers/
+*.jar
+bfg.jar
 
-# Exclude entire dist directory but allow metadata and checksums
-dist/
-!dist/binary_checksums.txt
-!dist/metadata/
+# ============================================================================
+# CLOUDTOLOCALLLM SPECIFIC EXCLUSIONS
+# ============================================================================
 
-# CloudToLocalLLM Binary File Management
-# Exclude large original files (>50MB) but include split parts
-dist/*.tar.gz
-dist/*.AppImage
-dist/**/cloudtolocalllm-enhanced-tray
-dist/**/cloudtolocalllm-settings
-# Include split parts and checksums
-!dist/*.part*
-!dist/**/binary_checksums.txt
-!dist/binary_checksums.txt
+# Large binary executables
+cloudtolocalllm-enhanced-tray*
+cloudtolocalllm-settings*
+cloudtolocalllm-v*.tar.gz
+cloudtolocalllm-*.tar.gz
+
+# Version-specific binaries
+cloudtolocalllm-*-stable.tar.gz
+cloudtolocalllm-*-robust.tar.gz
+cloudtolocalllm-*-fixed.tar.gz
