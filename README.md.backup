@@ -351,9 +351,9 @@ Refer to the `docs/` directory for detailed documentation. Key documents include
 - [FLUTTER_APP_STRUCTURE.md](docs/flutter_app_structure.md): Details on the Flutter application structure.
 
 **Deployment & Operations:**
-- [DEPLOYMENT.md](docs/COMPLETE_DEPLOYMENT_WORKFLOW.md): General deployment and infrastructure setup.
-- [VPS_DEPLOYMENT.md](docs/COMPLETE_DEPLOYMENT_WORKFLOW.md): Specific guide for VPS deployments.
-- [DEPLOYMENT_INSTRUCTIONS.md](docs/COMPLETE_DEPLOYMENT_WORKFLOW.md): Step-by-step deployment instructions.
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md): General deployment and infrastructure setup.
+- [VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md): Specific guide for VPS deployments.
+- [DEPLOYMENT_INSTRUCTIONS.md](docs/DEPLOYMENT_INSTRUCTIONS.md): Step-by-step deployment instructions.
 - [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render.
 - [MAINTENANCE_SCRIPTS.md](docs/MAINTENANCE_SCRIPTS.md): Information on available maintenance scripts.
 
