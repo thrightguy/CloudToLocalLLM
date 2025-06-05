@@ -3,7 +3,8 @@
 CloudToLocalLLM System Tray Daemon
 
 Cross-platform system tray daemon for CloudToLocalLLM using Python and pystray.
-Provides reliable system tray functionality with crash isolation from the main Flutter app.
+Provides reliable system tray functionality with crash isolation from the main
+Flutter app.
 
 Architecture:
 - TCP socket IPC with JSON protocol
@@ -25,7 +26,7 @@ import base64
 import subprocess
 import psutil
 from pathlib import Path
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any
 
 try:
     import pystray
@@ -167,7 +168,8 @@ class TrayDaemon:
                 return False
 
             # For now, we'll use a simple heuristic:
-            # If the app has been connected for more than 10 seconds, assume authenticated
+            # If the app has been connected for more than 10 seconds, assume
+            # authenticated
             # In a more sophisticated implementation, we could send a STATUS command
             # and wait for a response with authentication state
 
@@ -261,10 +263,10 @@ class TrayDaemon:
                 # Check if authentication state changed
                 if current_auth_state != self.app_is_authenticated:
                     self.app_is_authenticated = current_auth_state
-                    self.logger.info(
-                        f"App auth state changed: "
-                        f"{'authenticated' if current_auth_state else 'not authenticated'}"
+                    auth_status = (
+                        'authenticated' if current_auth_state else 'not authenticated'
                     )
+                    self.logger.info(f"App auth state changed: {auth_status}")
 
                 # Update tray menu if any state changed
                 if (current_running_state != self.app_is_running
@@ -299,34 +301,34 @@ class TrayDaemon:
         # Generated from CloudToLocalLLM assets
         icons = {
             "idle": (
-                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"
-                "GAvVNB70AAAAgElEQVQoz83RMQ6CUBAE0PfRBgItFzDxVh7DeA8bGo9lSW04ApCYtYBGBGqn3VdMdhJh"
-                "O0maz7X8SyajTnAEFzfVAgwad28h6njGWl5xDhly1WqBQkmG2OgZYgK7+ReQpK0/T2A0rIJRP72607gq"
-                "frZ4aM1jHZyUC9BrjaT9ufkAKf46eVLyT+wAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6"
-                "MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5KzAwOjAw"
-                "YrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNDoxMSswMDowMDQFC6IAAAAA"
+                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"  # noqa: E501
+                "GAvVNB70AAAAgElEQVQoz83RMQ6CUBAE0PfRBgItFzDxVh7DeA8bGo9lSW04ApCYtYBGBGqn3VdMdhJh"  # noqa: E501
+                "O0maz7X8SyajTnAEFzfVAgwad28h6njGWl5xDhly1WqBQkmG2OgZYgK7+ReQpK0/T2A0rIJRP72607gq"  # noqa: E501
+                "frZ4aM1jHZyUC9BrjaT9ufkAKf46eVLyT+wAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6"  # noqa: E501
+                "MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5KzAwOjAw"  # noqa: E501
+                "YrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNDoxMSswMDowMDQFC6IAAAAA"  # noqa: E501
                 "SUVORK5CYII="
             ),
             "connected": (
-                "iVBORw0KGgoAAAANSUhEUgAAABYAAAAWEAQAAAA+LXjzAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1"
-                "MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRP//FKsxzQAAAAd0SU1FB+kGAQ0KAtZaaNoAAAFBSURBVDjL"
-                "7ZOxSwJhGMZ/BE3ieNNFS4ZDoxE4JCTBQS1tDSJNbeV04L8Rrm5BkARRDU1CWncIWY2dzrVoqzQFT8Nx"
-                "pxdGlzaFD3zw8X3v++N5X94XZvrPMu7BvgYvD3oFbwfsCzAaU0ALKZC+PwVzEuhyAMhvSfsL0vuT5JxI"
-                "K0cReOo35beDxMqZVCpJg4EiqjyMwo3mV8LcePDeG4C1BovzYJqQSEQjDjNg5cL4j5iOvQ3wyy4WpXZb"
-                "Y+VcBY699ZhgvYCkGymdlvp9fathO2K1onMA4PYhmQTXHfnpQK/n3916+Lob07F9CZKVlWo1yTSlclmq"
-                "VqVud+jW2gzc2udxp6IRTsXp+BZUbiNTcRcTDP7w+4nWtuS4kh4l51iyVqdfkqUfNi8zATRsSxPsOng5"
-                "0DN4WbBbYLSmgM70B/oE5jIou4+gv28AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6MTA6"
-                "MDIrMDA6MDACdUjhAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjEwOjAyKzAwOjAwcyjw"
-                "XQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxMzoxMDowMiswMDowMCQ90YIAAAAASUVO"
+                "iVBORw0KGgoAAAANSUhEUgAAABYAAAAWEAQAAAA+LXjzAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1"  # noqa: E501
+                "MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRP//FKsxzQAAAAd0SU1FB+kGAQ0KAtZaaNoAAAFBSURBVDjL"  # noqa: E501
+                "7ZOxSwJhGMZ/BE3ieNNFS4ZDoxE4JCTBQS1tDSJNbeV04L8Rrm5BkARRDU1CWncIWY2dzrVoqzQFT8Nx"  # noqa: E501
+                "pxdGlzaFD3zw8X3v++N5X94XZvrPMu7BvgYvD3oFbwfsCzAaU0ALKZC+PwVzEuhyAMhvSfsL0vuT5JxI"  # noqa: E501
+                "K0cReOo35beDxMqZVCpJg4EiqjyMwo3mV8LcePDeG4C1BovzYJqQSEQjDjNg5cL4j5iOvQ3wyy4WpXZb"  # noqa: E501
+                "Y+VcBY699ZhgvYCkGymdlvp9fathO2K1onMA4PYhmQTXHfnpQK/n3916+Lob07F9CZKVlWo1yTSlclmq"  # noqa: E501
+                "VqVud+jW2gzc2udxp6IRTsXp+BZUbiNTcRcTDP7w+4nWtuS4kh4l51iyVqdfkqUfNi8zATRsSxPsOng5"  # noqa: E501
+                "0DN4WbBbYLSmgM70B/oE5jIou4+gv28AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6MTA6"  # noqa: E501
+                "MDIrMDA6MDACdUjhAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjEwOjAyKzAwOjAwcyjw"  # noqa: E501
+                "XQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxMzoxMDowMiswMDowMCQ90YIAAAAASUVO"  # noqa: E501
                 "RK5CYII="
             ),
             "error": (
-                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"
-                "GQRckDIkAAAAhklEQVQoz82RsQ2DQAxFnxN0MAL0dKyVhiZ7oIzBVCkyALQgqKKfwkFK4HQ1z4Ul+9mF"
-                "bRJJsm8eWbGfugiU2Cb0dEw7IaflzhVJgxoRiUpPKQNWJv7GfQULM1wAO3Qdw1xIchZBxM8t5JcM5MSc"
-                "QOFCScuD5fCLGzWYBLx5Me+EgpqwCQk+v2IykhHf6oIAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYt"
-                "MDFUMTM6MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5"
-                "KzAwOjAwYrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNTowNCswMDowMEVV"
+                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"  # noqa: E501
+                "GQRckDIkAAAAhklEQVQoz82RsQ2DQAxFnxN0MAL0dKyVhiZ7oIzBVCkyALQgqKKfwkFK4HQ1z4Ul+9mF"  # noqa: E501
+                "bRJJsm8eWbGfugiU2Cb0dEw7IaflzhVJgxoRiUpPKQNWJv7GfQULM1wAO3Qdw1xIchZBxM8t5JcM5MSc"  # noqa: E501
+                "QOFCScuD5fCLGzWYBLx5Me+EgpqwCQk+v2IykhHf6oIAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYt"  # noqa: E501
+                "MDFUMTM6MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5"  # noqa: E501
+                "KzAwOjAwYrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNTowNCswMDowMEVV"  # noqa: E501
                 "T6UAAAAASUVORK5CYII="
             ),
         }
@@ -346,7 +348,8 @@ class TrayDaemon:
             return img
 
     def _create_menu(self) -> pystray.Menu:
-        """Create the system tray context menu based on application and authentication state"""
+        """Create the system tray context menu based on application and
+        authentication state"""
         menu_items = []
 
         if self.app_is_running:
@@ -648,7 +651,8 @@ class TrayDaemon:
 
         # Check initial app state
         self.app_is_running = self._is_app_running()
-        self.logger.info(f"Initial app state: {'running' if self.app_is_running else 'stopped'}")
+        app_state = 'running' if self.app_is_running else 'stopped'
+        self.logger.info(f"Initial app state: {app_state}")
 
         # Start TCP server
         if not self.start_server():
@@ -747,9 +751,9 @@ def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description='CloudToLocalLLM System Tray Daemon')
     parser.add_argument('--port', type=int, default=0,
-                       help='TCP port for IPC (0 for auto-assign)')
+                        help='TCP port for IPC (0 for auto-assign)')
     parser.add_argument('--debug', action='store_true',
-                       help='Enable debug logging')
+                        help='Enable debug logging')
     parser.add_argument('--version', action='version', version='1.0.0')
 
     args = parser.parse_args()

@@ -10,6 +10,7 @@ from PIL import Image
 import pystray
 from pystray import MenuItem as Item
 
+
 def create_test_icon():
     """Create a simple test icon"""
     # Create a simple 16x16 icon with transparency

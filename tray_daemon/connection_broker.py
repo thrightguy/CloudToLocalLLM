@@ -234,7 +234,8 @@ class ConnectionBroker:
             )
             self._notify_status_change(connection_type)
 
-    async def _check_ollama_connection(self, config: ConnectionConfig, status: ConnectionStatus):
+    async def _check_ollama_connection(
+            self, config: ConnectionConfig, status: ConnectionStatus):
         """Check local Ollama connection"""
         url = f"{config.api_base_url}/api/version"
 
@@ -259,7 +260,8 @@ class ConnectionBroker:
             status.state = ConnectionState.ERROR
             status.error_message = "Connection timeout"
 
-    async def _fetch_ollama_models(self, config: ConnectionConfig, status: ConnectionStatus):
+    async def _fetch_ollama_models(
+            self, config: ConnectionConfig, status: ConnectionStatus):
         """Fetch available models from Ollama"""
         url = f"{config.api_base_url}/api/tags"
 
@@ -275,7 +277,8 @@ class ConnectionBroker:
         except Exception as e:
             self.logger.warning(f"Failed to fetch Ollama models: {e}")
 
-    async def _check_cloud_connection(self, config: ConnectionConfig, status: ConnectionStatus):
+    async def _check_cloud_connection(
+            self, config: ConnectionConfig, status: ConnectionStatus):
         """Check cloud proxy connection"""
         if not config.auth_token:
             status.state = ConnectionState.DISCONNECTED
@@ -305,7 +308,8 @@ class ConnectionBroker:
 
     # Public API Methods
 
-    def get_connection_status(self, connection_type: ConnectionType = None) -> Dict[str, Any]:
+    def get_connection_status(
+            self, connection_type: ConnectionType = None) -> Dict[str, Any]:
         """Get status of connections"""
         if connection_type:
             status = self.connection_status[connection_type]

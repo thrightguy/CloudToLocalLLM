@@ -1,0 +1,476 @@
+build_daemon.py:21:1: W293 blank line contains whitespace
+build_daemon.py:46:1: W293 blank line contains whitespace
+build_daemon.py:50:1: W293 blank line contains whitespace
+build_daemon.py:55:1: W293 blank line contains whitespace
+build_daemon.py:68:1: W293 blank line contains whitespace
+build_daemon.py:87:1: W293 blank line contains whitespace
+build_daemon.py:90:1: W293 blank line contains whitespace
+build_daemon.py:93:1: W293 blank line contains whitespace
+build_daemon.py:113:1: W293 blank line contains whitespace
+build_daemon.py:115:1: W293 blank line contains whitespace
+build_daemon.py:118:57: W291 trailing whitespace
+build_daemon.py:119:31: E128 continuation line under-indented for visual indent
+build_daemon.py:125:1: W293 blank line contains whitespace
+build_daemon.py:127:54: W291 trailing whitespace
+build_daemon.py:128:31: E128 continuation line under-indented for visual indent
+build_daemon.py:134:1: W293 blank line contains whitespace
+build_daemon.py:147:1: W293 blank line contains whitespace
+build_daemon.py:158:1: W293 blank line contains whitespace
+build_daemon.py:162:1: W293 blank line contains whitespace
+build_daemon.py:167:1: W293 blank line contains whitespace
+build_daemon.py:172:1: W293 blank line contains whitespace
+build_daemon.py:176:1: W293 blank line contains whitespace
+build_daemon.py:181:1: W293 blank line contains whitespace
+build_daemon.py:184:1: W293 blank line contains whitespace
+build_daemon.py:186:19: F541 f-string is missing placeholders
+build_daemon.py:192:1: W293 blank line contains whitespace
+connection_broker.py:21:1: F401 'typing.AsyncIterator' imported but unused
+connection_broker.py:24:1: F401 'requests' imported but unused
+connection_broker.py:61:1: W293 blank line contains whitespace
+connection_broker.py:69:1: W293 blank line contains whitespace
+connection_broker.py:78:1: W293 blank line contains whitespace
+connection_broker.py:81:1: W293 blank line contains whitespace
+connection_broker.py:84:1: W293 blank line contains whitespace
+connection_broker.py:94:1: W293 blank line contains whitespace
+connection_broker.py:100:1: W293 blank line contains whitespace
+connection_broker.py:108:1: W293 blank line contains whitespace
+connection_broker.py:112:1: W293 blank line contains whitespace
+connection_broker.py:119:1: W293 blank line contains whitespace
+connection_broker.py:123:1: W293 blank line contains whitespace
+connection_broker.py:130:1: W293 blank line contains whitespace
+connection_broker.py:133:1: W293 blank line contains whitespace
+connection_broker.py:144:1: W293 blank line contains whitespace
+connection_broker.py:147:1: W293 blank line contains whitespace
+connection_broker.py:150:1: W293 blank line contains whitespace
+connection_broker.py:154:1: W293 blank line contains whitespace
+connection_broker.py:158:1: W293 blank line contains whitespace
+connection_broker.py:161:1: W293 blank line contains whitespace
+connection_broker.py:163:1: W293 blank line contains whitespace
+connection_broker.py:167:1: W293 blank line contains whitespace
+connection_broker.py:174:1: W293 blank line contains whitespace
+connection_broker.py:177:1: W293 blank line contains whitespace
+connection_broker.py:179:1: W293 blank line contains whitespace
+connection_broker.py:183:1: W293 blank line contains whitespace
+connection_broker.py:191:1: W293 blank line contains whitespace
+connection_broker.py:199:1: W293 blank line contains whitespace
+connection_broker.py:201:1: W293 blank line contains whitespace
+connection_broker.py:207:1: W293 blank line contains whitespace
+connection_broker.py:212:1: W293 blank line contains whitespace
+connection_broker.py:214:1: W293 blank line contains whitespace
+connection_broker.py:220:1: W293 blank line contains whitespace
+connection_broker.py:224:89: E501 line too long (90 > 88 characters)
+connection_broker.py:225:1: W293 blank line contains whitespace
+connection_broker.py:227:1: W293 blank line contains whitespace
+connection_broker.py:230:89: E501 line too long (116 > 88 characters)
+connection_broker.py:232:1: W293 blank line contains whitespace
+connection_broker.py:233:89: E501 line too long (97 > 88 characters)
+connection_broker.py:236:1: W293 blank line contains whitespace
+connection_broker.py:244:1: W293 blank line contains whitespace
+connection_broker.py:250:1: W293 blank line contains whitespace
+connection_broker.py:257:1: W293 blank line contains whitespace
+connection_broker.py:258:89: E501 line too long (93 > 88 characters)
+connection_broker.py:261:1: W293 blank line contains whitespace
+connection_broker.py:268:1: W293 blank line contains whitespace
+connection_broker.py:271:1: W293 blank line contains whitespace
+connection_broker.py:272:89: E501 line too long (96 > 88 characters)
+connection_broker.py:278:1: W293 blank line contains whitespace
+connection_broker.py:281:1: W293 blank line contains whitespace
+connection_broker.py:285:21: F841 local variable 'data' is assigned to but never used
+connection_broker.py:292:1: W293 blank line contains whitespace
+connection_broker.py:302:89: E501 line too long (94 > 88 characters)
+connection_broker.py:330:67: W504 line break after binary operator
+connection_broker.py:331:13: E129 visually indented line with same indent as next logical line
+connection_broker.py:331:89: E501 line too long (100 > 88 characters)
+connection_broker.py:335:66: W504 line break after binary operator
+connection_broker.py:336:13: E129 visually indented line with same indent as next logical line
+connection_broker.py:336:89: E501 line too long (99 > 88 characters)
+connection_broker.py:363:28: E128 continuation line under-indented for visual indent
+connection_broker.py:381:36: E128 continuation line under-indented for visual indent
+connection_broker.py:381:89: E501 line too long (93 > 88 characters)
+connection_broker.py:400:35: E128 continuation line under-indented for visual indent
+connection_broker.py:400:89: E501 line too long (92 > 88 characters)
+connection_broker.py:413:89: E501 line too long (90 > 88 characters)
+connection_broker.py:438:89: E501 line too long (89 > 88 characters)
+connection_broker.py:447:26: E128 continuation line under-indented for visual indent
+connection_broker.py:467:34: E128 continuation line under-indented for visual indent
+connection_broker.py:495:33: E128 continuation line under-indented for visual indent
+enhanced_tray_daemon.py:29:1: F401 'typing.Callable' imported but unused
+enhanced_tray_daemon.py:29:1: F401 'typing.List' imported but unused
+enhanced_tray_daemon.py:41:1: F401 'connection_broker.ConnectionState' imported but unused
+enhanced_tray_daemon.py:42:1: F401 'version.__version__' imported but unused
+enhanced_tray_daemon.py:42:1: F401 'version.__build__' imported but unused
+enhanced_tray_daemon.py:42:1: F401 'version.__api_version__' imported but unused
+enhanced_tray_daemon.py:47:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:55:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:67:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:71:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:78:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:83:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:86:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:90:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:100:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:103:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:107:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:111:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:116:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:123:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:126:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:130:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:136:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:145:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:149:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:152:89: E501 line too long (92 > 88 characters)
+enhanced_tray_daemon.py:153:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:161:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:165:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:177:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:192:89: E501 line too long (106 > 88 characters)
+enhanced_tray_daemon.py:200:89: E501 line too long (106 > 88 characters)
+enhanced_tray_daemon.py:210:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:216:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:236:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:241:89: E501 line too long (95 > 88 characters)
+enhanced_tray_daemon.py:249:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:267:89: E501 line too long (99 > 88 characters)
+enhanced_tray_daemon.py:284:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:288:1: W293 blank line contains whitespace
+enhanced_tray_daemon.py:294:89: E501 line too long (90 > 88 characters)
+enhanced_tray_daemon.py:301:89: E501 line too long (99 > 88 characters)
+enhanced_tray_daemon.py:324:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:325:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:326:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:327:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:328:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:329:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:333:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:334:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:335:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:336:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:337:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:338:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:339:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:340:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:341:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:342:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:346:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:347:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:348:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:349:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:350:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:351:89: E501 line too long (98 > 88 characters)
+enhanced_tray_daemon.py:376:89: E501 line too long (89 > 88 characters)
+enhanced_tray_daemon.py:385:89: E501 line too long (100 > 88 characters)
+enhanced_tray_daemon.py:400:21: F841 local variable 'error' is assigned to but never used
+enhanced_tray_daemon.py:402:89: E501 line too long (89 > 88 characters)
+enhanced_tray_daemon.py:502:89: E501 line too long (91 > 88 characters)
+enhanced_tray_daemon.py:503:89: E501 line too long (95 > 88 characters)
+enhanced_tray_daemon.py:508:89: E501 line too long (99 > 88 characters)
+enhanced_tray_daemon.py:515:89: E501 line too long (91 > 88 characters)
+enhanced_tray_daemon.py:516:89: E501 line too long (97 > 88 characters)
+enhanced_tray_daemon.py:521:89: E501 line too long (99 > 88 characters)
+enhanced_tray_daemon.py:538:89: E501 line too long (103 > 88 characters)
+enhanced_tray_daemon.py:545:89: E501 line too long (97 > 88 characters)
+enhanced_tray_daemon.py:554:30: F541 f-string is missing placeholders
+enhanced_tray_daemon.py:558:13: E722 do not use bare 'except'
+enhanced_tray_daemon.py:561:89: E501 line too long (116 > 88 characters)
+enhanced_tray_daemon.py:582:89: E501 line too long (90 > 88 characters)
+enhanced_tray_daemon.py:629:13: E722 do not use bare 'except'
+enhanced_tray_daemon.py:679:89: E501 line too long (100 > 88 characters)
+enhanced_tray_daemon.py:684:89: E501 line too long (95 > 88 characters)
+enhanced_tray_daemon.py:695:89: E501 line too long (99 > 88 characters)
+enhanced_tray_daemon.py:724:89: E501 line too long (93 > 88 characters)
+enhanced_tray_daemon.py:749:89: E501 line too long (92 > 88 characters)
+enhanced_tray_daemon.py:847:89: E501 line too long (101 > 88 characters)
+enhanced_tray_daemon.py:849:89: E501 line too long (166 > 88 characters)
+enhanced_tray_daemon.py:854:89: E501 line too long (134 > 88 characters)
+enhanced_tray_daemon.py:863:89: E501 line too long (144 > 88 characters)
+enhanced_tray_daemon.py:866:66: W504 line break after binary operator
+enhanced_tray_daemon.py:867:21: E129 visually indented line with same indent as next logical line
+enhanced_tray_daemon.py:868:38: F541 f-string is missing placeholders
+enhanced_tray_daemon.py:868:89: E501 line too long (94 > 88 characters)
+enhanced_tray_daemon.py:901:13: E722 do not use bare 'except'
+enhanced_tray_daemon.py:908:13: E722 do not use bare 'except'
+enhanced_tray_daemon.py:920:9: E722 do not use bare 'except'
+enhanced_tray_daemon.py:929:89: E501 line too long (99 > 88 characters)
+settings_app.py:20:1: F401 'typing.Optional' imported but unused
+settings_app.py:31:1: W293 blank line contains whitespace
+settings_app.py:37:1: W293 blank line contains whitespace
+settings_app.py:42:1: W293 blank line contains whitespace
+settings_app.py:46:1: W293 blank line contains whitespace
+settings_app.py:50:1: W293 blank line contains whitespace
+settings_app.py:60:1: W293 blank line contains whitespace
+settings_app.py:63:1: W293 blank line contains whitespace
+settings_app.py:68:1: W293 blank line contains whitespace
+settings_app.py:75:1: W293 blank line contains whitespace
+settings_app.py:98:1: W293 blank line contains whitespace
+settings_app.py:107:1: W293 blank line contains whitespace
+settings_app.py:113:1: W293 blank line contains whitespace
+settings_app.py:118:1: W293 blank line contains whitespace
+settings_app.py:123:1: W293 blank line contains whitespace
+settings_app.py:128:1: W293 blank line contains whitespace
+settings_app.py:132:1: W293 blank line contains whitespace
+settings_app.py:133:89: E501 line too long (108 > 88 characters)
+settings_app.py:134:89: E501 line too long (110 > 88 characters)
+settings_app.py:135:89: E501 line too long (119 > 88 characters)
+settings_app.py:136:1: W293 blank line contains whitespace
+settings_app.py:141:82: W291 trailing whitespace
+settings_app.py:142:24: E128 continuation line under-indented for visual indent
+settings_app.py:143:1: W293 blank line contains whitespace
+settings_app.py:147:1: W293 blank line contains whitespace
+settings_app.py:150:89: E501 line too long (103 > 88 characters)
+settings_app.py:151:1: W293 blank line contains whitespace
+settings_app.py:154:89: E501 line too long (102 > 88 characters)
+settings_app.py:155:1: W293 blank line contains whitespace
+settings_app.py:159:1: W293 blank line contains whitespace
+settings_app.py:162:89: E501 line too long (108 > 88 characters)
+settings_app.py:163:1: W293 blank line contains whitespace
+settings_app.py:167:1: W293 blank line contains whitespace
+settings_app.py:172:80: W291 trailing whitespace
+settings_app.py:173:24: E128 continuation line under-indented for visual indent
+settings_app.py:174:1: W293 blank line contains whitespace
+settings_app.py:178:1: W293 blank line contains whitespace
+settings_app.py:181:89: E501 line too long (96 > 88 characters)
+settings_app.py:182:1: W293 blank line contains whitespace
+settings_app.py:186:1: W293 blank line contains whitespace
+settings_app.py:189:89: E501 line too long (95 > 88 characters)
+settings_app.py:191:1: W293 blank line contains whitespace
+settings_app.py:194:89: E501 line too long (92 > 88 characters)
+settings_app.py:195:35: E128 continuation line under-indented for visual indent
+settings_app.py:195:89: E501 line too long (112 > 88 characters)
+settings_app.py:197:1: W293 blank line contains whitespace
+settings_app.py:201:1: W293 blank line contains whitespace
+settings_app.py:204:89: E501 line too long (107 > 88 characters)
+settings_app.py:205:1: W293 blank line contains whitespace
+settings_app.py:209:1: W293 blank line contains whitespace
+settings_app.py:213:89: E501 line too long (92 > 88 characters)
+settings_app.py:215:1: W293 blank line contains whitespace
+settings_app.py:218:80: W291 trailing whitespace
+settings_app.py:219:24: E128 continuation line under-indented for visual indent
+settings_app.py:220:1: W293 blank line contains whitespace
+settings_app.py:229:1: W293 blank line contains whitespace
+settings_app.py:233:89: E501 line too long (98 > 88 characters)
+settings_app.py:236:1: W293 blank line contains whitespace
+settings_app.py:246:89: E501 line too long (91 > 88 characters)
+settings_app.py:248:1: W293 blank line contains whitespace
+settings_app.py:256:1: W293 blank line contains whitespace
+settings_app.py:258:1: W293 blank line contains whitespace
+settings_app.py:263:1: W293 blank line contains whitespace
+settings_app.py:268:1: W293 blank line contains whitespace
+settings_app.py:272:1: W293 blank line contains whitespace
+settings_app.py:276:1: W293 blank line contains whitespace
+settings_app.py:280:89: E501 line too long (89 > 88 characters)
+settings_app.py:282:1: W293 blank line contains whitespace
+settings_app.py:286:89: E501 line too long (92 > 88 characters)
+settings_app.py:289:89: E501 line too long (97 > 88 characters)
+settings_app.py:290:89: E501 line too long (94 > 88 characters)
+settings_app.py:291:1: W293 blank line contains whitespace
+settings_app.py:295:1: W293 blank line contains whitespace
+settings_app.py:303:1: W293 blank line contains whitespace
+settings_app.py:304:89: E501 line too long (96 > 88 characters)
+settings_app.py:305:1: W293 blank line contains whitespace
+settings_app.py:310:89: E501 line too long (96 > 88 characters)
+settings_app.py:311:89: E501 line too long (93 > 88 characters)
+settings_app.py:312:1: W293 blank line contains whitespace
+settings_app.py:316:1: W293 blank line contains whitespace
+settings_app.py:320:1: W293 blank line contains whitespace
+settings_app.py:324:89: E501 line too long (92 > 88 characters)
+settings_app.py:326:1: W293 blank line contains whitespace
+settings_app.py:333:1: W293 blank line contains whitespace
+test_appindicator.py:13:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:24:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:28:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:32:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:37:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:40:1: W293 blank line contains whitespace
+test_appindicator.py:44:1: W293 blank line contains whitespace
+test_appindicator.py:47:1: W293 blank line contains whitespace
+test_appindicator.py:55:1: W293 blank line contains whitespace
+test_appindicator.py:64:1: W293 blank line contains whitespace
+test_appindicator.py:66:1: W293 blank line contains whitespace
+test_appindicator.py:70:1: W293 blank line contains whitespace
+test_appindicator.py:73:1: W293 blank line contains whitespace
+test_appindicator.py:76:1: W293 blank line contains whitespace
+test_appindicator.py:83:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:86:1: W293 blank line contains whitespace
+test_appindicator.py:88:1: W293 blank line contains whitespace
+test_appindicator.py:97:1: W293 blank line contains whitespace
+test_appindicator.py:99:1: W293 blank line contains whitespace
+test_appindicator.py:101:1: W293 blank line contains whitespace
+test_appindicator.py:105:1: W293 blank line contains whitespace
+test_appindicator.py:108:1: W293 blank line contains whitespace
+test_appindicator.py:112:1: W293 blank line contains whitespace
+test_appindicator.py:115:1: W293 blank line contains whitespace
+test_appindicator.py:124:1: E302 expected 2 blank lines, found 1
+test_appindicator.py:127:1: W293 blank line contains whitespace
+test_appindicator.py:132:1: W293 blank line contains whitespace
+test_appindicator.py:136:1: W293 blank line contains whitespace
+test_appindicator.py:144:1: W293 blank line contains whitespace
+test_appindicator.py:147:1: E305 expected 2 blank lines after class or function definition, found 1
+test_backends.py:10:1: E302 expected 2 blank lines, found 1
+test_backends.py:13:1: W293 blank line contains whitespace
+test_backends.py:15:5: F841 local variable 'icon_image' is assigned to but never used
+test_backends.py:16:1: W293 blank line contains whitespace
+test_backends.py:19:1: W293 blank line contains whitespace
+test_backends.py:26:1: W293 blank line contains whitespace
+test_backends.py:33:1: W293 blank line contains whitespace
+test_backends.py:40:1: W293 blank line contains whitespace
+test_backends.py:47:1: W293 blank line contains whitespace
+test_backends.py:50:1: E302 expected 2 blank lines, found 1
+test_backends.py:53:1: W293 blank line contains whitespace
+test_backends.py:58:9: F401 'gi.repository.Gtk' imported but unused
+test_backends.py:59:1: W293 blank line contains whitespace
+test_backends.py:61:1: W293 blank line contains whitespace
+test_backends.py:68:1: W293 blank line contains whitespace
+test_backends.py:70:1: W293 blank line contains whitespace
+test_backends.py:74:1: W293 blank line contains whitespace
+test_backends.py:76:1: W293 blank line contains whitespace
+test_backends.py:81:1: E302 expected 2 blank lines, found 1
+test_backends.py:84:1: W293 blank line contains whitespace
+test_backends.py:87:1: W293 blank line contains whitespace
+test_backends.py:90:1: W293 blank line contains whitespace
+test_backends.py:91:11: F541 f-string is missing placeholders
+test_backends.py:95:1: W293 blank line contains whitespace
+test_backends.py:97:1: W293 blank line contains whitespace
+test_backends.py:99:11: F541 f-string is missing placeholders
+test_backends.py:106:1: W293 blank line contains whitespace
+test_backends.py:109:1: E305 expected 2 blank lines after class or function definition, found 1
+test_tray.py:13:1: E302 expected 2 blank lines, found 1
+test_tray.py:19:1: E302 expected 2 blank lines, found 1
+test_tray.py:23:1: E302 expected 2 blank lines, found 1
+test_tray.py:28:1: E302 expected 2 blank lines, found 1
+test_tray.py:31:1: W293 blank line contains whitespace
+test_tray.py:36:1: W293 blank line contains whitespace
+test_tray.py:44:1: W293 blank line contains whitespace
+test_tray.py:53:1: W293 blank line contains whitespace
+test_tray.py:55:89: E501 line too long (94 > 88 characters)
+test_tray.py:56:1: W293 blank line contains whitespace
+test_tray.py:59:1: W293 blank line contains whitespace
+test_tray.py:61:1: W293 blank line contains whitespace
+test_tray.py:67:1: E302 expected 2 blank lines, found 1
+test_tray.py:70:1: W293 blank line contains whitespace
+test_tray.py:76:1: W293 blank line contains whitespace
+test_tray.py:80:1: W293 blank line contains whitespace
+test_tray.py:82:1: W293 blank line contains whitespace
+test_tray.py:87:1: E302 expected 2 blank lines, found 1
+test_tray.py:90:1: W293 blank line contains whitespace
+test_tray.py:96:1: W293 blank line contains whitespace
+test_tray.py:99:1: W293 blank line contains whitespace
+test_tray.py:102:1: W293 blank line contains whitespace
+test_tray.py:106:1: W293 blank line contains whitespace
+test_tray.py:110:1: W293 blank line contains whitespace
+test_tray.py:116:1: E302 expected 2 blank lines, found 1
+test_tray.py:119:1: W293 blank line contains whitespace
+test_tray.py:125:1: W293 blank line contains whitespace
+test_tray.py:129:1: W293 blank line contains whitespace
+test_tray.py:133:1: W293 blank line contains whitespace
+test_tray.py:140:1: W293 blank line contains whitespace
+test_tray.py:144:1: E305 expected 2 blank lines after class or function definition, found 1
+tray_daemon.py:6:89: E501 line too long (91 > 88 characters)
+tray_daemon.py:28:1: F401 'typing.Callable' imported but unused
+tray_daemon.py:43:1: W293 blank line contains whitespace
+tray_daemon.py:51:1: W293 blank line contains whitespace
+tray_daemon.py:63:1: W293 blank line contains whitespace
+tray_daemon.py:78:1: W293 blank line contains whitespace
+tray_daemon.py:88:1: W293 blank line contains whitespace
+tray_daemon.py:91:1: W293 blank line contains whitespace
+tray_daemon.py:95:1: W293 blank line contains whitespace
+tray_daemon.py:99:1: W293 blank line contains whitespace
+tray_daemon.py:119:89: E501 line too long (106 > 88 characters)
+tray_daemon.py:127:89: E501 line too long (106 > 88 characters)
+tray_daemon.py:168:89: E501 line too long (90 > 88 characters)
+tray_daemon.py:173:89: E501 line too long (95 > 88 characters)
+tray_daemon.py:203:89: E501 line too long (99 > 88 characters)
+tray_daemon.py:238:89: E501 line too long (101 > 88 characters)
+tray_daemon.py:243:89: E501 line too long (119 > 88 characters)
+tray_daemon.py:252:89: E501 line too long (129 > 88 characters)
+tray_daemon.py:255:66: W504 line break after binary operator
+tray_daemon.py:256:21: E129 visually indented line with same indent as next logical line
+tray_daemon.py:278:1: W293 blank line contains whitespace
+tray_daemon.py:285:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:286:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:287:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:288:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:289:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:290:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:294:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:295:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:296:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:297:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:298:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:299:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:300:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:301:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:302:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:303:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:307:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:308:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:309:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:310:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:311:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:312:89: E501 line too long (98 > 88 characters)
+tray_daemon.py:319:1: W293 blank line contains whitespace
+tray_daemon.py:330:1: W293 blank line contains whitespace
+tray_daemon.py:332:89: E501 line too long (95 > 88 characters)
+tray_daemon.py:371:1: W293 blank line contains whitespace
+tray_daemon.py:418:1: W293 blank line contains whitespace
+tray_daemon.py:423:1: W293 blank line contains whitespace
+tray_daemon.py:430:1: W293 blank line contains whitespace
+tray_daemon.py:436:13: E722 do not use bare 'except'
+tray_daemon.py:458:89: E501 line too long (90 > 88 characters)
+tray_daemon.py:507:13: E722 do not use bare 'except'
+tray_daemon.py:545:21: E722 do not use bare 'except'
+tray_daemon.py:590:13: E722 do not use bare 'except'
+tray_daemon.py:598:13: E722 do not use bare 'except'
+tray_daemon.py:605:13: E722 do not use bare 'except'
+tray_daemon.py:613:9: E722 do not use bare 'except'
+tray_daemon.py:632:89: E501 line too long (97 > 88 characters)
+tray_daemon.py:669:13: F841 local variable 'test_icon' is assigned to but never used
+tray_daemon.py:693:13: F401 'pystray._appindicator' imported but unused
+tray_daemon.py:698:89: E501 line too long (102 > 88 characters)
+tray_daemon.py:706:89: E501 line too long (114 > 88 characters)
+tray_daemon.py:710:89: E501 line too long (124 > 88 characters)
+tray_daemon.py:712:89: E501 line too long (90 > 88 characters)
+tray_daemon.py:719:24: E128 continuation line under-indented for visual indent
+tray_daemon.py:721:24: E128 continuation line under-indented for visual indent
+version.py:25:1: E302 expected 2 blank lines, found 1
+version.py:27:1: W293 blank line contains whitespace
+version.py:38:89: E501 line too long (108 > 88 characters)
+version.py:44:1: W293 blank line contains whitespace
+version.py:54:1: W293 blank line contains whitespace
+version.py:64:1: W293 blank line contains whitespace
+version.py:69:1: W293 blank line contains whitespace
+version.py:71:89: E501 line too long (114 > 88 characters)
+version.py:73:1: W293 blank line contains whitespace
+version.py:81:89: E501 line too long (105 > 88 characters)
+version.py:90:1: W293 blank line contains whitespace
+version.py:95:89: E501 line too long (89 > 88 characters)
+version.py:96:89: E501 line too long (133 > 88 characters)
+version.py:98:1: W293 blank line contains whitespace
+version.py:100:1: W293 blank line contains whitespace
+version.py:105:1: W293 blank line contains whitespace
+version.py:109:89: E501 line too long (92 > 88 characters)
+version.py:110:1: W293 blank line contains whitespace
+version.py:117:1: E302 expected 2 blank lines, found 1
+version.py:123:1: W293 blank line contains whitespace
+version.py:126:1: W293 blank line contains whitespace
+version.py:131:1: E302 expected 2 blank lines, found 1
+version.py:133:1: W293 blank line contains whitespace
+version.py:142:1: W293 blank line contains whitespace
+version.py:147:1: W293 blank line contains whitespace
+version.py:153:1: W293 blank line contains whitespace
+version.py:158:1: E302 expected 2 blank lines, found 1
+version.py:163:1: E302 expected 2 blank lines, found 1
+version.py:165:1: W293 blank line contains whitespace
+version.py:170:1: W293 blank line contains whitespace
+version.py:176:1: W293 blank line contains whitespace
+version.py:179:89: E501 line too long (119 > 88 characters)
+version.py:181:1: W293 blank line contains whitespace
+version.py:183:1: W293 blank line contains whitespace
+version.py:188:1: W293 blank line contains whitespace
+version.py:194:1: W293 blank line contains whitespace
+version.py:195:89: E501 line too long (96 > 88 characters)
+version.py:196:1: W293 blank line contains whitespace
+version.py:206:1: E305 expected 2 blank lines after class or function definition, found 1
+version.py:211:5: F811 redefinition of unused 'sys' from line 8
+version.py:213:1: W293 blank line contains whitespace
+version.py:225:89: E501 line too long (106 > 88 characters)

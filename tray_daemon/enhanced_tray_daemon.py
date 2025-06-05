@@ -332,34 +332,34 @@ class EnhancedTrayDaemon:
         """Get base64 encoded icon data for different states"""
         # Base64 encoded monochrome icons (16x16 PNG)
         idle_icon = (
-            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"
-            "GAvVNB70AAAAgElEQVQoz83RMQ6CUBAE0PfRBgItFzDxVh7DeA8bGo9lSW04ApCYtYBGBGqn3VdMdhJh"
-            "O0maz7X8SyajTnAEFzfVAgwad28h6njGWl5xDhly1WqBQkmG2OgZYgK7+ReQpK0/T2A0rIJRP72607gq"
-            "frZ4aM1jHZyUC9BrjaT9ufkAKf46eVLyT+wAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6"
-            "MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5KzAwOjAw"
-            "YrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNDoxMSswMDowMDQFC6IAAAAA"
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"  # noqa: E501
+            "GAvVNB70AAAAgElEQVQoz83RMQ6CUBAE0PfRBgItFzDxVh7DeA8bGo9lSW04ApCYtYBGBGqn3VdMdhJh"  # noqa: E501
+            "O0maz7X8SyajTnAEFzfVAgwad28h6njGWl5xDhly1WqBQkmG2OgZYgK7+ReQpK0/T2A0rIJRP72607gq"  # noqa: E501
+            "frZ4aM1jHZyUC9BrjaT9ufkAKf46eVLyT+wAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6"  # noqa: E501
+            "MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5KzAwOjAw"  # noqa: E501
+            "YrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNDoxMSswMDowMDQFC6IAAAAA"  # noqa: E501
             "SUVORK5CYII="
         )
         connected_icon = (
-            "iVBORw0KGgoAAAANSUhEUgAAABYAAAAWEAQAAAA+LXjzAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1"
-            "MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRP//FKsxzQAAAAd0SU1FB+kGAQ0KAtZaaNoAAAFBSURBVDjL"
-            "7ZOxSwJhGMZ/BE3ieNNFS4ZDoxE4JCTBQS1tDSJNbeV04L8Rrm5BkARRDU1CWncIWY2dzrVoqzQFT8Nx"
-            "pxdGlzaFD3zw8X3v++N5X94XZvrPMu7BvgYvD3oFbwfsCzAaU0ALKZC+PwVzEuhyAMhvSfsL0vuT5JxI"
-            "K0cReOo35beDxMqZVCpJg4EiqjyMwo3mV8LcePDeG4C1BovzYJqQSEQjDjNg5cL4j5iOvQ3wyy4WpXZb"
-            "Y+VcBY699ZhgvYCkGymdlvp9fathO2K1onMA4PYhmQTXHfnpQK/n3916+Lob07F9CZKVlWo1yTSlclmq"
-            "VqVud+jW2gzc2udxp6IRTsXp+BZUbiNTcRcTDP7w+4nWtuS4kh4l51iyVqdfkqUfNi8zATRsSxPsOng5"
-            "0DN4WbBbYLSmgM70B/oE5jIou4+gv28AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6MTA6"
-            "MDIrMDA6MDACdUjhAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjEwOjAyKzAwOjAwcyjw"
-            "XQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxMzoxMDowMiswMDowMCQ90YIAAAAASUVO"
+            "iVBORw0KGgoAAAANSUhEUgAAABYAAAAWEAQAAAA+LXjzAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1"  # noqa: E501
+            "MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRP//FKsxzQAAAAd0SU1FB+kGAQ0KAtZaaNoAAAFBSURBVDjL"  # noqa: E501
+            "7ZOxSwJhGMZ/BE3ieNNFS4ZDoxE4JCTBQS1tDSJNbeV04L8Rrm5BkARRDU1CWncIWY2dzrVoqzQFT8Nx"  # noqa: E501
+            "pxdGlzaFD3zw8X3v++N5X94XZvrPMu7BvgYvD3oFbwfsCzAaU0ALKZC+PwVzEuhyAMhvSfsL0vuT5JxI"  # noqa: E501
+            "K0cReOo35beDxMqZVCpJg4EiqjyMwo3mV8LcePDeG4C1BovzYJqQSEQjDjNg5cL4j5iOvQ3wyy4WpXZb"  # noqa: E501
+            "Y+VcBY699ZhgvYCkGymdlvp9fathO2K1onMA4PYhmQTXHfnpQK/n3916+Lob07F9CZKVlWo1yTSlclmq"  # noqa: E501
+            "VqVud+jW2gzc2udxp6IRTsXp+BZUbiNTcRcTDP7w+4nWtuS4kh4l51iyVqdfkqUfNi8zATRsSxPsOng5"  # noqa: E501
+            "0DN4WbBbYLSmgM70B/oE5jIou4+gv28AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6MTA6"  # noqa: E501
+            "MDIrMDA6MDACdUjhAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjEwOjAyKzAwOjAwcyjw"  # noqa: E501
+            "XQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxMzoxMDowMiswMDowMCQ90YIAAAAASUVO"  # noqa: E501
             "RK5CYII="
         )
         error_icon = (
-            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO" +
-            "GQRckDIkAAAAhklEQVQoz82RsQ2DQAxFnxN0MAL0dKyVhiZ7oIzBVCkyALQgqKKfwkFK4HQ1z4Ul+9mF" +
-            "bRJJsm8eWbGfugiU2Cb0dEw7IaflzhVJgxoRiUpPKQNWJv7GfQULM1wAO3Qdw1xIchZBxM8t5JcM5MSc" +
-            "QOFCScuD5fCLGzWYBLx5Me+EgpqwCQk+v2IykhHf6oIAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYt" +
-            "MDFUMTM6MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5" +
-            "KzAwOjAwYrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNTowNCswMDowMEVV" +
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"  # noqa: E501
+            "GQRckDIkAAAAhklEQVQoz82RsQ2DQAxFnxN0MAL0dKyVhiZ7oIzBVCkyALQgqKKfwkFK4HQ1z4Ul+9mF"  # noqa: E501
+            "bRJJsm8eWbGfugiU2Cb0dEw7IaflzhVJgxoRiUpPKQNWJv7GfQULM1wAO3Qdw1xIchZBxM8t5JcM5MSc"  # noqa: E501
+            "QOFCScuD5fCLGzWYBLx5Me+EgpqwCQk+v2IykhHf6oIAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYt"  # noqa: E501
+            "MDFUMTM6MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5"  # noqa: E501
+            "KzAwOjAwYrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNTowNCswMDowMEVV"  # noqa: E501
             "T6UAAAAASUVORK5CYII="
         )
         icons = {
@@ -388,7 +388,8 @@ class EnhancedTrayDaemon:
 
         # Connection status section - prioritize Flutter app status
         flutter_status_shown = False
-        if hasattr(self, 'flutter_connection_status') and self.flutter_connection_status:
+        if (hasattr(self, 'flutter_connection_status')
+                and self.flutter_connection_status):
             # Show Flutter app connection status first
             for conn_type, status in self.flutter_connection_status.items():
                 connected = status.get('connected', False)
@@ -521,7 +522,8 @@ class EnhancedTrayDaemon:
         )
 
         # ALWAYS try to send command to Flutter app first
-        # If there are connected clients, this will work regardless of app_is_running state
+        # If there are connected clients, this will work regardless of
+        # app_is_running state
         self.logger.info(
             "🔧 [TrayDaemon] Sending DAEMON_SETTINGS command to "
             "connected clients"
@@ -530,7 +532,8 @@ class EnhancedTrayDaemon:
         self.logger.info("🔧 [TrayDaemon] DAEMON_SETTINGS command sent")
 
         # If no clients are connected, the command will be ignored
-        # We could add fallback logic here if needed, but for now let's see if this fixes the issue
+        # We could add fallback logic here if needed, but for now let's see
+        # if this fixes the issue
 
     def _on_connection_status(self, icon, item):
         """Handle connection status menu item"""
@@ -539,7 +542,8 @@ class EnhancedTrayDaemon:
         )
 
         # ALWAYS try to send command to Flutter app first
-        # If there are connected clients, this will work regardless of app_is_running state
+        # If there are connected clients, this will work regardless of
+        # app_is_running state
         self.logger.info(
             "📊 [TrayDaemon] Sending CONNECTION_STATUS command to "
             "connected clients"
@@ -548,7 +552,8 @@ class EnhancedTrayDaemon:
         self.logger.info("📊 [TrayDaemon] CONNECTION_STATUS command sent")
 
         # If no clients are connected, the command will be ignored
-        # We could add fallback logic here if needed, but for now let's see if this fixes the issue
+        # We could add fallback logic here if needed, but for now let's see
+        # if this fixes the issue
 
     def _on_quit_daemon(self, icon, item):
         """Handle quit daemon menu item"""
@@ -723,7 +728,9 @@ class EnhancedTrayDaemon:
                     status = self.connection_broker.get_connection_status()
                     self._send_response(client_socket, {"status": status})
                 else:
-                    self._send_response(client_socket, {"error": "Connection broker not available"})
+                    self._send_response(
+                        client_socket, {"error": "Connection broker not available"}
+                    )
 
             elif command == "UPDATE_CONNECTION_STATUS":
                 # Update connection status from Flutter app
@@ -930,15 +937,19 @@ class EnhancedTrayDaemon:
                 # Check if authentication state changed
                 if current_auth_state != self.app_is_authenticated:
                     self.app_is_authenticated = current_auth_state
+                    auth_status = (
+                        'authenticated' if current_auth_state else 'not authenticated'
+                    )
                     self.logger.info(
-                        f"🔄 [TrayDaemon] App auth state changed: "
-                        f"{'authenticated' if current_auth_state else 'not authenticated'}"
+                        f"🔄 [TrayDaemon] App auth state changed: {auth_status}"
                     )
 
                 # Update tray menu if any state changed
-                if (current_running_state != self.app_is_running or
-                    current_auth_state != self.app_is_authenticated):
-                    self.logger.info("🔄 [TrayDaemon] Updating tray menu due to state change")
+                if (current_running_state != self.app_is_running
+                        or current_auth_state != self.app_is_authenticated):
+                    self.logger.info(
+                        "🔄 [TrayDaemon] Updating tray menu due to state change"
+                    )
                     if self.tray:
                         self.tray.menu = self._create_menu()
 
@@ -998,8 +1009,12 @@ class EnhancedTrayDaemon:
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description='CloudToLocalLLM Enhanced Tray Daemon')
-    parser.add_argument('--port', type=int, default=0, help='TCP port for IPC (0 for auto-assign)')
+    parser = argparse.ArgumentParser(
+        description='CloudToLocalLLM Enhanced Tray Daemon'
+    )
+    parser.add_argument(
+        '--port', type=int, default=0, help='TCP port for IPC (0 for auto-assign)'
+    )
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
 
     args = parser.parse_args()

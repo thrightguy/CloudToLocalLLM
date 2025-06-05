@@ -5,16 +5,16 @@
 pystray>=0.19.5
 
 # Image processing for icons
-Pillow>=10.0.0
+Pillow>=11.0.0
 
 # Process monitoring
-psutil>=6.0.0
+psutil>=6.1.0
 
 # HTTP client for connection testing
-requests>=2.31.0
+requests>=2.32.3
 
 # Async HTTP client for connection broker
-aiohttp>=3.9.0
+aiohttp>=3.11.10
 
 # GUI toolkit (optional, for settings app)
-PyGObject>=3.46.0
+PyGObject>=3.50.0

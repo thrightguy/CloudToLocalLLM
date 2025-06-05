@@ -10,6 +10,7 @@ from PIL import Image
 import pystray
 from pystray import MenuItem as Item
 
+
 def create_test_icon():
     """Create a simple test icon"""
     # Create a simple 16x16 red square
@@ -55,7 +56,10 @@ def test_basic_tray():
         )
 
         print("Starting tray icon...")
-        print("If you see this message and the script hangs, the issue is with pystray.run()")
+        print(
+            "If you see this message and the script hangs, "
+            "the issue is with pystray.run()"
+        )
 
         # This should show the tray icon
         icon.run()
@@ -66,6 +70,7 @@ def test_basic_tray():
         print(f"Error: {e}")
         import traceback
         traceback.print_exc()
+
 
 def test_tray_support():
     """Test if system tray is supported"""

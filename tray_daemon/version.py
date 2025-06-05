@@ -183,6 +183,8 @@ def is_version_newer(current: str, target: str) -> bool:
     return compare_versions(target, current) > 0
 
 # Migration support
+
+
 class VersionMigration:
     """Handle version migrations for tray daemon"""
 
@@ -228,10 +230,12 @@ class VersionMigration:
             "backup_recommended": True,
         }
 
+
 # Export main version info for easy access
 __version__ = TRAY_DAEMON_VERSION
 __build__ = TRAY_DAEMON_BUILD
 __api_version__ = IPC_API_VERSION
+
 
 if __name__ == "__main__":
     import sys
