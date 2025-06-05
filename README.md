@@ -341,34 +341,52 @@ Instructions for building and packaging client applications for different platfo
 
 ## 📚 Documentation
 
-Refer to the `docs/` directory for detailed documentation. Key documents include:
+CloudToLocalLLM features comprehensive, well-organized documentation. The documentation has been streamlined into logical topic areas for better discoverability and maintenance.
 
-**Core Concepts & Setup:**
-- [ENHANCED_ARCHITECTURE.md](docs/ENHANCED_ARCHITECTURE.md): **Enhanced System Tray Architecture** with universal connection management.
-- [OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md): Ollama integration, hardware detection, model naming.
-- [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md): Premium features and subscription details.
-- [CONTAINER_ARCHITECTURE.md](docs/CONTAINER_ARCHITECTURE.md): Overview of the Docker container setup.
-- [FLUTTER_APP_STRUCTURE.md](docs/flutter_app_structure.md): Details on the Flutter application structure.
+### **📋 Primary Documentation**
 
-**Deployment & Operations:**
-- [DEPLOYMENT.md](docs/COMPLETE_DEPLOYMENT_WORKFLOW.md): General deployment and infrastructure setup.
-- [VPS_DEPLOYMENT.md](docs/COMPLETE_DEPLOYMENT_WORKFLOW.md): Specific guide for VPS deployments.
-- [DEPLOYMENT_INSTRUCTIONS.md](docs/COMPLETE_DEPLOYMENT_WORKFLOW.md): Step-by-step deployment instructions.
-- [RENDER_DEPLOYMENT.md](docs/RENDER_DEPLOYMENT.md): Guide for deploying on Render.
-- [MAINTENANCE_SCRIPTS.md](docs/MAINTENANCE_SCRIPTS.md): Information on available maintenance scripts.
+**🚀 Getting Started:**
+- [Installation Guide](docs/INSTALLATION/INSTALLATION_GUIDE.md): Complete installation instructions for all platforms (Linux, Windows, Self-hosting)
+- [User Guide](docs/USER_DOCUMENTATION/USER_GUIDE.md): Basic usage and interface overview
+- [Features Guide](docs/USER_DOCUMENTATION/FEATURES_GUIDE.md): Comprehensive feature documentation, integrations, and premium capabilities
 
-**Release & Windows Specific:**
-- [RELEASE_INSTRUCTIONS.md](docs/RELEASE_INSTRUCTIONS.md): How to prepare and manage releases.
-- [WINDOWS_INSTALLER_GUIDE.md](docs/WINDOWS_INSTALLER_GUIDE.md): Guide for the Windows installer.
+**🔧 Deployment & Operations:**
+- [Complete Deployment Workflow](docs/DEPLOYMENT/COMPLETE_DEPLOYMENT_WORKFLOW.md): **THE** authoritative deployment guide with version management
+- [Deployment Workflow Diagram](docs/DEPLOYMENT/DEPLOYMENT_WORKFLOW_DIAGRAM.md): Visual deployment process and troubleshooting
+- [Self-Hosting Guide](docs/OPERATIONS/SELF_HOSTING.md): VPS deployment for cloud features
+- [Infrastructure Guide](docs/OPERATIONS/INFRASTRUCTURE_GUIDE.md): Environment strategy, maintenance, and server setup
 
-**Development & Strategy:**
-- [AUTH0_DIRECT_LOGIN.md](docs/auth0_direct_login.md): Auth0 integration details.
-- [DUAL_LICENSE_STRATEGY.md](docs/DUAL_LICENSE_STRATEGY.md): Licensing information.
-- [PRICING_STRATEGY.md](docs/PRICING_STRATEGY.md): Details on pricing. *(Ensure this file is added to docs/ from root)*
+**🏗️ Technical Reference:**
+- [System Architecture](docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md): Complete technical architecture including enhanced tray, streaming, and containers
+- [Versioning Strategy](docs/DEPLOYMENT/VERSIONING_STRATEGY.md): Version format and management strategy
+- [Release Notes](docs/RELEASE/RELEASE_NOTES.md): Version history and release management
 
-**Legal & Policies:**
-- [PRIVACY.md](docs/PRIVACY.md): Privacy Policy. *(Ensure this file exists in docs/ or is created)*
-- [TERMS.md](docs/TERMS.md): Terms of Service. *(Ensure this file exists in docs/ or is created)*
+**📄 Legal & Compliance:**
+- [Privacy Policy](docs/LEGAL/PRIVACY.md): Privacy policy and data handling
+- [Terms of Service](docs/LEGAL/TERMS.md): Terms of service and usage agreement
+
+### **📁 Documentation Structure**
+
+The documentation is organized into logical topic areas:
+
+```
+docs/
+├── DEPLOYMENT/     # Deployment guides and version management
+├── ARCHITECTURE/   # Technical architecture documentation
+├── INSTALLATION/   # Platform-specific installation guides
+├── USER_DOCUMENTATION/ # User guides and feature documentation
+├── OPERATIONS/     # Infrastructure and maintenance guides
+├── RELEASE/        # Release notes and version history
+├── LEGAL/          # Privacy policy and terms of service
+└── archive/        # Archived/obsolete documentation
+```
+
+### **🔍 Quick Navigation**
+
+- **New Users**: Start with [Installation Guide](docs/INSTALLATION/INSTALLATION_GUIDE.md) → [User Guide](docs/USER_DOCUMENTATION/USER_GUIDE.md)
+- **Developers**: See [System Architecture](docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md) → [Features Guide](docs/USER_DOCUMENTATION/FEATURES_GUIDE.md)
+- **Deployers**: Follow [Complete Deployment Workflow](docs/DEPLOYMENT/COMPLETE_DEPLOYMENT_WORKFLOW.md)
+- **Self-Hosters**: Use [Self-Hosting Guide](docs/OPERATIONS/SELF_HOSTING.md) → [Infrastructure Guide](docs/OPERATIONS/INFRASTRUCTURE_GUIDE.md)
 
 ## 🤝 Contributing
 

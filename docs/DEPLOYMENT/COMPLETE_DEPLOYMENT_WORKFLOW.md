@@ -1013,14 +1013,14 @@ echo "✅ VPS deployment completed!"
 ## 📚 **DOCUMENTATION HIERARCHY**
 
 ### **🎯 Primary Documentation (ACTIVE)**
-- **THIS DOCUMENT** (`docs/COMPLETE_DEPLOYMENT_WORKFLOW.md`) - **THE ONLY DEPLOYMENT GUIDE**
-- `docs/VERSIONING_STRATEGY.md` - Version format reference and strategy
+- **THIS DOCUMENT** (`docs/DEPLOYMENT/COMPLETE_DEPLOYMENT_WORKFLOW.md`) - **THE ONLY DEPLOYMENT GUIDE**
+- `docs/DEPLOYMENT/VERSIONING_STRATEGY.md` - Version format reference and strategy
 - `scripts/version_manager.sh` - Version management tool documentation
 
 ### **🗂️ Supporting Documentation**
 - `scripts/deploy/README.md` - Deployment scripts overview
 - `aur-package/README.md` - AUR package specific instructions
-- `docs/SYSTEM_TRAY_ARCHITECTURE.md` - System tray implementation details
+- `docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md` - System architecture and tray implementation
 
 ### **🗄️ Archived Documentation (OBSOLETE)**
 Located in `docs/archive/obsolete-*/`:
