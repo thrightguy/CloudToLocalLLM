@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../components/modern_card.dart';
 import '../../components/gradient_button.dart';
+import '../../services/unified_connection_service.dart';
 
 /// System Tray Daemon Settings Screen
 class DaemonSettingsScreen extends StatefulWidget {
@@ -20,11 +22,17 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
   int _connectionTimeout = 5;
   int _healthCheckInterval = 30;
 
+  // Real-time status tracking
+  Map<String, dynamic>? _connectionStatus;
+  bool _isLoadingStatus = false;
+  DateTime? _lastStatusUpdate;
+
   @override
   void initState() {
     super.initState();
     debugPrint("🔧 [DaemonSettingsScreen] Initializing screen");
     _loadSettings();
+    _loadConnectionStatus();
   }
 
   void _loadSettings() {
@@ -39,6 +47,39 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
       _connectionTimeout = 5;
       _healthCheckInterval = 30;
     });
+  }
+
+  Future<void> _loadConnectionStatus() async {
+    setState(() {
+      _isLoadingStatus = true;
+    });
+
+    try {
+      // Get connection status from unified connection service
+      final connectionService = context.read<UnifiedConnectionService>();
+      await connectionService.refreshConnectionStatus();
+
+      setState(() {
+        _connectionStatus = {
+          'connected': connectionService.isConnected,
+          'connection_type': connectionService.connectionType,
+          'version': connectionService.version,
+          'models': connectionService.models.map((m) => m.name).toList(),
+          'error': connectionService.error,
+        };
+        _lastStatusUpdate = DateTime.now();
+      });
+    } catch (e) {
+      debugPrint("Failed to load connection status: $e");
+      setState(() {
+        _connectionStatus = {'connected': false, 'error': e.toString()};
+        _lastStatusUpdate = DateTime.now();
+      });
+    } finally {
+      setState(() {
+        _isLoadingStatus = false;
+      });
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -117,18 +158,22 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
             Text(
               'System Tray Configuration',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.textColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: AppTheme.textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             SizedBox(height: AppTheme.spacingS),
             Text(
               'Configure the system tray daemon behavior and appearance',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textColorLight,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
             ),
             SizedBox(height: AppTheme.spacingXL),
+
+            // Real-time Connection Status
+            _buildConnectionStatus(),
+            SizedBox(height: AppTheme.spacingL),
 
             // General Settings
             _buildGeneralSettings(),
@@ -146,6 +191,80 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
             _buildActions(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildConnectionStatus() {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildSectionHeader('Real-time Connection Status', Icons.wifi),
+              IconButton(
+                onPressed: _isLoadingStatus ? null : _loadConnectionStatus,
+                icon: _isLoadingStatus
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          if (_connectionStatus != null) ...[
+            _buildStatusRow(
+              'Connection Status',
+              _connectionStatus!['connected'] == true
+                  ? 'Connected'
+                  : 'Disconnected',
+              _connectionStatus!['connected'] == true
+                  ? Colors.green
+                  : Colors.red,
+            ),
+            if (_connectionStatus!['connection_type'] != null)
+              _buildStatusRow(
+                'Connection Type',
+                _connectionStatus!['connection_type'].toString().toUpperCase(),
+                AppTheme.textColorLight,
+              ),
+            if (_connectionStatus!['version'] != null)
+              _buildStatusRow(
+                'Version',
+                _connectionStatus!['version'].toString(),
+                AppTheme.textColorLight,
+              ),
+            if (_connectionStatus!['models'] != null)
+              _buildStatusRow(
+                'Available Models',
+                '${(_connectionStatus!['models'] as List).length} models',
+                AppTheme.textColorLight,
+              ),
+            if (_connectionStatus!['error'] != null &&
+                _connectionStatus!['error'].toString().isNotEmpty)
+              _buildStatusRow(
+                'Error',
+                _connectionStatus!['error'].toString(),
+                Colors.red,
+              ),
+            if (_lastStatusUpdate != null) ...[
+              SizedBox(height: AppTheme.spacingS),
+              Text(
+                'Last updated: ${_formatDateTime(_lastStatusUpdate!)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
+              ),
+            ],
+          ] else ...[
+            const Text('Loading connection status...'),
+          ],
+        ],
       ),
     );
   }
@@ -276,9 +395,9 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.textColor,
-                fontWeight: FontWeight.bold,
-              ),
+            color: AppTheme.textColor,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -301,24 +420,21 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    color: AppTheme.textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 SizedBox(height: AppTheme.spacingXS),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textColorLight,
-                      ),
+                    color: AppTheme.textColorLight,
+                  ),
                 ),
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
+          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -339,16 +455,16 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textColor,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: AppTheme.textColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           SizedBox(height: AppTheme.spacingXS),
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
           ),
           SizedBox(height: AppTheme.spacingS),
           DropdownButtonFormField<String>(
@@ -394,25 +510,25 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
               Text(
                 title,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textColor,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: AppTheme.textColor,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Text(
                 '${value.round()}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
           SizedBox(height: AppTheme.spacingXS),
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
           ),
           SizedBox(height: AppTheme.spacingS),
           Slider(
@@ -425,5 +541,38 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildStatusRow(String label, String value, Color valueColor) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppTheme.spacingXS),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: valueColor,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}:'
+        '${dateTime.second.toString().padLeft(2, '0')}';
   }
 }

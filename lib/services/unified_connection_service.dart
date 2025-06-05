@@ -134,6 +134,35 @@ class UnifiedConnectionService extends ChangeNotifier {
     }
 
     notifyListeners();
+
+    // Send status update to tray daemon
+    _sendStatusUpdateToTray();
+  }
+
+  /// Send connection status update to tray daemon
+  void _sendStatusUpdateToTray() {
+    if (_trayService.isConnected) {
+      if (_isConnected) {
+        if (_connectionType == 'local_ollama') {
+          _trayService.updateOllamaStatus(
+            connected: true,
+            version: _version,
+            models: _models.map((m) => m.name).toList(),
+          );
+        } else if (_connectionType == 'cloud_proxy') {
+          _trayService.updateCloudStatus(
+            connected: true,
+            endpoint: 'app.cloudtolocalllm.online',
+          );
+        }
+      } else {
+        // Send disconnected status
+        _trayService.updateOllamaStatus(
+          connected: false,
+          error: _error ?? 'Connection failed',
+        );
+      }
+    }
   }
 
   /// Test connection by getting version info

@@ -503,6 +503,57 @@ class EnhancedTrayService {
     return response?['status'] as Map<String, dynamic>?;
   }
 
+  /// Send connection status update to daemon
+  Future<bool> updateConnectionStatus(Map<String, dynamic> status) async {
+    debugPrint(
+        "📡 [EnhancedTrayService] Sending connection status update: $status");
+    return await _sendCommand({
+      'command': 'UPDATE_CONNECTION_STATUS',
+      'status': status,
+    });
+  }
+
+  /// Send Ollama connection status to daemon
+  Future<bool> updateOllamaStatus({
+    required bool connected,
+    String? version,
+    List<String>? models,
+    String? error,
+  }) async {
+    final status = {
+      'connected': connected,
+      'connection_type': 'ollama',
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    if (version != null) status['version'] = version;
+    if (models != null) status['models'] = models;
+    if (error != null) status['error'] = error;
+
+    debugPrint(
+        "🦙 [EnhancedTrayService] Sending Ollama status update: $status");
+    return await updateConnectionStatus(status);
+  }
+
+  /// Send cloud connection status to daemon
+  Future<bool> updateCloudStatus({
+    required bool connected,
+    String? endpoint,
+    String? error,
+  }) async {
+    final status = {
+      'connected': connected,
+      'connection_type': 'cloud',
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    if (endpoint != null) status['endpoint'] = endpoint;
+    if (error != null) status['error'] = error;
+
+    debugPrint("☁️ [EnhancedTrayService] Sending cloud status update: $status");
+    return await updateConnectionStatus(status);
+  }
+
   /// Proxy a request through the daemon's connection broker
   Future<Map<String, dynamic>?> proxyRequest({
     required String method,

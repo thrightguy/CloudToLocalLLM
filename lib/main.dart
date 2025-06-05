@@ -125,36 +125,76 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
     try {
       debugPrint("🧭 [Navigation] Attempting to navigate to route: $route");
 
-      final context = navigatorKey.currentContext;
-      if (context != null) {
+      // Try multiple approaches to get a valid context
+      BuildContext? context = navigatorKey.currentContext;
+
+      context ??= navigatorKey.currentState?.context;
+      context ??= _getCurrentAppContext();
+
+      if (context != null && context.mounted) {
         debugPrint(
           "✅ [Navigation] Context available, executing navigation to: $route",
         );
-        context.go(route);
-        debugPrint("✅ [Navigation] Navigation command sent for route: $route");
+
+        // Use post-frame callback to ensure navigation happens after current frame
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          try {
+            if (context!.mounted) {
+              context.go(route);
+              debugPrint(
+                "✅ [Navigation] Navigation command sent for route: $route",
+              );
+            } else {
+              debugPrint(
+                "❌ [Navigation] Context no longer mounted for route: $route",
+              );
+            }
+          } catch (e) {
+            debugPrint(
+              "💥 [Navigation] Post-frame navigation error for $route: $e",
+            );
+          }
+        });
       } else {
         debugPrint(
-          "❌ [Navigation] Cannot navigate to $route: no context available",
+          "❌ [Navigation] Cannot navigate to $route: no valid context available",
         );
-        debugPrint("❌ [Navigation] navigatorKey.currentContext is null");
 
-        // Try to get context from the current app state
-        final appContext = _getCurrentAppContext();
-        if (appContext != null) {
-          debugPrint(
-            "🔄 [Navigation] Found alternative context, retrying navigation",
-          );
-          appContext.go(route);
-          debugPrint(
-            "✅ [Navigation] Alternative navigation executed for route: $route",
-          );
-        } else {
-          debugPrint("❌ [Navigation] No alternative context available");
-        }
+        // Schedule retry after a short delay
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _retryNavigation(route, 1);
+        });
       }
     } catch (e, stackTrace) {
       debugPrint("💥 [Navigation] Error navigating to $route: $e");
       debugPrint("💥 [Navigation] Stack trace: $stackTrace");
+    }
+  }
+
+  void _retryNavigation(String route, int attempt) {
+    if (attempt > 3) {
+      debugPrint("❌ [Navigation] Max retry attempts reached for route: $route");
+      return;
+    }
+
+    debugPrint("🔄 [Navigation] Retry attempt $attempt for route: $route");
+
+    final context =
+        navigatorKey.currentContext ?? navigatorKey.currentState?.context;
+    if (context != null && context.mounted) {
+      try {
+        context.go(route);
+        debugPrint("✅ [Navigation] Retry successful for route: $route");
+      } catch (e) {
+        debugPrint("💥 [Navigation] Retry failed for $route: $e");
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          _retryNavigation(route, attempt + 1);
+        });
+      }
+    } else {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        _retryNavigation(route, attempt + 1);
+      });
     }
   }
 

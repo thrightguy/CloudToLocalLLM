@@ -1,9 +1,9 @@
-name: cloudtolocalllm
-description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
+name: cloudtolocalllm_tunnel_manager
+description: CloudToLocalLLM Tunnel Manager - Independent connection broker and tunnel management
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.2.0+001
+version: 1.0.0+001
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -15,10 +15,6 @@ dependencies:
   # UI and Navigation
   cupertino_icons: ^1.0.8
   go_router: ^15.1.2
-
-  # Authentication
-  openid_client: ^0.4.9
-  url_launcher: ^6.3.1
 
   # HTTP and Web
   http: ^1.2.2
@@ -33,17 +29,29 @@ dependencies:
   # State Management
   provider: ^6.1.2
 
-  # System Integration - using Python daemon instead of system_tray package
-  # system_tray: ^2.0.3
+  # Secure Storage for authentication tokens
+  flutter_secure_storage: ^9.2.2
+
+  # System Integration
+  window_manager: ^0.5.0
+
+  # JSON handling
+  json_annotation: ^4.9.0
+
+  # Shared libraries
+  cloudtolocalllm_shared:
+    path: ../../lib/shared
 
 dev_dependencies:
   flutter_lints: ^6.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.13
   flutter_test:
     sdk: flutter
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/images/
+    - assets/tunnel_manager/
     - assets/version.json
