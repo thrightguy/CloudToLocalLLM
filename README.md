@@ -1,4 +1,3 @@
-<!-- AI Review Breadcrumb: Last reviewed 2024-05-16. Focus on deployment, SSL, and PWA elements. -->
 # CloudToLocalLLM: Your Personal AI Powerhouse 🌩️💻
 
 **Website: [https://cloudtolocalllm.online](https://cloudtolocalllm.online)**
@@ -22,7 +21,7 @@ Internet → Nginx Proxy → Static Site (docs.cloudtolocalllm.online)
                       → API Backend (WebSocket + REST)
 ```
 
-For detailed information, see [MULTI_CONTAINER_ARCHITECTURE.md](docs/MULTI_CONTAINER_ARCHITECTURE.md).
+For detailed information, see [System Architecture](docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md).
 
 ## ✨ Features
 
@@ -34,27 +33,125 @@ For detailed information, see [MULTI_CONTAINER_ARCHITECTURE.md](docs/MULTI_CONTA
 - Modern, responsive UI
 - Cross-platform support
 
-## 📸 Screenshots
+## 📸 Screenshots & Visual Guide
 
-### Desktop Application (Linux)
+CloudToLocalLLM provides a modern, intuitive interface across all platforms. This visual guide demonstrates the key features and user experience that make CloudToLocalLLM the premier solution for local and cloud LLM management.
 
-#### Chat Interface
-![CloudToLocalLLM Linux Chat Interface](app_screenshots/cloudtolocalllm_linux_chat.png)
-*Modern chat interface with dark theme, showing conversation with local LLM*
+### 🖥️ **Desktop Application Experience**
 
-#### Login Screen
-![CloudToLocalLLM Linux Login](app_screenshots/cloudtolocalllm_linux_login.png)
-*Clean authentication interface with Auth0 integration*
+#### **Main Chat Interface**
+<img src="docs/app_screenshots/cloudtolocalllm_linux_chat.png" alt="CloudToLocalLLM Linux desktop chat interface showing modern dark theme with conversation history, message input, and model selection" width="800">
 
-### Web Application
+*Professional chat interface featuring Material Design 3 dark theme, conversation management, and seamless local LLM integration. The interface provides real-time streaming responses with syntax highlighting and markdown support.*
 
-#### Web Chat Interface
-![CloudToLocalLLM Web Chat](app_screenshots/cloudtolocalllm_web_chat.png)
-*Responsive web interface accessible from any browser*
+#### **Authentication Flow**
+<img src="docs/app_screenshots/cloudtolocalllm_linux_login.png" alt="CloudToLocalLLM authentication screen with Auth0 integration showing secure login process" width="800">
 
-#### Settings Panel
-![CloudToLocalLLM Web Settings](app_screenshots/cloudtolocalllm_web_settings.png)
-*Comprehensive settings panel for configuration and preferences*
+*Secure authentication powered by Auth0 with enterprise-grade security. The clean, professional login interface supports SSO, MFA, and seamless token management for both local and cloud features.*
+
+### 🌐 **Web Application Interface**
+
+#### **Cross-Platform Web Experience**
+<img src="docs/app_screenshots/cloudtolocalllm_web_chat.png" alt="CloudToLocalLLM web application showing responsive design and full feature parity with desktop version" width="800">
+
+*Responsive web application providing full feature parity with the desktop version. Access your local and cloud LLMs from any browser with the same professional interface and functionality.*
+
+#### **Comprehensive Settings Management**
+<img src="docs/app_screenshots/cloudtolocalllm_web_settings.png" alt="CloudToLocalLLM settings panel displaying connection management, model configuration, and premium feature controls" width="800">
+
+*Advanced settings panel for complete system configuration. Manage local Ollama connections, cloud proxy settings, authentication preferences, and premium features through an intuitive interface.*
+
+### 🔧 **System Integration Features**
+
+#### **Enhanced System Tray Architecture**
+*[Screenshot: System tray context menu showing connection status, quick actions, and authentication-aware options] - Coming Soon*
+
+The Enhanced System Tray Architecture provides:
+- **Independent Operation**: Python-based daemon with crash isolation
+- **Universal Connection Management**: Unified broker for local and cloud connections
+- **Real-time Status**: Live connection monitoring with visual indicators
+- **Quick Actions**: Show/Hide window, Settings access, Connection status, Quit
+
+#### **Installation Process**
+*[Screenshot: Platform-specific installation screens showing AppImage, Windows installer, and AUR package installation] - Coming Soon*
+
+Streamlined installation across all platforms:
+- **Linux**: AppImage (portable), AUR package (Arch), DEB package (Ubuntu/Debian)
+- **Windows**: Automated installer with Docker/Ollama integration
+- **Self-Hosting**: Complete VPS deployment with SSL configuration
+
+### ⚙️ **Advanced Configuration**
+
+#### **Connection Management**
+*[Screenshot: Connection broker interface showing local Ollama and cloud proxy configuration with health monitoring] - Coming Soon*
+
+Advanced connection management features:
+- **Automatic Discovery**: Detects and connects to available LLM services
+- **Health Monitoring**: Continuous connection health checks with automatic recovery
+- **Failover Logic**: Intelligent switching between local and cloud connections
+- **Performance Optimization**: Connection pooling and request optimization
+
+#### **Model Management Interface**
+*[Screenshot: Model management screen showing available models, download progress, and hardware recommendations] - Coming Soon*
+
+Comprehensive model management:
+- **Hardware Detection**: Automatic GPU and memory detection for optimal recommendations
+- **Model Browser**: Browse and download models directly from the interface
+- **Performance Analytics**: Real-time performance monitoring and optimization
+- **Custom Models**: Support for custom and fine-tuned model integration
+
+### 🚀 **Premium Features Demonstration**
+
+#### **Cloud Connectivity**
+*[Screenshot: Cloud proxy connection interface showing secure tunneling and multi-tenant isolation] - Coming Soon*
+
+Enterprise-grade cloud features:
+- **Secure Tunneling**: Encrypted connections to cloud-hosted LLMs
+- **Multi-Tenant Architecture**: Complete user isolation with zero data persistence
+- **Load Balancing**: Intelligent routing for optimal performance
+- **Enterprise Security**: JWT authentication with automatic token management
+
+#### **Cross-Platform Synchronization**
+*[Screenshot: Synchronization interface showing conversation sync across devices with encryption status] - Coming Soon*
+
+Advanced synchronization capabilities:
+- **Conversation Sync**: Seamless conversation history across all devices
+- **Settings Synchronization**: Preferences and configuration sync
+- **Secure Encryption**: End-to-end encryption for all synchronized data
+- **Offline Support**: Full functionality with automatic sync when online
+
+### 📱 **Responsive Design**
+
+#### **Mobile-Optimized Interface**
+*[Screenshot: Mobile browser view showing responsive design with touch-optimized controls] - Coming Soon*
+
+Mobile-first responsive design:
+- **Touch Optimization**: Gesture-friendly interface for mobile devices
+- **Adaptive Layout**: Intelligent layout adaptation for different screen sizes
+- **Performance Optimization**: Efficient resource usage on mobile devices
+- **Feature Parity**: Complete functionality across all device types
+
+---
+
+### 🎯 **Visual Design Principles**
+
+CloudToLocalLLM's interface follows modern design principles established during our documentation consolidation:
+
+- **Professional Aesthetics**: Clean, enterprise-ready visual design
+- **Consistent Experience**: Uniform interface across all platforms and features
+- **Accessibility**: High contrast, readable fonts, and keyboard navigation support
+- **Performance**: Optimized rendering for smooth, responsive interactions
+
+### 📸 **Contributing Screenshots**
+
+Help improve our visual documentation! We welcome community contributions for missing screenshots:
+
+- **System Tray Demonstrations**: Context menus, status indicators, cross-platform tray integration
+- **Installation Processes**: Platform-specific installation workflows and package managers
+- **Advanced Features**: Premium functionality, enterprise features, and configuration screens
+- **Cross-Platform Comparisons**: Side-by-side platform comparisons and feature demonstrations
+
+To contribute screenshots, please follow our [Contributing Guidelines](docs/USER_DOCUMENTATION/USER_GUIDE.md) and ensure screenshots meet our quality standards for resolution, clarity, and professional presentation.
 
 ## Hardware Detection & Model Recommendations
 
@@ -65,7 +162,7 @@ CloudToLocalLLM automatically detects your hardware capabilities and recommends 
 - **VRAM Analysis**: Measures available VRAM for optimal model selection
 - **Smart Recommendations**: Suggests models based on your specific hardware profile
 
-> For detailed information about hardware detection and model recommendations, see [OLLAMA_INTEGRATION.md](docs/OLLAMA_INTEGRATION.md)
+> For detailed information about hardware detection and model recommendations, see [Features Guide](docs/USER_DOCUMENTATION/FEATURES_GUIDE.md)
 
 ## Data Storage and Privacy
 
@@ -79,7 +176,7 @@ CloudToLocalLLM automatically detects your hardware capabilities and recommends 
 > - Your data is encrypted but stored on our servers
 > - If you lose your access code, we CANNOT recover your data
 > - We recommend keeping a secure backup of your access code
-> - Cloud storage is subject to our [Privacy Policy](docs/PRIVACY.md) and [Terms of Service](docs/TERMS.md)
+> - Cloud storage is subject to our [Privacy Policy](docs/LEGAL/PRIVACY.md) and [Terms of Service](docs/LEGAL/TERMS.md)
 
 ## 🎛️ Enhanced System Tray Architecture
 
@@ -104,7 +201,7 @@ CloudToLocalLLM features an **Enhanced System Tray Architecture** that provides 
 - **Health Monitoring**: Continuous connection health checks with automatic recovery
 - **Request Proxying**: All API calls routed through the connection broker
 
-For detailed information about the enhanced architecture, see [Enhanced System Tray Architecture](tray_daemon/ENHANCED_ARCHITECTURE.md).
+For detailed information about the enhanced architecture, see [System Architecture](docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md).
 
 ## Core Features vs Premium Features
 
@@ -122,7 +219,7 @@ For detailed information about the enhanced architecture, see [Enhanced System T
 - **Advanced Model Management**: Performance optimization tools and analytics
 - **Priority Support**: Dedicated technical support and feature requests
 
-> For more details about upcoming premium features and their development status, see [PREMIUM_FEATURES.md](docs/PREMIUM_FEATURES.md)
+> For more details about upcoming premium features and their development status, see [Features Guide](docs/USER_DOCUMENTATION/FEATURES_GUIDE.md)
 
 ## 📋 Versioning Strategy
 
@@ -137,7 +234,7 @@ CloudToLocalLLM uses a granular build numbering system:
 
 **Examples**: `3.1.1+001` → `3.1.1+002` → `3.1.2+001` → `4.0.0+001`
 
-For detailed information, see [Versioning Strategy](docs/VERSIONING_STRATEGY.md).
+For detailed information, see [Versioning Strategy](docs/DEPLOYMENT/VERSIONING_STRATEGY.md).
 
 ## 🚀 Deployment
 
@@ -156,7 +253,7 @@ Deploy all services with the new multi-container architecture:
 
 ### Legacy Single Container
 
-For instructions on self-hosting CloudToLocalLLM with the legacy single container, including SSL setup, prerequisites, and advanced deployment, please see our [Self-Hosting Guide](docs/SELF_HOSTING.md).
+For instructions on self-hosting CloudToLocalLLM with the legacy single container, including SSL setup, prerequisites, and advanced deployment, please see our [Self-Hosting Guide](docs/OPERATIONS/SELF_HOSTING.md).
 
 ## 📁 Project Structure
 
