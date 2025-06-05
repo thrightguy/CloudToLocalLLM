@@ -26,7 +26,7 @@ import subprocess
 import psutil
 import asyncio
 from pathlib import Path
-from typing import Optional, Dict, Any, Callable, List
+from typing import Optional, Dict, Any
 
 try:
     import pystray
@@ -38,20 +38,21 @@ except ImportError as e:
     print("Please install: pip install pystray pillow aiohttp")
     sys.exit(1)
 
-from connection_broker import ConnectionBroker, ConnectionType, ConnectionState
+from connection_broker import ConnectionBroker, ConnectionType
+from version import TrayDaemonVersion
 
 
 class EnhancedTrayDaemon:
     """Enhanced system tray daemon with connection broker"""
-    
+
     def __init__(self, port: int = 0, debug: bool = False):
         self.port = port
         self.debug = debug
-        self.server_socket: Optional[socket.socket] = None
-        self.tray: Optional[pystray.Icon] = None
+        self.server_socket = None  # type: Optional[socket.socket]
+        self.tray = None  # type: Optional[pystray.Icon]
         self.running = False
         self.client_connections = []
-        
+
         # Setup logging
         log_level = logging.DEBUG if debug else logging.INFO
         logging.basicConfig(
@@ -63,30 +64,30 @@ class EnhancedTrayDaemon:
             ]
         )
         self.logger = logging.getLogger(__name__)
-        
+
         # State management
-        self.tooltip = "CloudToLocalLLM"
+        self.tooltip = TrayDaemonVersion.get_tooltip_version()
         self.icon_state = "idle"  # idle, connected, error
-        
+
         # Application management
         self.app_process = None
         self.app_monitoring_thread = None
         self.app_is_running = False
         self.app_is_authenticated = False
         self.app_executable_path = None
-        
+
         # Connection broker
-        self.connection_broker: Optional[ConnectionBroker] = None
-        self.broker_loop: Optional[asyncio.AbstractEventLoop] = None
-        self.broker_thread: Optional[threading.Thread] = None
-        
+        self.connection_broker = None  # type: Optional[ConnectionBroker]
+        self.broker_loop = None  # type: Optional[asyncio.AbstractEventLoop]
+        self.broker_thread = None  # type: Optional[threading.Thread]
+
         # Settings app management
         self.settings_process = None
-        
+
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
-    
+
     def _get_config_dir(self) -> Path:
         """Get the configuration directory for CloudToLocalLLM"""
         home = Path.home()
@@ -96,43 +97,43 @@ class EnhancedTrayDaemon:
             config_dir = home / "Library" / "Application Support" / "CloudToLocalLLM"
         else:  # Linux and other Unix-like
             config_dir = home / ".cloudtolocalllm"
-        
+
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir
-    
+
     def _get_log_path(self) -> Path:
         """Get the log file path"""
         return self._get_config_dir() / "tray.log"
-    
+
     def _get_port_file_path(self) -> Path:
         """Get the port file path"""
         return self._get_config_dir() / "tray_port"
-    
+
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
         self.logger.info(f"Received signal {signum}, shutting down...")
         self.shutdown()
-    
+
     async def _init_connection_broker(self):
         """Initialize the connection broker"""
         self.connection_broker = ConnectionBroker(
             config_dir=self._get_config_dir(),
             logger=self.logger
         )
-        
+
         # Add status change callback
         self.connection_broker.add_status_callback(self._on_connection_status_change)
-        
+
         # Start the broker
         await self.connection_broker.start()
         self.logger.info("Connection broker initialized")
-    
+
     def _start_broker_thread(self):
         """Start the connection broker in a separate thread"""
         def run_broker():
             self.broker_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.broker_loop)
-            
+
             try:
                 self.broker_loop.run_until_complete(self._init_connection_broker())
                 self.broker_loop.run_forever()
@@ -141,15 +142,17 @@ class EnhancedTrayDaemon:
             finally:
                 if self.connection_broker:
                     self.broker_loop.run_until_complete(self.connection_broker.stop())
-        
+
         self.broker_thread = threading.Thread(target=run_broker, daemon=True)
         self.broker_thread.start()
         self.logger.info("Connection broker thread started")
-    
+
     def _on_connection_status_change(self, connection_type: ConnectionType, status):
         """Handle connection status changes"""
-        self.logger.info(f"Connection {connection_type.value} status: {status.state.value}")
-        
+        self.logger.info(
+            f"Connection {connection_type.value} status: {status.state.value}"
+        )
+
         # Update icon state based on best available connection
         if self.connection_broker:
             best_connection = self.connection_broker.get_best_connection()
@@ -157,11 +160,11 @@ class EnhancedTrayDaemon:
                 self.icon_state = "connected"
             else:
                 self.icon_state = "idle"
-            
+
             # Update tray icon
             if self.tray:
                 self.tray.icon = self._create_icon_image(self.icon_state)
-                
+
         # Notify connected Flutter apps
         self._send_to_clients({
             "command": "CONNECTION_STATUS_CHANGED",
@@ -173,7 +176,7 @@ class EnhancedTrayDaemon:
                 "models": status.models
             }
         })
-    
+
     def _find_app_executable(self) -> Optional[str]:
         """Find the CloudToLocalLLM executable"""
         possible_paths = []
@@ -188,7 +191,8 @@ class EnhancedTrayDaemon:
             ]
         elif sys.platform == "win32":
             possible_paths = [
-                str(Path(os.environ.get('PROGRAMFILES', '')) / "CloudToLocalLLM" / "cloudtolocalllm.exe"),
+                str(Path(os.environ.get('PROGRAMFILES', ''))
+                    / "CloudToLocalLLM" / "cloudtolocalllm.exe"),
                 "./cloudtolocalllm.exe",
                 "./build/windows/x64/runner/Release/cloudtolocalllm.exe",
             ]
@@ -196,7 +200,8 @@ class EnhancedTrayDaemon:
             possible_paths = [
                 "/Applications/CloudToLocalLLM.app/Contents/MacOS/cloudtolocalllm",
                 "./cloudtolocalllm",
-                "./build/macos/Build/Products/Release/cloudtolocalllm.app/Contents/MacOS/cloudtolocalllm",
+                ("./build/macos/Build/Products/Release/"
+                 "cloudtolocalllm.app/Contents/MacOS/cloudtolocalllm"),
             ]
 
         for path in possible_paths:
@@ -206,13 +211,13 @@ class EnhancedTrayDaemon:
 
         self.logger.warning("CloudToLocalLLM executable not found")
         return None
-    
+
     def _find_settings_executable(self) -> Optional[str]:
         """Find the CloudToLocalLLM settings executable"""
         # For now, we'll use the same executable with a settings flag
         # In the future, this could be a separate settings app
         return self._find_app_executable()
-    
+
     def _is_app_running(self) -> bool:
         """Check if CloudToLocalLLM application is currently running"""
         try:
@@ -232,12 +237,14 @@ class EnhancedTrayDaemon:
         except Exception as e:
             self.logger.warning(f"Error checking if app is running: {e}")
             return False
-    
+
     def _is_app_authenticated(self) -> bool:
         """Check if the CloudToLocalLLM application is authenticated"""
         try:
             # Check if we have any active client connections
-            active_connections = [conn for conn in self.client_connections if not conn._closed]
+            active_connections = [
+                conn for conn in self.client_connections if not conn._closed
+            ]
             if active_connections:
                 # If we have active connections, the app is likely authenticated
                 return True
@@ -245,7 +252,7 @@ class EnhancedTrayDaemon:
         except Exception as e:
             self.logger.warning(f"Error checking app authentication status: {e}")
             return False
-    
+
     def _launch_app(self) -> bool:
         """Launch the CloudToLocalLLM application"""
         if self.app_executable_path is None:
@@ -256,14 +263,17 @@ class EnhancedTrayDaemon:
             return False
 
         try:
-            self.logger.info(f"Launching CloudToLocalLLM: {self.app_executable_path}")
+            self.logger.info(
+                f"Launching CloudToLocalLLM: {self.app_executable_path}"
+            )
 
             # Launch the application as a detached process
             if sys.platform == "win32":
                 # Windows
                 self.app_process = subprocess.Popen(
                     [self.app_executable_path],
-                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                    creationflags=(subprocess.DETACHED_PROCESS
+                                   | subprocess.CREATE_NEW_PROCESS_GROUP)
                 )
             else:
                 # Linux/macOS
@@ -280,24 +290,27 @@ class EnhancedTrayDaemon:
         except Exception as e:
             self.logger.error(f"Failed to launch app: {e}")
             return False
-    
+
     def _launch_settings(self) -> bool:
         """Launch the CloudToLocalLLM settings interface"""
         settings_executable = self._find_settings_executable()
-        
+
         if settings_executable is None:
             self.logger.error("Cannot launch settings: executable not found")
             return False
 
         try:
-            self.logger.info(f"Launching CloudToLocalLLM settings: {settings_executable}")
+            self.logger.info(
+                f"Launching CloudToLocalLLM settings: {settings_executable}"
+            )
 
             # Launch settings with a flag to open settings directly
             if sys.platform == "win32":
                 # Windows
                 self.settings_process = subprocess.Popen(
                     [settings_executable, "--settings"],
-                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                    creationflags=(subprocess.DETACHED_PROCESS
+                                   | subprocess.CREATE_NEW_PROCESS_GROUP)
                 )
             else:
                 # Linux/macOS
@@ -318,38 +331,41 @@ class EnhancedTrayDaemon:
     def _get_icon_data(self, state: str = "idle") -> bytes:
         """Get base64 encoded icon data for different states"""
         # Base64 encoded monochrome icons (16x16 PNG)
+        idle_icon = (
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"
+            "GAvVNB70AAAAgElEQVQoz83RMQ6CUBAE0PfRBgItFzDxVh7DeA8bGo9lSW04ApCYtYBGBGqn3VdMdhJh"
+            "O0maz7X8SyajTnAEFzfVAgwad28h6njGWl5xDhly1WqBQkmG2OgZYgK7+ReQpK0/T2A0rIJRP72607gq"
+            "frZ4aM1jHZyUC9BrjaT9ufkAKf46eVLyT+wAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6"
+            "MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5KzAwOjAw"
+            "YrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNDoxMSswMDowMDQFC6IAAAAA"
+            "SUVORK5CYII="
+        )
+        connected_icon = (
+            "iVBORw0KGgoAAAANSUhEUgAAABYAAAAWEAQAAAA+LXjzAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1"
+            "MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRP//FKsxzQAAAAd0SU1FB+kGAQ0KAtZaaNoAAAFBSURBVDjL"
+            "7ZOxSwJhGMZ/BE3ieNNFS4ZDoxE4JCTBQS1tDSJNbeV04L8Rrm5BkARRDU1CWncIWY2dzrVoqzQFT8Nx"
+            "pxdGlzaFD3zw8X3v++N5X94XZvrPMu7BvgYvD3oFbwfsCzAaU0ALKZC+PwVzEuhyAMhvSfsL0vuT5JxI"
+            "K0cReOo35beDxMqZVCpJg4EiqjyMwo3mV8LcePDeG4C1BovzYJqQSEQjDjNg5cL4j5iOvQ3wyy4WpXZb"
+            "Y+VcBY699ZhgvYCkGymdlvp9fathO2K1onMA4PYhmQTXHfnpQK/n3916+Lob07F9CZKVlWo1yTSlclmq"
+            "VqVud+jW2gzc2udxp6IRTsXp+BZUbiNTcRcTDP7w+4nWtuS4kh4l51iyVqdfkqUfNi8zATRsSxPsOng5"
+            "0DN4WbBbYLSmgM70B/oE5jIou4+gv28AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6MTA6"
+            "MDIrMDA6MDACdUjhAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjEwOjAyKzAwOjAwcyjw"
+            "XQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxMzoxMDowMiswMDowMCQ90YIAAAAASUVO"
+            "RK5CYII="
+        )
+        error_icon = (
+            "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO" +
+            "GQRckDIkAAAAhklEQVQoz82RsQ2DQAxFnxN0MAL0dKyVhiZ7oIzBVCkyALQgqKKfwkFK4HQ1z4Ul+9mF" +
+            "bRJJsm8eWbGfugiU2Cb0dEw7IaflzhVJgxoRiUpPKQNWJv7GfQULM1wAO3Qdw1xIchZBxM8t5JcM5MSc" +
+            "QOFCScuD5fCLGzWYBLx5Me+EgpqwCQk+v2IykhHf6oIAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYt" +
+            "MDFUMTM6MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5" +
+            "KzAwOjAwYrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNTowNCswMDowMEVV" +
+            "T6UAAAAASUVORK5CYII="
+        )
         icons = {
-            "idle": (
-                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"
-                "GAvVNB70AAAAgElEQVQoz83RMQ6CUBAE0PfRBgItFzDxVh7DeA8bGo9lSW04ApCYtYBGBGqn3VdMdhJh"
-                "O0maz7X8SyajTnAEFzfVAgwad28h6njGWl5xDhly1WqBQkmG2OgZYgK7+ReQpK0/T2A0rIJRP72607gq"
-                "frZ4aM1jHZyUC9BrjaT9ufkAKf46eVLyT+wAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6"
-                "MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5KzAwOjAw"
-                "YrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNDoxMSswMDowMDQFC6IAAAAA"
-                "SUVORK5CYII="
-            ),
-            "connected": (
-                "iVBORw0KGgoAAAANSUhEUgAAABYAAAAWEAQAAAA+LXjzAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1"
-                "MAAA6mAAADqYAAAXcJy6UTwAAAACYktHRP//FKsxzQAAAAd0SU1FB+kGAQ0KAtZaaNoAAAFBSURBVDjL"
-                "7ZOxSwJhGMZ/BE3ieNNFS4ZDoxE4JCTBQS1tDSJNbeV04L8Rrm5BkARRDU1CWncIWY2dzrVoqzQFT8Nx"
-                "pxdGlzaFD3zw8X3v++N5X94XZvrPMu7BvgYvD3oFbwfsCzAaU0ALKZC+PwVzEuhyAMhvSfsL0vuT5JxI"
-                "K0cReOo35beDxMqZVCpJg4EiqjyMwo3mV8LcePDeG4C1BovzYJqQSEQjDjNg5cL4j5iOvQ3wyy4WpXZb"
-                "Y+VcBY699ZhgvYCkGymdlvp9fathO2K1onMA4PYhmQTXHfnpQK/n3916+Lob07F9CZKVlWo1yTSlclmq"
-                "VqVud+jW2gzc2udxp6IRTsXp+BZUbiNTcRcTDP7w+4nWtuS4kh4l51iyVqdfkqUfNi8zATRsSxPsOng5"
-                "0DN4WbBbYLSmgM70B/oE5jIou4+gv28AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYtMDFUMTM6MTA6"
-                "MDIrMDA6MDACdUjhAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjEwOjAyKzAwOjAwcyjw"
-                "XQAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxMzoxMDowMiswMDowMCQ90YIAAAAASUVO"
-                "RK5CYII="
-            ),
-            "error": (
-                "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAmJLR0QA/4ePzL8AAAAHdElNRQfpBgEO"
-                "GQRckDIkAAAAhklEQVQoz82RsQ2DQAxFnxN0MAL0dKyVhiZ7oIzBVCkyALQgqKKfwkFK4HQ1z4Ul+9mF"
-                "bRJJsm8eWbGfugiU2Cb0dEw7IaflzhVJgxoRiUpPKQNWJv7GfQULM1wAO3Qdw1xIchZBxM8t5JcM5MSc"
-                "QOFCScuD5fCLGzWYBLx5Me+EgpqwCQk+v2IykhHf6oIAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjUtMDYt"
-                "MDFUMTM6MjI6MzkrMDA6MDAT6q3EAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDI1LTA2LTAxVDEzOjIyOjM5"
-                "KzAwOjAwYrcVeAAAACh0RVh0ZGF0ZTp0aW1lc3RhbXAAMjAyNS0wNi0wMVQxNDoyNTowNCswMDowMEVV"
-                "T6UAAAAASUVORK5CYII="
-            ),
+            "idle": idle_icon,
+            "connected": connected_icon,
+            "error": error_icon,
         }
 
         icon_b64 = icons.get(state, icons["idle"])
@@ -370,8 +386,45 @@ class EnhancedTrayDaemon:
         """Create the system tray context menu"""
         menu_items = []
 
-        # Connection status section
-        if self.connection_broker:
+        # Connection status section - prioritize Flutter app status
+        flutter_status_shown = False
+        if hasattr(self, 'flutter_connection_status') and self.flutter_connection_status:
+            # Show Flutter app connection status first
+            for conn_type, status in self.flutter_connection_status.items():
+                connected = status.get('connected', False)
+                if connected:
+                    if conn_type == 'ollama':
+                        version = status.get('version', 'Unknown')
+                        model_count = len(status.get('models', []))
+                        menu_items.extend([
+                            Item(
+                                f"✅ Ollama {version} ({model_count} models)",
+                                None, enabled=False
+                            ),
+                            pystray.Menu.SEPARATOR,
+                        ])
+                    elif conn_type == 'cloud':
+                        endpoint = status.get('endpoint', 'Unknown')
+                        menu_items.extend([
+                            Item(f"✅ Cloud ({endpoint})", None, enabled=False),
+                            pystray.Menu.SEPARATOR,
+                        ])
+                    flutter_status_shown = True
+                    break
+
+            # If no connected status found, show disconnected
+            if not flutter_status_shown:
+                for conn_type, status in self.flutter_connection_status.items():
+                    menu_items.extend([
+                        Item(f"❌ {conn_type.title()} Disconnected",
+                             None, enabled=False),
+                        pystray.Menu.SEPARATOR,
+                    ])
+                    flutter_status_shown = True
+                    break
+
+        # Fallback to connection broker status if no Flutter status
+        if not flutter_status_shown and self.connection_broker:
             best_connection = self.connection_broker.get_best_connection()
             if best_connection:
                 status = self.connection_broker.connection_status[best_connection]
@@ -417,6 +470,22 @@ class EnhancedTrayDaemon:
 
         return pystray.Menu(*menu_items)
 
+    def _update_menu_for_status(self, status):
+        """Update the tray menu to reflect new connection status"""
+        # Store the status for menu generation
+        if not hasattr(self, 'flutter_connection_status'):
+            self.flutter_connection_status = {}
+
+        connection_type = status.get('connection_type', 'unknown')
+        self.flutter_connection_status[connection_type] = status
+
+        # Recreate the menu with updated status
+        if self.tray:
+            self.tray.menu = self._create_menu()
+            self.logger.info(
+                "📋 [TrayDaemon] Menu updated with new connection status"
+            )
+
     # Menu event handlers
     def _on_show_window(self, icon, item):
         """Handle show window menu item"""
@@ -447,11 +516,16 @@ class EnhancedTrayDaemon:
 
     def _on_daemon_settings(self, icon, item):
         """Handle daemon settings menu item"""
-        self.logger.info("🔧 [TrayDaemon] Opening daemon settings")
+        self.logger.info(
+            "🔧 [TrayDaemon] Opening daemon settings"
+        )
 
         # ALWAYS try to send command to Flutter app first
         # If there are connected clients, this will work regardless of app_is_running state
-        self.logger.info("🔧 [TrayDaemon] Sending DAEMON_SETTINGS command to connected clients")
+        self.logger.info(
+            "🔧 [TrayDaemon] Sending DAEMON_SETTINGS command to "
+            "connected clients"
+        )
         self._send_to_clients({"command": "DAEMON_SETTINGS"})
         self.logger.info("🔧 [TrayDaemon] DAEMON_SETTINGS command sent")
 
@@ -460,11 +534,16 @@ class EnhancedTrayDaemon:
 
     def _on_connection_status(self, icon, item):
         """Handle connection status menu item"""
-        self.logger.info("📊 [TrayDaemon] Showing connection status")
+        self.logger.info(
+            "📊 [TrayDaemon] Showing connection status"
+        )
 
         # ALWAYS try to send command to Flutter app first
         # If there are connected clients, this will work regardless of app_is_running state
-        self.logger.info("📊 [TrayDaemon] Sending CONNECTION_STATUS command to connected clients")
+        self.logger.info(
+            "📊 [TrayDaemon] Sending CONNECTION_STATUS command to "
+            "connected clients"
+        )
         self._send_to_clients({"command": "CONNECTION_STATUS"})
         self.logger.info("📊 [TrayDaemon] CONNECTION_STATUS command sent")
 
@@ -485,37 +564,52 @@ class EnhancedTrayDaemon:
 
     def _send_to_clients(self, message: Dict[str, Any]):
         """Send message to all connected clients"""
-        self.logger.info(f"📤 [TrayDaemon] Sending message to clients: {message}")
-        self.logger.info(f"📤 [TrayDaemon] Number of connected clients: {len(self.client_connections)}")
+        self.logger.info(
+            f"📤 [TrayDaemon] Sending message to clients: {message}"
+        )
+        self.logger.info(
+            f"📤 [TrayDaemon] Number of connected clients: "
+            f"{len(self.client_connections)}"
+        )
 
         message_json = json.dumps(message) + "\n"
         disconnected_clients = []
 
         for i, client in enumerate(self.client_connections):
             try:
-                self.logger.info(f"📤 [TrayDaemon] Sending to client {i}: {message_json.strip()}")
+                self.logger.info(
+                    f"📤 [TrayDaemon] Sending to client {i}: "
+                    f"{message_json.strip()}"
+                )
                 client.send(message_json.encode('utf-8'))
                 self.logger.info(f"✅ [TrayDaemon] Successfully sent to client {i}")
             except Exception as e:
-                self.logger.warning(f"❌ [TrayDaemon] Failed to send to client {i}: {e}")
+                self.logger.warning(
+                    f"❌ [TrayDaemon] Failed to send to client {i}: {e}"
+                )
                 disconnected_clients.append(client)
 
         # Remove disconnected clients
         for client in disconnected_clients:
-            self.logger.info(f"🗑️ [TrayDaemon] Removing disconnected client")
+            self.logger.info("🗑️ [TrayDaemon] Removing disconnected client")
             self.client_connections.remove(client)
             try:
                 client.close()
-            except:
+            except Exception:
                 pass
 
-        self.logger.info(f"📤 [TrayDaemon] Message sending complete. Active clients: {len(self.client_connections)}")
+        self.logger.info(
+            f"📤 [TrayDaemon] Message sending complete. "
+            f"Active clients: {len(self.client_connections)}"
+        )
 
     def start_server(self) -> bool:
         """Start the TCP server for IPC communication"""
         try:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.server_socket.setsockopt(
+                socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
+            )
             self.server_socket.bind(('127.0.0.1', self.port))
             self.server_socket.listen(5)
 
@@ -530,7 +624,9 @@ class EnhancedTrayDaemon:
             self.logger.info(f"TCP server started on port {self.port}")
 
             # Start accepting connections in a separate thread
-            server_thread = threading.Thread(target=self._accept_connections, daemon=True)
+            server_thread = threading.Thread(
+                target=self._accept_connections, daemon=True
+            )
             server_thread.start()
 
             return True
@@ -577,7 +673,7 @@ class EnhancedTrayDaemon:
         finally:
             try:
                 client_socket.close()
-            except:
+            except Exception:
                 pass
             if client_socket in self.client_connections:
                 self.client_connections.remove(client_socket)
@@ -629,6 +725,60 @@ class EnhancedTrayDaemon:
                 else:
                     self._send_response(client_socket, {"error": "Connection broker not available"})
 
+            elif command == "UPDATE_CONNECTION_STATUS":
+                # Update connection status from Flutter app
+                status = data.get('status', {})
+                self.logger.info(
+                    f"📡 [TrayDaemon] Received connection status update: {status}"
+                )
+
+                # Update our internal status tracking
+                connection_type = status.get('connection_type', 'unknown')
+                connected = status.get('connected', False)
+
+                # Update tooltip based on connection status
+                if connected:
+                    if connection_type == 'ollama':
+                        version = status.get('version', 'Unknown')
+                        model_count = len(status.get('models', []))
+                        self.tooltip = (
+                            f"CloudToLocalLLM - Ollama {version} "
+                            f"({model_count} models)"
+                        )
+                    elif connection_type == 'cloud':
+                        endpoint = status.get('endpoint', 'Unknown')
+                        self.tooltip = f"CloudToLocalLLM - Cloud ({endpoint})"
+                    else:
+                        self.tooltip = "CloudToLocalLLM - Connected"
+
+                    # Update icon to connected state
+                    if self.icon_state != 'connected':
+                        self.icon_state = 'connected'
+                        if self.tray:
+                            self.tray.icon = self._create_icon_image('connected')
+                else:
+                    error = status.get('error', 'Connection failed')
+                    self.tooltip = (
+                        f"CloudToLocalLLM - Disconnected ({error})"
+                    )
+
+                    # Update icon to disconnected state
+                    if self.icon_state != 'disconnected':
+                        self.icon_state = 'disconnected'
+                        if self.tray:
+                            self.tray.icon = self._create_icon_image('disconnected')
+
+                # Update tooltip
+                if self.tray:
+                    self.tray.title = self.tooltip
+
+                # Update menu to reflect new status
+                self._update_menu_for_status(status)
+
+                self.logger.info(
+                    f"📡 [TrayDaemon] Connection status updated: {self.tooltip}"
+                )
+
             elif command == "QUIT":
                 self.logger.info("Received quit command from client")
                 self.shutdown()
@@ -641,7 +791,8 @@ class EnhancedTrayDaemon:
         except Exception as e:
             self.logger.error(f"Error processing message: {e}")
 
-    def _send_response(self, client_socket: socket.socket, response: Dict[str, Any]):
+    def _send_response(
+            self, client_socket: socket.socket, response: Dict[str, Any]):
         """Send a response to a specific client"""
         try:
             response_json = json.dumps(response) + "\n"
@@ -649,10 +800,13 @@ class EnhancedTrayDaemon:
         except Exception as e:
             self.logger.warning(f"Failed to send response: {e}")
 
-    def _handle_proxy_request(self, data: Dict[str, Any], client_socket: socket.socket):
+    def _handle_proxy_request(
+            self, data: Dict[str, Any], client_socket: socket.socket):
         """Handle a proxy request from a client"""
         if not self.connection_broker:
-            self._send_response(client_socket, {"error": "Connection broker not available"})
+            self._send_response(
+                client_socket, {"error": "Connection broker not available"}
+            )
             return
 
         method = data.get('method', 'GET')
@@ -662,7 +816,9 @@ class EnhancedTrayDaemon:
         # Execute the proxy request in the broker's event loop
         if self.broker_loop:
             future = asyncio.run_coroutine_threadsafe(
-                self.connection_broker.proxy_request(method, path, request_data),
+                self.connection_broker.proxy_request(
+                    method, path, request_data
+                ),
                 self.broker_loop
             )
 
@@ -737,8 +893,7 @@ class EnhancedTrayDaemon:
             return
 
         self.app_monitoring_thread = threading.Thread(
-            target=self._monitor_app_state,
-            daemon=True
+            target=self._monitor_app_state, daemon=True
         )
         self.app_monitoring_thread.start()
         self.logger.info("Started application monitoring")
@@ -750,14 +905,23 @@ class EnhancedTrayDaemon:
         while self.running:
             try:
                 current_running_state = self._is_app_running()
-                current_auth_state = self._is_app_authenticated() if current_running_state else False
+                current_auth_state = (
+                    self._is_app_authenticated() if current_running_state else False
+                )
 
-                self.logger.debug(f"🔍 [TrayDaemon] App state check: running={current_running_state}, auth={current_auth_state}, stored_running={self.app_is_running}")
+                self.logger.debug(
+                    f"🔍 [TrayDaemon] App state check: "
+                    f"running={current_running_state}, auth={current_auth_state}, "
+                    f"stored_running={self.app_is_running}"
+                )
 
                 # Check if running state changed
                 if current_running_state != self.app_is_running:
                     self.app_is_running = current_running_state
-                    self.logger.info(f"🔄 [TrayDaemon] App running state changed: {'running' if current_running_state else 'stopped'}")
+                    self.logger.info(
+                        f"🔄 [TrayDaemon] App running state changed: "
+                        f"{'running' if current_running_state else 'stopped'}"
+                    )
 
                     # Reset auth state if app stopped
                     if not current_running_state:
@@ -766,12 +930,15 @@ class EnhancedTrayDaemon:
                 # Check if authentication state changed
                 if current_auth_state != self.app_is_authenticated:
                     self.app_is_authenticated = current_auth_state
-                    self.logger.info(f"🔄 [TrayDaemon] App auth state changed: {'authenticated' if current_auth_state else 'not authenticated'}")
+                    self.logger.info(
+                        f"🔄 [TrayDaemon] App auth state changed: "
+                        f"{'authenticated' if current_auth_state else 'not authenticated'}"
+                    )
 
                 # Update tray menu if any state changed
                 if (current_running_state != self.app_is_running or
                     current_auth_state != self.app_is_authenticated):
-                    self.logger.info(f"🔄 [TrayDaemon] Updating tray menu due to state change")
+                    self.logger.info("🔄 [TrayDaemon] Updating tray menu due to state change")
                     if self.tray:
                         self.tray.menu = self._create_menu()
 
@@ -804,14 +971,14 @@ class EnhancedTrayDaemon:
         if self.server_socket:
             try:
                 self.server_socket.close()
-            except:
+            except Exception:
                 pass
 
         # Close client connections
         for client in self.client_connections:
             try:
                 client.close()
-            except:
+            except Exception:
                 pass
 
         # Stop tray
@@ -823,7 +990,7 @@ class EnhancedTrayDaemon:
             port_file = self._get_port_file_path()
             if port_file.exists():
                 port_file.unlink()
-        except:
+        except Exception:
             pass
 
         self.logger.info("Tray daemon shutdown complete")

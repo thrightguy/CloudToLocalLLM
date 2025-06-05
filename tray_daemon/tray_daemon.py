@@ -40,15 +40,15 @@ except ImportError as e:
 
 class TrayDaemon:
     """Main system tray daemon class"""
-    
+
     def __init__(self, port: int = 0, debug: bool = False):
         self.port = port
         self.debug = debug
-        self.server_socket: Optional[socket.socket] = None
-        self.tray: Optional[pystray.Icon] = None
+        self.server_socket = None  # type: Optional[socket.socket]
+        self.tray = None  # type: Optional[pystray.Icon]
         self.running = False
         self.client_connections = []
-        
+
         # Setup logging
         log_level = logging.DEBUG if debug else logging.INFO
         logging.basicConfig(
@@ -60,7 +60,7 @@ class TrayDaemon:
             ]
         )
         self.logger = logging.getLogger(__name__)
-        
+
         # State management
         self.tooltip = "CloudToLocalLLM"
         self.icon_state = "idle"  # idle, connected, error
@@ -75,7 +75,7 @@ class TrayDaemon:
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
-    
+
     def _get_config_dir(self) -> Path:
         """Get the configuration directory for CloudToLocalLLM"""
         home = Path.home()
@@ -85,18 +85,18 @@ class TrayDaemon:
             config_dir = home / "Library" / "Application Support" / "CloudToLocalLLM"
         else:  # Linux and other Unix-like
             config_dir = home / ".cloudtolocalllm"
-        
+
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir
-    
+
     def _get_log_path(self) -> Path:
         """Get the log file path"""
         return self._get_config_dir() / "tray.log"
-    
+
     def _get_port_file_path(self) -> Path:
         """Get the port file path"""
         return self._get_config_dir() / "tray_port"
-    
+
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
         self.logger.info(f"Received signal {signum}, shutting down...")
@@ -116,7 +116,8 @@ class TrayDaemon:
             ]
         elif sys.platform == "win32":
             possible_paths = [
-                str(Path(os.environ.get('PROGRAMFILES', '')) / "CloudToLocalLLM" / "cloudtolocalllm.exe"),
+                str(Path(os.environ.get('PROGRAMFILES', ''))
+                    / "CloudToLocalLLM" / "cloudtolocalllm.exe"),
                 "./cloudtolocalllm.exe",
                 "./build/windows/x64/runner/Release/cloudtolocalllm.exe",
             ]
@@ -124,7 +125,8 @@ class TrayDaemon:
             possible_paths = [
                 "/Applications/CloudToLocalLLM.app/Contents/MacOS/cloudtolocalllm",
                 "./cloudtolocalllm",
-                "./build/macos/Build/Products/Release/cloudtolocalllm.app/Contents/MacOS/cloudtolocalllm",
+                ("./build/macos/Build/Products/Release/"
+                 "cloudtolocalllm.app/Contents/MacOS/cloudtolocalllm"),
             ]
 
         for path in possible_paths:
@@ -170,7 +172,9 @@ class TrayDaemon:
             # and wait for a response with authentication state
 
             # Check if we have any active client connections
-            active_connections = [conn for conn in self.client_connections if not conn._closed]
+            active_connections = [
+                conn for conn in self.client_connections if not conn._closed
+            ]
             if active_connections:
                 # If we have active connections, the app is likely authenticated
                 # This is a simplified approach - in production you might want to
@@ -193,14 +197,17 @@ class TrayDaemon:
             return False
 
         try:
-            self.logger.info(f"Launching CloudToLocalLLM: {self.app_executable_path}")
+            self.logger.info(
+                f"Launching CloudToLocalLLM: {self.app_executable_path}"
+            )
 
             # Launch the application as a detached process
             if sys.platform == "win32":
                 # Windows
                 self.app_process = subprocess.Popen(
                     [self.app_executable_path],
-                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                    creationflags=(subprocess.DETACHED_PROCESS
+                                   | subprocess.CREATE_NEW_PROCESS_GROUP)
                 )
             else:
                 # Linux/macOS
@@ -235,12 +242,17 @@ class TrayDaemon:
         while self.running:
             try:
                 current_running_state = self._is_app_running()
-                current_auth_state = self._is_app_authenticated() if current_running_state else False
+                current_auth_state = (
+                    self._is_app_authenticated() if current_running_state else False
+                )
 
                 # Check if running state changed
                 if current_running_state != self.app_is_running:
                     self.app_is_running = current_running_state
-                    self.logger.info(f"App running state changed: {'running' if current_running_state else 'stopped'}")
+                    self.logger.info(
+                        f"App running state changed: "
+                        f"{'running' if current_running_state else 'stopped'}"
+                    )
 
                     # Reset auth state if app stopped
                     if not current_running_state:
@@ -249,11 +261,14 @@ class TrayDaemon:
                 # Check if authentication state changed
                 if current_auth_state != self.app_is_authenticated:
                     self.app_is_authenticated = current_auth_state
-                    self.logger.info(f"App auth state changed: {'authenticated' if current_auth_state else 'not authenticated'}")
+                    self.logger.info(
+                        f"App auth state changed: "
+                        f"{'authenticated' if current_auth_state else 'not authenticated'}"
+                    )
 
                 # Update tray menu if any state changed
-                if (current_running_state != self.app_is_running or
-                    current_auth_state != self.app_is_authenticated):
+                if (current_running_state != self.app_is_running
+                        or current_auth_state != self.app_is_authenticated):
                     if self.tray:
                         self.tray.menu = self._create_menu()
 
@@ -268,14 +283,16 @@ class TrayDaemon:
                 if new_icon_state != self.icon_state:
                     self.icon_state = new_icon_state
                     if self.tray:
-                        self.tray.icon = self._create_icon_image(self.icon_state)
+                        self.tray.icon = self._create_icon_image(
+                            self.icon_state
+                        )
 
                 time.sleep(2)  # Check every 2 seconds
 
             except Exception as e:
                 self.logger.error(f"Error in app monitoring: {e}")
                 time.sleep(5)  # Wait longer on error
-    
+
     def _get_icon_data(self, state: str = "idle") -> bytes:
         """Get base64 encoded icon data for different states"""
         # Base64 encoded monochrome icons (16x16 PNG)
@@ -316,7 +333,7 @@ class TrayDaemon:
 
         icon_b64 = icons.get(state, icons["idle"])
         return base64.b64decode(icon_b64)
-    
+
     def _create_icon_image(self, state: str = "idle") -> Image.Image:
         """Create PIL Image from icon data"""
         try:
@@ -327,7 +344,7 @@ class TrayDaemon:
             # Create a simple fallback icon
             img = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
             return img
-    
+
     def _create_menu(self) -> pystray.Menu:
         """Create the system tray context menu based on application and authentication state"""
         menu_items = []
@@ -368,7 +385,7 @@ class TrayDaemon:
         ])
 
         return pystray.Menu(*menu_items)
-    
+
     def _on_show_window(self, icon, item):
         """Handle show window menu item"""
         self._send_to_clients({"command": "SHOW"})
@@ -415,25 +432,25 @@ class TrayDaemon:
             self._send_to_clients({"command": "SHOW"})
         else:
             self._launch_app()
-    
+
     def _send_to_clients(self, message: Dict[str, Any]):
         """Send message to all connected clients"""
         message_json = json.dumps(message) + "\n"
         disconnected_clients = []
-        
+
         for client in self.client_connections:
             try:
                 client.send(message_json.encode('utf-8'))
             except Exception as e:
                 self.logger.warning(f"Failed to send to client: {e}")
                 disconnected_clients.append(client)
-        
+
         # Remove disconnected clients
         for client in disconnected_clients:
             self.client_connections.remove(client)
             try:
                 client.close()
-            except:
+            except Exception:
                 pass
 
     def start_server(self) -> bool:
@@ -455,7 +472,9 @@ class TrayDaemon:
             self.logger.info(f"TCP server started on port {self.port}")
 
             # Start accepting connections in a separate thread
-            server_thread = threading.Thread(target=self._accept_connections, daemon=True)
+            server_thread = threading.Thread(
+                target=self._accept_connections, daemon=True
+            )
             server_thread.start()
 
             return True
@@ -504,7 +523,7 @@ class TrayDaemon:
                 self.client_connections.remove(client_socket)
             try:
                 client_socket.close()
-            except:
+            except Exception:
                 pass
 
     def _process_message(self, message: str):
@@ -542,7 +561,7 @@ class TrayDaemon:
                 for client in self.client_connections:
                     try:
                         client.send(response_json.encode('utf-8'))
-                    except:
+                    except Exception:
                         pass
             elif command == 'QUIT':
                 self.shutdown()
@@ -587,7 +606,7 @@ class TrayDaemon:
         for client in self.client_connections:
             try:
                 client.close()
-            except:
+            except Exception:
                 pass
         self.client_connections.clear()
 
@@ -595,14 +614,14 @@ class TrayDaemon:
         if self.server_socket:
             try:
                 self.server_socket.close()
-            except:
+            except Exception:
                 pass
 
         # Stop tray
         if self.tray:
             try:
                 self.tray.stop()
-            except:
+            except Exception:
                 pass
 
         # Remove port file
@@ -610,7 +629,7 @@ class TrayDaemon:
             port_file = self._get_port_file_path()
             if port_file.exists():
                 port_file.unlink()
-        except:
+        except Exception:
             pass
 
         self.logger.info("Tray daemon shutdown complete")
@@ -666,7 +685,7 @@ class TrayDaemon:
 
             # Try to create a test icon to check support
             test_image = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
-            test_icon = pystray.Icon("test", test_image)
+            pystray.Icon("test", test_image)
             # If we can create it, tray is likely supported
             return True
         except Exception as e:
@@ -690,26 +709,38 @@ class TrayDaemon:
             pass
 
         try:
-            import pystray._appindicator
+            import pystray._appindicator  # noqa: F401
             backends.append("appindicator")
         except ImportError:
             pass
 
-        self.logger.info(f"Available pystray backends: {', '.join(backends) if backends else 'none'}")
+        self.logger.info(
+            f"Available pystray backends: {', '.join(backends) if backends else 'none'}"
+        )
 
         # Log desktop environment info
         desktop = os.environ.get('XDG_CURRENT_DESKTOP', 'unknown')
         session = os.environ.get('XDG_SESSION_TYPE', 'unknown')
-        self.logger.info(f"Desktop environment: {desktop}, Session type: {session}")
+        self.logger.info(
+            f"Desktop environment: {desktop}, Session type: {session}"
+        )
 
         if 'appindicator' in backends:
-            self.logger.info("AppIndicator backend available - should work well with modern desktop environments")
+            self.logger.info(
+                "AppIndicator backend available - should work well with "
+                "modern desktop environments"
+            )
         elif 'gtk' in backends:
             self.logger.info("GTK backend available - good fallback option")
         elif 'xorg' in backends:
-            self.logger.warning("Only X11 backend available - may have compatibility issues with some desktop environments")
+            self.logger.warning(
+                "Only X11 backend available - may have compatibility issues "
+                "with some desktop environments"
+            )
         else:
-            self.logger.error("No pystray backends available - system tray will not work")
+            self.logger.error(
+                "No pystray backends available - system tray will not work"
+            )
 
 
 def main():

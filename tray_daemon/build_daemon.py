@@ -18,7 +18,7 @@ def get_platform_info():
     """Get current platform information"""
     system = platform.system().lower()
     machine = platform.machine().lower()
-    
+
     if system == "windows":
         return "windows", "x64" if machine in ["amd64", "x86_64"] else "x86"
     elif system == "darwin":
@@ -43,16 +43,16 @@ def install_dependencies():
 def build_executable():
     """Build the executable using PyInstaller"""
     platform_name, arch = get_platform_info()
-    
+
     # Output directory
     dist_dir = Path("dist") / f"{platform_name}-{arch}"
     dist_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Executable name
     exe_name = "cloudtolocalllm-tray"
     if platform_name == "windows":
         exe_name += ".exe"
-    
+
     # PyInstaller arguments
     args = [
         "pyinstaller",
@@ -65,7 +65,7 @@ def build_executable():
         "--clean",
         "tray_daemon.py"
     ]
-    
+
     # Add platform-specific options
     if platform_name == "windows":
         args.extend([
@@ -84,13 +84,13 @@ def build_executable():
             "--add-data", "requirements.txt:.",
             "--hidden-import", "pystray._xorg"
         ])
-    
+
     print(f"Building executable for {platform_name}-{arch}...")
     print(f"Command: {' '.join(args)}")
-    
+
     try:
         subprocess.check_call(args)
-        
+
         # Verify the executable was created
         exe_path = dist_dir / exe_name
         if exe_path.exists():
@@ -110,28 +110,28 @@ def test_executable(exe_path):
     if not exe_path or not Path(exe_path).exists():
         print("✗ Cannot test: executable not found")
         return False
-    
+
     print(f"Testing executable: {exe_path}")
-    
+
     try:
         # Test version flag
-        result = subprocess.run([exe_path, "--version"], 
-                              capture_output=True, text=True, timeout=10)
+        result = subprocess.run([exe_path, "--version"],
+                                capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             print(f"✓ Version test passed: {result.stdout.strip()}")
         else:
             print(f"✗ Version test failed: {result.stderr}")
             return False
-        
+
         # Test help flag
-        result = subprocess.run([exe_path, "--help"], 
-                              capture_output=True, text=True, timeout=10)
+        result = subprocess.run([exe_path, "--help"],
+                                capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             print("✓ Help test passed")
         else:
             print(f"✗ Help test failed: {result.stderr}")
             return False
-        
+
         return True
     except subprocess.TimeoutExpired:
         print("✗ Test timed out")
@@ -144,7 +144,7 @@ def test_executable(exe_path):
 def clean_build_artifacts():
     """Clean up build artifacts"""
     print("Cleaning build artifacts...")
-    
+
     for path in ["build", "__pycache__"]:
         if Path(path).exists():
             shutil.rmtree(path)
@@ -155,41 +155,41 @@ def main():
     """Main build process"""
     print("CloudToLocalLLM Tray Daemon Build Script")
     print("=" * 50)
-    
+
     # Change to script directory
     script_dir = Path(__file__).parent
     os.chdir(script_dir)
-    
+
     platform_name, arch = get_platform_info()
     print(f"Building for: {platform_name}-{arch}")
     print(f"Python version: {sys.version}")
     print()
-    
+
     try:
         # Install dependencies
         install_dependencies()
         print()
-        
+
         # Build executable
         exe_path = build_executable()
         print()
-        
+
         # Test executable
         if exe_path:
             test_executable(exe_path)
             print()
-        
+
         # Clean up
         clean_build_artifacts()
-        
+
         if exe_path:
-            print(f"✓ Build completed successfully!")
+            print("✓ Build completed successfully!")
             print(f"  Executable: {exe_path}")
             return 0
         else:
             print("✗ Build failed!")
             return 1
-            
+
     except KeyboardInterrupt:
         print("\n✗ Build interrupted by user")
         return 1
