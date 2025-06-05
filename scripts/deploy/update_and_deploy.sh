@@ -10,6 +10,15 @@ NC='\033[0m'
 
 echo -e "${YELLOW}Updating CloudToLocalLLM portal...${NC}"
 
+# Check if we're on VPS or local development
+if [[ "$HOSTNAME" == *"cloudtolocalllm"* ]] || [[ "$USER" == "cloudllm" ]]; then
+    VPS_MODE=true
+    echo -e "${BLUE}Running in VPS mode${NC}"
+else
+    VPS_MODE=false
+    echo -e "${BLUE}Running in local development mode${NC}"
+fi
+
 # Pull latest changes from GitHub (primary source of truth)
 echo -e "${BLUE}Pulling latest changes from GitHub...${NC}"
 git pull origin master
@@ -18,6 +27,23 @@ git pull origin master
 echo -e "${BLUE}Building Flutter web application...${NC}"
 flutter clean
 flutter pub get
+
+# Check if this is a version that needs a GitHub release
+if [[ "$VPS_MODE" == "false" ]]; then
+    # Local development mode - check if GitHub release exists for current version
+    local current_version=$(grep "^version:" pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+    echo -e "${BLUE}Current version: $current_version${NC}"
+
+    if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+        if ! gh release view "v$current_version" --repo "imrightguy/CloudToLocalLLM" &> /dev/null; then
+            echo -e "${YELLOW}No GitHub release found for v$current_version${NC}"
+            echo -e "${YELLOW}Consider running: ./scripts/release/create_github_release.sh${NC}"
+        else
+            echo -e "${GREEN}GitHub release v$current_version exists${NC}"
+        fi
+    fi
+fi
+
 flutter build web --no-tree-shake-icons
 
 # Stop running containers

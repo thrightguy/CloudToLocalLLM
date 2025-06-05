@@ -36,18 +36,17 @@ provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
 
-# NOTE: CloudToLocalLLM v3.1.3 uses new versioning strategy
-# GitHub releases are only created for major versions (x.0.0)
-# Minor/patch versions use build increments without GitHub releases
-# For v3.1.3, using v3.0.3 binaries as base (compatible core functionality)
+# NOTE: CloudToLocalLLM v3.2.0+ uses GitHub releases for distribution
+# All versions are now distributed via GitHub releases for better reliability
+# AUR package downloads pre-built binaries from GitHub release assets
 
-# Using local v3.2.0 binaries for testing
+# Download from GitHub releases
 source=(
-    "cloudtolocalllm-3.2.0-x86_64.tar.gz"
-    "cloudtolocalllm-3.2.0-x86_64.tar.gz.sha256"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256"
 )
 sha256sums=(
-    '544454297403aaccd81c9daea6b26ab1a13433d73a9eb1637c5c65d907820a67'  # v3.2.0 unified package checksum
+    'SKIP'  # Will be verified using downloaded checksum file
     'SKIP'  # Checksum file verification
 )
 
