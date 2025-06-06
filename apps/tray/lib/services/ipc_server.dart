@@ -60,10 +60,12 @@ class IPCServer extends ChangeNotifier {
 
   /// Handle new client connection
   void _handleClientConnection(Socket client) {
-    debugPrint("New IPC client connected: ${client.remoteAddress}:${client.remotePort}");
-    
+    debugPrint(
+      "New IPC client connected: ${client.remoteAddress}:${client.remotePort}",
+    );
+
     _clients.add(client);
-    
+
     // Listen for messages from client
     client.listen(
       (data) => _handleClientMessage(client, data),
@@ -81,7 +83,7 @@ class IPCServer extends ChangeNotifier {
     _sendToClient(client, {
       'type': 'welcome',
       'message': 'Connected to CloudToLocalLLM Tray Service',
-      'version': '3.2.1',
+      'version': '3.3.0',
     });
   }
 
@@ -98,7 +100,10 @@ class IPCServer extends ChangeNotifier {
 
       switch (command) {
         case 'PING':
-          _sendToClient(client, {'type': 'pong', 'timestamp': DateTime.now().millisecondsSinceEpoch});
+          _sendToClient(client, {
+            'type': 'pong',
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          });
           break;
         case 'GET_STATUS':
           _sendToClient(client, {
@@ -155,7 +160,9 @@ class IPCServer extends ChangeNotifier {
       _sendToClient(client, command);
     }
 
-    debugPrint("Sent command to ${_clients.length} clients: ${command['command']}");
+    debugPrint(
+      "Sent command to ${_clients.length} clients: ${command['command']}",
+    );
   }
 
   /// Remove client from list
@@ -172,13 +179,13 @@ class IPCServer extends ChangeNotifier {
   Future<void> _writePortFile() async {
     try {
       final portFile = File(_getPortFilePath());
-      
+
       // Ensure directory exists
       await portFile.parent.create(recursive: true);
-      
+
       // Write port number
       await portFile.writeAsString(_port.toString());
-      
+
       debugPrint("Port file written: ${portFile.path}");
     } catch (e) {
       debugPrint("Failed to write port file: $e");
@@ -187,7 +194,8 @@ class IPCServer extends ChangeNotifier {
 
   /// Get the path to the port file
   String _getPortFilePath() {
-    final home = Platform.environment['HOME'] ??
+    final home =
+        Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '';
     final platform = Platform.operatingSystem;
@@ -195,10 +203,16 @@ class IPCServer extends ChangeNotifier {
     String configDir;
     if (platform == 'windows') {
       configDir = path.join(
-          Platform.environment['LOCALAPPDATA'] ?? home, 'CloudToLocalLLM');
+        Platform.environment['LOCALAPPDATA'] ?? home,
+        'CloudToLocalLLM',
+      );
     } else if (platform == 'macos') {
-      configDir =
-          path.join(home, 'Library', 'Application Support', 'CloudToLocalLLM');
+      configDir = path.join(
+        home,
+        'Library',
+        'Application Support',
+        'CloudToLocalLLM',
+      );
     } else {
       configDir = path.join(home, '.cloudtolocalllm');
     }
@@ -228,9 +242,9 @@ class IPCServer extends ChangeNotifier {
   Future<void> stop() async {
     try {
       debugPrint("Stopping IPC server...");
-      
+
       _heartbeatTimer?.cancel();
-      
+
       // Close all client connections
       for (final client in List.from(_clients)) {
         _removeClient(client);
