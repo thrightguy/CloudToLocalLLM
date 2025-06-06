@@ -1,6 +1,6 @@
 name: cloudtolocalllm_shared
 description: Shared components for CloudToLocalLLM three-application architecture
-version: 3.2.1
+version: 3.3.0
 publish_to: 'none' # This is a local package
 
 environment:

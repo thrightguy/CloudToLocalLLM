@@ -3,7 +3,7 @@ description: CloudToLocalLLM Settings App - Connection management and Ollama tes
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.2.1+001
+version: 3.3.0+001
 
 environment:
   sdk: '>=3.8.0 <4.0.0'

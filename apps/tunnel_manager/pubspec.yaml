@@ -3,7 +3,7 @@ description: CloudToLocalLLM Tunnel Manager - Independent connection broker and 
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 1.0.0+001
+version: 3.3.0+001
 
 environment:
   sdk: '>=3.8.0 <4.0.0'

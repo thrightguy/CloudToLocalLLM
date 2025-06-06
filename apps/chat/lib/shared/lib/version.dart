@@ -8,19 +8,19 @@ import 'package:package_info_plus/package_info_plus.dart';
 /// Version constants for all CloudToLocalLLM components
 class CloudToLocalLLMVersions {
   // Main application version
-  static const String mainAppVersion = '3.2.0';
+  static const String mainAppVersion = '3.3.0';
   static const int mainAppBuildNumber = 1;
 
   // Tunnel manager version
-  static const String tunnelManagerVersion = '1.0.0';
+  static const String tunnelManagerVersion = '3.3.0';
   static const int tunnelManagerBuildNumber = 1;
 
   // Shared library version
-  static const String sharedLibraryVersion = '3.2.0';
+  static const String sharedLibraryVersion = '3.3.0';
   static const int sharedLibraryBuildNumber = 1;
 
-  // Tray daemon version (Python component)
-  static const String trayDaemonVersion = '2.0.0';
+  // Tray daemon version (Flutter component)
+  static const String trayDaemonVersion = '3.3.0';
 
   // Build timestamp (updated during build process)
   static const String buildTimestamp = '2025-01-27T00:00:00Z';

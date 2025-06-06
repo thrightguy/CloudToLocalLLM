@@ -1,5 +1,5 @@
 /// Version compatibility and management utilities
-/// 
+///
 /// This file provides version information and compatibility checking
 /// for the CloudToLocalLLM modular architecture.
 
@@ -20,22 +20,22 @@ class VersionCompatibility {
 /// Version constants for all CloudToLocalLLM components
 class CloudToLocalLLMVersions {
   // Shared library version
-  static const String sharedLibraryVersion = '3.2.1';
+  static const String sharedLibraryVersion = '3.3.0';
   static const String sharedLibraryBuildNumber = '001';
-  
+
   // Chat application version
-  static const String chatAppVersion = '3.2.1';
+  static const String chatAppVersion = '3.3.0';
   static const String chatAppBuildNumber = '001';
-  
+
   // Main application version
-  static const String mainAppVersion = '3.2.1';
+  static const String mainAppVersion = '3.3.0';
   static const String mainAppBuildNumber = '001';
-  
+
   // Tunnel manager version
-  static const String tunnelManagerVersion = '3.2.1';
+  static const String tunnelManagerVersion = '3.3.0';
   static const String tunnelManagerBuildNumber = '001';
-  
+
   // Overall project version
-  static const String projectVersion = '3.2.1';
+  static const String projectVersion = '3.3.0';
   static const String projectBuildNumber = '001';
 }
