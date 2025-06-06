@@ -1,0 +1,29 @@
+name: cloudtolocalllm_shared
+description: Shared components for CloudToLocalLLM three-application architecture
+version: 3.2.1
+publish_to: 'none' # This is a local package
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Core utilities
+  http: ^1.2.2
+  path: ^1.9.1
+  
+  # JSON serialization
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true

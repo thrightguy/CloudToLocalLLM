@@ -1,0 +1,50 @@
+name: cloudtolocalllm_tray
+description: CloudToLocalLLM System Tray Service - Independent Flutter-based system tray with TCP IPC server
+publish_to: none
+homepage: https://cloudtolocalllm.online
+repository: https://github.com/imrightguy/CloudToLocalLLM
+version: 3.2.1+001
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI and Navigation
+  cupertino_icons: ^1.0.8
+
+  # System Tray Integration - Flutter-only implementation
+  tray_manager: ^0.5.0
+
+  # Window Management
+  window_manager: ^0.4.3
+
+  # TCP Socket IPC
+  http: ^1.2.2
+
+  # File System
+  path: ^1.9.1
+
+  # State Management
+  provider: ^6.1.2
+
+  # Shared libraries
+  cloudtolocalllm_shared:
+    path: ../shared
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/linux/
+    - assets/version.json
+
+  # Monochrome tray icons for Linux compatibility
+  # Following system tray icon standards across light and dark themes

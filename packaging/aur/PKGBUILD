@@ -43,14 +43,6 @@ build() {
         --console \
         enhanced_tray_daemon.py
 
-    # Build settings application
-    pyinstaller --onefile --name cloudtolocalllm-settings \
-        --hidden-import tkinter \
-        --hidden-import tkinter.ttk \
-        --hidden-import tkinter.scrolledtext \
-        --windowed \
-        settings_app.py
-
     cd ..
 }
 
@@ -64,7 +56,6 @@ package() {
     # Install enhanced tray daemon
     install -dm755 "$pkgdir/opt/$pkgname/tray_daemon"
     install -m755 tray_daemon/dist/cloudtolocalllm-enhanced-tray "$pkgdir/opt/$pkgname/tray_daemon/"
-    install -m755 tray_daemon/dist/cloudtolocalllm-settings "$pkgdir/opt/$pkgname/tray_daemon/"
     install -m755 tray_daemon/start_enhanced_daemon.sh "$pkgdir/opt/$pkgname/tray_daemon/"
     install -m644 tray_daemon/requirements.txt "$pkgdir/opt/$pkgname/tray_daemon/"
     install -m644 tray_daemon/ENHANCED_ARCHITECTURE.md "$pkgdir/opt/$pkgname/tray_daemon/"
@@ -85,14 +76,6 @@ cd /opt/cloudtolocalllm-desktop/tray_daemon
 exec ./cloudtolocalllm-enhanced-tray "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm-tray"
-
-    # Install settings launcher
-    cat > "$pkgdir/usr/bin/cloudtolocalllm-settings" << 'EOF'
-#!/bin/bash
-cd /opt/cloudtolocalllm-desktop/tray_daemon
-exec ./cloudtolocalllm-settings "$@"
-EOF
-    chmod +x "$pkgdir/usr/bin/cloudtolocalllm-settings"
 
     # Install systemd user service for tray daemon
     install -dm755 "$pkgdir/usr/lib/systemd/user"
@@ -177,7 +160,7 @@ post_install() {
     echo "🚀 Enhanced Features:"
     echo "  ✅ Independent System Tray Daemon with universal connection management"
     echo "  ✅ Automatic failover between local Ollama and cloud connections"
-    echo "  ✅ Separate settings interface for daemon configuration"
+    echo "  ✅ Integrated Flutter settings interface"
     echo "  ✅ Crash isolation between tray daemon and main application"
     echo "  ✅ Auth0 authentication with desktop redirect"
     echo "  ✅ Modern Flutter interface"
@@ -185,11 +168,10 @@ post_install() {
     echo "🎛️ Starting the Enhanced System:"
     echo "  1. Start tray daemon: systemctl --user enable --now cloudtolocalllm-tray"
     echo "  2. Launch main app from Applications menu, or run: cloudtolocalllm"
-    echo "  3. Configure connections: cloudtolocalllm-settings"
+    echo "  3. Configure settings within the app's Settings screen"
     echo ""
     echo "🔧 Manual Daemon Management:"
     echo "  • Start daemon: cloudtolocalllm-tray"
-    echo "  • Settings GUI: cloudtolocalllm-settings"
     echo "  • Check status: systemctl --user status cloudtolocalllm-tray"
     echo ""
     echo "🦙 For Ollama integration:"

@@ -1,27 +1,76 @@
-# CloudToLocalLLM: Your Personal AI Powerhouse 🌩️💻
+# CloudToLocalLLM
+
+**Bridge the gap between cloud AI and local control**
+
+CloudToLocalLLM is a comprehensive solution that enables seamless interaction with both cloud-based and local Large Language Models (LLMs). Whether you're using OpenAI's GPT models through our cloud proxy or running Ollama locally, CloudToLocalLLM provides a unified, secure, and user-friendly interface.
 
 **Website: [https://cloudtolocalllm.online](https://cloudtolocalllm.online)**
 
-Run powerful Large Language Models (LLMs) directly on your machine and seamlessly sync your conversations to the cloud. Experience the best of local control and cloud convenience.
+## � Key Features
 
-## 🏗️ Multi-Container Architecture
+- **🔄 Dual Connectivity**: Seamlessly switch between cloud and local LLM providers
+- **🔒 Privacy-First**: Your data stays secure with optional local-only mode
+- **🖥️ Cross-Platform**: Available on Linux, Windows, and macOS
+- **🎨 Modern UI**: Clean, intuitive interface built with Flutter
+- **⚡ Real-time Streaming**: Live response streaming for natural conversations
+- **🔧 Easy Setup**: Simple installation and configuration process
+- **🌐 Web & Desktop**: Use in your browser or as a native desktop application
+- **🖱️ System Tray**: Convenient system tray integration for quick access
+- **⚙️ Settings Management**: Easy configuration of connections and preferences
+- **🧪 Model Testing**: Built-in tools to test and validate local Ollama models
 
-CloudToLocalLLM now features a modern multi-container architecture that provides:
+## 🏗️ 3-App Modular Flutter-Only Architecture
 
-- **Independent Deployments**: Update Flutter app, documentation, or API backend separately
-- **Zero-Downtime Updates**: Rolling updates with health checks
-- **Scalability**: Individual container scaling and load balancing
-- **Security**: Container isolation and non-root execution
+CloudToLocalLLM features a **unified Flutter-only architecture** with three independent applications for optimal modularity and system integration:
 
-### Architecture Overview
-
+### Directory Structure
 ```
-Internet → Nginx Proxy → Static Site (docs.cloudtolocalllm.online)
-                      → Flutter App (app.cloudtolocalllm.online)
-                      → API Backend (WebSocket + REST)
+apps/
+├── chat/                     # Main ChatGPT-like interface
+│   ├── lib/                  # Flutter app source code
+│   ├── pubspec.yaml         # App-specific dependencies
+│   └── assets/              # Chat app assets
+├── tray/                     # System tray service
+│   ├── lib/                  # Flutter tray implementation
+│   ├── pubspec.yaml         # Tray dependencies (tray_manager)
+│   └── assets/              # Monochrome tray icons
+├── settings/                 # Connection management & Ollama testing
+│   ├── lib/                  # Flutter settings UI
+│   ├── pubspec.yaml         # Settings dependencies
+│   └── assets/              # Settings app assets
+└── shared/                   # Shared library
+    ├── lib/                  # Common models and utilities
+    └── pubspec.yaml         # Shared dependencies
 ```
 
-For detailed information, see [System Architecture](docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md).
+### **MANDATORY: Context7 Documentation Requirement**
+
+**Before implementing any external libraries, frameworks, or APIs:**
+1. **ALWAYS** use `resolve-library-id_context7` to find the correct library ID
+2. **ALWAYS** use `get-library-docs_context7` to get current documentation
+3. This ensures proper usage, correct parameters, and current best practices
+4. **NO EXCEPTIONS** - this prevents implementation errors and deprecated usage
+
+### Key Benefits
+- **Separation of Concerns**: App-specific vs shared functionality
+- **Code Reusability**: Shared models and services across applications
+- **Independent Development**: Teams can work on different apps simultaneously
+- **Better Maintainability**: Easier to locate and modify specific functionality
+
+### Import Conventions
+```dart
+// Local imports (within same app)
+import '../models/conversation.dart';
+import '../services/chat_service.dart';
+
+// Shared library imports
+import 'package:cloudtolocalllm_shared/cloudtolocalllm_shared.dart';
+```
+
+For detailed architecture information, see:
+- [Modular Architecture Overview](apps/README.md)
+- [Architecture Documentation](docs/ARCHITECTURE.md)
+- [Migration Guide](docs/MIGRATION_GUIDE.md)
 
 ## ✨ Features
 

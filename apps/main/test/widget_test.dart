@@ -15,7 +15,7 @@ void main() {
     WidgetTester tester,
   ) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const CloudToLocalLLMMainApp());
+    await tester.pumpWidget(const CloudToLocalLLMApp());
 
     // Verify that our app loads correctly.
     expect(find.text('CloudToLocalLLM'), findsWidgets);

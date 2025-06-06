@@ -47,10 +47,7 @@ dist/
 build/
 !build/web/  # Allow web build for deployment
 
-# Tray daemon build artifacts
-tray_daemon/build/
-tray_daemon/dist/
-tray_daemon/venv/
+# Flutter-only architecture - no Python tray daemon
 
 # ============================================================================
 # PACKAGING ARTIFACTS - EXCLUDED
@@ -79,24 +76,11 @@ packaging/deb/usr/lib/cloudtolocalllm/
 .pub-cache/
 .pub/
 
-# Python
+# Python (legacy - now Flutter-only)
+# Keeping minimal Python exclusions for any future scripts
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-develop-eggs/
-downloads/
-eggs/
-.eggs/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+*.pyc
 
 # Node.js
 node_modules/
