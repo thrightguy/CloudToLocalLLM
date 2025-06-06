@@ -35,12 +35,14 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Get version from pubspec.yaml
+# Get version from version.txt
 get_version() {
-    if [[ -f "$PROJECT_ROOT/pubspec.yaml" ]]; then
-        grep "^version:" "$PROJECT_ROOT/pubspec.yaml" | cut -d' ' -f2 | cut -d'+' -f1
+    if [[ -f "$PROJECT_ROOT/version.txt" ]]; then
+        cat "$PROJECT_ROOT/version.txt" | tr -d '\n'
+    elif [[ -f "$PROJECT_ROOT/apps/main/pubspec.yaml" ]]; then
+        grep "^version:" "$PROJECT_ROOT/apps/main/pubspec.yaml" | cut -d' ' -f2 | cut -d'+' -f1
     else
-        print_error "pubspec.yaml not found"
+        print_error "version.txt or pubspec.yaml not found"
         exit 1
     fi
 }
@@ -86,18 +88,16 @@ check_existing_release() {
 # Build binary packages if they don't exist
 build_packages() {
     local version="$1"
-    local package_file="$PROJECT_ROOT/aur-package/cloudtolocalllm-$version-x86_64.tar.gz"
+    local package_file="$PROJECT_ROOT/dist/cloudtolocalllm-$version-x86_64.tar.gz"
     local checksum_file="$package_file.sha256"
     
     if [[ ! -f "$package_file" ]]; then
         print_status "Building binary package for version $version..."
         cd "$PROJECT_ROOT"
         
-        # Build Flutter application
-        print_status "Building Flutter application..."
-        flutter clean
-        flutter pub get
-        flutter build linux --release
+        # Build Flutter applications using build script
+        print_status "Building Flutter applications..."
+        ./scripts/build_all.sh release false --skip-tests
         
         # Create AUR binary package
         print_status "Creating AUR binary package..."
@@ -110,11 +110,8 @@ build_packages() {
             exit 1
         fi
         
-        # Move package to aur-package directory if not already there
-        if [[ -f "dist/cloudtolocalllm-$version-x86_64.tar.gz" ]]; then
-            mv "dist/cloudtolocalllm-$version-x86_64.tar.gz" "$package_file"
-            mv "dist/cloudtolocalllm-$version-x86_64.tar.gz.sha256" "$checksum_file"
-        fi
+        # Package should already be in dist directory from build script
+        # No need to move files
     fi
     
     if [[ ! -f "$package_file" ]]; then
@@ -206,7 +203,7 @@ EOF
 create_release() {
     local version="$1"
     local tag="v$version"
-    local package_file="$PROJECT_ROOT/aur-package/cloudtolocalllm-$version-x86_64.tar.gz"
+    local package_file="$PROJECT_ROOT/dist/cloudtolocalllm-$version-x86_64.tar.gz"
     local checksum_file="$package_file.sha256"
     local notes_file=$(generate_release_notes "$version")
     

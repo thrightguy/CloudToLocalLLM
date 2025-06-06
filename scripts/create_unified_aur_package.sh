@@ -16,8 +16,8 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="3.0.2"  # Security Fixes + Docker Non-Root User Implementation
-BUILD_DIR="$PROJECT_ROOT/build/linux/x64/release/bundle"
+VERSION=$(cat "$PROJECT_ROOT/version.txt")  # Read from version.txt
+BUILD_DIR="$PROJECT_ROOT/build/cloudtolocalllm-v$VERSION-linux"
 OUTPUT_DIR="$PROJECT_ROOT/dist"
 PACKAGE_NAME="cloudtolocalllm-$VERSION-x86_64"
 PACKAGE_DIR="$OUTPUT_DIR/$PACKAGE_NAME"
@@ -56,8 +56,9 @@ check_prerequisites() {
         exit 1
     fi
     
-    if [[ ! -f "$BUILD_DIR/cloudtolocalllm" ]]; then
-        log_error "Main executable not found: $BUILD_DIR/cloudtolocalllm"
+    if [[ ! -d "$BUILD_DIR/bin" ]]; then
+        log_error "Build bin directory not found: $BUILD_DIR/bin"
+        log_error "Please run './scripts/build_all.sh release' first"
         exit 1
     fi
     
@@ -84,31 +85,33 @@ create_package_structure() {
     log_success "Package structure created"
 }
 
-# Copy Flutter application
-copy_flutter_app() {
-    log "Copying unified Flutter application..."
-    
-    # Copy the entire Flutter bundle
+# Copy Flutter applications
+copy_flutter_apps() {
+    log "Copying multi-app Flutter package..."
+
+    # Copy the entire package structure
     cp -r "$BUILD_DIR"/* "$PACKAGE_DIR/"
-    
-    # Ensure main executable is executable
-    chmod +x "$PACKAGE_DIR/cloudtolocalllm"
-    
-    # Verify the copy
-    if [[ ! -f "$PACKAGE_DIR/cloudtolocalllm" ]]; then
-        log_error "Failed to copy main executable"
-        exit 1
-    fi
-    
+
+    # Ensure all executables are executable
+    chmod +x "$PACKAGE_DIR/bin"/*
+
+    # Verify the copy - check for all expected executables
+    local expected_apps=("cloudtolocalllm_main" "cloudtolocalllm_chat" "cloudtolocalllm_tray" "cloudtolocalllm_settings")
+    for app in "${expected_apps[@]}"; do
+        if [[ ! -f "$PACKAGE_DIR/bin/$app" ]]; then
+            log_warning "Application not found: $app (this may be expected)"
+        fi
+    done
+
     # Check for essential directories
-    for dir in data lib; do
+    for dir in lib data; do
         if [[ -d "$BUILD_DIR/$dir" && ! -d "$PACKAGE_DIR/$dir" ]]; then
             log_error "Failed to copy essential directory: $dir"
             exit 1
         fi
     done
-    
-    log_success "Flutter application copied successfully"
+
+    log_success "Multi-app Flutter package copied successfully"
 }
 
 # Add metadata and documentation
@@ -125,10 +128,12 @@ Architecture: x86_64
 Build Date: $(date '+%Y-%m-%d %H:%M:%S')
 
 Contents:
-- Main Flutter application (cloudtolocalllm)
-- Integrated system tray functionality
+- Main Flutter application (cloudtolocalllm_main) with system tray integration
+- Chat application (cloudtolocalllm_chat) - standalone chat interface
+- System tray service (cloudtolocalllm_tray) - Flutter-based tray daemon
+- Settings application (cloudtolocalllm_settings) - connection management
 - All required libraries and data files
-- Unified architecture with no separate components
+- Multi-app architecture with unified packaging
 
 Installation:
 This package is designed for AUR (Arch User Repository) installation.
@@ -211,11 +216,11 @@ test_package() {
     
     # Extract and test
     tar -xzf "$PACKAGE_NAME.tar.gz" -C "$test_dir"
-    
-    if [[ -f "$test_dir/$PACKAGE_NAME/cloudtolocalllm" ]]; then
+
+    if [[ -d "$test_dir/$PACKAGE_NAME/bin" ]] && [[ -f "$test_dir/$PACKAGE_NAME/bin/cloudtolocalllm_main" ]]; then
         log_success "Package integrity test passed"
     else
-        log_error "Package integrity test failed"
+        log_error "Package integrity test failed - main executable not found"
         exit 1
     fi
     
@@ -260,7 +265,7 @@ cleanup() {
 main() {
     check_prerequisites
     create_package_structure
-    copy_flutter_app
+    copy_flutter_apps
     add_metadata
     create_archive
     generate_checksums
