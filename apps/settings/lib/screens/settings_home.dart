@@ -12,10 +12,10 @@ import '../config/theme.dart';
 /// Provides navigation to different settings categories and displays
 /// current system status
 class SettingsHome extends StatefulWidget {
-  const SettingsHome({Key? key}) : super(key: key);
+  const SettingsHome({super.key});
 
   @override
-  _SettingsHomeState createState() => _SettingsHomeState();
+  State<SettingsHome> createState() => _SettingsHomeState();
 }
 
 class _SettingsHomeState extends State<SettingsHome> {
@@ -42,11 +42,11 @@ class _SettingsHomeState extends State<SettingsHome> {
                 // Status overview
                 _buildStatusSection(settings, ollama, ipc),
                 const SizedBox(height: 24),
-                
+
                 // Settings categories
                 _buildSettingsCategories(context),
                 const SizedBox(height: 24),
-                
+
                 // Quick actions
                 _buildQuickActions(context, ollama, ipc),
               ],
@@ -57,7 +57,11 @@ class _SettingsHomeState extends State<SettingsHome> {
     );
   }
 
-  Widget _buildStatusSection(SettingsService settings, OllamaService ollama, IPCClient ipc) {
+  Widget _buildStatusSection(
+    SettingsService settings,
+    OllamaService ollama,
+    IPCClient ipc,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -86,23 +90,16 @@ class _SettingsHomeState extends State<SettingsHome> {
 
     return Row(
       children: [
-        Icon(
-          statusIcon,
-          color: statusColor,
-          size: 20,
-        ),
+        Icon(statusIcon, color: statusColor, size: 20),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ),
         Text(
           status,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: statusColor,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: statusColor),
         ),
       ],
     );
@@ -145,33 +142,24 @@ class _SettingsHomeState extends State<SettingsHome> {
   }) {
     return Card(
       child: ListTile(
-        leading: Icon(
-          icon,
-          color: SettingsTheme.primaryColor,
-          size: 32,
-        ),
-        title: Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        subtitle: Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        leading: Icon(icon, color: SettingsTheme.primaryColor, size: 32),
+        title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+        subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: const Icon(Icons.arrow_forward_ios),
         onTap: onTap,
       ),
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, OllamaService ollama, IPCClient ipc) {
+  Widget _buildQuickActions(
+    BuildContext context,
+    OllamaService ollama,
+    IPCClient ipc,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text('Quick Actions', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         Wrap(
           spacing: 12,
@@ -219,14 +207,20 @@ class _SettingsHomeState extends State<SettingsHome> {
 
   Future<void> _testOllama(OllamaService ollama) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     try {
       final success = await ollama.testConnection();
-      
+
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text(success ? 'Ollama connection successful!' : 'Ollama connection failed'),
-          backgroundColor: success ? SettingsTheme.successColor : SettingsTheme.errorColor,
+          content: Text(
+            success
+                ? 'Ollama connection successful!'
+                : 'Ollama connection failed',
+          ),
+          backgroundColor: success
+              ? SettingsTheme.successColor
+              : SettingsTheme.errorColor,
         ),
       );
     } catch (e) {
@@ -241,14 +235,20 @@ class _SettingsHomeState extends State<SettingsHome> {
 
   Future<void> _connectTray(IPCClient ipc) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     try {
       final success = await ipc.connectToTray();
-      
+
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text(success ? 'Connected to tray service!' : 'Failed to connect to tray service'),
-          backgroundColor: success ? SettingsTheme.successColor : SettingsTheme.errorColor,
+          content: Text(
+            success
+                ? 'Connected to tray service!'
+                : 'Failed to connect to tray service',
+          ),
+          backgroundColor: success
+              ? SettingsTheme.successColor
+              : SettingsTheme.errorColor,
         ),
       );
     } catch (e) {
@@ -291,11 +291,14 @@ class _SettingsHomeState extends State<SettingsHome> {
 
   Future<void> _resetSettings() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
-    
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
+
     try {
       await settingsService.resetToDefaults();
-      
+
       scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Settings reset to defaults'),

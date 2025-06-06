@@ -1,13 +1,9 @@
 import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/material.dart' hide MenuItem;
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:tray_manager/tray_manager.dart';
-import 'package:cloudtolocalllm_shared/version.dart';
 
 import 'services/tray_service.dart';
 import 'services/ipc_server.dart';
@@ -35,10 +31,12 @@ void main() async {
     await windowManager.hide();
   });
 
-  runApp(CloudToLocalLLMTrayApp());
+  runApp(const CloudToLocalLLMTrayApp());
 }
 
 class CloudToLocalLLMTrayApp extends StatelessWidget {
+  const CloudToLocalLLMTrayApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -53,7 +51,7 @@ class CloudToLocalLLMTrayApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           brightness: Brightness.dark,
         ),
-        home: TrayServiceHome(),
+        home: const TrayServiceHome(),
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -61,13 +59,14 @@ class CloudToLocalLLMTrayApp extends StatelessWidget {
 }
 
 class TrayServiceHome extends StatefulWidget {
+  const TrayServiceHome({super.key});
+
   @override
-  _TrayServiceHomeState createState() => _TrayServiceHomeState();
+  State<TrayServiceHome> createState() => _TrayServiceHomeState();
 }
 
-class _TrayServiceHomeState extends State<TrayServiceHome> 
+class _TrayServiceHomeState extends State<TrayServiceHome>
     with TrayListener, WindowListener {
-  
   @override
   void initState() {
     super.initState();
@@ -147,7 +146,7 @@ class _TrayServiceHomeState extends State<TrayServiceHome>
     debugPrint('Tray requested: Quit application');
     final ipcServer = Provider.of<IPCServer>(context, listen: false);
     ipcServer.sendCommand({'command': 'QUIT'});
-    
+
     // Give time for command to be sent, then exit
     Timer(const Duration(milliseconds: 500), () {
       exit(0);
@@ -172,16 +171,16 @@ class _TrayServiceHomeState extends State<TrayServiceHome>
                 const SizedBox(height: 16),
                 Text(
                   'CloudToLocalLLM Tray Service',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineSmall?.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Running in background',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[400],
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]),
                 ),
                 const SizedBox(height: 24),
                 _buildStatusCard('Tray Status', tray.status),
@@ -226,10 +225,7 @@ class _TrayServiceHomeState extends State<TrayServiceHome>
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              '$title: $status',
-              style: TextStyle(color: Colors.white),
-            ),
+            Text('$title: $status', style: TextStyle(color: Colors.white)),
           ],
         ),
       ),
@@ -250,20 +246,8 @@ class _TrayServiceHomeState extends State<TrayServiceHome>
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
-    switch (menuItem.key) {
-      case 'show_window':
-        _handleShowWindow();
-        break;
-      case 'hide_window':
-        _handleHideWindow();
-        break;
-      case 'settings':
-        _handleSettings();
-        break;
-      case 'quit':
-        _handleQuit();
-        break;
-    }
+    final trayService = Provider.of<TrayService>(context, listen: false);
+    trayService.handleMenuClick(menuItem.key ?? '');
   }
 
   @override

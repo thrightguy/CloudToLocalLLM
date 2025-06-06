@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:cloudtolocalllm_shared/version.dart';
+import 'package:cloudtolocalllm_shared/cloudtolocalllm_shared.dart';
 
 import 'services/tunnel_service.dart';
 import 'services/api_server_service.dart';
@@ -90,7 +90,7 @@ class _TunnelManagerHomeState extends State<TunnelManagerHome>
     with WindowListener {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [TunnelDashboard(), TunnelSettings()];
+  final List<Widget> _pages = [const TunnelDashboard(), const TunnelSettings()];
 
   @override
   void initState() {

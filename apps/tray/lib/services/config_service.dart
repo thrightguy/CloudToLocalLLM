@@ -81,11 +81,11 @@ class ConfigService extends ChangeNotifier {
       if (await _configFile!.exists()) {
         final configData = await _configFile!.readAsString();
         final loadedConfig = jsonDecode(configData) as Map<String, dynamic>;
-        
+
         // Merge with defaults to ensure all keys exist
         _config = Map.from(_defaultConfig);
         _config.addAll(loadedConfig);
-        
+
         debugPrint("Configuration loaded from ${_configFile!.path}");
       } else {
         // Use default configuration
@@ -143,13 +143,13 @@ class ConfigService extends ChangeNotifier {
     }
 
     // Validate value types and ranges
-    if (_config['connectionTimeout'] is! int || 
+    if (_config['connectionTimeout'] is! int ||
         (_config['connectionTimeout'] as int) < 1000) {
       _config['connectionTimeout'] = _defaultConfig['connectionTimeout'];
       needsSave = true;
     }
 
-    if (_config['heartbeatInterval'] is! int || 
+    if (_config['heartbeatInterval'] is! int ||
         (_config['heartbeatInterval'] as int) < 10000) {
       _config['heartbeatInterval'] = _defaultConfig['heartbeatInterval'];
       needsSave = true;
@@ -162,7 +162,8 @@ class ConfigService extends ChangeNotifier {
 
   /// Get configuration file path
   String _getConfigFilePath() {
-    final home = Platform.environment['HOME'] ??
+    final home =
+        Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '';
     final platform = Platform.operatingSystem;
@@ -170,10 +171,16 @@ class ConfigService extends ChangeNotifier {
     String configDir;
     if (platform == 'windows') {
       configDir = path.join(
-          Platform.environment['LOCALAPPDATA'] ?? home, 'CloudToLocalLLM');
+        Platform.environment['LOCALAPPDATA'] ?? home,
+        'CloudToLocalLLM',
+      );
     } else if (platform == 'macos') {
-      configDir =
-          path.join(home, 'Library', 'Application Support', 'CloudToLocalLLM');
+      configDir = path.join(
+        home,
+        'Library',
+        'Application Support',
+        'CloudToLocalLLM',
+      );
     } else {
       configDir = path.join(home, '.cloudtolocalllm');
     }
@@ -198,8 +205,8 @@ class ConfigService extends ChangeNotifier {
   Future<bool> importConfig(Map<String, dynamic> newConfig) async {
     try {
       // Validate imported config
-      final validatedConfig = Map.from(_defaultConfig);
-      
+      final validatedConfig = Map<String, dynamic>.from(_defaultConfig);
+
       for (final entry in newConfig.entries) {
         if (_defaultConfig.containsKey(entry.key)) {
           validatedConfig[entry.key] = entry.value;
@@ -245,13 +252,13 @@ class ConfigService extends ChangeNotifier {
   }) async {
     if (autoStart != null) await set('autoStart', autoStart);
     if (minimizeToTray != null) await set('minimizeToTray', minimizeToTray);
-    if (showNotifications != null) await set('showNotifications', showNotifications);
+    if (showNotifications != null) {
+      await set('showNotifications', showNotifications);
+    }
   }
 
   /// Update icon settings
-  Future<void> updateIconSettings({
-    String? iconTheme,
-  }) async {
+  Future<void> updateIconSettings({String? iconTheme}) async {
     if (iconTheme != null) await set('iconTheme', iconTheme);
   }
 
@@ -262,8 +269,12 @@ class ConfigService extends ChangeNotifier {
     int? heartbeatInterval,
   }) async {
     if (ipcPort != null) await set('ipcPort', ipcPort);
-    if (connectionTimeout != null) await set('connectionTimeout', connectionTimeout);
-    if (heartbeatInterval != null) await set('heartbeatInterval', heartbeatInterval);
+    if (connectionTimeout != null) {
+      await set('connectionTimeout', connectionTimeout);
+    }
+    if (heartbeatInterval != null) {
+      await set('heartbeatInterval', heartbeatInterval);
+    }
   }
 
   /// Cleanup resources

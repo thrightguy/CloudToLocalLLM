@@ -33,19 +33,19 @@ class SettingsTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      
+
       // Color scheme
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         primaryContainer: primaryVariant,
         secondary: secondaryColor,
-        background: backgroundColor,
-        surface: surfaceColor,
+        surface: backgroundColor,
+        surfaceContainer: surfaceColor,
         error: errorColor,
         onPrimary: onPrimary,
         onSecondary: onSecondary,
-        onBackground: onBackground,
-        onSurface: onSurface,
+        onSurface: onBackground,
+        onSurfaceVariant: onSurface,
         onError: onError,
       ),
 
@@ -66,11 +66,11 @@ class SettingsTheme {
       ),
 
       // Card
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         color: cardColor,
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
 
@@ -81,9 +81,7 @@ class SettingsTheme {
           foregroundColor: onPrimary,
           elevation: 2,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
 
@@ -92,9 +90,7 @@ class SettingsTheme {
         style: TextButton.styleFrom(
           foregroundColor: primaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
 
@@ -104,9 +100,7 @@ class SettingsTheme {
           foregroundColor: primaryColor,
           side: const BorderSide(color: primaryColor),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
 
@@ -136,35 +130,35 @@ class SettingsTheme {
 
       // Switch
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return Colors.grey;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
-            return primaryColor.withOpacity(0.5);
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryColor.withValues(alpha: 0.5);
           }
-          return Colors.grey.withOpacity(0.3);
+          return Colors.grey.withValues(alpha: 0.3);
         }),
       ),
 
       // Checkbox
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return Colors.transparent;
         }),
-        checkColor: MaterialStateProperty.all(onPrimary),
+        checkColor: WidgetStateProperty.all(onPrimary),
       ),
 
       // Radio
       radioTheme: RadioThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryColor;
           }
           return Colors.grey;
@@ -174,9 +168,9 @@ class SettingsTheme {
       // Slider
       sliderTheme: SliderThemeData(
         activeTrackColor: primaryColor,
-        inactiveTrackColor: Colors.grey.withOpacity(0.3),
+        inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
         thumbColor: primaryColor,
-        overlayColor: primaryColor.withOpacity(0.2),
+        overlayColor: primaryColor.withValues(alpha: 0.2),
       ),
 
       // Progress indicator
@@ -186,7 +180,7 @@ class SettingsTheme {
 
       // Divider
       dividerTheme: DividerThemeData(
-        color: Colors.grey.withOpacity(0.3),
+        color: Colors.grey.withValues(alpha: 0.3),
         thickness: 1,
       ),
 
@@ -198,19 +192,16 @@ class SettingsTheme {
       ),
 
       // Dialog
-      dialogTheme: DialogTheme(
+      dialogTheme: const DialogThemeData(
         backgroundColor: surfaceColor,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        contentTextStyle: const TextStyle(
-          color: textPrimary,
-          fontSize: 16,
-        ),
+        contentTextStyle: TextStyle(color: textPrimary, fontSize: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
 
@@ -220,19 +211,35 @@ class SettingsTheme {
         contentTextStyle: const TextStyle(color: textPrimary),
         actionTextColor: primaryColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
 
       // Text theme
       textTheme: const TextTheme(
-        displayLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w300),
-        displayMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w400),
-        displaySmall: TextStyle(color: textPrimary, fontWeight: FontWeight.w400),
-        headlineLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w400),
-        headlineMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w400),
-        headlineSmall: TextStyle(color: textPrimary, fontWeight: FontWeight.w400),
+        displayLarge: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w300,
+        ),
+        displayMedium: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w400,
+        ),
+        displaySmall: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w400,
+        ),
+        headlineLarge: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w400,
+        ),
+        headlineMedium: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w400,
+        ),
+        headlineSmall: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w400,
+        ),
         titleLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
         titleMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
         titleSmall: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
@@ -240,8 +247,14 @@ class SettingsTheme {
         bodyMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w400),
         bodySmall: TextStyle(color: textSecondary, fontWeight: FontWeight.w400),
         labelLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
-        labelMedium: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
-        labelSmall: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(
+          color: textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
+        labelSmall: TextStyle(
+          color: textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@
 ///
 /// This file provides version information and compatibility checking
 /// for the CloudToLocalLLM modular architecture.
+library;
 
 /// Version compatibility checker
 class VersionCompatibility {

@@ -13,10 +13,10 @@ import '../config/theme.dart';
 /// - Monitor connection health
 /// - Pull new models
 class OllamaTest extends StatefulWidget {
-  const OllamaTest({Key? key}) : super(key: key);
+  const OllamaTest({super.key});
 
   @override
-  _OllamaTestState createState() => _OllamaTestState();
+  State<OllamaTest> createState() => _OllamaTestState();
 }
 
 class _OllamaTestState extends State<OllamaTest> {
@@ -56,16 +56,16 @@ class _OllamaTestState extends State<OllamaTest> {
                 // Connection status
                 _buildConnectionStatus(ollama, settings),
                 const SizedBox(height: 24),
-                
+
                 // Connection test
                 _buildConnectionTest(ollama),
                 const SizedBox(height: 24),
-                
+
                 // Model list
                 if (ollama.isConnected) ...[
                   _buildModelList(ollama),
                   const SizedBox(height: 24),
-                  
+
                   // Model testing
                   _buildModelTest(ollama),
                 ],
@@ -77,7 +77,10 @@ class _OllamaTestState extends State<OllamaTest> {
     );
   }
 
-  Widget _buildConnectionStatus(OllamaService ollama, SettingsService settings) {
+  Widget _buildConnectionStatus(
+    OllamaService ollama,
+    SettingsService settings,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -93,8 +96,8 @@ class _OllamaTestState extends State<OllamaTest> {
               children: [
                 Icon(
                   ollama.isConnected ? Icons.check_circle : Icons.error,
-                  color: ollama.isConnected 
-                      ? SettingsTheme.successColor 
+                  color: ollama.isConnected
+                      ? SettingsTheme.successColor
                       : SettingsTheme.errorColor,
                 ),
                 const SizedBox(width: 12),
@@ -113,9 +116,8 @@ class _OllamaTestState extends State<OllamaTest> {
                       if (ollama.lastError != null)
                         Text(
                           'Error: ${ollama.lastError}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SettingsTheme.errorColor,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: SettingsTheme.errorColor),
                         ),
                     ],
                   ),
@@ -152,7 +154,9 @@ class _OllamaTestState extends State<OllamaTest> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: ollama.isConnected ? _startHealthMonitoring : null,
+                    onPressed: ollama.isConnected
+                        ? _startHealthMonitoring
+                        : null,
                     icon: const Icon(Icons.monitor_heart),
                     label: const Text('Monitor Health'),
                   ),
@@ -190,28 +194,31 @@ class _OllamaTestState extends State<OllamaTest> {
             if (ollama.availableModels.isEmpty)
               const Text('No models available. Pull a model to get started.')
             else
-              ...ollama.availableModels.map((model) => ListTile(
-                title: Text(model),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (action) => _handleModelAction(action, model, ollama),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'test',
-                      child: Text('Test Model'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Delete Model'),
-                    ),
-                  ],
+              ...ollama.availableModels.map(
+                (model) => ListTile(
+                  title: Text(model),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (action) =>
+                        _handleModelAction(action, model, ollama),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'test',
+                        child: Text('Test Model'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete Model'),
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedModel = model;
+                    });
+                  },
+                  selected: _selectedModel == model,
                 ),
-                onTap: () {
-                  setState(() {
-                    _selectedModel = model;
-                  });
-                },
-                selected: _selectedModel == model,
-              )),
+              ),
           ],
         ),
       ),
@@ -237,10 +244,7 @@ class _OllamaTestState extends State<OllamaTest> {
                 border: OutlineInputBorder(),
               ),
               items: ollama.availableModels.map((model) {
-                return DropdownMenuItem(
-                  value: model,
-                  child: Text(model),
-                );
+                return DropdownMenuItem(value: model, child: Text(model));
               }).toList(),
               onChanged: (value) {
                 setState(() {
@@ -283,7 +287,7 @@ class _OllamaTestState extends State<OllamaTest> {
                 decoration: BoxDecoration(
                   color: SettingsTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +314,7 @@ class _OllamaTestState extends State<OllamaTest> {
   Future<void> _refreshConnection() async {
     final ollama = Provider.of<OllamaService>(context, listen: false);
     final settings = Provider.of<SettingsService>(context, listen: false);
-    
+
     await ollama.setBaseUrl(settings.ollamaUrl);
     await _testConnection();
   }
@@ -318,13 +322,15 @@ class _OllamaTestState extends State<OllamaTest> {
   Future<void> _testConnection() async {
     final ollama = Provider.of<OllamaService>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     final success = await ollama.testConnection();
-    
+
     scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(success ? 'Connection successful!' : 'Connection failed'),
-        backgroundColor: success ? SettingsTheme.successColor : SettingsTheme.errorColor,
+        backgroundColor: success
+            ? SettingsTheme.successColor
+            : SettingsTheme.errorColor,
       ),
     );
   }
@@ -332,7 +338,7 @@ class _OllamaTestState extends State<OllamaTest> {
   void _startHealthMonitoring() {
     final ollama = Provider.of<OllamaService>(context, listen: false);
     ollama.startHealthMonitoring();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Health monitoring started'),
@@ -343,18 +349,18 @@ class _OllamaTestState extends State<OllamaTest> {
 
   Future<void> _testSelectedModel() async {
     if (_selectedModel == null) return;
-    
+
     setState(() {
       _isTestingModel = true;
       _testResult = null;
     });
-    
+
     final ollama = Provider.of<OllamaService>(context, listen: false);
     final result = await ollama.testModel(
       _selectedModel!,
       prompt: _testPromptController.text.trim(),
     );
-    
+
     setState(() {
       _isTestingModel = false;
       _testResult = result ?? 'Test failed - no response received';
@@ -377,7 +383,7 @@ class _OllamaTestState extends State<OllamaTest> {
 
   void _showPullModelDialog() {
     final controller = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -434,16 +440,20 @@ class _OllamaTestState extends State<OllamaTest> {
 
   Future<void> _pullModel(String modelName) async {
     if (modelName.isEmpty) return;
-    
+
     final ollama = Provider.of<OllamaService>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     final success = await ollama.pullModel(modelName);
-    
+
     scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: Text(success ? 'Model pulled successfully!' : 'Failed to pull model'),
-        backgroundColor: success ? SettingsTheme.successColor : SettingsTheme.errorColor,
+        content: Text(
+          success ? 'Model pulled successfully!' : 'Failed to pull model',
+        ),
+        backgroundColor: success
+            ? SettingsTheme.successColor
+            : SettingsTheme.errorColor,
       ),
     );
   }

@@ -55,7 +55,7 @@ packages:
       path: "../shared"
       relative: true
     source: path
-    version: "3.2.1"
+    version: "3.3.0"
   collection:
     dependency: transitive
     description:

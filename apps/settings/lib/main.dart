@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:cloudtolocalllm_shared/version.dart';
 
 import 'services/settings_service.dart';
 import 'services/ollama_service.dart';
 import 'services/ipc_client.dart';
-import 'screens/settings_home.dart';
 import 'config/theme.dart';
 import 'config/router.dart';
 
@@ -33,10 +30,12 @@ void main() async {
     await windowManager.focus();
   });
 
-  runApp(CloudToLocalLLMSettingsApp());
+  runApp(const CloudToLocalLLMSettingsApp());
 }
 
 class CloudToLocalLLMSettingsApp extends StatelessWidget {
+  const CloudToLocalLLMSettingsApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -58,15 +57,14 @@ class CloudToLocalLLMSettingsApp extends StatelessWidget {
 class SettingsAppInitializer extends StatefulWidget {
   final Widget child;
 
-  const SettingsAppInitializer({Key? key, required this.child}) : super(key: key);
+  const SettingsAppInitializer({super.key, required this.child});
 
   @override
-  _SettingsAppInitializerState createState() => _SettingsAppInitializerState();
+  State<SettingsAppInitializer> createState() => _SettingsAppInitializerState();
 }
 
-class _SettingsAppInitializerState extends State<SettingsAppInitializer> 
+class _SettingsAppInitializerState extends State<SettingsAppInitializer>
     with WindowListener {
-  
   @override
   void initState() {
     super.initState();
@@ -82,7 +80,10 @@ class _SettingsAppInitializerState extends State<SettingsAppInitializer>
 
   Future<void> _initializeServices() async {
     try {
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final settingsService = Provider.of<SettingsService>(
+        context,
+        listen: false,
+      );
       final ollamaService = Provider.of<OllamaService>(context, listen: false);
       final ipcClient = Provider.of<IPCClient>(context, listen: false);
 
@@ -125,7 +126,10 @@ class _SettingsAppInitializerState extends State<SettingsAppInitializer>
   @override
   void onWindowClose() async {
     // Graceful shutdown
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final ollamaService = Provider.of<OllamaService>(context, listen: false);
     final ipcClient = Provider.of<IPCClient>(context, listen: false);
 

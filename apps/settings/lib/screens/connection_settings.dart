@@ -11,10 +11,10 @@ import '../config/theme.dart';
 /// - Cloud proxy settings
 /// - Connection timeout and retry settings
 class ConnectionSettings extends StatefulWidget {
-  const ConnectionSettings({Key? key}) : super(key: key);
+  const ConnectionSettings({super.key});
 
   @override
-  _ConnectionSettingsState createState() => _ConnectionSettingsState();
+  State<ConnectionSettings> createState() => _ConnectionSettingsState();
 }
 
 class _ConnectionSettingsState extends State<ConnectionSettings> {
@@ -28,11 +28,17 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
   void initState() {
     super.initState();
     final settings = Provider.of<SettingsService>(context, listen: false);
-    
+
     _ollamaUrlController = TextEditingController(text: settings.ollamaUrl);
-    _cloudProxyUrlController = TextEditingController(text: settings.cloudProxyUrl);
-    _connectionTimeoutController = TextEditingController(text: settings.connectionTimeout.toString());
-    _retryAttemptsController = TextEditingController(text: settings.retryAttempts.toString());
+    _cloudProxyUrlController = TextEditingController(
+      text: settings.cloudProxyUrl,
+    );
+    _connectionTimeoutController = TextEditingController(
+      text: settings.connectionTimeout.toString(),
+    );
+    _retryAttemptsController = TextEditingController(
+      text: settings.retryAttempts.toString(),
+    );
   }
 
   @override
@@ -50,10 +56,7 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
       appBar: AppBar(
         title: const Text('Connection Settings'),
         actions: [
-          TextButton(
-            onPressed: _saveSettings,
-            child: const Text('Save'),
-          ),
+          TextButton(onPressed: _saveSettings, child: const Text('Save')),
         ],
       ),
       body: Consumer<SettingsService>(
@@ -68,15 +71,15 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
                   // Connection mode
                   _buildConnectionModeSection(settings),
                   const SizedBox(height: 24),
-                  
+
                   // Ollama settings
                   _buildOllamaSection(settings),
                   const SizedBox(height: 24),
-                  
+
                   // Cloud proxy settings
                   _buildCloudProxySection(settings),
                   const SizedBox(height: 24),
-                  
+
                   // Advanced settings
                   _buildAdvancedSection(settings),
                 ],
@@ -150,7 +153,7 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
                 if (value == null || value.isEmpty) {
                   return 'Please enter Ollama URL';
                 }
-                if (!Uri.tryParse(value)?.hasScheme == true) {
+                if (Uri.tryParse(value)?.hasScheme != true) {
                   return 'Please enter a valid URL';
                 }
                 return null;
@@ -167,7 +170,8 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
               title: const Text('Prefer local connection'),
               subtitle: const Text('Use local Ollama when available'),
               value: settings.preferLocalConnection,
-              onChanged: (value) => settings.set('preferLocalConnection', value),
+              onChanged: (value) =>
+                  settings.set('preferLocalConnection', value),
             ),
           ],
         ),
@@ -198,7 +202,7 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
                 if (value == null || value.isEmpty) {
                   return 'Please enter cloud proxy URL';
                 }
-                if (!Uri.tryParse(value)?.hasScheme == true) {
+                if (Uri.tryParse(value)?.hasScheme != true) {
                   return 'Please enter a valid URL';
                 }
                 return null;
@@ -278,8 +282,14 @@ class _ConnectionSettingsState extends State<ConnectionSettings> {
     try {
       await settings.set('ollamaUrl', _ollamaUrlController.text.trim());
       await settings.set('cloudProxyUrl', _cloudProxyUrlController.text.trim());
-      await settings.set('connectionTimeout', int.parse(_connectionTimeoutController.text));
-      await settings.set('retryAttempts', int.parse(_retryAttemptsController.text));
+      await settings.set(
+        'connectionTimeout',
+        int.parse(_connectionTimeoutController.text),
+      );
+      await settings.set(
+        'retryAttempts',
+        int.parse(_retryAttemptsController.text),
+      );
 
       scaffoldMessenger.showSnackBar(
         const SnackBar(

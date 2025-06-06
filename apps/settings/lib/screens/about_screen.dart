@@ -3,10 +3,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 /// About screen showing app information
 class AboutScreen extends StatefulWidget {
-  const AboutScreen({Key? key}) : super(key: key);
+  const AboutScreen({super.key});
 
   @override
-  _AboutScreenState createState() => _AboutScreenState();
+  State<AboutScreen> createState() => _AboutScreenState();
 }
 
 class _AboutScreenState extends State<AboutScreen> {
@@ -28,9 +28,7 @@ class _AboutScreenState extends State<AboutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('About'),
-      ),
+      appBar: AppBar(title: const Text('About')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -39,15 +37,15 @@ class _AboutScreenState extends State<AboutScreen> {
             // App info
             _buildAppInfo(),
             const SizedBox(height: 24),
-            
+
             // Description
             _buildDescription(),
             const SizedBox(height: 24),
-            
+
             // Features
             _buildFeatures(),
             const SizedBox(height: 24),
-            
+
             // Links
             _buildLinks(),
           ],
@@ -62,11 +60,7 @@ class _AboutScreenState extends State<AboutScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Icon(
-              Icons.settings,
-              size: 64,
-              color: Colors.blue,
-            ),
+            const Icon(Icons.settings, size: 64, color: Colors.blue),
             const SizedBox(height: 16),
             Text(
               'CloudToLocalLLM Settings',
@@ -97,10 +91,7 @@ class _AboutScreenState extends State<AboutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Description',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Description', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             const Text(
               'CloudToLocalLLM Settings is a configuration and testing application for the CloudToLocalLLM system. '
@@ -120,10 +111,7 @@ class _AboutScreenState extends State<AboutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Features',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Features', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             const _FeatureItem(
               icon: Icons.wifi,
@@ -158,10 +146,7 @@ class _AboutScreenState extends State<AboutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Links',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Links', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             ListTile(
               leading: const Icon(Icons.home),
@@ -212,25 +197,15 @@ class _FeatureItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: Colors.blue,
-            size: 24,
-          ),
+          Icon(icon, color: Colors.blue, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                Text(title, style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text(description, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),

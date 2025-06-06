@@ -198,6 +198,24 @@ class TrayService extends ChangeNotifier {
     }
   }
 
+  /// Handle menu item clicks
+  void handleMenuClick(String key) {
+    switch (key) {
+      case 'show_window':
+        _onShowWindow?.call();
+        break;
+      case 'hide_window':
+        _onHideWindow?.call();
+        break;
+      case 'settings':
+        _onSettings?.call();
+        break;
+      case 'quit':
+        _onQuit?.call();
+        break;
+    }
+  }
+
   /// Check if current platform is desktop
   bool _isDesktopPlatform() {
     return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
