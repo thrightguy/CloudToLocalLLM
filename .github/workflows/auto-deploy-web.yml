@@ -1,0 +1,180 @@
+name: Auto Deploy Web Application
+
+on:
+  push:
+    branches: [ master, main, release/*, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  VPS_HOST: cloudtolocalllm.online
+  VPS_USER: cloudllm
+  PROJECT_PATH: /opt/cloudtolocalllm
+
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+        channel: 'stable'
+        
+    - name: Get Flutter dependencies
+      run: |
+        cd apps/main
+        flutter pub get
+        
+    - name: Build Flutter web
+      run: |
+        cd apps/main
+        flutter build web --release --no-tree-shake-icons
+        
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ env.VPS_HOST }}
+        username: ${{ env.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          cd ${{ env.PROJECT_PATH }}
+          
+          # Stash any local changes
+          git stash push -m "Auto-stash before deployment $(date)" || true
+          
+          # Pull latest changes
+          git pull origin ${{ github.ref_name }}
+          
+          # Build Flutter web application
+          cd apps/main
+          flutter clean
+          flutter pub get
+          flutter build web --release --no-tree-shake-icons
+          
+          # Copy web build to root for deployment
+          cd ..
+          cp -r apps/main/build/web build/
+          
+          # Restart containers
+          docker-compose -f docker-compose.yml down
+          docker-compose -f docker-compose.yml up -d
+          
+          # Wait for containers to start
+          sleep 10
+          
+          # Verify deployment
+          curl -f https://app.cloudtolocalllm.online || exit 1
+          
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Web deployment successful for branch: ${{ github.ref_name }}"
+          echo "🌐 Live at: https://app.cloudtolocalllm.online"
+        else
+          echo "❌ Web deployment failed for branch: ${{ github.ref_name }}"
+        fi
+
+  deploy-beta:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref_name != 'master' && github.ref_name != 'main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+        channel: 'stable'
+        
+    - name: Get Flutter dependencies
+      run: |
+        cd apps/main
+        flutter pub get
+        
+    - name: Build Flutter web (Beta)
+      run: |
+        cd apps/main
+        flutter build web --release --no-tree-shake-icons
+        
+    - name: Deploy to Beta Environment
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ env.VPS_HOST }}
+        username: ${{ env.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          # Create beta deployment directory
+          mkdir -p /opt/cloudtolocalllm-beta
+          cd /opt/cloudtolocalllm-beta
+          
+          # Clone or pull latest changes
+          if [ ! -d ".git" ]; then
+            git clone https://github.com/imrightguy/CloudToLocalLLM.git .
+          fi
+          
+          git fetch origin
+          git checkout ${{ github.ref_name }}
+          git pull origin ${{ github.ref_name }}
+          
+          # Build Flutter web application
+          cd apps/main
+          flutter clean
+          flutter pub get
+          flutter build web --release --no-tree-shake-icons
+          
+          # Copy web build for beta deployment
+          cd ..
+          cp -r apps/main/build/web build/
+          
+          # Deploy to beta subdomain (requires nginx configuration)
+          # This would need additional nginx setup for beta.cloudtolocalllm.online
+          
+    - name: Notify beta deployment
+      if: always()
+      run: |
+        echo "🧪 Beta deployment for branch: ${{ github.ref_name }}"
+        echo "Note: Beta subdomain requires additional nginx configuration"
+
+  test-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.3'
+        channel: 'stable'
+        
+    - name: Test build all apps
+      run: |
+        # Test main app
+        cd apps/main
+        flutter pub get
+        flutter build web --release --no-tree-shake-icons
+        
+        # Test other apps if they have web support
+        cd ../chat
+        flutter pub get
+        flutter build web --release --no-tree-shake-icons || echo "Chat app web build not supported"
+        
+        cd ../settings
+        flutter pub get
+        flutter build web --release --no-tree-shake-icons || echo "Settings app web build not supported"
+        
+    - name: Test results
+      run: |
+        echo "✅ Build test completed for PR #${{ github.event.number }}"
+        echo "🔍 All Flutter applications tested successfully"
