@@ -83,10 +83,10 @@ clean_builds() {
     
     # Clean build directories
     rm -rf "$PROJECT_ROOT/build"
-    mkdir -p "$PROJECT_ROOT/build"/{chat,tray,settings}
+    mkdir -p "$PROJECT_ROOT/build"/{main,chat,tray,settings}
 
     # Clean individual app builds
-    for app in shared chat tray settings; do
+    for app in shared main chat tray settings; do
         if [ -d "$PROJECT_ROOT/apps/$app" ]; then
             cd "$PROJECT_ROOT/apps/$app"
             flutter clean > /dev/null 2>&1 || true
@@ -101,7 +101,7 @@ get_dependencies() {
     print_info "Getting dependencies for all applications..."
     
     # Get dependencies in dependency order
-    for app in shared chat tray settings; do
+    for app in shared main chat tray settings; do
         if [ -d "$PROJECT_ROOT/apps/$app" ]; then
             run_flutter_command "$app" "flutter pub get"
         fi
@@ -126,31 +126,46 @@ build_app() {
     local app_name="$1"
     local app_dir="$PROJECT_ROOT/apps/$app_name"
     local output_dir="$PROJECT_ROOT/build/$app_name"
-    
+
     if [ ! -d "$app_dir" ]; then
         print_warning "Application $app_name not found, skipping..."
         return
     fi
-    
+
     print_info "Building $app_name application..."
-    
+
     # Build the application
     run_flutter_command "$app_name" "flutter build linux --$BUILD_TYPE"
-    
+
     # Copy build artifacts to central build directory
     local source_dir="$app_dir/build/linux/x64/$BUILD_TYPE/bundle"
     if [ -d "$source_dir" ]; then
         cp -r "$source_dir"/* "$output_dir/"
-        
-        # Rename the executable to include app name
-        local original_exe="$output_dir/cloudtolocalllm_$app_name"
-        local generic_exe="$output_dir/$(basename "$app_dir")"
-        
-        if [ -f "$generic_exe" ]; then
-            mv "$generic_exe" "$original_exe"
+
+        # Handle executable naming - different apps have different naming patterns
+        local target_exe="$output_dir/cloudtolocalllm_$app_name"
+        local found_exe=""
+
+        # Find the actual executable in the build output
+        if [ -f "$output_dir/cloudtolocalllm_$app_name" ]; then
+            found_exe="$output_dir/cloudtolocalllm_$app_name"
+        elif [ -f "$output_dir/cloudtolocalllm" ]; then
+            found_exe="$output_dir/cloudtolocalllm"
+        elif [ -f "$output_dir/$app_name" ]; then
+            found_exe="$output_dir/$app_name"
         fi
-        
-        print_status "$app_name built successfully"
+
+        # Rename to standardized format if needed
+        if [ -n "$found_exe" ] && [ "$found_exe" != "$target_exe" ]; then
+            mv "$found_exe" "$target_exe"
+        fi
+
+        if [ -f "$target_exe" ]; then
+            print_status "$app_name built successfully"
+        else
+            print_error "$app_name executable not found after build"
+            exit 1
+        fi
     else
         print_error "$app_name build artifacts not found"
         exit 1
@@ -165,9 +180,11 @@ create_package() {
     mkdir -p "$package_dir"/{bin,lib,data,scripts,config}
     
     # Copy executables
-    for app in chat tray settings; do
+    for app in main chat tray settings; do
         if [ -f "$PROJECT_ROOT/build/$app/cloudtolocalllm_$app" ]; then
             cp "$PROJECT_ROOT/build/$app/cloudtolocalllm_$app" "$package_dir/bin/"
+        else
+            print_warning "Executable for $app not found at $PROJECT_ROOT/build/$app/cloudtolocalllm_$app"
         fi
     done
 
@@ -198,7 +215,8 @@ create_package() {
 
 ## Applications
 
-- \`bin/cloudtolocalllm_chat\` - Main ChatGPT-like interface
+- \`bin/cloudtolocalllm_main\` - Main ChatGPT-like interface with system tray integration
+- \`bin/cloudtolocalllm_chat\` - Standalone chat interface
 - \`bin/cloudtolocalllm_tray\` - Flutter-only system tray service
 - \`bin/cloudtolocalllm_settings\` - Connection management and Ollama testing
 
@@ -218,7 +236,7 @@ EOF
 run_tests() {
     print_info "Running tests for all applications..."
     
-    for app in shared chat tray settings; do
+    for app in shared main chat tray settings; do
         if [ -d "$PROJECT_ROOT/apps/$app" ]; then
             print_info "Testing $app..."
             run_flutter_command "$app" "flutter test"
@@ -233,7 +251,7 @@ display_summary() {
     print_info "Build Summary:"
     echo ""
     
-    for app in chat tray settings; do
+    for app in main chat tray settings; do
         local exe_path="$PROJECT_ROOT/build/$app/cloudtolocalllm_$app"
         if [ -f "$exe_path" ]; then
             local size=$(du -h "$exe_path" | cut -f1)
@@ -277,6 +295,7 @@ main() {
     
     # Build applications in order
     print_info "Building applications..."
+    build_app "main"
     build_app "chat"
     build_app "tray"
     build_app "settings"
