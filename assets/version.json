@@ -1,13 +1,6 @@
 {
-  "version": "3.3.1",
-  "build_number": "002",
-  "build_date": "2025-01-27T01:02:02Z",
-  "git_commit": "unified-arch",
-  "architecture": "unified-flutter-native",
-  "features": [
-    "integrated_system_tray",
-    "tunnel_manager_service",
-    "python_free_architecture",
-    "single_executable"
-  ]
+  "version": "3.4.0",
+  "build_number": "001",
+  "build_date": "2025-06-08T14:04:17Z",
+  "git_commit": "7e86375"
 }
