@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# Push CloudToLocalLLM Multi-Container Architecture to Live
-set -e
+# Push CloudToLocalLLM Multi-Container Architecture to Live - Automated Mode
+# This script runs in fully automated mode without interactive prompts
+# All deployment decisions must be made through command-line arguments
+
+set -e  # Exit on any error
+set -u  # Exit on undefined variables
+set -o pipefail  # Exit on pipe failures
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,42 +42,67 @@ log_error() {
 # Show usage
 show_usage() {
     cat << EOF
-CloudToLocalLLM Live Deployment Script
+CloudToLocalLLM Live Deployment Script - Automated Mode
 
 Usage: $0 [options]
 
 Options:
-  --backup          Create backup before deployment
-  --force           Force deployment without confirmation
-  --ssl-renew       Renew SSL certificates
-  --rollback        Rollback to previous deployment
-  --status          Check current deployment status
-  --help            Show this help message
+  -f, --force           Skip all safety checks and proceed with deployment
+  -s, --skip-backup     Skip backup creation to speed up deployment
+  -v, --verbose         Enable detailed logging output
+  -d, --dry-run         Show what would be deployed without executing
+  --ssl-renew           Renew SSL certificates during deployment
+  --rollback            Rollback to previous deployment
+  --status              Check current deployment status only
+  -h, --help            Show this help message
+
+Deployment Modes:
+  $0                    # Standard automated deployment (includes backup)
+  $0 --force            # Fast deployment, skip safety checks
+  $0 --skip-backup      # Deploy without creating backup
+  $0 --dry-run          # Preview deployment actions
+  $0 --verbose          # Detailed logging for troubleshooting
 
 Examples:
-  $0                    # Standard deployment with confirmation
-  $0 --backup           # Deploy with backup
-  $0 --force            # Deploy without confirmation
-  $0 --status           # Check current status
+  $0                                    # Standard automated deployment
+  $0 --force --skip-backup              # Fastest deployment
+  $0 --verbose --dry-run                # Preview with detailed output
+  $0 --status                           # Check current status
+  $0 --rollback --force                 # Emergency rollback
+
+Note: This script runs in fully automated mode without interactive prompts.
+All deployment decisions must be made through command-line arguments.
 
 EOF
 }
 
 # Parse command line arguments
-BACKUP=false
+BACKUP=true          # Default to creating backup for safety
 FORCE=false
+SKIP_BACKUP=false
+VERBOSE=false
+DRY_RUN=false
 SSL_RENEW=false
 ROLLBACK=false
 STATUS_ONLY=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --backup)
-            BACKUP=true
+        -f|--force)
+            FORCE=true
             shift
             ;;
-        --force)
-            FORCE=true
+        -s|--skip-backup)
+            SKIP_BACKUP=true
+            BACKUP=false
+            shift
+            ;;
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -d|--dry-run)
+            DRY_RUN=true
             shift
             ;;
         --ssl-renew)
@@ -87,7 +117,7 @@ while [[ $# -gt 0 ]]; do
             STATUS_ONLY=true
             shift
             ;;
-        --help)
+        -h|--help)
             show_usage
             exit 0
             ;;
@@ -99,23 +129,91 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Apply verbose logging if requested
+if [ "$VERBOSE" = true ]; then
+    set -x
+    log_info "Verbose logging enabled"
+fi
+
+# Show dry-run notice
+if [ "$DRY_RUN" = true ]; then
+    log_warning "DRY RUN MODE: No actual changes will be made"
+    log_info "This will show what would be deployed without executing"
+fi
+
+# Validate prerequisites
+validate_prerequisites() {
+    local errors=0
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would validate prerequisites"
+        return 0
+    fi
+
+    log_info "Validating prerequisites..."
+
+    # Check if we're in a git repository
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        log_error "Not in a Git repository"
+        ((errors++))
+    fi
+
+    # Check if we have uncommitted changes (unless force mode)
+    if [ "$FORCE" = false ] && ! git diff --quiet; then
+        log_warning "You have uncommitted changes"
+        if [ "$VERBOSE" = true ]; then
+            git status --porcelain
+        fi
+    fi
+
+    # Check required commands
+    for cmd in git ssh curl docker; do
+        if ! command -v "$cmd" &> /dev/null; then
+            log_error "Required command not found: $cmd"
+            ((errors++))
+        fi
+    done
+
+    # Check if we can reach GitHub
+    if ! curl -s --connect-timeout 5 https://github.com > /dev/null; then
+        log_warning "Cannot reach GitHub - network connectivity may be limited"
+    fi
+
+    if [ $errors -gt 0 ]; then
+        log_error "Prerequisites validation failed with $errors errors"
+        exit 1
+    fi
+
+    log_success "Prerequisites validation passed"
+}
+
 # Check if we can connect to VPS
 check_vps_connection() {
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would check VPS connection to $VPS_USER@$VPS_HOST"
+        return 0
+    fi
+
     log_info "Checking VPS connection..."
-    
+
     if ! ssh -o ConnectTimeout=10 "$VPS_USER@$VPS_HOST" "echo 'Connection successful'" &> /dev/null; then
         log_error "Cannot connect to VPS: $VPS_USER@$VPS_HOST"
         log_error "Please check your SSH configuration and VPS status"
         exit 1
     fi
-    
+
     log_success "VPS connection verified"
 }
 
 # Check current deployment status
 check_deployment_status() {
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would check current deployment status on VPS"
+        return 0
+    fi
+
     log_info "Checking current deployment status..."
-    
+
     ssh "$VPS_USER@$VPS_HOST" << 'EOF'
         cd /opt/cloudtolocalllm
         
@@ -150,9 +248,19 @@ EOF
 
 # Create backup on VPS
 create_backup() {
+    if [ "$SKIP_BACKUP" = true ]; then
+        log_info "Skipping backup creation (--skip-backup specified)"
+        return 0
+    fi
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would create backup on VPS"
+        return 0
+    fi
+
     if [ "$BACKUP" = true ]; then
         log_info "Creating backup on VPS..."
-        
+
         ssh "$VPS_USER@$VPS_HOST" << 'EOF'
             cd /opt/cloudtolocalllm
             
@@ -188,15 +296,24 @@ EOF
 
 # Push code to VPS
 push_code() {
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would push code to VPS:"
+        log_info "  - Commit local changes"
+        log_info "  - Push to GitHub"
+        log_info "  - Pull changes on VPS"
+        log_info "  - Make scripts executable"
+        return 0
+    fi
+
     log_info "Pushing code to VPS..."
-    
+
     # First, commit and push to GitHub
     cd "$PROJECT_ROOT"
-    
+
     log_info "Committing changes locally..."
     git add .
-    git commit -m "Deploy multi-container architecture to production" || log_warning "No changes to commit"
-    
+    git commit -m "Deploy v3.3.1 unified settings interface to production" || log_warning "No changes to commit"
+
     log_info "Pushing to GitHub..."
     git push origin master
     
@@ -223,8 +340,18 @@ EOF
 
 # Deploy multi-container architecture
 deploy_multi_container() {
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would deploy multi-container architecture:"
+        log_info "  - Stop existing containers"
+        log_info "  - Build Flutter web application"
+        log_info "  - Build documentation (if exists)"
+        log_info "  - Install API backend dependencies"
+        log_info "  - Deploy with multi-container script"
+        return 0
+    fi
+
     log_info "Deploying multi-container architecture..."
-    
+
     ssh "$VPS_USER@$VPS_HOST" << EOF
         cd /opt/cloudtolocalllm
         
@@ -273,8 +400,16 @@ EOF
 
 # Verify deployment
 verify_deployment() {
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would verify deployment:"
+        log_info "  - Check container status"
+        log_info "  - Verify service health"
+        log_info "  - Test URL accessibility"
+        return 0
+    fi
+
     log_info "Verifying deployment..."
-    
+
     # Wait for services to start
     sleep 30
     
@@ -324,8 +459,17 @@ EOF
 
 # Rollback deployment
 rollback_deployment() {
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would rollback deployment:"
+        log_info "  - Find latest backup"
+        log_info "  - Stop current containers"
+        log_info "  - Restore configuration"
+        log_info "  - Start containers"
+        return 0
+    fi
+
     log_info "Rolling back deployment..."
-    
+
     ssh "$VPS_USER@$VPS_HOST" << 'EOF'
         cd /opt/cloudtolocalllm
         
@@ -359,63 +503,85 @@ EOF
     log_success "Rollback completed"
 }
 
-# Confirmation prompt
+# Automated deployment confirmation (no interactive prompts)
 confirm_deployment() {
-    if [ "$FORCE" = false ]; then
-        echo ""
-        log_warning "You are about to deploy the multi-container architecture to PRODUCTION"
-        log_warning "This will:"
+    if [ "$FORCE" = false ] && [ "$DRY_RUN" = false ]; then
+        log_info "Automated deployment mode - proceeding with deployment"
+        log_warning "Deploying multi-container architecture to PRODUCTION"
+        log_info "This will:"
         echo "  • Stop existing containers"
         echo "  • Deploy new multi-container architecture"
         echo "  • Update all services (nginx-proxy, static-site, flutter-app, api-backend)"
         echo "  • Potentially cause brief downtime during transition"
         echo ""
-        read -p "Are you sure you want to continue? (yes/no): " -r
-        echo ""
-        
-        if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
-            log_info "Deployment cancelled by user"
-            exit 0
-        fi
+        log_info "Proceeding automatically (use --dry-run to preview without executing)"
+    elif [ "$FORCE" = true ]; then
+        log_info "Force mode enabled - skipping safety checks"
+    elif [ "$DRY_RUN" = true ]; then
+        log_info "Dry run mode - no actual deployment will occur"
     fi
 }
 
 # Main deployment process
 main() {
-    log_info "CloudToLocalLLM Live Deployment"
-    log_info "==============================="
-    
+    log_info "CloudToLocalLLM Live Deployment - Automated Mode"
+    log_info "================================================="
+
+    # Show configuration
+    if [ "$VERBOSE" = true ]; then
+        log_info "Configuration:"
+        log_info "  Force mode: $FORCE"
+        log_info "  Skip backup: $SKIP_BACKUP"
+        log_info "  Verbose: $VERBOSE"
+        log_info "  Dry run: $DRY_RUN"
+        log_info "  SSL renew: $SSL_RENEW"
+        log_info "  Rollback: $ROLLBACK"
+        log_info "  Status only: $STATUS_ONLY"
+        echo ""
+    fi
+
+    # Validate prerequisites unless in status-only mode
+    if [ "$STATUS_ONLY" = false ]; then
+        validate_prerequisites
+    fi
+
     check_vps_connection
-    
+
     if [ "$STATUS_ONLY" = true ]; then
         check_deployment_status
         exit 0
     fi
-    
+
     if [ "$ROLLBACK" = true ]; then
         confirm_deployment
         rollback_deployment
         verify_deployment
         exit 0
     fi
-    
+
+    # Standard deployment flow
     check_deployment_status
     confirm_deployment
     create_backup
     push_code
     deploy_multi_container
     verify_deployment
-    
-    log_success "🎉 Deployment completed successfully!"
-    log_info ""
-    log_info "URLs to test:"
-    log_info "  • Main site: https://cloudtolocalllm.online"
-    log_info "  • Documentation: https://docs.cloudtolocalllm.online"
-    log_info "  • Web app: https://app.cloudtolocalllm.online"
-    log_info "  • API health: https://app.cloudtolocalllm.online/api/health"
-    log_info ""
-    log_info "Monitor with:"
-    log_info "  ssh $VPS_USER@$VPS_HOST 'cd /opt/cloudtolocalllm && docker-compose -f docker-compose.multi.yml logs -f'"
+
+    if [ "$DRY_RUN" = true ]; then
+        log_success "🎉 Dry run completed successfully!"
+        log_info "No actual changes were made. Use without --dry-run to execute deployment."
+    else
+        log_success "🎉 Deployment completed successfully!"
+        log_info ""
+        log_info "URLs to test:"
+        log_info "  • Main site: https://cloudtolocalllm.online"
+        log_info "  • Documentation: https://docs.cloudtolocalllm.online"
+        log_info "  • Web app: https://app.cloudtolocalllm.online"
+        log_info "  • API health: https://app.cloudtolocalllm.online/api/health"
+        log_info ""
+        log_info "Monitor with:"
+        log_info "  ssh $VPS_USER@$VPS_HOST 'cd /opt/cloudtolocalllm && docker-compose -f docker-compose.multi.yml logs -f'"
+    fi
 }
 
 # Run main function
