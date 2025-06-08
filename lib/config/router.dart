@@ -12,6 +12,7 @@ import '../screens/settings/llm_provider_settings_screen.dart';
 import '../screens/settings/daemon_settings_screen.dart';
 import '../screens/settings/connection_status_screen.dart';
 import '../screens/tunnel_settings_screen.dart';
+import '../screens/unified_settings_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -60,10 +61,17 @@ class AppRouter {
           builder: (context, state) => const OllamaTestScreen(),
         ),
 
-        // Settings route - now displays tunnel settings as primary interface
+        // Settings route - unified settings interface with sidebar layout
         GoRoute(
           path: '/settings',
           name: 'settings',
+          builder: (context, state) => const UnifiedSettingsScreen(),
+        ),
+
+        // Tunnel Settings route (legacy/advanced tunnel configuration)
+        GoRoute(
+          path: '/settings/tunnels',
+          name: 'tunnel-settings',
           builder: (context, state) => const TunnelSettingsScreen(),
         ),
 

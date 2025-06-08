@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   // App Information
   static const String appName = 'CloudToLocalLLM';
-  static const String appVersion = '3.1.2'; // Updated by build scripts
+  static const String appVersion = '3.3.1'; // Updated by build scripts
   static const String appDescription =
       'Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.';
 
@@ -49,6 +49,11 @@ class AppConfig {
   static const bool enableDarkMode = true;
   static const bool enableAnalytics = false; // Disabled for privacy
   static const bool enableDebugMode = false;
+
+  // TEMPORARY: Debug version display for v3.3.1 beta testing
+  // TODO: Remove this feature after v3.3.1 testing phase is complete
+  // Set to false to disable version overlay across entire application
+  static const bool showDebugVersionOverlay = true;
 
   // Ollama Configuration (Direct Local Connection for Desktop)
   static const String defaultOllamaHost = 'localhost';
