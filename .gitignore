@@ -33,9 +33,13 @@
 # DISTRIBUTION AND BUILD DIRECTORIES - EXCLUDED
 # ============================================================================
 
-# Complete exclusion of distribution directory
+# Distribution directory - allow unified packages for git-based distribution
 dist/
-# Allow only small metadata files
+# Allow unified package files for v3.4.0+ git-based distribution
+!dist/cloudtolocalllm-3.4.0-x86_64.tar.gz
+!dist/cloudtolocalllm-3.4.0-x86_64.tar.gz.sha256
+!dist/cloudtolocalllm-3.4.0-x86_64-aur-info.txt
+# Allow small metadata files
 !dist/metadata/
 !dist/**/*.md5
 !dist/**/*.sha256
@@ -216,6 +220,8 @@ cloudtolocalllm-enhanced-tray*
 cloudtolocalllm-settings*
 cloudtolocalllm-v*.tar.gz
 cloudtolocalllm-*.tar.gz
+# Exception: Allow v3.4.0 unified package for git-based distribution
+!cloudtolocalllm-3.4.0-x86_64.tar.gz
 
 # Version-specific binaries
 cloudtolocalllm-*-stable.tar.gz

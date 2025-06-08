@@ -213,6 +213,55 @@ build_flutter_web() {
     log_success "Flutter web build completed"
 }
 
+# Update static distribution files from repository
+update_static_distribution() {
+    log "Updating static distribution files from repository..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would copy distribution files from dist/ to static_homepage/"
+        return 0
+    fi
+
+    # Copy unified package files from repository to static homepage
+    local dist_files=(
+        "cloudtolocalllm-3.4.0-x86_64.tar.gz"
+        "cloudtolocalllm-3.4.0-x86_64.tar.gz.sha256"
+        "cloudtolocalllm-3.4.0-x86_64-aur-info.txt"
+    )
+
+    for file in "${dist_files[@]}"; do
+        if [[ -f "dist/$file" ]]; then
+            log_verbose "Copying $file to static homepage..."
+            cp "dist/$file" "static_homepage/"
+            chmod 644 "static_homepage/$file"
+        else
+            log_warning "Distribution file not found: dist/$file"
+        fi
+    done
+
+    # Update download metadata
+    local version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
+    local package_file="cloudtolocalllm-${version}-x86_64.tar.gz"
+
+    if [[ -f "static_homepage/$package_file" ]]; then
+        local package_size=$(du -h "static_homepage/$package_file" | cut -f1)
+
+        cat > "static_homepage/latest.json" << EOF
+{
+  "version": "$version",
+  "package_file": "$package_file",
+  "package_size": "$package_size",
+  "upload_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "download_url": "https://cloudtolocalllm.online/$package_file"
+}
+EOF
+        chmod 644 "static_homepage/latest.json"
+        log_verbose "Updated download metadata"
+    fi
+
+    log_success "Static distribution files updated from repository"
+}
+
 # Manage containers
 manage_containers() {
     log "Managing Docker containers..."
@@ -322,6 +371,7 @@ main() {
     create_backup
     pull_latest_changes
     build_flutter_web
+    update_static_distribution
     manage_containers
     perform_health_checks
     display_summary

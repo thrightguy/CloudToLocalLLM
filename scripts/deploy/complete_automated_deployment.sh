@@ -225,21 +225,11 @@ phase4_distribution_execution() {
     log_phase 4 "Distribution Execution"
     
     log "Executing distribution deployment..."
-    
-    # Upload to static distribution
-    local upload_flags=""
-    if [[ "$FORCE" == "true" ]]; then
-        upload_flags="$upload_flags --force"
-    fi
-    if [[ "$VERBOSE" == "true" ]]; then
-        upload_flags="$upload_flags --verbose"
-    fi
-    if [[ "$DRY_RUN" == "true" ]]; then
-        upload_flags="$upload_flags --dry-run"
-    fi
-    
-    log_verbose "Uploading to static distribution..."
-    ./scripts/deploy/upload_static_distribution.sh $upload_flags
+
+    # Note: Static distribution files are now distributed via git repository
+    # The unified package files in dist/ are committed to the repository
+    # and will be pulled to the VPS during deployment
+    log_verbose "Using git repository as single source of truth for distribution files..."
     
     # Test AUR package
     local aur_flags="--skip-install"
@@ -322,7 +312,8 @@ phase6_operational_readiness() {
     echo ""
     echo -e "${BLUE}📋 Deployment Summary:${NC}"
     echo "  ✅ Version: v3.4.0+001"
-    echo "  ✅ Static Distribution: https://cloudtolocalllm.online/download/"
+    echo "  ✅ Git-based Distribution: Repository as single source of truth"
+    echo "  ✅ Static Download: https://cloudtolocalllm.online/cloudtolocalllm-3.4.0-x86_64.tar.gz"
     echo "  ✅ Web Platform: https://app.cloudtolocalllm.online"
     echo "  ✅ AUR Package: Ready for submission"
     echo ""
