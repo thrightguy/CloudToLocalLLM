@@ -7,7 +7,7 @@
 pkgname=cloudtolocalllm
 pkgver=3.4.0
 pkgrel=1
-pkgdesc="CloudToLocalLLM - Enhanced Architecture with System Tray Integration and Local LLM Management (Unified 145MB package)"
+pkgdesc="CloudToLocalLLM - Unified Flutter Architecture with Integrated System Tray and Local LLM Management (19MB package)"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
 license=('MIT')
@@ -23,7 +23,6 @@ depends=(
     'dbus'
     'xdg-utils'
     'hicolor-icon-theme'
-    'python'  # For tray daemon
     'wmctrl'  # For window management
 )
 makedepends=()
@@ -36,18 +35,18 @@ provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
 
-# NOTE: CloudToLocalLLM v3.2.0+ uses GitHub releases for distribution
-# All versions are now distributed via GitHub releases for better reliability
-# AUR package downloads pre-built binaries from GitHub release assets
+# NOTE: CloudToLocalLLM v3.4.0+ uses static distribution for deployment
+# All versions are now distributed via static download for better reliability
+# AUR package downloads pre-built binaries from static download location
 
-# Download from GitHub releases
+# Download from static distribution
 source=(
-    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
-    "cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256"
+    "https://github.com/imrightguy/CloudToLocalLLM/archive/v${pkgver}.tar.gz"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://cloudtolocalllm.online/download/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 )
 sha256sums=(
-    '3d8d458bcc5445854f026306551e18c3e75aea133543d655f7a3ed9c213e907b'  # cloudtolocalllm-3.3.1-x86_64.tar.gz (FIXED)
-    'SKIP'  # Checksum file verification
+    'SKIP'  # Source code archive
+    '6fd8d2178e879061a50627f217a4cb14a09160d2f9df8ceee40685e76adc7974'  # cloudtolocalllm-3.4.0-x86_64.tar.gz
 )
 
 prepare() {
@@ -55,35 +54,24 @@ prepare() {
 
     msg "Extracting unified CloudToLocalLLM binary package..."
 
-    # Verify checksum using downloaded SHA256 file
+    # Verify the unified package structure
     local package_file="cloudtolocalllm-${pkgver}-x86_64.tar.gz"
-    local checksum_file="${package_file}.sha256"
 
     if [[ ! -f "$package_file" ]]; then
         error "Unified binary package not found: $package_file"
         return 1
     fi
 
-    # Verify integrity using the downloaded checksum file
-    if [[ -f "$checksum_file" ]]; then
-        msg "Verifying package integrity..."
-        if ! sha256sum -c "$checksum_file"; then
-            error "Package integrity verification failed"
-            return 1
-        fi
-        msg "Package integrity verified successfully"
-    fi
-
     # Extract the package (already extracted by makepkg)
     # Verify extraction - the unified package extracts to cloudtolocalllm-${pkgver}-x86_64 directory
     if [[ ! -f "cloudtolocalllm-${pkgver}-x86_64/cloudtolocalllm" ]]; then
-        error "Main executable wrapper not found after extraction"
+        error "Main executable not found after extraction"
         return 1
     fi
 
-    # Verify the new package structure with app directories
-    if [[ ! -f "cloudtolocalllm-${pkgver}-x86_64/app/cloudtolocalllm" ]]; then
-        error "Main Flutter executable not found in app/ directory"
+    # Verify required libraries are present
+    if [[ ! -d "cloudtolocalllm-${pkgver}-x86_64/lib" ]]; then
+        error "Library directory not found in unified package"
         return 1
     fi
 
@@ -109,49 +97,20 @@ package() {
     # Copy all files from the unified package
     cp -r * "$pkgdir/usr/share/cloudtolocalllm/"
 
-    # Make all executables executable (new structure)
+    # Make the main executable executable (unified architecture)
     chmod +x "$pkgdir/usr/share/cloudtolocalllm/cloudtolocalllm"
-    chmod +x "$pkgdir/usr/share/cloudtolocalllm/cloudtolocalllm-main"
-    chmod +x "$pkgdir/usr/share/cloudtolocalllm/cloudtolocalllm-tunnel-manager"
 
-    # Make Flutter executables in app directories executable
-    if [[ -f "$pkgdir/usr/share/cloudtolocalllm/app/cloudtolocalllm" ]]; then
-        chmod +x "$pkgdir/usr/share/cloudtolocalllm/app/cloudtolocalllm"
-    fi
-    if [[ -f "$pkgdir/usr/share/cloudtolocalllm/main/cloudtolocalllm_main" ]]; then
-        chmod +x "$pkgdir/usr/share/cloudtolocalllm/main/cloudtolocalllm_main"
-    fi
-    if [[ -f "$pkgdir/usr/share/cloudtolocalllm/tunnel-manager/cloudtolocalllm_tunnel_manager" ]]; then
-        chmod +x "$pkgdir/usr/share/cloudtolocalllm/tunnel-manager/cloudtolocalllm_tunnel_manager"
-    fi
-
-    # Install Flutter application executables in /usr/bin
+    # Install Flutter application executable in /usr/bin
     install -dm755 "$pkgdir/usr/bin"
 
-    # Create system wrapper scripts that use the new package structure
+    # Create system wrapper script for unified architecture
     cat > "$pkgdir/usr/bin/cloudtolocalllm" << 'EOF'
 #!/bin/bash
-# CloudToLocalLLM v3.3.1 main application system wrapper
-cd /usr/share/cloudtolocalllm/app
+# CloudToLocalLLM v3.4.0+ unified application system wrapper
+cd /usr/share/cloudtolocalllm
 exec ./cloudtolocalllm "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
-
-    cat > "$pkgdir/usr/bin/cloudtolocalllm-main" << 'EOF'
-#!/bin/bash
-# CloudToLocalLLM main chat application system wrapper
-cd /usr/share/cloudtolocalllm/main
-exec ./cloudtolocalllm_main "$@"
-EOF
-    chmod +x "$pkgdir/usr/bin/cloudtolocalllm-main"
-
-    cat > "$pkgdir/usr/bin/cloudtolocalllm-tunnel-manager" << 'EOF'
-#!/bin/bash
-# CloudToLocalLLM tunnel manager application system wrapper
-cd /usr/share/cloudtolocalllm/tunnel-manager
-exec ./cloudtolocalllm_tunnel_manager "$@"
-EOF
-    chmod +x "$pkgdir/usr/bin/cloudtolocalllm-tunnel-manager"
 
     # Install desktop entry from the aur-package directory
     cd "$srcdir/.."
