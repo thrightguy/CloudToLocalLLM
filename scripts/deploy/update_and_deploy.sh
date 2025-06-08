@@ -126,17 +126,18 @@ create_backup() {
 
     log "Creating deployment backup..."
 
-    local backup_dir="/opt/cloudtolocalllm-backup-$(date +%Y%m%d-%H%M%S)"
+    # Use backups directory within the project (owned by cloudllm user)
+    local backup_dir="backups/backup-$(date +%Y%m%d-%H%M%S)"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log "DRY RUN: Would create backup at $backup_dir"
         return 0
     fi
 
-    # Create backup of current deployment
+    # Create backup of current deployment (no sudo needed)
     if [[ -d "build/web" ]]; then
-        sudo mkdir -p "$backup_dir"
-        sudo cp -r build/web "$backup_dir/"
+        mkdir -p "$backup_dir"
+        cp -r build/web "$backup_dir/"
         log_verbose "Backup created at: $backup_dir"
         log_success "Backup created"
     else

@@ -57,8 +57,10 @@ log_success "In project directory: $(pwd)"
 # Step 2: Create backup
 log_info "Step 2: Creating backup..."
 if [[ -d "$PROJECT_DIR" ]]; then
-    sudo cp -r "$PROJECT_DIR" "$BACKUP_DIR" 2>/dev/null || cp -r "$PROJECT_DIR" "$BACKUP_DIR"
-    log_success "Backup created: $BACKUP_DIR"
+    # Create backup within project directory (no sudo needed)
+    mkdir -p "$PROJECT_DIR/backups"
+    cp -r "$PROJECT_DIR" "$PROJECT_DIR/backups/backup-$(date +%Y%m%d-%H%M%S)"
+    log_success "Backup created in project backups directory"
 fi
 
 # Step 3: Pull latest changes with black screen fixes

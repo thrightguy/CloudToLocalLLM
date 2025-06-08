@@ -25,8 +25,10 @@ echo ""
 # Step 1: Backup Current Deployment
 echo "💾 Step 1: Creating backup of current deployment..."
 if [ -d "$PROJECT_DIR" ]; then
-    sudo cp -r "$PROJECT_DIR" "$BACKUP_DIR"
-    echo "✅ Backup created at: $BACKUP_DIR"
+    # Create backup within project directory (no sudo needed)
+    mkdir -p "$PROJECT_DIR/backups"
+    cp -r "$PROJECT_DIR" "$PROJECT_DIR/backups/backup-$(date +%Y%m%d-%H%M%S)"
+    echo "✅ Backup created in project backups directory"
 else
     echo "⚠️  No existing deployment found to backup"
 fi
@@ -51,44 +53,43 @@ echo ""
 echo "📦 Step 4: Installing uploaded binaries..."
 if [ -d "$TEMP_DIST" ]; then
     echo "Moving distribution files from $TEMP_DIST to $PROJECT_DIR..."
-    
-    # Create dist directory if it doesn't exist
-    sudo mkdir -p "$PROJECT_DIR/dist"
-    
+
+    # Create dist directory if it doesn't exist (no sudo needed)
+    mkdir -p "$PROJECT_DIR/dist"
+
     # Move AppImage (if available)
     if [ -f "$TEMP_DIST/CloudToLocalLLM-3.0.1-x86_64.AppImage" ]; then
-        sudo mv "$TEMP_DIST/CloudToLocalLLM-3.0.1-x86_64.AppImage" "$PROJECT_DIR/dist/"
-        sudo chmod +x "$PROJECT_DIR/dist/CloudToLocalLLM-3.0.1-x86_64.AppImage"
+        mv "$TEMP_DIST/CloudToLocalLLM-3.0.1-x86_64.AppImage" "$PROJECT_DIR/dist/"
+        chmod +x "$PROJECT_DIR/dist/CloudToLocalLLM-3.0.1-x86_64.AppImage"
         echo "✅ AppImage v3.0.1 installed and made executable"
     fi
 
     # Move binary package (split files will be reassembled automatically)
     if [ -f "$TEMP_DIST/cloudtolocalllm-3.0.1-x86_64.tar.gz" ]; then
-        sudo mv "$TEMP_DIST/cloudtolocalllm-3.0.1-x86_64.tar.gz" "$PROJECT_DIR/dist/"
+        mv "$TEMP_DIST/cloudtolocalllm-3.0.1-x86_64.tar.gz" "$PROJECT_DIR/dist/"
         echo "✅ Binary package v3.0.1 installed"
     fi
-    
+
     # Move tray daemon files
     if [ -d "$TEMP_DIST/tray_daemon" ]; then
-        sudo mv "$TEMP_DIST/tray_daemon" "$PROJECT_DIR/dist/"
-        sudo chmod +x "$PROJECT_DIR/dist/tray_daemon/linux-x64/cloudtolocalllm-enhanced-tray"
-        sudo chmod +x "$PROJECT_DIR/dist/tray_daemon/linux-x64/cloudtolocalllm-settings"
-        sudo chmod +x "$PROJECT_DIR/dist/tray_daemon/linux-x64/start_enhanced_daemon.sh"
+        mv "$TEMP_DIST/tray_daemon" "$PROJECT_DIR/dist/"
+        chmod +x "$PROJECT_DIR/dist/tray_daemon/linux-x64/cloudtolocalllm-enhanced-tray"
+        chmod +x "$PROJECT_DIR/dist/tray_daemon/linux-x64/cloudtolocalllm-settings"
+        chmod +x "$PROJECT_DIR/dist/tray_daemon/linux-x64/start_enhanced_daemon.sh"
         echo "✅ Tray daemon files installed and made executable"
     fi
-    
+
     # Move deployment summary
     if [ -f "$TEMP_DIST/DEPLOYMENT_SUMMARY.txt" ]; then
-        sudo mv "$TEMP_DIST/DEPLOYMENT_SUMMARY.txt" "$PROJECT_DIR/dist/"
+        mv "$TEMP_DIST/DEPLOYMENT_SUMMARY.txt" "$PROJECT_DIR/dist/"
         echo "✅ Deployment summary installed"
     fi
-    
-    # Set proper ownership
-    sudo chown -R "$USER:$USER" "$PROJECT_DIR/dist"
-    echo "✅ Ownership set to $USER:$USER"
-    
+
+    # Files are already owned by cloudllm user (no chown needed)
+    echo "✅ Distribution files installed with proper ownership"
+
     # Clean up temp directory
-    sudo rm -rf "$TEMP_DIST"
+    rm -rf "$TEMP_DIST"
     echo "✅ Temporary files cleaned up"
 else
     echo "❌ Error: Distribution files not found at $TEMP_DIST"
@@ -100,20 +101,22 @@ echo ""
 # Step 5: Run VPS Deployment Script
 echo "🔧 Step 5: Running VPS deployment script..."
 if [ -f "$PROJECT_DIR/scripts/deploy/update_and_deploy.sh" ]; then
-    sudo "$PROJECT_DIR/scripts/deploy/update_and_deploy.sh"
+    # Run deployment script as cloudllm user (no sudo needed)
+    "$PROJECT_DIR/scripts/deploy/update_and_deploy.sh" --force
     echo "✅ VPS deployment script completed"
 else
     echo "⚠️  VPS deployment script not found, proceeding with manual deployment..."
-    
+
     # Manual deployment steps
     echo "📦 Building Flutter web application..."
     cd "$PROJECT_DIR"
     flutter build web --release
     echo "✅ Flutter web build completed"
-    
+
     echo "🐳 Restarting Docker containers..."
-    sudo docker compose -f docker-compose.multi.yml down
-    sudo docker compose -f docker-compose.multi.yml up -d --build
+    # Use docker compose without sudo (cloudllm user is in docker group)
+    docker compose -f docker-compose.yml down
+    docker compose -f docker-compose.yml up -d --build
     echo "✅ Docker containers restarted"
 fi
 echo ""
@@ -121,12 +124,13 @@ echo ""
 # Step 6: Verify Docker Containers
 echo "🔍 Step 6: Verifying Docker container health..."
 echo "Container status:"
-sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+# Use docker without sudo (cloudllm user is in docker group)
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 echo ""
 
 echo "Container health check:"
-for container in cloudtolocalllm-webapp cloudtolocalllm-api cloudtolocalllm-nginx cloudtolocalllm-docs; do
-    if sudo docker ps | grep -q "$container"; then
+for container in cloudtolocalllm-webapp cloudtolocalllm-postfix-mail cloudtolocalllm-certbot; do
+    if docker ps | grep -q "$container"; then
         echo "✅ $container: Running"
     else
         echo "❌ $container: Not running"
