@@ -21,7 +21,7 @@ DIST_DIR="$PROJECT_ROOT/dist"
 # VPS Configuration
 VPS_HOST="cloudtolocalllm.online"
 VPS_USER="cloudllm"
-VPS_DOWNLOAD_DIR="/var/www/html/download"
+VPS_DOWNLOAD_DIR="/opt/cloudtolocalllm/static_homepage/downloads"
 
 # Flags
 DRY_RUN=false
@@ -297,7 +297,7 @@ update_download_metadata() {
   \"package_file\": \"$package_basename\",
   \"package_size\": \"$package_size\",
   \"upload_date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
-  \"download_url\": \"https://cloudtolocalllm.online/download/$package_basename\"
+  \"download_url\": \"https://cloudtolocalllm.online/$package_basename\"
 }
 EOF"
 
@@ -330,7 +330,7 @@ display_summary() {
     echo -e "${GREEN}=================${NC}"
     echo "Version: $version"
     echo "Package: $package_basename"
-    echo "Download URL: https://cloudtolocalllm.online/download/$package_basename"
+    echo "Download URL: https://cloudtolocalllm.online/$package_basename"
     echo ""
     
     if [[ "$DRY_RUN" == "true" ]]; then

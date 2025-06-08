@@ -240,11 +240,11 @@ sha256sums=('SKIP' '$checksum')
 # Static download URL:
 source=(
     "https://github.com/imrightguy/CloudToLocalLLM/archive/v\$pkgver.tar.gz"
-    "https://cloudtolocalllm.online/download/cloudtolocalllm-\${pkgver}-x86_64.tar.gz"
+    "https://cloudtolocalllm.online/cloudtolocalllm-\${pkgver}-x86_64.tar.gz"
 )
 
 # Deployment workflow for static distribution:
-# 1. Upload cloudtolocalllm-$VERSION-x86_64.tar.gz to https://cloudtolocalllm.online/download/
+# 1. Upload cloudtolocalllm-$VERSION-x86_64.tar.gz to https://cloudtolocalllm.online/
 # 2. Update aur-package/PKGBUILD with new version and checksum
 # 3. Test AUR package build locally
 # 4. Submit updated PKGBUILD to AUR

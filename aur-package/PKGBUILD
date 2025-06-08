@@ -42,7 +42,7 @@ install=cloudtolocalllm.install
 # Download from static distribution
 source=(
     "https://github.com/imrightguy/CloudToLocalLLM/archive/v${pkgver}.tar.gz"
-    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://cloudtolocalllm.online/download/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://cloudtolocalllm.online/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 )
 sha256sums=(
     'SKIP'  # Source code archive
