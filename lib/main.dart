@@ -12,6 +12,7 @@ import 'services/unified_connection_service.dart';
 import 'services/tunnel_manager_service.dart';
 import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
+import 'widgets/debug_version_overlay.dart';
 
 // Global navigator key for navigation from system tray
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -233,33 +234,37 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
   Widget _buildMainApp() {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
-        return MaterialApp.router(
-          // App configuration
-          title: AppConfig.appName,
-          debugShowCheckedModeBanner: false,
+        return DebugVersionWrapper(
+          child: MaterialApp.router(
+            // App configuration
+            title: AppConfig.appName,
+            debugShowCheckedModeBanner: false,
 
-          // Theme configuration
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: AppConfig.enableDarkMode
-              ? ThemeMode.dark
-              : ThemeMode.light,
+            // Theme configuration
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: AppConfig.enableDarkMode
+                ? ThemeMode.dark
+                : ThemeMode.light,
 
-          // Router configuration
-          routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
+            // Router configuration
+            routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
 
-          // Builder for additional configuration
-          builder: (context, child) {
-            return MediaQuery(
-              // Ensure text scaling doesn't break the UI
-              data: MediaQuery.of(context).copyWith(
-                textScaler: TextScaler.linear(
-                  MediaQuery.of(context).textScaler.scale(1.0).clamp(0.8, 1.2),
+            // Builder for additional configuration
+            builder: (context, child) {
+              return MediaQuery(
+                // Ensure text scaling doesn't break the UI
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(
+                    MediaQuery.of(
+                      context,
+                    ).textScaler.scale(1.0).clamp(0.8, 1.2),
+                  ),
                 ),
-              ),
-              child: child!,
-            );
-          },
+                child: child!,
+              );
+            },
+          ),
         );
       },
     );
