@@ -129,6 +129,7 @@ obtain_certificate() {
         --force-renewal \
         -d "$DOMAIN" \
         -d "app.$DOMAIN" \
+        -d "docs.$DOMAIN" \
         -d "mail.$DOMAIN" 2>&1
     
     local staging_result=$?
@@ -147,6 +148,7 @@ obtain_certificate() {
             --force-renewal \
             -d "$DOMAIN" \
             -d "app.$DOMAIN" \
+            -d "docs.$DOMAIN" \
             -d "mail.$DOMAIN" 2>&1
         
         local cert_result=$?

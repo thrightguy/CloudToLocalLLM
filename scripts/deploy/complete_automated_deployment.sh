@@ -73,8 +73,8 @@ OPTIONS:
     --help              Show this help message
 
 EXAMPLES:
-    $0                  # Interactive deployment
-    $0 --force          # Fully automated deployment
+    $0                  # Non-interactive deployment with 3-second delay
+    $0 --force          # Fully automated deployment (CI/CD compatible)
     $0 --verbose        # Detailed logging
     $0 --dry-run        # Simulate entire deployment
 
@@ -353,16 +353,13 @@ main() {
     # Parse arguments
     parse_arguments "$@"
     
-    # Confirmation prompt (unless force or dry-run)
+    # Non-interactive execution - no prompts allowed
+    # Use --force flag to bypass safety checks in automated environments
     if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
-        echo -e "${YELLOW}⚠️  About to execute complete production deployment${NC}"
-        echo -e "${YELLOW}This will deploy CloudToLocalLLM v3.4.0+001 to all distribution channels${NC}"
-        read -p "Continue? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log "Deployment cancelled by user"
-            exit 0
-        fi
+        log_warning "Production deployment starting without --force flag"
+        log_warning "Use --force flag for automated/CI environments"
+        log "Proceeding with deployment in 3 seconds..."
+        sleep 3
     fi
     
     # Execute six-phase deployment workflow

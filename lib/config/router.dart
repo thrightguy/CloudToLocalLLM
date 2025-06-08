@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,11 @@ import '../screens/settings/connection_status_screen.dart';
 import '../screens/tunnel_settings_screen.dart';
 import '../screens/unified_settings_screen.dart';
 
+// Marketing screens (web-only)
+import '../screens/marketing/homepage_screen.dart';
+import '../screens/marketing/download_screen.dart';
+import '../screens/marketing/documentation_screen.dart';
+
 /// Application router configuration using GoRouter
 class AppRouter {
   static GoRouter createRouter({GlobalKey<NavigatorState>? navigatorKey}) {
@@ -22,11 +28,57 @@ class AppRouter {
       initialLocation: '/',
       debugLogDiagnostics: false,
       routes: [
-        // Home route
+        // Home route - platform-specific routing
         GoRoute(
           path: '/',
           name: 'home',
+          builder: (context, state) {
+            // Web: Show marketing homepage
+            // Desktop: Redirect to chat interface
+            if (kIsWeb) {
+              return const HomepageScreen();
+            } else {
+              // For desktop, home is the chat interface
+              return const HomeScreen();
+            }
+          },
+        ),
+
+        // Chat route - main app interface (accessible via app subdomain)
+        GoRoute(
+          path: '/chat',
+          name: 'chat',
           builder: (context, state) => const HomeScreen(),
+        ),
+
+        // Download route - web-only marketing page
+        GoRoute(
+          path: '/download',
+          name: 'download',
+          builder: (context, state) {
+            // Only available on web platform
+            if (kIsWeb) {
+              return const DownloadScreen();
+            } else {
+              // Redirect desktop users to main app
+              return const HomeScreen();
+            }
+          },
+        ),
+
+        // Documentation route - web-only
+        GoRoute(
+          path: '/docs',
+          name: 'docs',
+          builder: (context, state) {
+            // Only available on web platform
+            if (kIsWeb) {
+              return const DocumentationScreen();
+            } else {
+              // Redirect desktop users to main app
+              return const HomeScreen();
+            }
+          },
         ),
 
         // Login route
@@ -103,20 +155,28 @@ class AppRouter {
         ),
       ],
 
-      // Redirect logic for authentication
+      // Redirect logic for authentication and domain-based routing
       redirect: (context, state) {
         final authService = context.read<AuthService>();
         final isAuthenticated = authService.isAuthenticated.value;
         final isLoggingIn = state.matchedLocation == '/login';
         final isCallback = state.matchedLocation == '/callback';
         final isLoading = state.matchedLocation == '/loading';
+        final isHomepage = state.matchedLocation == '/' && kIsWeb;
+        final isDownload = state.matchedLocation == '/download' && kIsWeb;
+        final isDocs = state.matchedLocation == '/docs' && kIsWeb;
+
+        // Allow access to marketing pages on web without authentication
+        if (kIsWeb && (isHomepage || isDownload || isDocs)) {
+          return null;
+        }
 
         // Allow access to login, callback, and loading pages
         if (isLoggingIn || isCallback || isLoading) {
           return null;
         }
 
-        // Redirect to login if not authenticated
+        // Redirect to login if not authenticated (for app routes)
         if (!isAuthenticated) {
           return '/login';
         }

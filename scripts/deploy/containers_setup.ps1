@@ -57,7 +57,7 @@ echo -e "${YELLOW}Getting SSL certificates...${NC}"
 apt-get update && apt-get install -y certbot
 certbot certonly --standalone --force-renewal --non-interactive --agree-tos \
   --email admin@cloudtolocalllm.online \
-  -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d api.cloudtolocalllm.online -d users.cloudtolocalllm.online
+  -d cloudtolocalllm.online -d www.cloudtolocalllm.online -d app.cloudtolocalllm.online -d docs.cloudtolocalllm.online -d api.cloudtolocalllm.online -d users.cloudtolocalllm.online
 
 # Copy certificates to nginx ssl directory
 echo -e "${YELLOW}Copying SSL certificates...${NC}"

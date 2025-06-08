@@ -567,9 +567,7 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     }
 
     try {
-      final tunnelManager = context.read<TunnelManagerService>();
-
-      // Create new configuration
+      // Create new configuration and apply it
       final newConfig = TunnelConfig(
         enableLocalOllama: _enableLocalOllama,
         enableCloudProxy: _enableCloudProxy,
@@ -582,8 +580,9 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
         ),
       );
 
-      // Apply configuration (this would need to be implemented in TunnelManagerService)
-      // await tunnelManager.updateConfiguration(newConfig);
+      // Apply configuration to tunnel manager
+      final tunnelManager = context.read<TunnelManagerService>();
+      await tunnelManager.updateConfiguration(newConfig);
 
       setState(() {
         _isModified = false;

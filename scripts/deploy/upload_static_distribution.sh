@@ -66,9 +66,9 @@ OPTIONS:
     --help              Show this help message
 
 EXAMPLES:
-    $0                  # Upload with confirmation
+    $0                  # Non-interactive upload with 3-second delay
     $0 --dry-run        # Simulate upload
-    $0 --force          # Upload without prompts
+    $0 --force          # Upload without prompts (CI/CD compatible)
     $0 --verbose        # Detailed logging
 
 EXIT CODES:
@@ -358,15 +358,13 @@ main() {
     find_package_files
     validate_package_integrity
     
-    # Confirmation prompt (unless force or dry-run)
+    # Non-interactive execution - no prompts allowed
+    # Use --force flag to bypass safety checks in automated environments
     if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
-        echo -e "${YELLOW}⚠️  About to upload package to production server${NC}"
-        read -p "Continue? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log "Upload cancelled by user"
-            exit 0
-        fi
+        log_warning "Production upload starting without --force flag"
+        log_warning "Use --force flag for automated/CI environments"
+        log "Proceeding with upload in 3 seconds..."
+        sleep 3
     fi
     
     create_remote_structure

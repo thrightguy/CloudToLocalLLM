@@ -13,40 +13,44 @@ CloudToLocalLLM implements a comprehensive multi-component architecture designed
 
 ---
 
-## 🏗️ **1. Enhanced System Tray Architecture**
+## 🏗️ **1. Unified Flutter-Native System Tray Architecture**
 
 ### **Overview**
-The Enhanced System Tray Architecture provides independent operation, universal connection management, and enhanced reliability through a completely independent system tray daemon.
+CloudToLocalLLM v3.4.0+ implements a unified Flutter-native system tray architecture that integrates system tray functionality directly into the main Flutter application using the `tray_manager` package. This modern approach eliminates external dependencies while providing robust cross-platform system tray support.
 
 ### **Core Components**
 
-#### **1.1 Enhanced Tray Daemon**
-- **Technology**: Python-based with pystray library
-- **Operation**: Independent background service
+#### **1.1 Native Tray Service**
+- **Technology**: Flutter-native with `tray_manager` package
+- **Location**: `lib/services/native_tray_service.dart`
+- **Operation**: Integrated within main Flutter application
 - **Responsibilities**:
-  - Universal connection broker for ALL connections
-  - Authentication token management
-  - System tray integration and UI
-  - Health monitoring and automatic reconnection
+  - Cross-platform system tray integration (Linux/Windows/macOS)
+  - Real-time connection status display with visual indicators
+  - Context menu management (Show/Hide/Settings/Quit)
+  - Integration with tunnel manager service for live updates
 
-#### **1.2 Connection Broker**
-- **Purpose**: Centralized connection management
+#### **1.2 Tunnel Manager Service Integration**
+- **Purpose**: Centralized connection and status management
+- **Location**: `lib/services/tunnel_manager_service.dart`
 - **Features**:
-  - Local Ollama connection handling
+  - Local Ollama connection monitoring
   - Cloud proxy connection management
-  - Automatic failover between connection types
-  - Connection pooling and optimization
+  - Health checks and automatic reconnection
+  - WebSocket support for real-time updates
+  - Status broadcasting to system tray
 
-#### **1.3 Main Flutter Application**
-- **Role**: User interface and chat functionality
-- **Dependencies**: Connects through tray daemon broker
-- **Benefits**: Crash isolation from connection management
+#### **1.3 Unified Application Architecture**
+- **Role**: Single Flutter application handling all functionality
+- **Integration**: System tray, UI, chat, and connection management in one process
+- **Benefits**: Simplified deployment, reduced complexity, single executable
 
 ### **Architecture Benefits**
-- **Separation of Concerns**: Clear separation between UI and connection management
-- **Enhanced Reliability**: Elimination of system tray crashes and segmentation faults
-- **Universal Connections**: Seamless switching between local and cloud
-- **Persistent Operation**: System tray persists across app restarts
+- **Unified Codebase**: All functionality in single Flutter application
+- **Native Performance**: Direct Flutter integration without IPC overhead
+- **Cross-Platform Consistency**: Same implementation across all platforms
+- **Simplified Deployment**: Single executable with no external dependencies
+- **Real-Time Updates**: Direct service integration for instant status updates
 
 ---
 
@@ -175,58 +179,73 @@ Modern multi-container architecture providing better separation of concerns, ind
 
 ---
 
-## 🖥️ **4. System Tray Implementation**
+## 🖥️ **4. Flutter-Native System Tray Implementation**
 
 ### **Implementation Details**
 
-#### **4.1 Python-Based Architecture**
-- **Library**: pystray for cross-platform system tray support
-- **Process Model**: Separate process architecture for crash isolation
-- **Communication**: TCP socket IPC with JSON protocol
-- **Packaging**: PyInstaller for standalone executables
+#### **4.1 Flutter-Native Architecture**
+- **Library**: `tray_manager` package for cross-platform system tray support
+- **Integration**: Direct integration within main Flutter application
+- **Communication**: Direct service calls within Flutter application
+- **Packaging**: Single Flutter executable with integrated tray functionality
 
 #### **4.2 Cross-Platform Support**
-- **Linux**: libayatana-appindicator3 integration
-- **Windows**: Native system tray API
-- **macOS**: NSStatusBar integration
-- **Icons**: Monochrome/grayscale for theme compatibility
+- **Linux**: Native system tray integration with desktop environment compatibility
+- **Windows**: Native Windows system tray API integration
+- **macOS**: NSStatusBar integration through Flutter plugin
+- **Icons**: Platform-adaptive icons with connection status indicators
 
-#### **4.3 IPC Communication Protocol**
-```json
-{
-  "command": "SHOW|HIDE|SETTINGS|QUIT|STATUS",
-  "data": {
-    "authentication_state": "authenticated|unauthenticated",
-    "connection_status": "connected|disconnected|error"
-  }
-}
+#### **4.3 Service Integration**
+```dart
+// Direct Flutter service integration
+final nativeTray = NativeTrayService();
+await nativeTray.initialize(
+  tunnelManager: tunnelManager,
+  onShowWindow: () => WindowManagerService().showWindow(),
+  onHideWindow: () => WindowManagerService().hideToTray(),
+  onSettings: () => navigateToSettings(),
+  onQuit: () => exitApplication(),
+);
 ```
 
+#### **4.4 Connection Status Integration**
+- **Real-Time Updates**: Direct integration with `TunnelManagerService`
+- **Visual Indicators**: Dynamic icon changes based on connection status
+- **Status Types**: Connected, Disconnected, Connecting, Error states
+- **Automatic Updates**: Live status monitoring without polling
+
 ### **Menu Structure**
-- **Show/Hide CloudToLocalLLM**: Toggle main application visibility
-- **Settings**: Open connection configuration
-- **About**: Application information
-- **Quit**: Graceful shutdown
+- **Show CloudToLocalLLM**: Bring main window to foreground
+- **Hide to Tray**: Minimize application to system tray
+- **Connection Status**: Display current connection state
+- **Settings**: Open application settings
+- **Quit**: Graceful application shutdown
 
 ---
 
-## 🔄 **5. Connection Flow Architecture**
+## 🔄 **5. Unified Connection Flow Architecture**
 
 ### **Local Connection Flow**
 ```
-Desktop App → Tray Daemon → Local Ollama (localhost:11434)
+Flutter App → TunnelManagerService → Local Ollama (localhost:11434)
 ```
 
 ### **Cloud Connection Flow**
 ```
-Desktop App → Tray Daemon → Cloud Proxy → User's Streaming Container
+Flutter App → TunnelManagerService → Cloud Proxy → User's Streaming Container
 ```
 
-### **Hybrid Connection Management**
-- **Automatic Detection**: Tray daemon detects available connections
-- **Failover Logic**: Automatic switching between local and cloud
-- **Health Monitoring**: Continuous connection health checks
-- **User Preference**: Manual override for connection preference
+### **Web Platform Connection Flow**
+```
+Flutter Web → UnifiedConnectionService → Cloud Tunnel → Local Ollama
+```
+
+### **Integrated Connection Management**
+- **Unified Service**: Single `TunnelManagerService` handles all connection types
+- **Real-Time Monitoring**: Continuous health checks with live status updates
+- **Automatic Failover**: Seamless switching between local and cloud connections
+- **Platform Detection**: Automatic platform-specific connection handling
+- **Status Broadcasting**: Real-time updates to system tray and UI components
 
 ---
 
@@ -267,4 +286,32 @@ Desktop App → Tray Daemon → Cloud Proxy → User's Streaming Container
 
 ---
 
-This consolidated architecture document provides the complete technical foundation for understanding CloudToLocalLLM's system design, replacing the previous scattered architecture documentation with a single authoritative reference.
+## 🚀 **6. Unified Flutter-Native Architecture Benefits**
+
+### **Development Benefits**
+- **Single Codebase**: All functionality in unified Flutter application
+- **Simplified Debugging**: No inter-process communication complexity
+- **Faster Development**: Direct service integration without IPC protocols
+- **Consistent Testing**: Single application testing approach
+
+### **Deployment Benefits**
+- **Single Executable**: No external daemon dependencies
+- **Simplified Installation**: Standard Flutter application deployment
+- **Reduced Package Size**: Elimination of Python runtime and dependencies
+- **Platform Consistency**: Same deployment approach across all platforms
+
+### **User Experience Benefits**
+- **Faster Startup**: No daemon initialization delays
+- **Real-Time Updates**: Instant status updates without polling
+- **Reliable Operation**: No daemon communication failures
+- **Native Integration**: Platform-native system tray behavior
+
+### **Maintenance Benefits**
+- **Unified Updates**: Single application update process
+- **Simplified Support**: Single process for troubleshooting
+- **Consistent Logging**: Unified logging across all components
+- **Reduced Complexity**: Elimination of multi-process architecture
+
+---
+
+This consolidated architecture document provides the complete technical foundation for understanding CloudToLocalLLM's v3.4.0+ unified Flutter-native system design, accurately reflecting the current implementation that eliminates Python dependencies and multi-process complexity.

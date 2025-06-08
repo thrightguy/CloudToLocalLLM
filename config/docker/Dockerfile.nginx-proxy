@@ -13,7 +13,7 @@ RUN mkdir -p /var/log/nginx /var/cache/nginx /var/run/nginx && \
     chown -R nginx:nginx /var/log/nginx /var/cache/nginx /var/run/nginx
 
 # Copy custom nginx configuration
-COPY config/nginx/nginx-proxy.conf /etc/nginx/nginx.conf
+COPY config/nginx/nginx-proxy-dev.conf /etc/nginx/nginx.conf
 
 # Create health check script
 RUN echo '#!/bin/sh' > /usr/local/bin/health-check.sh && \

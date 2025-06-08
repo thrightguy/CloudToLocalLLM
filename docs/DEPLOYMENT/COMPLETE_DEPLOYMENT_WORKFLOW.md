@@ -6,6 +6,15 @@ This is the **ONE AND ONLY** deployment document for CloudToLocalLLM. Follow thi
 
 **📊 Estimated Total Time: 45-90 minutes** (First-time: 90 min, Updates: 45 min)
 
+## 🏗️ **ARCHITECTURE UPDATE (v3.4.0+)**
+
+**Unified Flutter Web Architecture**: CloudToLocalLLM now uses a single Flutter application for both marketing and application functionality:
+- **cloudtolocalllm.online**: Flutter marketing homepage and download pages (was static site)
+- **app.cloudtolocalllm.online**: Flutter chat interface (redirects / to /chat)
+- **docs.cloudtolocalllm.online**: VitePress documentation (unchanged)
+
+See [Unified Flutter Web Architecture](../ARCHITECTURE/UNIFIED_FLUTTER_WEB.md) for detailed information.
+
 ---
 
 ## 🔍 **PRE-FLIGHT CHECKS** (⏱️ 5 minutes)
@@ -190,30 +199,30 @@ Got dependencies!
 
 #### **Step 2.2: Build Flutter Applications** ✅
 
-**⚠️ CRITICAL: Multi-App Architecture Build Requirements**
+**⚠️ CRITICAL: Unified Flutter-Native Architecture Build Requirements**
 
-CloudToLocalLLM uses a multi-app Flutter architecture that requires building ALL applications together to ensure proper dependency alignment and prevent startup crashes caused by missing Flutter plugin libraries.
+CloudToLocalLLM v3.4.0+ uses a unified Flutter-native architecture with a single application that includes integrated system tray functionality. All required dependencies are managed through the main pubspec.yaml.
 
-**Required Dependencies for Startup Crash Prevention:**
-- `window_manager: ^0.5.0` (provides libwindow_manager_plugin.so and libscreen_retriever_linux_plugin.so)
-- `flutter_secure_storage: ^9.2.2` (provides libflutter_secure_storage_linux_plugin.so)
+**Required Dependencies for System Tray and Window Management:**
+- `tray_manager: ^0.2.3` (provides native system tray functionality)
+- `window_manager: ^0.5.0` (provides window management and screen retrieval)
+- `flutter_secure_storage: ^9.2.2` (provides secure local storage)
 
-These dependencies MUST be included in the main pubspec.yaml to prevent the following startup errors:
-- "libscreen_retriever_linux_plugin.so: cannot open shared object file: No such file or directory"
-- "libwindow_manager_plugin.so: cannot open shared object file: No such file or directory"
-- "libflutter_secure_storage_linux_plugin.so: cannot open shared object file: No such file or directory"
+These dependencies are automatically included in the unified Flutter application to provide:
+- Native system tray integration across all platforms
+- Window management and hiding to tray functionality
+- Secure storage for authentication tokens and settings
 
-**Unified Multi-App Build Process:**
+**Unified Single-App Build Process:**
 ```bash
 # Use the unified package creation script (REQUIRED for AUR packages)
 ./scripts/create_unified_aur_package.sh
 
 # This script automatically:
-# 1. Builds root Flutter application (main directory)
-# 2. Builds main chat application (apps/main/)
-# 3. Builds tunnel manager application (apps/tunnel_manager/)
-# 4. Collects ALL Flutter plugin libraries from each app
-# 5. Creates unified package with proper library dependencies
+# 1. Builds the unified Flutter application (main directory)
+# 2. Collects ALL required Flutter plugin libraries
+# 3. Creates unified package with proper library dependencies
+# 4. Generates AUR package metadata and checksums
 
 # For web deployment only (VPS)
 flutter build web --release --no-tree-shake-icons
@@ -223,16 +232,14 @@ flutter build web --release --no-tree-shake-icons
 ```
 CloudToLocalLLM Unified AUR Binary Package Creator
 ===================================================
-Version: 3.3.1
+Version: 3.4.0
 
-[INFO] Building all Flutter applications...
-[INFO] Building root Flutter application...
+[INFO] Building unified Flutter application...
+[INFO] Building Flutter application with integrated system tray...
 ✓ Built build/linux/x64/release/bundle/cloudtolocalllm
-[INFO] Building main chat application...
-✓ Built build/linux/x64/release/bundle/cloudtolocalllm_main
-[INFO] Building tunnel manager application...
-✓ Built build/linux/x64/release/bundle/cloudtolocalllm_tunnel_manager
-✅ All Flutter applications built successfully
+[INFO] Collecting Flutter plugin libraries...
+✓ Collected tray_manager, window_manager, and secure_storage plugins
+✅ Unified Flutter application built successfully
 
 ✅ Unified AUR binary package created successfully!
 📦 Ready for GitHub release and AUR deployment
@@ -242,8 +249,9 @@ Version: 3.3.1
 ```bash
 # Verify unified package contains all required libraries
 tar -tf dist/cloudtolocalllm-*-x86_64.tar.gz | grep "\.so$"
-# Expected: libscreen_retriever_linux_plugin.so, libwindow_manager_plugin.so,
-#           libflutter_secure_storage_linux_plugin.so, liburl_launcher_linux_plugin.so
+# Expected: libtray_manager_plugin.so, libwindow_manager_plugin.so,
+#           libscreen_retriever_linux_plugin.so, libflutter_secure_storage_linux_plugin.so,
+#           liburl_launcher_linux_plugin.so
 
 # Verify web build (for VPS deployment)
 ls -la build/web/
@@ -254,7 +262,7 @@ ls -la build/web/
 
 **⚠️ IMPORTANT: Use Unified Package Creation Script**
 
-The unified package creation script (./scripts/create_unified_aur_package.sh) automatically handles multi-app building and packaging. DO NOT use manual build/package commands.
+The unified package creation script (./scripts/create_unified_aur_package.sh) automatically handles the unified Flutter application building and packaging. DO NOT use manual build/package commands.
 
 ```bash
 # The unified script already created the package in Step 2.2
@@ -263,7 +271,7 @@ ls -la dist/cloudtolocalllm-*-x86_64.tar.gz*
 
 # Check package contents for required libraries
 tar -tf dist/cloudtolocalllm-*-x86_64.tar.gz | grep -E "(bin/|lib/.*\.so$)"
-# Expected: All three executables in bin/ and all Flutter plugin libraries in lib/
+# Expected: Single executable in bin/ and all Flutter plugin libraries in lib/
 
 # Verify AUR info file was generated
 cat dist/cloudtolocalllm-*-aur-info.txt
@@ -272,18 +280,17 @@ cat dist/cloudtolocalllm-*-aur-info.txt
 
 **Expected Output:**
 ```
--rw-r--r-- 1 user user 19000000 Jun  7 21:32 cloudtolocalllm-3.3.1-x86_64.tar.gz
--rw-r--r-- 1 user user       102 Jun  7 21:32 cloudtolocalllm-3.3.1-x86_64.tar.gz.sha256
--rw-r--r-- 1 user user      1024 Jun  7 21:32 cloudtolocalllm-3.3.1-x86_64-aur-info.txt
+-rw-r--r-- 1 user user 19000000 Jun  7 21:32 cloudtolocalllm-3.4.0-x86_64.tar.gz
+-rw-r--r-- 1 user user       102 Jun  7 21:32 cloudtolocalllm-3.4.0-x86_64.tar.gz.sha256
+-rw-r--r-- 1 user user      1024 Jun  7 21:32 cloudtolocalllm-3.4.0-x86_64-aur-info.txt
 
 Package contents:
-cloudtolocalllm-3.3.1-x86_64/bin/cloudtolocalllm
-cloudtolocalllm-3.3.1-x86_64/bin/cloudtolocalllm_main
-cloudtolocalllm-3.3.1-x86_64/bin/cloudtolocalllm_tunnel_manager
-cloudtolocalllm-3.3.1-x86_64/lib/libscreen_retriever_linux_plugin.so
-cloudtolocalllm-3.3.1-x86_64/lib/libwindow_manager_plugin.so
-cloudtolocalllm-3.3.1-x86_64/lib/libflutter_secure_storage_linux_plugin.so
-cloudtolocalllm-3.3.1-x86_64/lib/liburl_launcher_linux_plugin.so
+cloudtolocalllm-3.4.0-x86_64/bin/cloudtolocalllm
+cloudtolocalllm-3.4.0-x86_64/lib/libtray_manager_plugin.so
+cloudtolocalllm-3.4.0-x86_64/lib/libscreen_retriever_linux_plugin.so
+cloudtolocalllm-3.4.0-x86_64/lib/libwindow_manager_plugin.so
+cloudtolocalllm-3.4.0-x86_64/lib/libflutter_secure_storage_linux_plugin.so
+cloudtolocalllm-3.4.0-x86_64/lib/liburl_launcher_linux_plugin.so
 ```
 
 #### **Step 2.4: Upload to SourceForge File Hosting** (Optional) ⚠️

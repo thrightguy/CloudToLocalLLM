@@ -425,6 +425,23 @@ class TunnelManagerService extends ChangeNotifier {
     await _initializeConnections();
   }
 
+  /// Update tunnel configuration and reinitialize connections
+  Future<void> updateConfiguration(TunnelConfig newConfig) async {
+    debugPrint('🚇 [TunnelManager] Updating configuration...');
+
+    _config = newConfig;
+
+    // Clear existing connections
+    _connectionStatus.clear();
+    _cloudWebSocket?.close();
+    _cloudWebSocket = null;
+
+    // Reinitialize with new configuration
+    await _initializeConnections();
+
+    debugPrint('🚇 [TunnelManager] Configuration updated successfully');
+  }
+
   /// Get best available connection for routing requests
   String? getBestConnection() {
     // Prioritize local Ollama if available
