@@ -57,8 +57,8 @@ OPTIONS:
     --help              Show this help message
 
 EXAMPLES:
-    $0                  # Interactive deployment
-    $0 --force          # Automated deployment
+    $0                  # Non-interactive deployment with 3-second delay
+    $0 --force          # Automated deployment (CI/CD compatible)
     $0 --verbose        # Detailed logging
     $0 --dry-run        # Simulate deployment
 
@@ -225,18 +225,18 @@ manage_containers() {
     # Stop running containers
     log_verbose "Stopping existing containers..."
     if [[ "$VERBOSE" == "true" ]]; then
-        docker-compose -f docker-compose.yml down
+        docker compose -f docker-compose.yml down
     else
-        docker-compose -f docker-compose.yml down &> /dev/null
+        docker compose -f docker-compose.yml down &> /dev/null
     fi
 
     # Check SSL certificates
     if [ -d "certbot/live/cloudtolocalllm.online" ]; then
         log_verbose "SSL certificates found, starting services..."
         if [[ "$VERBOSE" == "true" ]]; then
-            docker-compose -f docker-compose.yml up -d
+            docker compose -f docker-compose.yml up -d
         else
-            docker-compose -f docker-compose.yml up -d &> /dev/null
+            docker compose -f docker-compose.yml up -d &> /dev/null
         fi
     else
         log_error "SSL certificates not found"
@@ -264,7 +264,7 @@ perform_health_checks() {
     # Check container health
     log_verbose "Checking container status..."
     if [[ "$VERBOSE" == "true" ]]; then
-        docker-compose -f docker-compose.yml ps
+        docker compose -f docker-compose.yml ps
     fi
 
     # Verify web app accessibility
@@ -284,7 +284,7 @@ perform_health_checks() {
     done
 
     log_error "Web app accessibility check failed after $max_attempts attempts"
-    log_error "Check logs with: docker-compose -f docker-compose.yml logs"
+    log_error "Check logs with: docker compose -f docker-compose.yml logs"
     exit 4
 }
 
@@ -309,15 +309,13 @@ main() {
     # Parse command line arguments
     parse_arguments "$@"
 
-    # Confirmation prompt (unless force or dry-run)
+    # Non-interactive execution - no prompts allowed
+    # Use --force flag to bypass safety checks in automated environments
     if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
-        echo -e "${YELLOW}⚠️  About to deploy to production VPS${NC}"
-        read -p "Continue? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log "Deployment cancelled by user"
-            exit 0
-        fi
+        log_warning "Production VPS deployment starting without --force flag"
+        log_warning "Use --force flag for automated/CI environments"
+        log "Proceeding with deployment in 3 seconds..."
+        sleep 3
     fi
 
     # Execute deployment phases

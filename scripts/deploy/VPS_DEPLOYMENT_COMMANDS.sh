@@ -112,8 +112,8 @@ else
     echo "✅ Flutter web build completed"
     
     echo "🐳 Restarting Docker containers..."
-    sudo docker-compose -f docker-compose.multi.yml down
-    sudo docker-compose -f docker-compose.multi.yml up -d --build
+    sudo docker compose -f docker-compose.multi.yml down
+    sudo docker compose -f docker-compose.multi.yml up -d --build
     echo "✅ Docker containers restarted"
 fi
 echo ""
