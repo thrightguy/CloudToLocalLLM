@@ -39,13 +39,11 @@ install=cloudtolocalllm.install
 # All versions are now distributed via static download for better reliability
 # AUR package downloads pre-built binaries from static download location
 
-# Download from static distribution
+# Download from static distribution (primary source)
 source=(
-    "https://github.com/imrightguy/CloudToLocalLLM/archive/v${pkgver}.tar.gz"
     "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://cloudtolocalllm.online/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 )
 sha256sums=(
-    'SKIP'  # Source code archive
     '6fd8d2178e879061a50627f217a4cb14a09160d2f9df8ceee40685e76adc7974'  # cloudtolocalllm-3.4.0-x86_64.tar.gz
 )
 
@@ -75,7 +73,7 @@ prepare() {
         return 1
     fi
 
-    # Create symlink for version compatibility
+    # Create symlink for version compatibility (static download only)
     if [[ ! -d "cloudtolocalllm-${pkgver}" ]]; then
         ln -sf "cloudtolocalllm-${pkgver}-x86_64" "cloudtolocalllm-${pkgver}"
     fi
@@ -112,14 +110,9 @@ exec ./cloudtolocalllm "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
 
-    # Install desktop entry from the aur-package directory
-    cd "$srcdir/.."
-    if [[ -f "cloudtolocalllm.desktop" ]]; then
-        install -Dm644 "cloudtolocalllm.desktop" \
-            "$pkgdir/usr/share/applications/cloudtolocalllm.desktop"
-    else
-        # Create a basic desktop entry if not found
-        cat > "$pkgdir/usr/share/applications/cloudtolocalllm.desktop" << 'EOF'
+    # Install desktop entry (create directly since using static download only)
+    install -dm755 "$pkgdir/usr/share/applications"
+    cat > "$pkgdir/usr/share/applications/cloudtolocalllm.desktop" << 'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -133,7 +126,6 @@ Categories=Network;
 Keywords=LLM;AI;Ollama;Chat;Machine Learning;
 StartupNotify=true
 EOF
-    fi
 
     # Create a simple icon (placeholder) for desktop integration
     install -dm755 "$pkgdir/usr/share/pixmaps"
