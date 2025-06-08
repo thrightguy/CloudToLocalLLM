@@ -9,7 +9,9 @@ import 'config/app_config.dart';
 import 'services/auth_service.dart';
 import 'services/streaming_proxy_service.dart';
 import 'services/unified_connection_service.dart';
-import 'services/enhanced_tray_service.dart';
+import 'services/tunnel_manager_service.dart';
+import 'services/native_tray_service.dart';
+import 'services/window_manager_service.dart';
 
 // Global navigator key for navigation from system tray
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -64,45 +66,31 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
 
   Future<void> _initializeSystemTray() async {
     try {
-      debugPrint("🚀 [SystemTray] Initializing enhanced tray service...");
+      debugPrint("🚀 [SystemTray] Initializing native tray service...");
 
-      final enhancedTray = EnhancedTrayService();
-      final success = await enhancedTray.initialize(
+      // Initialize tunnel manager service first
+      final tunnelManager = TunnelManagerService();
+      await tunnelManager.initialize();
+
+      // Initialize native tray service
+      final nativeTray = NativeTrayService();
+      final success = await nativeTray.initialize(
+        tunnelManager: tunnelManager,
         onShowWindow: () {
-          debugPrint("🪟 [SystemTray] Enhanced tray requested to show window");
-          // Show window logic would go here
+          debugPrint("🪟 [SystemTray] Native tray requested to show window");
+          WindowManagerService().showWindow();
         },
         onHideWindow: () {
-          debugPrint("🫥 [SystemTray] Enhanced tray requested to hide window");
-          // Hide window logic would go here
+          debugPrint("🫥 [SystemTray] Native tray requested to hide window");
+          WindowManagerService().hideToTray();
         },
         onSettings: () {
-          debugPrint(
-            "⚙️ [SystemTray] Enhanced tray requested to open settings",
-          );
+          debugPrint("⚙️ [SystemTray] Native tray requested to open settings");
           _navigateToRoute('/settings');
-        },
-        onDaemonSettings: () {
-          debugPrint(
-            "🔧 [SystemTray] Enhanced tray requested to open daemon settings",
-          );
-          _navigateToRoute('/settings/daemon');
-        },
-        onConnectionStatus: () {
-          debugPrint(
-            "📊 [SystemTray] Enhanced tray requested to show connection status",
-          );
-          _navigateToRoute('/settings/connection-status');
-        },
-        onOllamaTest: () {
-          debugPrint(
-            "🧪 [SystemTray] Enhanced tray requested to open Ollama test",
-          );
-          _navigateToRoute('/ollama-test');
         },
         onQuit: () {
           debugPrint(
-            "🚪 [SystemTray] Enhanced tray requested to quit application",
+            "🚪 [SystemTray] Native tray requested to quit application",
           );
           // Quit application logic would go here
         },
@@ -110,10 +98,10 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
 
       if (success) {
         debugPrint(
-          "✅ [SystemTray] Enhanced tray service initialized successfully",
+          "✅ [SystemTray] Native tray service initialized successfully",
         );
       } else {
-        debugPrint("❌ [SystemTray] Failed to initialize enhanced tray service");
+        debugPrint("❌ [SystemTray] Failed to initialize native tray service");
       }
     } catch (e, stackTrace) {
       debugPrint("💥 [SystemTray] Failed to initialize system tray: $e");
@@ -221,6 +209,8 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         ),
         // Unified connection service
         ChangeNotifierProvider(create: (_) => UnifiedConnectionService()),
+        // Tunnel manager service
+        ChangeNotifierProvider(create: (_) => TunnelManagerService()),
       ],
       child: MaterialApp(
         // App configuration

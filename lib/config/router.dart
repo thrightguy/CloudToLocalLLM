@@ -7,10 +7,11 @@ import '../screens/login_screen.dart';
 import '../screens/loading_screen.dart';
 import '../screens/callback_screen.dart';
 import '../screens/ollama_test_screen.dart';
-import '../screens/settings_screen.dart';
+
 import '../screens/settings/llm_provider_settings_screen.dart';
 import '../screens/settings/daemon_settings_screen.dart';
 import '../screens/settings/connection_status_screen.dart';
+import '../screens/tunnel_settings_screen.dart';
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -59,11 +60,11 @@ class AppRouter {
           builder: (context, state) => const OllamaTestScreen(),
         ),
 
-        // Settings route
+        // Settings route - now displays tunnel settings as primary interface
         GoRoute(
           path: '/settings',
           name: 'settings',
-          builder: (context, state) => const SettingsScreen(),
+          builder: (context, state) => const TunnelSettingsScreen(),
         ),
 
         // LLM Provider Settings route
@@ -122,11 +123,7 @@ class AppRouter {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
                 'Page Not Found',

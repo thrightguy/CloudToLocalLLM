@@ -5,9 +5,9 @@
 # don't need to install Flutter or any build dependencies.
 #
 pkgname=cloudtolocalllm
-pkgver=2.1.1
-pkgrel=6
-pkgdesc="Multi-tenant streaming LLM management with system tray integration (pre-built binary)"
+pkgver=3.3.1
+pkgrel=1
+pkgdesc="CloudToLocalLLM - Enhanced Architecture with System Tray Integration and Local LLM Management (Unified 145MB package)"
 arch=('x86_64')
 url="https://github.com/imrightguy/CloudToLocalLLM"
 license=('MIT')
@@ -23,6 +23,8 @@ depends=(
     'dbus'
     'xdg-utils'
     'hicolor-icon-theme'
+    'python'  # For tray daemon
+    'wmctrl'  # For window management
 )
 makedepends=()
 optdepends=(
@@ -33,31 +35,58 @@ optdepends=(
 provides=('cloudtolocalllm')
 conflicts=('cloudtolocalllm-git')
 install=cloudtolocalllm.install
+
+# NOTE: CloudToLocalLLM v3.2.0+ uses GitHub releases for distribution
+# All versions are now distributed via GitHub releases for better reliability
+# AUR package downloads pre-built binaries from GitHub release assets
+
+# Download from GitHub releases
 source=(
-    "https://github.com/imrightguy/CloudToLocalLLM/archive/v$pkgver.tar.gz"
-    "cloudtolocalllm-$pkgver-x86_64.tar.gz::https://cloudtolocalllm.online/cloudtolocalllm-$pkgver-x86_64.tar.gz"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+    "cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256::https://github.com/imrightguy/CloudToLocalLLM/releases/download/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz.sha256"
 )
 sha256sums=(
-    'SKIP'  # Source archive checksum
-    'SKIP'  # Binary package checksum
+    'SKIP'  # Will be verified using downloaded checksum file
+    'SKIP'  # Checksum file verification
 )
 
 prepare() {
     cd "$srcdir"
 
-    # Extract the pre-built binary package
-    if [[ -f "cloudtolocalllm-$pkgver-x86_64.tar.gz" ]]; then
-        echo "Extracting pre-built binary package..."
-        tar -xzf "cloudtolocalllm-$pkgver-x86_64.tar.gz" || {
-            echo "Error: Failed to extract binary package"
-            exit 1
-        }
-    else
-        echo "Error: Pre-built binary package not found"
-        exit 1
+    msg "Extracting unified CloudToLocalLLM binary package..."
+
+    # Verify checksum using downloaded SHA256 file
+    local package_file="cloudtolocalllm-3.2.0-x86_64.tar.gz"
+    local checksum_file="${package_file}.sha256"
+
+    if [[ ! -f "$package_file" ]]; then
+        error "Unified binary package not found: $package_file"
+        return 1
     fi
 
-    echo "Pre-built binary package extracted successfully"
+    # Verify integrity using the downloaded checksum file
+    if [[ -f "$checksum_file" ]]; then
+        msg "Verifying package integrity..."
+        if ! sha256sum -c "$checksum_file"; then
+            error "Package integrity verification failed"
+            return 1
+        fi
+        msg "Package integrity verified successfully"
+    fi
+
+    # Extract the package (already extracted by makepkg)
+    # Verify extraction - the package extracts to linux-x64 subdirectory
+    if [[ ! -f "linux-x64/cloudtolocalllm" ]]; then
+        error "Main executable not found after extraction"
+        return 1
+    fi
+
+    # Create symlink for version compatibility
+    if [[ ! -d "cloudtolocalllm-${pkgver}" ]]; then
+        ln -sf "linux-x64" "cloudtolocalllm-${pkgver}"
+    fi
+
+    msg "Unified binary package extraction completed successfully"
 }
 
 build() {
@@ -66,83 +95,96 @@ build() {
 }
 
 package() {
-    cd "$srcdir"
+    cd "$srcdir/cloudtolocalllm-${pkgver}"
 
-    # Install the pre-built binary to /usr/share/cloudtolocalllm
+    # Install the unified CloudToLocalLLM application
     install -dm755 "$pkgdir/usr/share/cloudtolocalllm"
 
-    # Copy the pre-built application files (extracted directly to srcdir)
-    if [[ -f "cloudtolocalllm" && -d "data" && -d "lib" ]]; then
-        cp -r cloudtolocalllm data lib "$pkgdir/usr/share/cloudtolocalllm/"
-    else
-        echo "Error: Pre-built binary files not found"
-        echo "Expected: cloudtolocalllm binary, data/, lib/ directories"
-        ls -la
-        exit 1
-    fi
+    # Copy all files from the extracted binary package
+    # The package extracts to a subdirectory
+    cp -r * "$pkgdir/usr/share/cloudtolocalllm/" 2>/dev/null || {
+        # If that fails, try copying specific files
+        for file in cloudtolocalllm data lib VERSION PACKAGE_INFO.txt; do
+            if [[ -e "$file" ]]; then
+                cp -r "$file" "$pkgdir/usr/share/cloudtolocalllm/"
+            fi
+        done
+    }
 
-    # Make the binary executable
+    # Make the Flutter binary executable
     chmod +x "$pkgdir/usr/share/cloudtolocalllm/cloudtolocalllm"
 
-    # Create wrapper script in /usr/bin
+    # Install essential tray daemon (core component) if present
     install -dm755 "$pkgdir/usr/bin"
+    if [[ -f "cloudtolocalllm-enhanced-tray" ]]; then
+        install -Dm755 "cloudtolocalllm-enhanced-tray" "$pkgdir/usr/bin/cloudtolocalllm-tray"
+    fi
+
+    # Install settings application if present
+    if [[ -f "cloudtolocalllm-settings" ]]; then
+        install -Dm755 "cloudtolocalllm-settings" "$pkgdir/usr/bin/cloudtolocalllm-settings"
+    fi
+
+    # Create unified wrapper script in /usr/bin
     cat > "$pkgdir/usr/bin/cloudtolocalllm" << 'EOF'
 #!/bin/bash
-# CloudToLocalLLM wrapper script with robust system tray integration
-# System tray is enabled by default with proper error handling
-# To disable system tray for debugging, run: DISABLE_SYSTEM_TRAY=true cloudtolocalllm
+# CloudToLocalLLM v3.0.3 unified wrapper script
+# Manages essential tray daemon and Flutter application
 
 cd /usr/share/cloudtolocalllm
 
-# Enable debug logging for system tray issues if requested
-if [[ "${DEBUG_SYSTEM_TRAY}" == "true" ]]; then
-    export G_MESSAGES_DEBUG=all
-    echo "Debug mode enabled for system tray troubleshooting"
+# Start essential tray daemon (core tunneling functionality)
+if [[ -x "/usr/bin/cloudtolocalllm-tray" ]]; then
+    # Start tray daemon if not already running
+    if ! pgrep -f "cloudtolocalllm-enhanced-tray" > /dev/null; then
+        /usr/bin/cloudtolocalllm-tray --daemon &
+        sleep 1
+    fi
+else
+    echo "Warning: Essential tray daemon not found. Some functionality may be limited."
 fi
 
-# Check for system tray support
-if [[ "${DISABLE_SYSTEM_TRAY}" != "true" ]]; then
-    # Verify desktop environment supports system tray
-    if [[ -z "$XDG_CURRENT_DESKTOP" ]]; then
-        echo "Warning: XDG_CURRENT_DESKTOP not set, system tray may not work properly"
-    fi
-
-    # Check for required libraries
-    if ! ldconfig -p | grep -q libayatana-appindicator; then
-        echo "Warning: libayatana-appindicator not found, system tray may not work"
-    fi
-fi
-
+# Launch main Flutter application
 exec ./cloudtolocalllm "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/cloudtolocalllm"
 
-    # Install desktop entry and other files from source
-    cd "$srcdir/CloudToLocalLLM-$pkgver"
-    install -Dm644 "aur-package/cloudtolocalllm.desktop" \
-        "$pkgdir/usr/share/applications/cloudtolocalllm.desktop"
-
-    # Install application icons for desktop integration
-    # Use the main app icon for pixmaps (fallback icon)
-    install -Dm644 "assets/images/app_icon.png" \
-        "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
-
-    # Install the main app icon for hicolor theme (most common size)
-    install -Dm644 "assets/images/app_icon.png" \
-        "$pkgdir/usr/share/icons/hicolor/48x48/apps/cloudtolocalllm.png"
-
-    # Install documentation
-    install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
-    if [[ -f "CHANGELOG.md" ]]; then
-        install -Dm644 "CHANGELOG.md" "$pkgdir/usr/share/doc/$pkgname/CHANGELOG.md"
+    # Install desktop entry from the aur-package directory
+    cd "$srcdir/.."
+    if [[ -f "cloudtolocalllm.desktop" ]]; then
+        install -Dm644 "cloudtolocalllm.desktop" \
+            "$pkgdir/usr/share/applications/cloudtolocalllm.desktop"
+    else
+        # Create a basic desktop entry if not found
+        cat > "$pkgdir/usr/share/applications/cloudtolocalllm.desktop" << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=CloudToLocalLLM
+GenericName=Multi-tenant Streaming LLM Management
+Comment=Multi-tenant streaming LLM management with system tray integration
+Exec=cloudtolocalllm
+Icon=cloudtolocalllm
+Terminal=false
+Categories=Network;
+Keywords=LLM;AI;Ollama;Chat;Machine Learning;
+StartupNotify=true
+EOF
     fi
 
-    # Install license
-    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    # Create a simple icon (placeholder) for desktop integration
+    install -dm755 "$pkgdir/usr/share/pixmaps"
+    install -dm755 "$pkgdir/usr/share/icons/hicolor/48x48/apps"
 
-    # Install man page if it exists
-    if [[ -f "docs/cloudtolocalllm.1" ]]; then
-        install -Dm644 "docs/cloudtolocalllm.1" "$pkgdir/usr/share/man/man1/cloudtolocalllm.1"
-        gzip -9 "$pkgdir/usr/share/man/man1/cloudtolocalllm.1"
+    # Create a simple text-based icon if no icon file is found
+    if [[ ! -f "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png" ]]; then
+        # Create a minimal placeholder icon
+        echo "CloudToLocalLLM Icon Placeholder" > "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png"
+        cp "$pkgdir/usr/share/pixmaps/cloudtolocalllm.png" "$pkgdir/usr/share/icons/hicolor/48x48/apps/"
+    fi
+
+    # Install documentation if present in the binary package
+    if [[ -f "PACKAGE_INFO.txt" ]]; then
+        install -Dm644 "PACKAGE_INFO.txt" "$pkgdir/usr/share/doc/$pkgname/PACKAGE_INFO.txt"
     fi
 }

@@ -5,11 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../models/tunnel_config.dart';
-import '../models/connection_status.dart';
-import '../models/tunnel_metrics.dart';
-
-class TunnelService extends ChangeNotifier {
+/// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
+///
+/// Consolidates tunnel management functionality from the separate tunnel_manager app
+/// into the main application for unified architecture.
+class TunnelManagerService extends ChangeNotifier {
   static const String _authTokenKey = 'cloudtolocalllm_auth_token';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -18,39 +18,38 @@ class TunnelService extends ChangeNotifier {
   bool _isConnected = false;
   bool _isConnecting = false;
   String? _error;
-  TunnelConfig? _config;
 
   // Connection status for different endpoints
   final Map<String, ConnectionStatus> _connectionStatus = {};
 
-  // Metrics collection
-  final TunnelMetrics _metrics = TunnelMetrics();
-
   // HTTP client for connections
   late http.Client _httpClient;
 
-  // Timers for health checks and metrics
+  // Timers for health checks
   Timer? _healthCheckTimer;
-  Timer? _metricsTimer;
 
   // WebSocket connections for real-time updates
   WebSocket? _cloudWebSocket;
+
+  // Configuration
+  TunnelConfig _config = TunnelConfig.defaultConfig();
 
   // Getters
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
   String? get error => _error;
-  TunnelConfig? get config => _config;
+  TunnelConfig get config => _config;
   Map<String, ConnectionStatus> get connectionStatus =>
       Map.unmodifiable(_connectionStatus);
-  TunnelMetrics get metrics => _metrics;
 
-  /// Initialize the tunnel service with configuration
-  Future<void> initialize(TunnelConfig config) async {
-    _config = config;
+  /// Initialize the tunnel manager service
+  Future<void> initialize() async {
     _httpClient = http.Client();
 
-    debugPrint('Initializing Tunnel Service with config: ${config.toJson()}');
+    debugPrint('🚇 [TunnelManager] Initializing tunnel manager service...');
+
+    // Load configuration
+    await _loadConfiguration();
 
     // Start initial connection attempts
     await _initializeConnections();
@@ -58,10 +57,20 @@ class TunnelService extends ChangeNotifier {
     // Start health monitoring
     _startHealthChecks();
 
-    // Start metrics collection
-    _startMetricsCollection();
-
     notifyListeners();
+  }
+
+  /// Load configuration from storage
+  Future<void> _loadConfiguration() async {
+    try {
+      // For now, use default configuration
+      // In the future, this could load from secure storage or config files
+      _config = TunnelConfig.defaultConfig();
+      debugPrint('🚇 [TunnelManager] Configuration loaded');
+    } catch (e) {
+      debugPrint('🚇 [TunnelManager] Failed to load configuration: $e');
+      _config = TunnelConfig.defaultConfig();
+    }
   }
 
   /// Initialize all configured connections
@@ -72,12 +81,12 @@ class TunnelService extends ChangeNotifier {
 
     try {
       // Initialize local Ollama connection
-      if (_config!.enableLocalOllama) {
+      if (_config.enableLocalOllama) {
         await _initializeOllamaConnection();
       }
 
       // Initialize cloud proxy connection
-      if (_config!.enableCloudProxy) {
+      if (_config.enableCloudProxy) {
         await _initializeCloudConnection();
       }
 
@@ -85,7 +94,7 @@ class TunnelService extends ChangeNotifier {
       _updateOverallStatus();
     } catch (e) {
       _error = 'Failed to initialize connections: $e';
-      debugPrint('Connection initialization error: $e');
+      debugPrint('🚇 [TunnelManager] Connection initialization error: $e');
     } finally {
       _isConnecting = false;
       notifyListeners();
@@ -94,17 +103,17 @@ class TunnelService extends ChangeNotifier {
 
   /// Initialize local Ollama connection
   Future<void> _initializeOllamaConnection() async {
-    final ollamaUrl = 'http://${_config!.ollamaHost}:${_config!.ollamaPort}';
+    final ollamaUrl = 'http://${_config.ollamaHost}:${_config.ollamaPort}';
 
     try {
-      debugPrint('Testing Ollama connection to $ollamaUrl');
+      debugPrint('🚇 [TunnelManager] Testing Ollama connection to $ollamaUrl');
 
       final response = await _httpClient
           .get(
             Uri.parse('$ollamaUrl/api/version'),
             headers: {'Content-Type': 'application/json'},
           )
-          .timeout(Duration(seconds: _config!.connectionTimeout));
+          .timeout(Duration(seconds: _config.connectionTimeout));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -116,7 +125,7 @@ class TunnelService extends ChangeNotifier {
               Uri.parse('$ollamaUrl/api/tags'),
               headers: {'Content-Type': 'application/json'},
             )
-            .timeout(Duration(seconds: _config!.connectionTimeout));
+            .timeout(Duration(seconds: _config.connectionTimeout));
 
         List<String> models = [];
         if (modelsResponse.statusCode == 200) {
@@ -136,11 +145,11 @@ class TunnelService extends ChangeNotifier {
           version: version,
           models: models,
           lastCheck: DateTime.now(),
-          latency: 0, // Will be updated by health checks
+          latency: 0,
         );
 
         debugPrint(
-          'Ollama connection successful: $version, ${models.length} models',
+          '🚇 [TunnelManager] Ollama connection successful: $version, ${models.length} models',
         );
       } else {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
@@ -153,14 +162,16 @@ class TunnelService extends ChangeNotifier {
         error: e.toString(),
         lastCheck: DateTime.now(),
       );
-      debugPrint('Ollama connection failed: $e');
+      debugPrint('🚇 [TunnelManager] Ollama connection failed: $e');
     }
   }
 
   /// Initialize cloud proxy connection
   Future<void> _initializeCloudConnection() async {
     try {
-      debugPrint('Testing cloud proxy connection to ${_config!.cloudProxyUrl}');
+      debugPrint(
+        '🚇 [TunnelManager] Testing cloud proxy connection to ${_config.cloudProxyUrl}',
+      );
 
       // Get authentication token
       final authToken = await _getAuthToken();
@@ -170,13 +181,13 @@ class TunnelService extends ChangeNotifier {
 
       final response = await _httpClient
           .get(
-            Uri.parse('${_config!.cloudProxyUrl}/api/health'),
+            Uri.parse('${_config.cloudProxyUrl}/api/health'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $authToken',
             },
           )
-          .timeout(Duration(seconds: _config!.connectionTimeout));
+          .timeout(Duration(seconds: _config.connectionTimeout));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -185,13 +196,15 @@ class TunnelService extends ChangeNotifier {
         _connectionStatus['cloud'] = ConnectionStatus(
           type: 'cloud',
           isConnected: true,
-          endpoint: _config!.cloudProxyUrl,
+          endpoint: _config.cloudProxyUrl,
           version: version,
           lastCheck: DateTime.now(),
-          latency: 0, // Will be updated by health checks
+          latency: 0,
         );
 
-        debugPrint('Cloud proxy connection successful: $version');
+        debugPrint(
+          '🚇 [TunnelManager] Cloud proxy connection successful: $version',
+        );
 
         // Establish WebSocket connection for real-time updates
         await _establishCloudWebSocket(authToken);
@@ -202,18 +215,18 @@ class TunnelService extends ChangeNotifier {
       _connectionStatus['cloud'] = ConnectionStatus(
         type: 'cloud',
         isConnected: false,
-        endpoint: _config!.cloudProxyUrl,
+        endpoint: _config.cloudProxyUrl,
         error: e.toString(),
         lastCheck: DateTime.now(),
       );
-      debugPrint('Cloud proxy connection failed: $e');
+      debugPrint('🚇 [TunnelManager] Cloud proxy connection failed: $e');
     }
   }
 
   /// Establish WebSocket connection to cloud proxy
   Future<void> _establishCloudWebSocket(String authToken) async {
     try {
-      final wsUrl = '${_config!.cloudProxyUrl.replaceFirst('http', 'ws')}/ws';
+      final wsUrl = '${_config.cloudProxyUrl.replaceFirst('http', 'ws')}/ws';
       _cloudWebSocket = await WebSocket.connect(
         wsUrl,
         headers: {'Authorization': 'Bearer $authToken'},
@@ -225,22 +238,24 @@ class TunnelService extends ChangeNotifier {
             final message = json.decode(data);
             _handleCloudWebSocketMessage(message);
           } catch (e) {
-            debugPrint('Error parsing WebSocket message: $e');
+            debugPrint(
+              '🚇 [TunnelManager] Error parsing WebSocket message: $e',
+            );
           }
         },
         onError: (error) {
-          debugPrint('Cloud WebSocket error: $error');
+          debugPrint('🚇 [TunnelManager] Cloud WebSocket error: $error');
           _cloudWebSocket = null;
         },
         onDone: () {
-          debugPrint('Cloud WebSocket connection closed');
+          debugPrint('🚇 [TunnelManager] Cloud WebSocket connection closed');
           _cloudWebSocket = null;
         },
       );
 
-      debugPrint('Cloud WebSocket connection established');
+      debugPrint('🚇 [TunnelManager] Cloud WebSocket connection established');
     } catch (e) {
-      debugPrint('Failed to establish cloud WebSocket: $e');
+      debugPrint('🚇 [TunnelManager] Failed to establish cloud WebSocket: $e');
     }
   }
 
@@ -250,7 +265,6 @@ class TunnelService extends ChangeNotifier {
 
     switch (type) {
       case 'status_update':
-        // Update cloud connection status
         final status = _connectionStatus['cloud'];
         if (status != null) {
           _connectionStatus['cloud'] = status.copyWith(
@@ -262,7 +276,6 @@ class TunnelService extends ChangeNotifier {
         break;
 
       case 'model_update':
-        // Update available models from cloud
         final status = _connectionStatus['cloud'];
         if (status != null) {
           final models =
@@ -276,7 +289,7 @@ class TunnelService extends ChangeNotifier {
         break;
 
       default:
-        debugPrint('Unknown WebSocket message type: $type');
+        debugPrint('🚇 [TunnelManager] Unknown WebSocket message type: $type');
     }
   }
 
@@ -309,7 +322,7 @@ class TunnelService extends ChangeNotifier {
   void _startHealthChecks() {
     _healthCheckTimer?.cancel();
     _healthCheckTimer = Timer.periodic(
-      Duration(seconds: _config!.healthCheckInterval),
+      Duration(seconds: _config.healthCheckInterval),
       (_) => _performHealthChecks(),
     );
   }
@@ -338,9 +351,6 @@ class TunnelService extends ChangeNotifier {
           lastCheck: DateTime.now(),
           latency: stopwatch.elapsedMilliseconds.toDouble(),
         );
-
-        // Update metrics
-        _metrics.recordLatency(type, stopwatch.elapsedMilliseconds.toDouble());
       } catch (e) {
         // Mark connection as failed
         _connectionStatus[type] = status.copyWith(
@@ -349,7 +359,7 @@ class TunnelService extends ChangeNotifier {
           lastCheck: DateTime.now(),
         );
 
-        debugPrint('Health check failed for $type: $e');
+        debugPrint('🚇 [TunnelManager] Health check failed for $type: $e');
       }
     }
 
@@ -393,41 +403,11 @@ class TunnelService extends ChangeNotifier {
     }
   }
 
-  /// Start metrics collection
-  void _startMetricsCollection() {
-    _metricsTimer?.cancel();
-    _metricsTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _collectMetrics(),
-    );
-  }
-
-  /// Collect performance metrics
-  void _collectMetrics() {
-    // Update connection counts
-    final connectedCount = _connectionStatus.values
-        .where((s) => s.isConnected)
-        .length;
-    final totalCount = _connectionStatus.length;
-
-    _metrics.updateConnectionCounts(connectedCount, totalCount);
-
-    // Calculate uptime percentage
-    final now = DateTime.now();
-    final uptimePercentage = _metrics.calculateUptimePercentage(now);
-
-    debugPrint(
-      'Metrics: $connectedCount/$totalCount connections, ${uptimePercentage.toStringAsFixed(1)}% uptime',
-    );
-  }
-
   /// Graceful shutdown
   Future<void> shutdown() async {
-    debugPrint('Shutting down Tunnel Service...');
+    debugPrint('🚇 [TunnelManager] Shutting down tunnel manager service...');
 
     _healthCheckTimer?.cancel();
-    _metricsTimer?.cancel();
-
     _cloudWebSocket?.close();
     _httpClient.close();
 
@@ -439,7 +419,7 @@ class TunnelService extends ChangeNotifier {
 
   /// Force reconnection to all endpoints
   Future<void> reconnect() async {
-    debugPrint('Forcing reconnection to all endpoints...');
+    debugPrint('🚇 [TunnelManager] Forcing reconnection to all endpoints...');
 
     _connectionStatus.clear();
     await _initializeConnections();
@@ -461,4 +441,106 @@ class TunnelService extends ChangeNotifier {
 
     return null;
   }
+
+  /// Get connection status for system tray display
+  TrayConnectionStatus getTrayConnectionStatus() {
+    final ollamaConnected = _connectionStatus['ollama']?.isConnected ?? false;
+    final cloudConnected = _connectionStatus['cloud']?.isConnected ?? false;
+
+    if (ollamaConnected && cloudConnected) {
+      return TrayConnectionStatus.allConnected;
+    } else if (ollamaConnected || cloudConnected) {
+      return TrayConnectionStatus.partiallyConnected;
+    } else if (_isConnecting) {
+      return TrayConnectionStatus.connecting;
+    } else {
+      return TrayConnectionStatus.disconnected;
+    }
+  }
+}
+
+/// Connection status for a specific endpoint
+class ConnectionStatus {
+  final String type;
+  final bool isConnected;
+  final String endpoint;
+  final String? version;
+  final List<String> models;
+  final String? error;
+  final DateTime lastCheck;
+  final double latency;
+
+  const ConnectionStatus({
+    required this.type,
+    required this.isConnected,
+    required this.endpoint,
+    this.version,
+    this.models = const [],
+    this.error,
+    required this.lastCheck,
+    this.latency = 0.0,
+  });
+
+  ConnectionStatus copyWith({
+    String? type,
+    bool? isConnected,
+    String? endpoint,
+    String? version,
+    List<String>? models,
+    String? error,
+    DateTime? lastCheck,
+    double? latency,
+  }) {
+    return ConnectionStatus(
+      type: type ?? this.type,
+      isConnected: isConnected ?? this.isConnected,
+      endpoint: endpoint ?? this.endpoint,
+      version: version ?? this.version,
+      models: models ?? this.models,
+      error: error ?? this.error,
+      lastCheck: lastCheck ?? this.lastCheck,
+      latency: latency ?? this.latency,
+    );
+  }
+}
+
+/// Tunnel configuration
+class TunnelConfig {
+  final bool enableLocalOllama;
+  final bool enableCloudProxy;
+  final String ollamaHost;
+  final int ollamaPort;
+  final String cloudProxyUrl;
+  final int connectionTimeout;
+  final int healthCheckInterval;
+
+  const TunnelConfig({
+    required this.enableLocalOllama,
+    required this.enableCloudProxy,
+    required this.ollamaHost,
+    required this.ollamaPort,
+    required this.cloudProxyUrl,
+    required this.connectionTimeout,
+    required this.healthCheckInterval,
+  });
+
+  factory TunnelConfig.defaultConfig() {
+    return const TunnelConfig(
+      enableLocalOllama: true,
+      enableCloudProxy: true,
+      ollamaHost: 'localhost',
+      ollamaPort: 11434,
+      cloudProxyUrl: 'https://app.cloudtolocalllm.online',
+      connectionTimeout: 10,
+      healthCheckInterval: 30,
+    );
+  }
+}
+
+/// System tray connection status
+enum TrayConnectionStatus {
+  disconnected,
+  connecting,
+  partiallyConnected,
+  allConnected,
 }

@@ -189,56 +189,101 @@ Got dependencies!
 ```
 
 #### **Step 2.2: Build Flutter Applications** ✅
-```bash
-# Build for Linux desktop (AUR package)
-flutter build linux --release
 
-# Build for web (VPS deployment)
+**⚠️ CRITICAL: Multi-App Architecture Build Requirements**
+
+CloudToLocalLLM uses a multi-app Flutter architecture that requires building ALL applications together to ensure proper dependency alignment and prevent startup crashes caused by missing Flutter plugin libraries.
+
+**Required Dependencies for Startup Crash Prevention:**
+- `window_manager: ^0.5.0` (provides libwindow_manager_plugin.so and libscreen_retriever_linux_plugin.so)
+- `flutter_secure_storage: ^9.2.2` (provides libflutter_secure_storage_linux_plugin.so)
+
+These dependencies MUST be included in the main pubspec.yaml to prevent the following startup errors:
+- "libscreen_retriever_linux_plugin.so: cannot open shared object file: No such file or directory"
+- "libwindow_manager_plugin.so: cannot open shared object file: No such file or directory"
+- "libflutter_secure_storage_linux_plugin.so: cannot open shared object file: No such file or directory"
+
+**Unified Multi-App Build Process:**
+```bash
+# Use the unified package creation script (REQUIRED for AUR packages)
+./scripts/create_unified_aur_package.sh
+
+# This script automatically:
+# 1. Builds root Flutter application (main directory)
+# 2. Builds main chat application (apps/main/)
+# 3. Builds tunnel manager application (apps/tunnel_manager/)
+# 4. Collects ALL Flutter plugin libraries from each app
+# 5. Creates unified package with proper library dependencies
+
+# For web deployment only (VPS)
 flutter build web --release --no-tree-shake-icons
 ```
 
 **Expected Output:**
 ```
-Building Linux application...
-✓ Built build/linux/x64/release/bundle/cloudtolocalllm
+CloudToLocalLLM Unified AUR Binary Package Creator
+===================================================
+Version: 3.3.1
 
-Compiling lib/main.dart for the Web...
-✓ Built build/web
+[INFO] Building all Flutter applications...
+[INFO] Building root Flutter application...
+✓ Built build/linux/x64/release/bundle/cloudtolocalllm
+[INFO] Building main chat application...
+✓ Built build/linux/x64/release/bundle/cloudtolocalllm_main
+[INFO] Building tunnel manager application...
+✓ Built build/linux/x64/release/bundle/cloudtolocalllm_tunnel_manager
+✅ All Flutter applications built successfully
+
+✅ Unified AUR binary package created successfully!
+📦 Ready for GitHub release and AUR deployment
 ```
 
 **Build Verification:**
 ```bash
-# Verify Linux build
-ls -la build/linux/x64/release/bundle/
-# Expected: cloudtolocalllm executable and data/ lib/ directories
+# Verify unified package contains all required libraries
+tar -tf dist/cloudtolocalllm-*-x86_64.tar.gz | grep "\.so$"
+# Expected: libscreen_retriever_linux_plugin.so, libwindow_manager_plugin.so,
+#           libflutter_secure_storage_linux_plugin.so, liburl_launcher_linux_plugin.so
 
-# Verify web build
+# Verify web build (for VPS deployment)
 ls -la build/web/
 # Expected: index.html, main.dart.js, assets/, etc.
 ```
 
 #### **Step 2.3: Create Binary Package** ✅
+
+**⚠️ IMPORTANT: Use Unified Package Creation Script**
+
+The unified package creation script (./scripts/create_unified_aur_package.sh) automatically handles multi-app building and packaging. DO NOT use manual build/package commands.
+
 ```bash
-# Create unified binary package for AUR
-VERSION=$(./scripts/version_manager.sh get-semantic)
-mkdir -p dist/v${VERSION}
-cp -r build/linux/x64/release/bundle dist/v${VERSION}/cloudtolocalllm-${VERSION}
+# The unified script already created the package in Step 2.2
+# Verify the package was created successfully
+ls -la dist/cloudtolocalllm-*-x86_64.tar.gz*
 
-# Create tarball
-cd dist/v${VERSION}
-tar -czf cloudtolocalllm-${VERSION}-x86_64.tar.gz cloudtolocalllm-${VERSION}/
+# Check package contents for required libraries
+tar -tf dist/cloudtolocalllm-*-x86_64.tar.gz | grep -E "(bin/|lib/.*\.so$)"
+# Expected: All three executables in bin/ and all Flutter plugin libraries in lib/
 
-# Generate checksum
-sha256sum cloudtolocalllm-${VERSION}-x86_64.tar.gz > cloudtolocalllm-${VERSION}-x86_64.tar.gz.sha256
-
-# Verify package
-ls -la cloudtolocalllm-${VERSION}-x86_64.tar.gz*
+# Verify AUR info file was generated
+cat dist/cloudtolocalllm-*-aur-info.txt
+# Expected: pkgver, sha256sums, and GitHub release URLs
 ```
 
 **Expected Output:**
 ```
--rw-r--r-- 1 user user 145000000 Jun  4 10:00 cloudtolocalllm-3.1.3-x86_64.tar.gz
--rw-r--r-- 1 user user       102 Jun  4 10:00 cloudtolocalllm-3.1.3-x86_64.tar.gz.sha256
+-rw-r--r-- 1 user user 19000000 Jun  7 21:32 cloudtolocalllm-3.3.1-x86_64.tar.gz
+-rw-r--r-- 1 user user       102 Jun  7 21:32 cloudtolocalllm-3.3.1-x86_64.tar.gz.sha256
+-rw-r--r-- 1 user user      1024 Jun  7 21:32 cloudtolocalllm-3.3.1-x86_64-aur-info.txt
+
+Package contents:
+cloudtolocalllm-3.3.1-x86_64/bin/cloudtolocalllm
+cloudtolocalllm-3.3.1-x86_64/bin/cloudtolocalllm_main
+cloudtolocalllm-3.3.1-x86_64/bin/cloudtolocalllm_tunnel_manager
+cloudtolocalllm-3.3.1-x86_64/lib/libscreen_retriever_linux_plugin.so
+cloudtolocalllm-3.3.1-x86_64/lib/libwindow_manager_plugin.so
+cloudtolocalllm-3.3.1-x86_64/lib/libflutter_secure_storage_linux_plugin.so
+cloudtolocalllm-3.3.1-x86_64/lib/liburl_launcher_linux_plugin.so
 ```
 
 #### **Step 2.4: Upload to SourceForge File Hosting** (Optional) ⚠️

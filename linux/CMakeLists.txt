@@ -42,13 +42,15 @@ endif()
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_14)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
+  # Allow deprecated declarations for system tray functionality
+  target_compile_options(${TARGET} PRIVATE -Wno-deprecated-declarations)
 
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
 endfunction()
 
-# Note: tray_manager deprecation fix removed - now using Python-based independent tray daemon
-# The CloudToLocalLLM application connects to an external tray daemon instead of managing its own tray
+# CloudToLocalLLM v3.3.1+ - Unified Flutter-native architecture with integrated system tray
+# Deprecation warnings are suppressed to allow tray_manager functionality on older systems
 
 # Flutter library and tool build rules.
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")

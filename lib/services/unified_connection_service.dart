@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'enhanced_tray_service.dart';
+import 'tunnel_manager_service.dart';
 
-/// Unified connection service that routes ALL connections through the tray daemon
+/// Unified connection service that provides a consistent API for connections
 ///
-/// This service provides a consistent API for both local Ollama and cloud connections,
-/// with all actual connections managed by the independent tray daemon's connection broker.
+/// This service integrates with the tunnel manager service to provide
+/// a unified interface for both local Ollama and cloud connections.
 class UnifiedConnectionService extends ChangeNotifier {
-  final EnhancedTrayService _trayService = EnhancedTrayService();
+  TunnelManagerService? _tunnelManager;
 
   bool _isConnected = false;
   String? _version;
@@ -15,16 +15,22 @@ class UnifiedConnectionService extends ChangeNotifier {
   String? _error;
   String _connectionType = 'none';
 
-  // Connection status from daemon
-  Map<String, dynamic>? _connectionStatus;
+  // Connection status from tunnel manager
+  Map<String, ConnectionStatus>? _connectionStatus;
 
   UnifiedConnectionService() {
-    // Listen to connection status changes from daemon
-    _trayService.messageStream.listen((message) {
-      if (message['command'] == 'CONNECTION_STATUS_CHANGED') {
-        _handleConnectionStatusChange(message);
-      }
-    });
+    // Will be initialized when tunnel manager is available
+  }
+
+  /// Set the tunnel manager service reference
+  void setTunnelManager(TunnelManagerService tunnelManager) {
+    _tunnelManager = tunnelManager;
+    
+    // Listen to connection status changes
+    _tunnelManager!.addListener(_handleConnectionStatusChange);
+    
+    // Update initial status
+    _handleConnectionStatusChange();
   }
 
   // Getters
@@ -34,13 +40,12 @@ class UnifiedConnectionService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String get connectionType => _connectionType;
-  Map<String, dynamic>? get connectionStatus => _connectionStatus;
+  Map<String, ConnectionStatus>? get connectionStatus => _connectionStatus;
 
   /// Initialize the connection service
   Future<bool> initialize() async {
-    if (!_trayService.isInitialized) {
-      debugPrint(
-          "Tray service not initialized, cannot initialize connection service");
+    if (_tunnelManager == null) {
+      debugPrint("🔗 [UnifiedConnection] Tunnel manager not available, cannot initialize connection service");
       return false;
     }
 
@@ -49,19 +54,16 @@ class UnifiedConnectionService extends ChangeNotifier {
     return true;
   }
 
-  /// Refresh connection status from daemon
+  /// Refresh connection status from tunnel manager
   Future<void> refreshConnectionStatus() async {
+    if (_tunnelManager == null) return;
+    
     try {
       _setLoading(true);
       _clearError();
 
-      final status = await _trayService.getConnectionStatus();
-      if (status != null) {
-        _connectionStatus = status;
-        _updateConnectionState(status);
-      } else {
-        _setError('Failed to get connection status from daemon');
-      }
+      _connectionStatus = _tunnelManager!.connectionStatus;
+      _updateConnectionState();
     } catch (e) {
       _setError('Error refreshing connection status: $e');
     } finally {
@@ -69,48 +71,48 @@ class UnifiedConnectionService extends ChangeNotifier {
     }
   }
 
-  /// Handle connection status changes from daemon
-  void _handleConnectionStatusChange(Map<String, dynamic> message) {
-    final connectionType = message['connection_type'] as String?;
-    final status = message['status'] as Map<String, dynamic>?;
-
-    if (status != null) {
-      debugPrint(
-          'Connection status changed for $connectionType: ${status['state']}');
-
-      // Update our cached status
-      if (_connectionStatus != null) {
-        _connectionStatus![connectionType!] = status;
-      }
-
-      // Update overall connection state
-      _updateConnectionState(_connectionStatus ?? {});
-    }
+  /// Handle connection status changes from tunnel manager
+  void _handleConnectionStatusChange() {
+    if (_tunnelManager == null) return;
+    
+    _connectionStatus = _tunnelManager!.connectionStatus;
+    _updateConnectionState();
   }
 
-  /// Update connection state based on daemon status
-  void _updateConnectionState(Map<String, dynamic> status) {
+  /// Update connection state based on tunnel manager status
+  void _updateConnectionState() {
+    if (_connectionStatus == null) {
+      _isConnected = false;
+      _connectionType = 'none';
+      _version = null;
+      _models = [];
+      _setError('No connection status available');
+      return;
+    }
+
     // Find the best available connection
     String? bestConnection;
-    Map<String, dynamic>? bestStatus;
+    ConnectionStatus? bestStatus;
 
-    // Prefer local_ollama if connected
-    if (status['local_ollama']?['state'] == 'connected') {
-      bestConnection = 'local_ollama';
-      bestStatus = status['local_ollama'];
-    } else if (status['cloud_proxy']?['state'] == 'connected') {
-      bestConnection = 'cloud_proxy';
-      bestStatus = status['cloud_proxy'];
+    // Prefer local Ollama if connected
+    final ollamaStatus = _connectionStatus!['ollama'];
+    final cloudStatus = _connectionStatus!['cloud'];
+
+    if (ollamaStatus?.isConnected == true) {
+      bestConnection = 'ollama';
+      bestStatus = ollamaStatus;
+    } else if (cloudStatus?.isConnected == true) {
+      bestConnection = 'cloud';
+      bestStatus = cloudStatus;
     }
 
     if (bestConnection != null && bestStatus != null) {
       _isConnected = true;
       _connectionType = bestConnection;
-      _version = bestStatus['version'] ?? 'Unknown';
-      _models = (bestStatus['models'] as List<dynamic>?)
-              ?.map((model) => OllamaModel(name: model.toString()))
-              .toList() ??
-          [];
+      _version = bestStatus.version ?? 'Unknown';
+      _models = bestStatus.models
+          .map((model) => OllamaModel(name: model))
+          .toList();
       _clearError();
     } else {
       _isConnected = false;
@@ -120,9 +122,9 @@ class UnifiedConnectionService extends ChangeNotifier {
 
       // Set error message based on available statuses
       final errors = <String>[];
-      status.forEach((type, typeStatus) {
-        if (typeStatus['error_message']?.isNotEmpty == true) {
-          errors.add('$type: ${typeStatus['error_message']}');
+      _connectionStatus!.forEach((type, status) {
+        if (!status.isConnected && status.error != null) {
+          errors.add('$type: ${status.error}');
         }
       });
 
@@ -134,54 +136,20 @@ class UnifiedConnectionService extends ChangeNotifier {
     }
 
     notifyListeners();
-
-    // Send status update to tray daemon
-    _sendStatusUpdateToTray();
   }
 
-  /// Send connection status update to tray daemon
-  void _sendStatusUpdateToTray() {
-    if (_trayService.isConnected) {
-      if (_isConnected) {
-        if (_connectionType == 'local_ollama') {
-          _trayService.updateOllamaStatus(
-            connected: true,
-            version: _version,
-            models: _models.map((m) => m.name).toList(),
-          );
-        } else if (_connectionType == 'cloud_proxy') {
-          _trayService.updateCloudStatus(
-            connected: true,
-            endpoint: 'app.cloudtolocalllm.online',
-          );
-        }
-      } else {
-        // Send disconnected status
-        _trayService.updateOllamaStatus(
-          connected: false,
-          error: _error ?? 'Connection failed',
-        );
-      }
-    }
-  }
-
-  /// Test connection by getting version info
+  /// Test connection by refreshing status
   Future<bool> testConnection() async {
     try {
       _setLoading(true);
       _clearError();
 
-      final result = await _trayService.proxyRequest(
-        method: 'GET',
-        path: '/api/version',
-      );
-
-      if (result != null) {
-        debugPrint('Connection test successful: $result');
+      if (_tunnelManager != null) {
+        await _tunnelManager!.reconnect();
         await refreshConnectionStatus();
         return _isConnected;
       } else {
-        _setError('Connection test failed: no response');
+        _setError('Tunnel manager not available');
         return false;
       }
     } catch (e) {
@@ -192,30 +160,16 @@ class UnifiedConnectionService extends ChangeNotifier {
     }
   }
 
-  /// Get available models
+  /// Get available models (simplified - returns cached models)
   Future<List<OllamaModel>> getModels() async {
     try {
       _setLoading(true);
       _clearError();
 
-      final result = await _trayService.proxyRequest(
-        method: 'GET',
-        path: '/api/tags',
-      );
-
-      if (result != null) {
-        final modelsData = result['models'] as List<dynamic>? ?? [];
-        _models = modelsData
-            .map((model) => OllamaModel.fromJson(model as Map<String, dynamic>))
-            .toList();
-
-        debugPrint('Loaded ${_models.length} models');
-        notifyListeners();
-        return _models;
-      } else {
-        _setError('Failed to load models');
-        return [];
-      }
+      // For now, return cached models from connection status
+      // In the future, this could make direct API calls through tunnel manager
+      await refreshConnectionStatus();
+      return _models;
     } catch (e) {
       _setError('Error loading models: $e');
       return [];
@@ -224,91 +178,9 @@ class UnifiedConnectionService extends ChangeNotifier {
     }
   }
 
-  /// Send a chat message
-  Future<String?> chat({
-    required String model,
-    required String message,
-    List<Map<String, String>>? history,
-  }) async {
-    try {
-      _setLoading(true);
-      _clearError();
-
-      final messages = [
-        if (history != null) ...history,
-        {'role': 'user', 'content': message},
-      ];
-
-      final result = await _trayService.proxyRequest(
-        method: 'POST',
-        path: '/api/chat',
-        data: {
-          'model': model,
-          'messages': messages,
-          'stream': false,
-        },
-      );
-
-      if (result != null) {
-        final responseMessage = result['message'];
-        if (responseMessage != null && responseMessage['content'] != null) {
-          return responseMessage['content'] as String;
-        } else {
-          _setError('Invalid response format');
-          return null;
-        }
-      } else {
-        _setError('No response from chat API');
-        return null;
-      }
-    } catch (e) {
-      _setError('Chat error: $e');
-      return null;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Pull a model from registry
-  Future<bool> pullModel(String modelName) async {
-    try {
-      _setLoading(true);
-      _clearError();
-
-      final result = await _trayService.proxyRequest(
-        method: 'POST',
-        path: '/api/pull',
-        data: {'name': modelName},
-      );
-
-      if (result != null) {
-        debugPrint('Model pull successful: $result');
-        // Refresh models list
-        await getModels();
-        return true;
-      } else {
-        _setError('Model pull failed');
-        return false;
-      }
-    } catch (e) {
-      _setError('Model pull error: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Update authentication token
-  Future<void> updateAuthToken(String token) async {
-    await _trayService.updateAuthToken(token);
-    // Refresh connection status after token update
-    await Future.delayed(const Duration(milliseconds: 500));
-    await refreshConnectionStatus();
-  }
-
-  /// Clear authentication token
-  Future<void> clearAuthToken() async {
-    await updateAuthToken('');
+  /// Get best available connection type
+  String? getBestConnection() {
+    return _tunnelManager?.getBestConnection();
   }
 
   // Helper methods
@@ -319,13 +191,19 @@ class UnifiedConnectionService extends ChangeNotifier {
 
   void _setError(String error) {
     _error = error;
-    debugPrint('[UnifiedConnectionService] Error: $error');
+    debugPrint('🔗 [UnifiedConnection] Error: $error');
     notifyListeners();
   }
 
   void _clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _tunnelManager?.removeListener(_handleConnectionStatusChange);
+    super.dispose();
   }
 }
 
