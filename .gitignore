@@ -42,6 +42,9 @@ dist/
 !dist/cloudtolocalllm-3.5.0-x86_64.tar.gz
 !dist/cloudtolocalllm-3.5.0-x86_64.tar.gz.sha256
 !dist/cloudtolocalllm-3.5.0-x86_64-aur-info.txt
+!dist/cloudtolocalllm-3.5.3-x86_64.tar.gz
+!dist/cloudtolocalllm-3.5.3-x86_64.tar.gz.sha256
+!dist/cloudtolocalllm-3.5.3-x86_64-aur-info.txt
 # Allow small metadata files
 !dist/metadata/
 !dist/**/*.md5
@@ -226,6 +229,7 @@ cloudtolocalllm-*.tar.gz
 # Exception: Allow v3.4.0+ unified packages for git-based distribution
 !cloudtolocalllm-3.4.0-x86_64.tar.gz
 !cloudtolocalllm-3.5.0-x86_64.tar.gz
+!cloudtolocalllm-3.5.3-x86_64.tar.gz
 
 # Version-specific binaries
 cloudtolocalllm-*-stable.tar.gz
