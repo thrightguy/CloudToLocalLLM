@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,8 @@ import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
 import '../services/version_service.dart';
+import '../services/tunnel_manager_service.dart';
+import '../services/ollama_service.dart';
 import '../components/modern_card.dart';
 
 /// Modern settings screen with comprehensive configuration options
@@ -51,8 +54,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: EdgeInsets.all(AppTheme.spacingL),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxWidth:
-                        isDesktop ? AppConfig.maxContentWidth : double.infinity,
+                    maxWidth: isDesktop
+                        ? AppConfig.maxContentWidth
+                        : double.infinity,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,12 +64,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Page title
                       Text(
                         'Settings',
-                        style:
-                            Theme.of(context).textTheme.displayMedium?.copyWith(
-                                  color: AppTheme.textColor,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        style: Theme.of(context).textTheme.displayMedium
+                            ?.copyWith(
+                              color: AppTheme.textColor,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       SizedBox(height: AppTheme.spacingL),
 
@@ -98,11 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Back button
           IconButton(
             onPressed: () => context.go('/'),
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-              size: 24,
-            ),
+            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
             style: IconButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.2),
               shape: RoundedRectangleBorder(
@@ -117,10 +117,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(
             'Settings',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
 
           const Spacer(),
@@ -193,9 +193,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SizedBox(height: AppTheme.spacingL),
         _buildLLMSettings(context),
         SizedBox(height: AppTheme.spacingL),
-        _buildSystemTraySettings(context),
+        if (!kIsWeb) _buildSystemTraySettings(context),
+        if (!kIsWeb) SizedBox(height: AppTheme.spacingL),
+        _buildTunnelConnectionSettings(context),
         SizedBox(height: AppTheme.spacingL),
-        _buildCloudSettings(context),
+        _buildModelManagementSettings(context),
+        SizedBox(height: AppTheme.spacingL),
+        _buildPremiumFeaturesSettings(context),
       ],
     );
   }
@@ -308,9 +312,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Quick info about what's in the detailed settings
           Text(
             'Configure connection settings, test connectivity, and manage models',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
             textAlign: TextAlign.center,
           ),
         ],
@@ -349,86 +353,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildCloudSettings(BuildContext context) {
-    return ModernCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            context,
-            'Cloud & Sync',
-            Icons.cloud,
-            AppTheme.accentColor,
-          ),
-          SizedBox(height: AppTheme.spacingM),
-
-          // Basic sync info
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppTheme.spacingM),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
+  Widget _buildTunnelConnectionSettings(BuildContext context) {
+    return Consumer<TunnelManagerService>(
+      builder: (context, tunnelManager, child) {
+        return ModernCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader(
+                context,
+                'Tunnel Connection',
+                Icons.swap_horiz,
+                AppTheme.accentColor,
               ),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.sync,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    SizedBox(width: AppTheme.spacingS),
-                    Text(
-                      'Basic Sync Available',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppTheme.spacingS),
-                Text(
-                  'Basic conversation sync is included. Advanced cloud sync of settings and preferences will be available as a premium feature.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+              SizedBox(height: AppTheme.spacingM),
+
+              // Connection status overview
+              _buildConnectionStatusCard(context, tunnelManager),
+
+              SizedBox(height: AppTheme.spacingM),
+
+              // Local Ollama configuration
+              _buildOllamaConfigCard(context, tunnelManager),
+
+              SizedBox(height: AppTheme.spacingM),
+
+              // Cloud proxy configuration
+              _buildCloudProxyConfigCard(context, tunnelManager),
+
+              SizedBox(height: AppTheme.spacingM),
+
+              // Connection test button
+              _buildConnectionTestButton(context, tunnelManager),
+            ],
           ),
-
-          SizedBox(height: AppTheme.spacingM),
-
-          // Premium features placeholder
-          _buildPremiumFeatureItem(
-            context,
-            'Advanced Cloud Sync',
-            'Sync settings and preferences across devices',
-            'Premium feature - coming soon',
-          ),
-
-          SizedBox(height: AppTheme.spacingM),
-
-          // Remote access placeholder
-          _buildPremiumFeatureItem(
-            context,
-            'Remote Access',
-            'Allow remote access to your LLM',
-            'Premium feature - coming soon',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -446,20 +406,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
+          child: Icon(icon, color: color, size: 20),
         ),
         SizedBox(width: AppTheme.spacingM),
         Text(
           title,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ],
     );
@@ -477,16 +433,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textColor,
-                fontWeight: FontWeight.w600,
-              ),
+            color: AppTheme.textColor,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         SizedBox(height: AppTheme.spacingXS),
         Text(
           description,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textColorLight,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
         ),
         SizedBox(height: AppTheme.spacingS),
         control,
@@ -506,11 +462,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.circle,
-            color: Colors.green,
-            size: 12,
-          ),
+          Icon(Icons.circle, color: Colors.green, size: 12),
           SizedBox(width: AppTheme.spacingS),
           Expanded(
             child: Column(
@@ -518,15 +470,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   'Tray Daemon Status',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   'Connected and running',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textColorLight,
-                      ),
+                    color: AppTheme.textColorLight,
+                  ),
                 ),
               ],
             ),
@@ -556,11 +508,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: Theme.of(context).colorScheme.primary,
-              size: 24,
-            ),
+            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
             SizedBox(width: AppTheme.spacingM),
             Expanded(
               child: Column(
@@ -569,14 +517,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     description,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textColorLight,
-                        ),
+                      color: AppTheme.textColorLight,
+                    ),
                   ),
                 ],
               ),
@@ -607,9 +555,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).disabledColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: Theme.of(context).disabledColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Container(
@@ -618,24 +566,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 vertical: AppTheme.spacingXS,
               ),
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                 border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
                 '💎 Premium',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -644,8 +590,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text(
           description,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).disabledColor,
-              ),
+            color: Theme.of(context).disabledColor,
+          ),
         ),
       ],
     );
@@ -682,6 +628,445 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Tunnel Connection Helper Methods
+  Widget _buildConnectionStatusCard(
+    BuildContext context,
+    TunnelManagerService tunnelManager,
+  ) {
+    final isConnected = tunnelManager.isConnected;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isConnected ? Icons.check_circle : Icons.error,
+                color: isConnected ? Colors.green : Colors.red,
+                size: 20,
+              ),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                isConnected ? 'Tunnel Connected' : 'Tunnel Disconnected',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: isConnected ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingS),
+          Text(
+            isConnected
+                ? 'Local Ollama is accessible via cloud proxy tunnel'
+                : 'Connection to local Ollama or cloud proxy failed',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOllamaConfigCard(
+    BuildContext context,
+    TunnelManagerService tunnelManager,
+  ) {
+    final config = tunnelManager.config;
+
+    return Container(
+      padding: EdgeInsets.all(AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.computer, color: AppTheme.secondaryColor, size: 20),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Local Ollama Configuration',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          _buildSettingItem(
+            context,
+            'Enable Local Ollama',
+            'Connect to local Ollama instance',
+            Switch(
+              value: config.enableLocalOllama,
+              onChanged: (value) {
+                // TODO: Update configuration
+              },
+            ),
+          ),
+
+          if (config.enableLocalOllama) ...[
+            SizedBox(height: AppTheme.spacingM),
+            _buildSettingItem(
+              context,
+              'Host',
+              'Ollama server host address',
+              TextFormField(
+                initialValue: config.ollamaHost,
+                decoration: InputDecoration(
+                  hintText: 'localhost',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (value) {
+                  // TODO: Update configuration
+                },
+              ),
+            ),
+
+            SizedBox(height: AppTheme.spacingM),
+            _buildSettingItem(
+              context,
+              'Port',
+              'Ollama server port',
+              TextFormField(
+                initialValue: config.ollamaPort.toString(),
+                decoration: InputDecoration(
+                  hintText: '11434',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  // TODO: Update configuration
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCloudProxyConfigCard(
+    BuildContext context,
+    TunnelManagerService tunnelManager,
+  ) {
+    final config = tunnelManager.config;
+
+    return Container(
+      padding: EdgeInsets.all(AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.cloud, color: Colors.blue, size: 20),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Cloud Proxy Configuration',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          _buildSettingItem(
+            context,
+            'Enable Cloud Proxy',
+            'Connect to CloudToLocalLLM cloud services',
+            Switch(
+              value: config.enableCloudProxy,
+              onChanged: (value) {
+                // TODO: Update configuration
+              },
+            ),
+          ),
+
+          if (config.enableCloudProxy) ...[
+            SizedBox(height: AppTheme.spacingM),
+            _buildSettingItem(
+              context,
+              'Cloud Proxy URL',
+              'Cloud proxy service endpoint',
+              TextFormField(
+                initialValue: config.cloudProxyUrl,
+                decoration: InputDecoration(
+                  hintText: 'https://app.cloudtolocalllm.online',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (value) {
+                  // TODO: Update configuration
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConnectionTestButton(
+    BuildContext context,
+    TunnelManagerService tunnelManager,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          // TODO: Implement connection test
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Testing connection...')));
+        },
+        icon: Icon(Icons.wifi_tethering),
+        label: Text('Test Connection'),
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.all(AppTheme.spacingM),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModelManagementSettings(BuildContext context) {
+    return Consumer<OllamaService>(
+      builder: (context, ollamaService, child) {
+        return ModernCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSectionHeader(
+                context,
+                'Model Management',
+                Icons.storage,
+                AppTheme.primaryColor,
+              ),
+              SizedBox(height: AppTheme.spacingM),
+
+              // Model download manager info
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(AppTheme.spacingM),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.download,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                        ),
+                        SizedBox(width: AppTheme.spacingS),
+                        Text(
+                          'Model Download Manager',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: AppTheme.spacingS),
+                    Text(
+                      kIsWeb
+                          ? 'Model management available through cloud proxy connection'
+                          : 'Download and manage Ollama models directly from the local instance',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: AppTheme.spacingM),
+
+              // Available models count
+              _buildSettingItem(
+                context,
+                'Available Models',
+                'Currently installed Ollama models',
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingM,
+                    vertical: AppTheme.spacingS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    '${ollamaService.models.length} models',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: AppTheme.spacingM),
+
+              // Navigate to model management button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: Navigate to model management screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Model management screen coming soon'),
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.manage_search),
+                  label: Text('Manage Models'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.all(AppTheme.spacingM),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPremiumFeaturesSettings(BuildContext context) {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+            context,
+            'Premium Features',
+            Icons.diamond,
+            Colors.purple,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          // Premium features info
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.star, color: Colors.purple, size: 20),
+                    SizedBox(width: AppTheme.spacingS),
+                    Text(
+                      'Premium Features Available',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.purple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppTheme.spacingS),
+                Text(
+                  'Advanced cloud sync, mobile app access, and enhanced features for power users',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: AppTheme.spacingM),
+
+          // Premium features list
+          _buildPremiumFeatureItem(
+            context,
+            'Advanced Cloud Sync',
+            'Sync settings and preferences across devices',
+            'Premium feature - coming soon',
+          ),
+
+          SizedBox(height: AppTheme.spacingM),
+
+          _buildPremiumFeatureItem(
+            context,
+            'Mobile App Access',
+            'Access your LLM from mobile devices',
+            'Premium feature - coming soon',
+          ),
+
+          SizedBox(height: AppTheme.spacingM),
+
+          _buildPremiumFeatureItem(
+            context,
+            'Remote Access',
+            'Allow secure remote access to your LLM',
+            'Premium feature - coming soon',
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVersionSection(BuildContext context) {
     return ModernCard(
       child: Column(
@@ -709,33 +1094,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     vertical: AppTheme.spacingS,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                     border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.tag,
-                        color: AppTheme.accentColor,
-                        size: 20,
-                      ),
+                      Icon(Icons.tag, color: AppTheme.accentColor, size: 20),
                       SizedBox(width: AppTheme.spacingS),
                       Expanded(
                         child: Text(
                           snapshot.hasData ? snapshot.data! : 'Loading...',
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: AppTheme.textColor,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'monospace',
-                                  ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: AppTheme.textColor,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'monospace',
+                              ),
                         ),
                       ),
                       if (snapshot.hasData)
@@ -779,14 +1160,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     vertical: AppTheme.spacingS,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                     border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
@@ -800,9 +1181,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Text(
                         formattedDate,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.textColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: AppTheme.textColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -845,18 +1226,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: Text(
                         '${entry.key}:',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textColorLight,
-                            ),
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textColorLight,
+                        ),
                       ),
                     ),
                     Expanded(
                       child: SelectableText(
                         entry.value,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontFamily: 'monospace',
-                              color: AppTheme.textColor,
-                            ),
+                          fontFamily: 'monospace',
+                          color: AppTheme.textColor,
+                        ),
                       ),
                     ),
                   ],
