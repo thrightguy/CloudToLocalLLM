@@ -1,0 +1,11 @@
+# AUR PKGBUILD Information for CloudToLocalLLM v3.0.2
+
+# Update these values in aur-package/PKGBUILD:
+pkgver=3.0.2
+sha256sums=('SKIP' '2d726cedb0b377114c20dd4bc5a23133300e5ac4777e90f74271826fb9a3f88a')
+
+# SourceForge download URL:
+source=(
+    "https://github.com/imrightguy/CloudToLocalLLM/archive/v$pkgver.tar.gz"
+    "https://sourceforge.net/projects/cloudtolocalllm/files/releases/v${pkgver}/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+)

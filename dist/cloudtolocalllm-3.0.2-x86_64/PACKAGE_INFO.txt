@@ -1,0 +1,24 @@
+CloudToLocalLLM v3.0.2
+========================
+
+Package Type: Unified Binary Package for AUR
+Architecture: x86_64
+Build Date: 2025-06-07 21:13:57
+
+Contents:
+- Main Flutter application (cloudtolocalllm)
+- Integrated system tray functionality
+- All required libraries and data files
+- Unified architecture with no separate components
+
+Installation:
+This package is designed for AUR (Arch User Repository) installation.
+Use: yay -S cloudtolocalllm
+
+Security Features:
+- Docker containers run as non-root users
+- Enhanced permission handling
+- Secure authentication flow
+
+For more information, visit:
+https://github.com/imrightguy/CloudToLocalLLM
