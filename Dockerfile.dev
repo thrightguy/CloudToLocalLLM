@@ -1,0 +1,180 @@
+# CloudToLocalLLM v3.5.0+ Development Environment
+# Complete containerized Flutter environment with system tray and web support
+# 
+# Usage:
+#   docker build -f Dockerfile.dev -t cloudtolocalllm:dev .
+#   docker run -it --rm -v $(pwd):/workspace cloudtolocalllm:dev
+#
+# For GUI applications (system tray testing):
+#   docker run -it --rm -v $(pwd):/workspace -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY cloudtolocalllm:dev
+
+FROM ghcr.io/cirruslabs/flutter:3.32.2
+
+# Metadata
+LABEL maintainer="CloudToLocalLLM Team"
+LABEL version="3.5.0"
+LABEL description="Complete Flutter development environment for CloudToLocalLLM with system tray support"
+
+# Environment variables for Flutter and CloudToLocalLLM
+ENV FLUTTER_ROOT=/opt/flutter
+ENV PATH="$FLUTTER_ROOT/bin:$PATH"
+ENV PUB_CACHE=/home/flutter/.pub-cache
+ENV FLUTTER_WEB_USE_SKIA=true
+ENV CHROME_EXECUTABLE=/usr/bin/google-chrome-stable
+
+# Set non-interactive mode for apt
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update package lists and install system dependencies
+RUN apt-get update && apt-get install -y \
+    # Build essentials
+    clang \
+    cmake \
+    ninja-build \
+    pkg-config \
+    build-essential \
+    # GTK3 development (for system tray and window management)
+    libgtk-3-dev \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-dev \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libatk1.0-dev \
+    libglib2.0-dev \
+    # System tray dependencies
+    libayatana-appindicator3-dev \
+    libayatana-appindicator3-1 \
+    # Compression and crypto libraries
+    liblzma-dev \
+    libssl-dev \
+    # Development tools
+    git \
+    curl \
+    wget \
+    unzip \
+    zip \
+    xz-utils \
+    # X11 and display support (for GUI testing)
+    xvfb \
+    x11-utils \
+    # Chrome for web testing
+    gnupg \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome for web testing
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for secure development
+RUN groupadd -g 1000 flutter \
+    && useradd -u 1000 -g flutter -m -s /bin/bash flutter \
+    && usermod -aG sudo flutter \
+    && echo 'flutter ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Create workspace directory with proper permissions
+RUN mkdir -p /workspace \
+    && chown -R flutter:flutter /workspace
+
+# Switch to flutter user
+USER flutter
+WORKDIR /home/flutter
+
+# Configure Flutter for CloudToLocalLLM development
+RUN flutter config --enable-linux-desktop \
+    && flutter config --enable-web \
+    && flutter config --no-analytics \
+    && flutter config --no-cli-animations
+
+# Pre-warm Flutter cache and download dependencies
+RUN flutter precache --linux --web \
+    && flutter doctor
+
+# Create .pub-cache directory with proper permissions
+RUN mkdir -p $PUB_CACHE \
+    && chmod 755 $PUB_CACHE
+
+# Set working directory to workspace
+WORKDIR /workspace
+
+# Create a health check script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "🔍 CloudToLocalLLM Development Environment Health Check"\n\
+echo "================================================"\n\
+\n\
+# Check Flutter installation\n\
+echo "📱 Checking Flutter installation..."\n\
+flutter --version\n\
+\n\
+# Check Flutter doctor\n\
+echo "🩺 Running Flutter doctor..."\n\
+flutter doctor\n\
+\n\
+# Check platform support\n\
+echo "🖥️  Checking platform support..."\n\
+flutter config | grep -E "(linux-desktop|web)"\n\
+\n\
+# Check system dependencies\n\
+echo "📦 Checking system dependencies..."\n\
+pkg-config --exists gtk+-3.0 && echo "✅ GTK3 development libraries available"\n\
+which clang && echo "✅ Clang compiler available"\n\
+which cmake && echo "✅ CMake build system available"\n\
+which ninja && echo "✅ Ninja build tool available"\n\
+\n\
+# Check Chrome for web testing\n\
+echo "🌐 Checking web testing support..."\n\
+google-chrome-stable --version && echo "✅ Chrome available for web testing"\n\
+\n\
+echo "🎉 Health check completed successfully!"\n\
+echo "Ready for CloudToLocalLLM v3.5.0+ development"\n\
+' > /home/flutter/health-check.sh \
+    && chmod +x /home/flutter/health-check.sh
+
+# Create development helper scripts
+RUN echo '#!/bin/bash\n\
+# CloudToLocalLLM Development Helper\n\
+echo "🚀 CloudToLocalLLM v3.5.0+ Development Environment"\n\
+echo "================================================"\n\
+echo "Available commands:"\n\
+echo "  flutter-health    - Run health check"\n\
+echo "  flutter-build     - Build for Linux desktop"\n\
+echo "  flutter-web       - Build for web"\n\
+echo "  flutter-test      - Run tests"\n\
+echo "  flutter-analyze   - Analyze code"\n\
+echo "  flutter-clean     - Clean build artifacts"\n\
+echo ""\n\
+echo "Example workflow:"\n\
+echo "  1. flutter pub get"\n\
+echo "  2. flutter analyze"\n\
+echo "  3. flutter test"\n\
+echo "  4. flutter build linux --release"\n\
+echo "  5. flutter build web --release"\n\
+echo ""\n\
+echo "For system tray testing with X11 forwarding:"\n\
+echo "  docker run -it --rm -v \$(pwd):/workspace \\\\\n\
+echo "    -v /tmp/.X11-unix:/tmp/.X11-unix \\\\\n\
+echo "    -e DISPLAY=\$DISPLAY cloudtolocalllm:dev"\n\
+' > /home/flutter/welcome.sh \
+    && chmod +x /home/flutter/welcome.sh
+
+# Create convenient aliases
+RUN echo 'alias flutter-health="/home/flutter/health-check.sh"' >> /home/flutter/.bashrc \
+    && echo 'alias flutter-build="flutter build linux --release"' >> /home/flutter/.bashrc \
+    && echo 'alias flutter-web="flutter build web --release"' >> /home/flutter/.bashrc \
+    && echo 'alias flutter-test="flutter test"' >> /home/flutter/.bashrc \
+    && echo 'alias flutter-analyze="flutter analyze"' >> /home/flutter/.bashrc \
+    && echo 'alias flutter-clean="flutter clean"' >> /home/flutter/.bashrc
+
+# Health check for container
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /home/flutter/health-check.sh > /dev/null 2>&1 || exit 1
+
+# Default command
+CMD ["/bin/bash", "-c", "/home/flutter/welcome.sh && /bin/bash"]
+
+# Expose common development ports
+EXPOSE 8080 3000 4000 5000
