@@ -147,7 +147,12 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
     return Container(
       color: AppTheme.backgroundMain,
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(AppTheme.spacingL),
+        padding: EdgeInsets.only(
+          left: AppTheme.spacingL,
+          right: AppTheme.spacingL,
+          bottom: AppTheme.spacingL,
+          // No top padding to ensure content starts at the top
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: AppConfig.maxContentWidth,
@@ -155,6 +160,8 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Add small top spacing for visual breathing room
+              SizedBox(height: AppTheme.spacingM),
               _buildSectionHeader(),
               SizedBox(height: AppTheme.spacingL),
               _buildSectionContent(),
