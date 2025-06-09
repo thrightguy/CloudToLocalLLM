@@ -17,6 +17,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 AUR_DIR="$PROJECT_ROOT/aur-package"
 
+# Flags
+FORCE=false
+VERBOSE=false
+DRY_RUN=false
+
 # Logging functions
 log() {
     echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} $1"
@@ -32,6 +37,69 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[$(date '+%H:%M:%S')] ❌${NC} $1"
+}
+
+log_verbose() {
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${BLUE}[$(date '+%H:%M:%S')] [VERBOSE]${NC} $1"
+    fi
+}
+
+# Usage information
+show_usage() {
+    cat << EOF
+CloudToLocalLLM AUR Package Submission Script
+
+USAGE:
+    $0 [OPTIONS]
+
+OPTIONS:
+    --force             Skip confirmation prompts
+    --verbose           Enable detailed logging
+    --dry-run           Simulate submission without actual changes
+    --help              Show this help message
+
+EXAMPLES:
+    $0                  # Interactive submission
+    $0 --force          # Automated submission (CI/CD compatible)
+    $0 --verbose        # Detailed logging
+    $0 --dry-run        # Simulate submission
+
+EXIT CODES:
+    0 - Success
+    1 - General error
+    2 - Validation failure
+    3 - Submission failure
+EOF
+}
+
+# Parse command line arguments
+parse_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --force)
+                FORCE=true
+                shift
+                ;;
+            --verbose)
+                VERBOSE=true
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            --help)
+                show_usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
 }
 
 # Get current version
@@ -86,17 +154,27 @@ verify_pkgbuild_version() {
 # Update .SRCINFO
 update_srcinfo() {
     log "Updating .SRCINFO..."
-    
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would update .SRCINFO"
+        log_success "DRY RUN: .SRCINFO update simulation completed"
+        return 0
+    fi
+
     cd "$AUR_DIR"
-    
+
     if ! command -v makepkg &> /dev/null; then
         log_error "makepkg not found - required for .SRCINFO generation"
         log_error "Please install base-devel package"
         exit 1
     fi
-    
-    makepkg --printsrcinfo > .SRCINFO
-    
+
+    if [[ "$VERBOSE" == "true" ]]; then
+        makepkg --printsrcinfo > .SRCINFO
+    else
+        makepkg --printsrcinfo > .SRCINFO 2>/dev/null
+    fi
+
     if [[ $? -eq 0 ]]; then
         log_success ".SRCINFO updated successfully"
     else
@@ -108,17 +186,27 @@ update_srcinfo() {
 # Check for changes
 check_changes() {
     log "Checking for changes to commit..."
-    
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would check for changes"
+        log_success "DRY RUN: Change detection simulation completed"
+        return 0
+    fi
+
     cd "$AUR_DIR"
-    
+
     if git diff --quiet && git diff --cached --quiet; then
         log_warning "No changes detected in AUR package"
         log_warning "Package may already be up to date"
         return 1
     fi
-    
+
     log "Changes detected:"
-    git status --porcelain
+    if [[ "$VERBOSE" == "true" ]]; then
+        git status --porcelain
+    else
+        git status --porcelain | head -5
+    fi
     log_success "Changes ready for commit"
     return 0
 }
@@ -126,39 +214,59 @@ check_changes() {
 # Commit and push changes
 submit_to_aur() {
     local version="$1"
-    
+
     log "Submitting AUR package update..."
-    
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would commit and push to AUR"
+        log "DRY RUN: Commit message: Update to v$version - unified Flutter architecture"
+        log_success "DRY RUN: AUR submission simulation completed"
+        return 0
+    fi
+
     cd "$AUR_DIR"
-    
+
     # Add files
+    log_verbose "Adding PKGBUILD and .SRCINFO to git..."
     git add PKGBUILD .SRCINFO
-    
+
     # Commit with version-specific message
     local commit_message="Update to v$version - unified Flutter architecture"
+    log_verbose "Committing with message: $commit_message"
     git commit -m "$commit_message"
-    
+
     # Push to AUR
     log "Pushing to AUR repository..."
-    git push origin master
-    
+    if [[ "$VERBOSE" == "true" ]]; then
+        git push origin master
+    else
+        git push origin master 2>/dev/null
+    fi
+
     log_success "AUR package submitted successfully"
 }
 
 # Verify submission
 verify_submission() {
     local version="$1"
-    
+
     log "Verifying AUR submission..."
-    
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would verify AUR submission"
+        log_success "DRY RUN: Verification simulation completed"
+        return 0
+    fi
+
     # Wait a moment for AUR to update
+    log_verbose "Waiting for AUR to update..."
     sleep 5
-    
+
     # Check if package appears on AUR website
     local aur_url="https://aur.archlinux.org/packages/cloudtolocalllm"
-    log "Checking AUR package page: $aur_url"
-    
-    if curl -s -f "$aur_url" > /dev/null; then
+    log_verbose "Checking AUR package page: $aur_url"
+
+    if curl -s -f "$aur_url" > /dev/null 2>&1; then
         log_success "AUR package page accessible"
     else
         log_warning "AUR package page not immediately accessible (may take time to update)"
@@ -188,20 +296,34 @@ display_summary() {
 # Main execution function
 main() {
     local version
-    
+
     log "🚀 CloudToLocalLLM AUR Package Submission"
     log "========================================"
-    
+    echo "Force: $FORCE | Verbose: $VERBOSE | Dry Run: $DRY_RUN"
+    echo ""
+
     # Get current version
     version=$(get_version)
     log "Submitting version: $version"
-    
+
     # Execute submission steps
     verify_aur_setup
     verify_pkgbuild_version "$version"
     update_srcinfo
-    
+
     if check_changes; then
+        # Confirmation prompt for non-force mode
+        if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
+            log_warning "About to submit AUR package update for v$version"
+            log_warning "This will commit and push changes to the AUR repository"
+            read -p "Continue? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log "AUR submission cancelled by user"
+                exit 0
+            fi
+        fi
+
         submit_to_aur "$version"
         verify_submission "$version"
         display_summary "$version"
@@ -214,5 +336,6 @@ main() {
 # Error handling
 trap 'log_error "AUR submission failed at line $LINENO. Check logs above for details."' ERR
 
-# Execute main function
-main "$@"
+# Parse arguments and execute main function
+parse_arguments "$@"
+main

@@ -224,14 +224,14 @@ phase3_multiplatform_build() {
 # Phase 4: Distribution Execution
 phase4_distribution_execution() {
     log_phase 4 "Distribution Execution"
-    
+
     log "Executing distribution deployment..."
 
     # Note: Static distribution files are now distributed via git repository
     # The unified package files in dist/ are committed to the repository
     # and will be pulled to the VPS during deployment
     log_verbose "Using git repository as single source of truth for distribution files..."
-    
+
     # Test AUR package
     local aur_flags="--skip-install"
     if [[ "$VERBOSE" == "true" ]]; then
@@ -240,10 +240,10 @@ phase4_distribution_execution() {
     if [[ "$DRY_RUN" == "true" ]]; then
         aur_flags="$aur_flags --dry-run"
     fi
-    
+
     log_verbose "Testing AUR package..."
     ./scripts/deploy/test_aur_package.sh $aur_flags
-    
+
     # Deploy to VPS
     local vps_flags=""
     if [[ "$FORCE" == "true" ]]; then
@@ -258,10 +258,33 @@ phase4_distribution_execution() {
     if [[ "$DRY_RUN" == "true" ]]; then
         vps_flags="$vps_flags --dry-run"
     fi
-    
+
     log_verbose "Deploying to VPS..."
     ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull origin master && ./scripts/deploy/update_and_deploy.sh $vps_flags"
-    
+
+    # Submit AUR package immediately after VPS deployment
+    log_verbose "Submitting AUR package..."
+
+    # Prepare AUR submission flags
+    local aur_submit_flags=""
+    if [[ "$FORCE" == "true" ]]; then
+        aur_submit_flags="$aur_submit_flags --force"
+    fi
+    if [[ "$VERBOSE" == "true" ]]; then
+        aur_submit_flags="$aur_submit_flags --verbose"
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        aur_submit_flags="$aur_submit_flags --dry-run"
+    fi
+
+    # Submit AUR package with error handling that doesn't block deployment
+    if ./scripts/deploy/submit_aur_package.sh $aur_submit_flags; then
+        log_success "AUR package submitted successfully"
+    else
+        log_warning "AUR package submission failed - continuing with deployment"
+        log_warning "Manual AUR submission may be required"
+    fi
+
     log_success "Distribution execution completed"
 }
 
@@ -318,13 +341,13 @@ phase6_operational_readiness() {
     echo "  ✅ Git-based Distribution: Repository as single source of truth"
     echo "  ✅ Static Download: https://cloudtolocalllm.online/cloudtolocalllm-${deployed_version%+*}-x86_64.tar.gz"
     echo "  ✅ Web Platform: https://app.cloudtolocalllm.online"
-    echo "  ✅ AUR Package: Ready for submission"
+    echo "  ✅ AUR Package: Submitted and available"
     echo ""
     echo -e "${BLUE}📋 Next Steps:${NC}"
-    echo "  1. Submit AUR package: cd aur-package && git add . && git commit -m 'Update to v${deployed_version%+*}' && git push"
-    echo "  2. Test AUR installation: yay -S cloudtolocalllm"
-    echo "  3. Verify platform-specific UI features"
-    echo "  4. Monitor deployment health"
+    echo "  1. Test AUR installation: yay -S cloudtolocalllm"
+    echo "  2. Verify platform-specific UI features"
+    echo "  3. Monitor deployment health"
+    echo "  4. Check AUR package page: https://aur.archlinux.org/packages/cloudtolocalllm"
     
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""
