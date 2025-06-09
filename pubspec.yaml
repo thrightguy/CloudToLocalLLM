@@ -24,11 +24,29 @@ dependencies:
   http: ^1.2.2
   web: ^1.1.1
 
+  # Streaming and WebSocket support
+  web_socket_channel: ^2.4.0
+  stream_channel: ^2.1.2
+
+  # Enhanced HTTP handling for streaming
+  dio: ^5.3.2
+
+  # Real-time event handling
+  rxdart: ^0.27.7
+
+  # Connection monitoring
+  connectivity_plus: ^4.0.2
+
   # App Information
   package_info_plus: ^8.1.1
 
   # File System
   path: ^1.9.1
+  path_provider: ^2.1.4
+
+  # Local Storage
+  sqflite: ^2.3.3
+  sqflite_common_ffi: ^2.3.3
 
   # State Management
   provider: ^6.1.2
@@ -43,6 +61,12 @@ dependencies:
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
+    sdk: flutter
+
+  # Streaming and integration testing
+  test: ^1.24.6
+  mockito: ^5.4.2
+  integration_test:
     sdk: flutter
 
 flutter:

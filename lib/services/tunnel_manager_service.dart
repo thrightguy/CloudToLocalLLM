@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../models/streaming_message.dart';
+import 'streaming_service.dart';
+import 'local_ollama_streaming_service.dart';
 
 /// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
 ///
@@ -34,6 +37,10 @@ class TunnelManagerService extends ChangeNotifier {
   // Configuration
   TunnelConfig _config = TunnelConfig.defaultConfig();
 
+  // Streaming services
+  LocalOllamaStreamingService? _ollamaStreamingService;
+  StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
+
   // Getters
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
@@ -41,6 +48,10 @@ class TunnelManagerService extends ChangeNotifier {
   TunnelConfig get config => _config;
   Map<String, ConnectionStatus> get connectionStatus =>
       Map.unmodifiable(_connectionStatus);
+
+  /// Get the local Ollama streaming service
+  LocalOllamaStreamingService? get ollamaStreamingService =>
+      _ollamaStreamingService;
 
   /// Initialize the tunnel manager service
   Future<void> initialize() async {
@@ -51,11 +62,17 @@ class TunnelManagerService extends ChangeNotifier {
     // Load configuration
     await _loadConfiguration();
 
+    // Initialize streaming services
+    await _initializeStreamingServices();
+
     // Start initial connection attempts
     await _initializeConnections();
 
     // Start health monitoring
     _startHealthChecks();
+
+    // Listen to status events
+    _setupStatusEventListener();
 
     notifyListeners();
   }
@@ -71,6 +88,78 @@ class TunnelManagerService extends ChangeNotifier {
       debugPrint('🚇 [TunnelManager] Failed to load configuration: $e');
       _config = TunnelConfig.defaultConfig();
     }
+  }
+
+  /// Initialize streaming services
+  Future<void> _initializeStreamingServices() async {
+    try {
+      debugPrint('🚇 [TunnelManager] Initializing streaming services...');
+
+      // Initialize local Ollama streaming service if enabled
+      if (_config.enableLocalOllama) {
+        final ollamaUrl = 'http://${_config.ollamaHost}:${_config.ollamaPort}';
+        _ollamaStreamingService = LocalOllamaStreamingService(
+          baseUrl: ollamaUrl,
+          config: StreamingConfig.local(),
+        );
+        debugPrint(
+          '🚇 [TunnelManager] Local Ollama streaming service initialized',
+        );
+      }
+
+      debugPrint(
+        '🚇 [TunnelManager] Streaming services initialized successfully',
+      );
+    } catch (e) {
+      debugPrint(
+        '🚇 [TunnelManager] Failed to initialize streaming services: $e',
+      );
+    }
+  }
+
+  /// Setup status event listener
+  void _setupStatusEventListener() {
+    _statusSubscription?.cancel();
+    _statusSubscription = StatusEventBus().statusStream.listen(
+      (event) {
+        debugPrint('🚇 [TunnelManager] Received status event: $event');
+
+        // Update connection status based on streaming service events
+        if (event.state == StreamingConnectionState.connected ||
+            event.state == StreamingConnectionState.streaming) {
+          // Update Ollama connection status if this is from local Ollama
+          if (event.endpoint?.contains(_config.ollamaHost) == true) {
+            _connectionStatus['ollama'] = ConnectionStatus(
+              type: 'ollama',
+              isConnected: true,
+              endpoint: event.endpoint!,
+              version: 'Streaming',
+              lastCheck: event.timestamp,
+              latency: event.latency?.inMilliseconds.toDouble() ?? 0.0,
+            );
+            _updateOverallStatus();
+            notifyListeners();
+          }
+        } else if (event.state == StreamingConnectionState.error ||
+            event.state == StreamingConnectionState.disconnected) {
+          // Update connection status for errors
+          if (event.endpoint?.contains(_config.ollamaHost) == true) {
+            _connectionStatus['ollama'] = ConnectionStatus(
+              type: 'ollama',
+              isConnected: false,
+              endpoint: event.endpoint ?? 'Unknown',
+              error: event.error,
+              lastCheck: event.timestamp,
+            );
+            _updateOverallStatus();
+            notifyListeners();
+          }
+        }
+      },
+      onError: (error) {
+        debugPrint('🚇 [TunnelManager] Status event listener error: $error');
+      },
+    );
   }
 
   /// Initialize all configured connections
@@ -108,6 +197,31 @@ class TunnelManagerService extends ChangeNotifier {
     try {
       debugPrint('🚇 [TunnelManager] Testing Ollama connection to $ollamaUrl');
 
+      // Use streaming service for connection if available
+      if (_ollamaStreamingService != null) {
+        final connected = await _ollamaStreamingService!.testConnection();
+        if (connected) {
+          final models = await _ollamaStreamingService!.getAvailableModels();
+
+          _connectionStatus['ollama'] = ConnectionStatus(
+            type: 'ollama',
+            isConnected: true,
+            endpoint: ollamaUrl,
+            version: 'Streaming Enabled',
+            models: models,
+            lastCheck: DateTime.now(),
+            latency: _ollamaStreamingService!.connection.latency.inMilliseconds
+                .toDouble(),
+          );
+
+          debugPrint(
+            '🚇 [TunnelManager] Ollama streaming connection successful: ${models.length} models',
+          );
+          return;
+        }
+      }
+
+      // Fallback to HTTP connection test
       final response = await _httpClient
           .get(
             Uri.parse('$ollamaUrl/api/version'),
@@ -149,7 +263,7 @@ class TunnelManagerService extends ChangeNotifier {
         );
 
         debugPrint(
-          '🚇 [TunnelManager] Ollama connection successful: $version, ${models.length} models',
+          '🚇 [TunnelManager] Ollama HTTP connection successful: $version, ${models.length} models',
         );
       } else {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
@@ -408,8 +522,13 @@ class TunnelManagerService extends ChangeNotifier {
     debugPrint('🚇 [TunnelManager] Shutting down tunnel manager service...');
 
     _healthCheckTimer?.cancel();
+    _statusSubscription?.cancel();
     _cloudWebSocket?.close();
     _httpClient.close();
+
+    // Dispose streaming services
+    _ollamaStreamingService?.dispose();
+    _ollamaStreamingService = null;
 
     _isConnected = false;
     _connectionStatus.clear();

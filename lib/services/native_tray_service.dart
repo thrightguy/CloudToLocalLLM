@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'tunnel_manager_service.dart';
+import 'streaming_service.dart';
 
 /// Native Flutter system tray service for CloudToLocalLLM v3.3.1+
 ///
@@ -15,6 +17,7 @@ class NativeTrayService with TrayListener {
   bool _isInitialized = false;
   bool _isSupported = false;
   TunnelManagerService? _tunnelManager;
+  StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
 
   // Callbacks for tray events
   void Function()? _onShowWindow;
@@ -72,6 +75,9 @@ class NativeTrayService with TrayListener {
       // Listen to tunnel manager status changes
       _tunnelManager!.addListener(_onTunnelStatusChanged);
 
+      // Listen to streaming status events
+      _setupStreamingStatusListener();
+
       _isInitialized = true;
       debugPrint(
         '🖥️ [NativeTray] Native tray service initialized successfully',
@@ -88,6 +94,21 @@ class NativeTrayService with TrayListener {
       // Don't fail the entire application if tray initialization fails
       return false;
     }
+  }
+
+  /// Setup streaming status event listener
+  void _setupStreamingStatusListener() {
+    _statusSubscription?.cancel();
+    _statusSubscription = StatusEventBus().statusStream.listen(
+      (event) {
+        debugPrint('🖥️ [NativeTray] Received streaming status event: $event');
+        // Update tray status when streaming events occur
+        _onTunnelStatusChanged();
+      },
+      onError: (error) {
+        debugPrint('🖥️ [NativeTray] Streaming status listener error: $error');
+      },
+    );
   }
 
   /// Handle tunnel manager status changes
@@ -191,6 +212,7 @@ class NativeTrayService with TrayListener {
       // Remove listeners
       trayManager.removeListener(this);
       _tunnelManager?.removeListener(_onTunnelStatusChanged);
+      _statusSubscription?.cancel();
 
       // Destroy tray
       await trayManager.destroy();

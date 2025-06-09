@@ -98,21 +98,13 @@ class _MessageBubbleState extends State<MessageBubble>
       return CircleAvatar(
         radius: 16,
         backgroundColor: AppTheme.primaryColor,
-        child: const Icon(
-          Icons.person,
-          color: Colors.white,
-          size: 18,
-        ),
+        child: const Icon(Icons.person, color: Colors.white, size: 18),
       );
     } else {
       return CircleAvatar(
         radius: 16,
         backgroundColor: AppTheme.secondaryColor,
-        child: const Icon(
-          Icons.smart_toy,
-          color: Colors.white,
-          size: 18,
-        ),
+        child: const Icon(Icons.smart_toy, color: Colors.white, size: 18),
       );
     }
   }
@@ -127,17 +119,17 @@ class _MessageBubbleState extends State<MessageBubble>
                 ? 'You'
                 : (widget.message.model ?? 'Assistant'),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppTheme.textColorLight,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: AppTheme.textColorLight,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (widget.showTimestamp) ...[
             SizedBox(width: AppTheme.spacingS),
             Text(
               widget.message.formattedTime,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppTheme.textColorLight,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: AppTheme.textColorLight),
             ),
           ],
         ],
@@ -148,6 +140,10 @@ class _MessageBubbleState extends State<MessageBubble>
   Widget _buildMessageContent() {
     if (widget.message.isLoading) {
       return _buildLoadingContent();
+    }
+
+    if (widget.message.isStreaming) {
+      return _buildStreamingContent();
     }
 
     return Container(
@@ -171,9 +167,9 @@ class _MessageBubbleState extends State<MessageBubble>
           SelectableText(
             widget.message.content,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textColor,
-                  height: 1.5,
-                ),
+              color: AppTheme.textColor,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -206,10 +202,62 @@ class _MessageBubbleState extends State<MessageBubble>
           Text(
             'Thinking...',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textColorLight,
+              color: AppTheme.textColorLight,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreamingContent() {
+    return Container(
+      padding: EdgeInsets.all(AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundCard,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Streaming indicator
+          Row(
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppTheme.primaryColor,
+                  ),
+                ),
+              ),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Streaming...',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppTheme.primaryColor,
                   fontStyle: FontStyle.italic,
                 ),
+              ),
+            ],
           ),
+          if (widget.message.content.isNotEmpty) ...[
+            SizedBox(height: AppTheme.spacingS),
+            SelectableText(
+              widget.message.content,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textColor,
+                height: 1.5,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -229,18 +277,14 @@ class _MessageBubbleState extends State<MessageBubble>
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: AppTheme.dangerColor,
-            size: 16,
-          ),
+          Icon(Icons.error_outline, color: AppTheme.dangerColor, size: 16),
           SizedBox(width: AppTheme.spacingS),
           Expanded(
             child: Text(
               'Error: ${widget.message.error ?? 'Unknown error'}',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppTheme.dangerColor,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: AppTheme.dangerColor),
             ),
           ),
           if (widget.onRetry != null)

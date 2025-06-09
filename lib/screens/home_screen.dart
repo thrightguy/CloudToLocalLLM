@@ -5,7 +5,8 @@ import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../models/conversation.dart';
 import '../services/auth_service.dart';
-import '../services/chat_service.dart';
+import '../services/streaming_chat_service.dart';
+import '../services/tunnel_manager_service.dart';
 import '../services/ollama_service.dart';
 import '../components/conversation_list.dart';
 import '../components/message_bubble.dart';
@@ -21,7 +22,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  ChatService? _chatService;
+  StreamingChatService? _streamingChatService;
+  TunnelManagerService? _tunnelManagerService;
   OllamaService? _ollamaService;
   bool _isSidebarCollapsed = false;
   final ScrollController _scrollController = ScrollController();
@@ -31,53 +33,81 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Initialize services after the first frame to access context
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeServices();
+    });
+  }
+
+  /// Initialize all services with streaming support
+  Future<void> _initializeServices() async {
+    try {
       debugPrint('[DEBUG] HomeScreen: Initializing services...');
 
       final authService = Provider.of<AuthService>(context, listen: false);
       debugPrint(
-          '[DEBUG] HomeScreen: AuthService obtained - isAuthenticated: ${authService.isAuthenticated.value}');
+        '[DEBUG] HomeScreen: AuthService obtained - isAuthenticated: ${authService.isAuthenticated.value}',
+      );
 
+      // Initialize tunnel manager service
+      final tunnelManagerService = TunnelManagerService();
+      await tunnelManagerService.initialize();
+
+      // Initialize Ollama service (for fallback)
       final ollamaService = OllamaService(authService: authService);
-      final chatService = ChatService(ollamaService);
+
+      // Initialize streaming chat service
+      final streamingChatService = StreamingChatService(tunnelManagerService);
 
       setState(() {
+        _tunnelManagerService = tunnelManagerService;
         _ollamaService = ollamaService;
-        _chatService = chatService;
+        _streamingChatService = streamingChatService;
       });
 
-      debugPrint(
-          '[DEBUG] HomeScreen: Services initialized, testing connection...');
+      debugPrint('[DEBUG] HomeScreen: Services initialized successfully');
 
-      // Initialize services asynchronously (non-blocking)
-      _testConnectionAsync(ollamaService);
-    });
+      // Test connections asynchronously (non-blocking)
+      _testConnectionAsync();
+    } catch (e) {
+      debugPrint('[DEBUG] HomeScreen: Service initialization error: $e');
+      // Don't block the UI even if service initialization fails
+    }
   }
 
-  /// Test Ollama connection asynchronously without blocking the UI
-  Future<void> _testConnectionAsync(OllamaService ollamaService) async {
+  /// Test connections asynchronously without blocking the UI
+  Future<void> _testConnectionAsync() async {
     try {
-      debugPrint('[DEBUG] Starting async Ollama connection test...');
+      debugPrint('[DEBUG] Starting async connection tests...');
 
-      // Test connection in background - don't await to avoid blocking UI
-      ollamaService.testConnection().then((connected) {
-        debugPrint('[DEBUG] Ollama connection test completed: $connected');
-        if (!connected) {
-          debugPrint(
-              '[DEBUG] Ollama connection failed, but UI remains functional');
-          // Could show a subtle notification to user about connection status
-        } else {
-          debugPrint('[DEBUG] Ollama connection successful');
-        }
-      }).catchError((error) {
-        debugPrint('[DEBUG] Ollama connection test error: $error');
-        // Don't show error to user - just log it
-        // The UI should remain functional even if Ollama is not available
-      });
+      // Test tunnel manager connections
+      if (_tunnelManagerService != null) {
+        debugPrint('[DEBUG] Testing tunnel manager connections...');
+        // Tunnel manager will handle its own connection testing
+      }
 
-      debugPrint('[DEBUG] Connection test started (non-blocking)');
+      // Test Ollama service connection
+      if (_ollamaService != null) {
+        _ollamaService!
+            .testConnection()
+            .then((connected) {
+              debugPrint(
+                '[DEBUG] Ollama connection test completed: $connected',
+              );
+              if (!connected) {
+                debugPrint(
+                  '[DEBUG] Ollama connection failed, but UI remains functional',
+                );
+              } else {
+                debugPrint('[DEBUG] Ollama connection successful');
+              }
+            })
+            .catchError((error) {
+              debugPrint('[DEBUG] Ollama connection test error: $error');
+            });
+      }
+
+      debugPrint('[DEBUG] Connection tests started (non-blocking)');
     } catch (e) {
       debugPrint('[DEBUG] Connection test initialization error: $e');
-      // Don't block the UI even if connection test fails to start
     }
   }
 
@@ -102,19 +132,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Show loading screen if services are not initialized yet
-    if (_chatService == null || _ollamaService == null) {
+    if (_streamingChatService == null || _ollamaService == null) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundMain,
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: _chatService),
+        ChangeNotifierProvider.value(value: _streamingChatService),
         ChangeNotifierProvider.value(value: _ollamaService),
+        if (_tunnelManagerService != null)
+          ChangeNotifierProvider.value(value: _tunnelManagerService),
       ],
       child: Scaffold(
         backgroundColor: AppTheme.backgroundMain,
@@ -134,16 +164,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   // Conversation sidebar
                   if (!isMobile || !_isSidebarCollapsed)
-                    Consumer<ChatService>(
+                    Consumer<StreamingChatService>(
                       builder: (context, chatService, child) {
                         return ConversationList(
                           conversations: chatService.conversations,
                           selectedConversation: chatService.currentConversation,
-                          onConversationSelected:
-                              chatService.selectConversation,
-                          onConversationDeleted: chatService.deleteConversation,
-                          onConversationRenamed:
-                              chatService.updateConversationTitle,
+                          onConversationSelected: (conversationId) {
+                            final conversation = chatService.conversations
+                                .firstWhere((c) => c.id == conversationId);
+                            chatService.selectConversation(conversation);
+                          },
+                          onConversationDeleted: (conversationId) {
+                            final conversation = chatService.conversations
+                                .firstWhere((c) => c.id == conversationId);
+                            chatService.deleteConversation(conversation);
+                          },
+                          onConversationRenamed: (conversationId, newTitle) {
+                            final conversation = chatService.conversations
+                                .firstWhere((c) => c.id == conversationId);
+                            chatService.updateConversationTitle(
+                              conversation,
+                              newTitle,
+                            );
+                          },
                           onNewConversation: () =>
                               chatService.createConversation(),
                           isCollapsed: _isSidebarCollapsed,
@@ -159,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         floatingActionButton: isMobile && _isSidebarCollapsed
-            ? Consumer<ChatService>(
+            ? Consumer<StreamingChatService>(
                 builder: (context, chatService, child) {
                   return FloatingActionButton(
                     onPressed: () => chatService.createConversation(),
@@ -204,15 +247,15 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             AppConfig.appName,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
 
           const Spacer(),
 
           // Model selector
-          Consumer2<ChatService, OllamaService>(
+          Consumer2<StreamingChatService, OllamaService>(
             builder: (context, chatService, ollamaService, child) {
               final models = ollamaService.models.map((m) => m.name).toList();
               return Container(
@@ -360,7 +403,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChatArea(BuildContext context) {
-    return Consumer<ChatService>(
+    return Consumer<StreamingChatService>(
       builder: (context, chatService, child) {
         final conversation = chatService.currentConversation;
 
@@ -413,9 +456,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'Welcome to CloudToLocalLLM',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppTheme.textColor,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: AppTheme.textColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           SizedBox(height: AppTheme.spacingM),
           Text(
@@ -426,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> {
             textAlign: TextAlign.center,
           ),
           SizedBox(height: AppTheme.spacingXL),
-          Consumer<ChatService>(
+          Consumer<StreamingChatService>(
             builder: (context, chatService, child) {
               return ElevatedButton.icon(
                 onPressed: () => chatService.createConversation(),
@@ -457,9 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       return ListView.builder(
         controller: _scrollController,
-        padding: EdgeInsets.symmetric(
-          vertical: AppTheme.spacingM,
-        ),
+        padding: EdgeInsets.symmetric(vertical: AppTheme.spacingM),
         itemCount: conversation.messages.length,
         itemBuilder: (context, index) {
           try {
@@ -472,12 +513,15 @@ class _HomeScreenState extends State<HomeScreen> {
             return MessageBubble(
               message: message,
               showAvatar: true,
-              showTimestamp: index == 0 ||
+              showTimestamp:
+                  index == 0 ||
                   (index > 0 &&
                       conversation.messages[index - 1].role != message.role),
               onRetry: message.hasError
                   ? () => _retryMessage(
-                      Provider.of<ChatService>(context, listen: false), message)
+                      Provider.of<StreamingChatService>(context, listen: false),
+                      message,
+                    )
                   : null,
             );
           } catch (e) {
@@ -508,9 +552,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             'How can I help you today?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.textColor,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: AppTheme.textColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           SizedBox(height: AppTheme.spacingS),
           Text(
@@ -529,24 +573,20 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppTheme.dangerColor,
-          ),
+          Icon(Icons.error_outline, size: 64, color: AppTheme.dangerColor),
           SizedBox(height: AppTheme.spacingL),
           Text(
             'Something went wrong',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppTheme.textColor,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: AppTheme.textColor),
           ),
           SizedBox(height: AppTheme.spacingS),
           Text(
             message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
             textAlign: TextAlign.center,
           ),
         ],
@@ -554,7 +594,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _sendMessage(ChatService chatService, String message) async {
+  void _sendMessage(StreamingChatService chatService, String message) async {
     await chatService.sendMessage(message);
 
     // Scroll to bottom after sending message
@@ -569,7 +609,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _retryMessage(ChatService chatService, message) {
+  void _retryMessage(StreamingChatService chatService, message) {
     // TODO: Implement retry functionality
     // This would involve resending the last user message
   }

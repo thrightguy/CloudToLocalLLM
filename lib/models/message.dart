@@ -19,10 +19,7 @@ class Message {
   });
 
   /// Create a user message
-  factory Message.user({
-    required String content,
-    String? id,
-  }) {
+  factory Message.user({required String content, String? id}) {
     return Message(
       id: id ?? _generateId(),
       content: content,
@@ -52,10 +49,7 @@ class Message {
   }
 
   /// Create a system message
-  factory Message.system({
-    required String content,
-    String? id,
-  }) {
+  factory Message.system({required String content, String? id}) {
     return Message(
       id: id ?? _generateId(),
       content: content,
@@ -66,10 +60,7 @@ class Message {
   }
 
   /// Create a loading message (for when assistant is typing)
-  factory Message.loading({
-    required String model,
-    String? id,
-  }) {
+  factory Message.loading({required String model, String? id}) {
     return Message(
       id: id ?? _generateId(),
       content: '',
@@ -77,6 +68,22 @@ class Message {
       timestamp: DateTime.now(),
       model: model,
       status: MessageStatus.loading,
+    );
+  }
+
+  /// Create a streaming message (for real-time streaming responses)
+  factory Message.streaming({
+    required String model,
+    String? id,
+    String content = '',
+  }) {
+    return Message(
+      id: id ?? _generateId(),
+      content: content,
+      role: MessageRole.assistant,
+      timestamp: DateTime.now(),
+      model: model,
+      status: MessageStatus.streaming,
     );
   }
 
@@ -145,6 +152,9 @@ class Message {
   /// Check if message is currently loading
   bool get isLoading => status == MessageStatus.loading;
 
+  /// Check if message is currently streaming
+  bool get isStreaming => status == MessageStatus.streaming;
+
   /// Check if message has an error
   bool get hasError => status == MessageStatus.error;
 
@@ -185,15 +195,7 @@ class Message {
 }
 
 /// Enum for message roles
-enum MessageRole {
-  user,
-  assistant,
-  system,
-}
+enum MessageRole { user, assistant, system }
 
 /// Enum for message status
-enum MessageStatus {
-  loading,
-  sent,
-  error,
-}
+enum MessageStatus { loading, streaming, sent, error }
