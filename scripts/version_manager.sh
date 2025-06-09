@@ -10,6 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PUBSPEC_FILE="$PROJECT_ROOT/pubspec.yaml"
 APP_CONFIG_FILE="$PROJECT_ROOT/lib/config/app_config.dart"
+SHARED_VERSION_FILE="$PROJECT_ROOT/lib/shared/lib/version.dart"
+SHARED_PUBSPEC_FILE="$PROJECT_ROOT/lib/shared/pubspec.yaml"
 
 # Colors for output
 RED='\033[0;31m'
@@ -183,21 +185,74 @@ update_pubspec_version() {
 # Update version in app_config.dart
 update_app_config_version() {
     local new_version="$1"
-    
+
     log_info "Updating app_config.dart version to $new_version"
-    
+
     if [[ ! -f "$APP_CONFIG_FILE" ]]; then
         log_warning "app_config.dart not found, skipping update"
         return
     fi
-    
+
     # Create backup
     cp "$APP_CONFIG_FILE" "$APP_CONFIG_FILE.backup"
-    
+
     # Update version constant
     sed -i "s/static const String appVersion = '[^']*';/static const String appVersion = '$new_version';/" "$APP_CONFIG_FILE"
-    
+
     log_success "Updated app_config.dart version to $new_version"
+}
+
+# Update version in shared/lib/version.dart
+update_shared_version_file() {
+    local new_version="$1"
+    local new_build_number="$2"
+
+    log_info "Updating shared/lib/version.dart to $new_version"
+
+    if [[ ! -f "$SHARED_VERSION_FILE" ]]; then
+        log_warning "shared/lib/version.dart not found, skipping update"
+        return
+    fi
+
+    # Create backup
+    cp "$SHARED_VERSION_FILE" "$SHARED_VERSION_FILE.backup"
+
+    # Generate build timestamp
+    local build_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    local build_number_int=$(date +%Y%m%d%H%M)
+
+    # Update all version constants
+    sed -i "s/static const String mainAppVersion = '[^']*';/static const String mainAppVersion = '$new_version';/" "$SHARED_VERSION_FILE"
+    sed -i "s/static const int mainAppBuildNumber = [0-9]*;/static const int mainAppBuildNumber = $build_number_int;/" "$SHARED_VERSION_FILE"
+    sed -i "s/static const String tunnelManagerVersion = '[^']*';/static const String tunnelManagerVersion = '$new_version';/" "$SHARED_VERSION_FILE"
+    sed -i "s/static const int tunnelManagerBuildNumber = [0-9]*;/static const int tunnelManagerBuildNumber = $build_number_int;/" "$SHARED_VERSION_FILE"
+    sed -i "s/static const String sharedLibraryVersion = '[^']*';/static const String sharedLibraryVersion = '$new_version';/" "$SHARED_VERSION_FILE"
+    sed -i "s/static const int sharedLibraryBuildNumber = [0-9]*;/static const int sharedLibraryBuildNumber = $build_number_int;/" "$SHARED_VERSION_FILE"
+    sed -i "s/static const String buildTimestamp = '[^']*';/static const String buildTimestamp = '$build_timestamp';/" "$SHARED_VERSION_FILE"
+
+    log_success "Updated shared/lib/version.dart to $new_version"
+}
+
+# Update version in shared/pubspec.yaml
+update_shared_pubspec_version() {
+    local new_version="$1"
+    local new_build_number="$2"
+    local full_version="$new_version+$new_build_number"
+
+    log_info "Updating shared/pubspec.yaml version to $full_version"
+
+    if [[ ! -f "$SHARED_PUBSPEC_FILE" ]]; then
+        log_warning "shared/pubspec.yaml not found, skipping update"
+        return
+    fi
+
+    # Create backup
+    cp "$SHARED_PUBSPEC_FILE" "$SHARED_PUBSPEC_FILE.backup"
+
+    # Update version line
+    sed -i "s/^version:.*/version: $full_version/" "$SHARED_PUBSPEC_FILE"
+
+    log_success "Updated shared/pubspec.yaml version to $full_version"
 }
 
 # Validate version format
@@ -256,6 +311,8 @@ main() {
                 validate_version_format "$current_version"
                 update_pubspec_version "$current_version" "$new_build_number"
                 update_app_config_version "$current_version"
+                update_shared_version_file "$current_version" "$new_build_number"
+                update_shared_pubspec_version "$current_version" "$new_build_number"
                 log_info "Build number incremented (no GitHub release needed)"
             else
                 # For semantic version changes, generate new build number
@@ -264,6 +321,8 @@ main() {
                 validate_version_format "$new_version"
                 update_pubspec_version "$new_version" "$new_build_number"
                 update_app_config_version "$new_version"
+                update_shared_version_file "$new_version" "$new_build_number"
+                update_shared_pubspec_version "$new_version" "$new_build_number"
 
                 # Check if GitHub release should be created
                 if should_create_github_release "$new_version"; then
@@ -282,9 +341,11 @@ main() {
                 exit 1
             fi
             validate_version_format "$2"
-            local new_build_number=$(generate_build_number)
+            local new_build_number="001"  # Reset build number for set command
             update_pubspec_version "$2" "$new_build_number"
             update_app_config_version "$2"
+            update_shared_version_file "$2" "$new_build_number"
+            update_shared_pubspec_version "$2" "$new_build_number"
             show_version_info
             ;;
         "validate")

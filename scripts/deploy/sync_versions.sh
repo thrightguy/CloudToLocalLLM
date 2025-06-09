@@ -59,13 +59,13 @@ fi
 # Update AUR PKGBUILD
 if [[ -f "aur-package/PKGBUILD" ]]; then
     echo -e "${BLUE}📝 Updating AUR PKGBUILD...${NC}"
-    
+
     # Create backup
     cp "aur-package/PKGBUILD" "aur-package/PKGBUILD.backup"
-    
+
     # Update pkgver
     sed -i "s/^pkgver=.*/pkgver=$PUBSPEC_VERSION/" aur-package/PKGBUILD
-    
+
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}✅ Updated AUR PKGBUILD pkgver to $PUBSPEC_VERSION${NC}"
     else
@@ -74,6 +74,56 @@ if [[ -f "aur-package/PKGBUILD" ]]; then
     fi
 else
     echo -e "${YELLOW}⚠️  AUR PKGBUILD not found, skipping...${NC}"
+fi
+
+# Update lib/shared/lib/version.dart
+if [[ -f "lib/shared/lib/version.dart" ]]; then
+    echo -e "${BLUE}📝 Updating lib/shared/lib/version.dart...${NC}"
+
+    # Create backup
+    cp "lib/shared/lib/version.dart" "lib/shared/lib/version.dart.backup"
+
+    # Generate build timestamp and number
+    BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    BUILD_NUMBER_INT=$(date +%Y%m%d%H%M)
+
+    # Update all version constants
+    sed -i "s/static const String mainAppVersion = '[^']*';/static const String mainAppVersion = '$PUBSPEC_VERSION';/" lib/shared/lib/version.dart
+    sed -i "s/static const int mainAppBuildNumber = [0-9]*;/static const int mainAppBuildNumber = $BUILD_NUMBER_INT;/" lib/shared/lib/version.dart
+    sed -i "s/static const String tunnelManagerVersion = '[^']*';/static const String tunnelManagerVersion = '$PUBSPEC_VERSION';/" lib/shared/lib/version.dart
+    sed -i "s/static const int tunnelManagerBuildNumber = [0-9]*;/static const int tunnelManagerBuildNumber = $BUILD_NUMBER_INT;/" lib/shared/lib/version.dart
+    sed -i "s/static const String sharedLibraryVersion = '[^']*';/static const String sharedLibraryVersion = '$PUBSPEC_VERSION';/" lib/shared/lib/version.dart
+    sed -i "s/static const int sharedLibraryBuildNumber = [0-9]*;/static const int sharedLibraryBuildNumber = $BUILD_NUMBER_INT;/" lib/shared/lib/version.dart
+    sed -i "s/static const String buildTimestamp = '[^']*';/static const String buildTimestamp = '$BUILD_TIMESTAMP';/" lib/shared/lib/version.dart
+
+    if [[ $? -eq 0 ]]; then
+        echo -e "${GREEN}✅ Updated lib/shared/lib/version.dart to $PUBSPEC_VERSION${NC}"
+    else
+        echo -e "${RED}❌ Failed to update lib/shared/lib/version.dart${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}⚠️  lib/shared/lib/version.dart not found, skipping...${NC}"
+fi
+
+# Update lib/shared/pubspec.yaml
+if [[ -f "lib/shared/pubspec.yaml" ]]; then
+    echo -e "${BLUE}📝 Updating lib/shared/pubspec.yaml...${NC}"
+
+    # Create backup
+    cp "lib/shared/pubspec.yaml" "lib/shared/pubspec.yaml.backup"
+
+    # Update version line
+    sed -i "s/^version:.*/version: $FULL_VERSION/" lib/shared/pubspec.yaml
+
+    if [[ $? -eq 0 ]]; then
+        echo -e "${GREEN}✅ Updated lib/shared/pubspec.yaml to $FULL_VERSION${NC}"
+    else
+        echo -e "${RED}❌ Failed to update lib/shared/pubspec.yaml${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}⚠️  lib/shared/pubspec.yaml not found, skipping...${NC}"
 fi
 
 # Verify synchronization
@@ -99,12 +149,40 @@ if [[ -f "aur-package/PKGBUILD" ]]; then
     fi
 fi
 
+# Check lib/shared/lib/version.dart if it exists
+if [[ -f "lib/shared/lib/version.dart" ]]; then
+    SHARED_VERSION=$(grep "static const String mainAppVersion = " lib/shared/lib/version.dart | cut -d"'" -f2)
+    if [[ "$SHARED_VERSION" = "$PUBSPEC_VERSION" ]]; then
+        echo -e "${GREEN}✅ lib/shared/lib/version.dart: $SHARED_VERSION${NC}"
+    else
+        echo -e "${RED}❌ lib/shared/lib/version.dart version mismatch: $SHARED_VERSION != $PUBSPEC_VERSION${NC}"
+        exit 1
+    fi
+fi
+
+# Check lib/shared/pubspec.yaml if it exists
+if [[ -f "lib/shared/pubspec.yaml" ]]; then
+    SHARED_PUBSPEC_VERSION=$(grep "^version:" lib/shared/pubspec.yaml | cut -d':' -f2 | tr -d ' ' | cut -d'+' -f1)
+    if [[ "$SHARED_PUBSPEC_VERSION" = "$PUBSPEC_VERSION" ]]; then
+        echo -e "${GREEN}✅ lib/shared/pubspec.yaml: $SHARED_PUBSPEC_VERSION${NC}"
+    else
+        echo -e "${RED}❌ lib/shared/pubspec.yaml version mismatch: $SHARED_PUBSPEC_VERSION != $PUBSPEC_VERSION${NC}"
+        exit 1
+    fi
+fi
+
 echo -e "${GREEN}🎉 All versions synchronized to $FULL_VERSION${NC}"
 echo -e "${BLUE}📋 Summary:${NC}"
 echo -e "  pubspec.yaml: $FULL_VERSION"
 echo -e "  assets/version.json: $PUBSPEC_VERSION"
 if [[ -f "aur-package/PKGBUILD" ]]; then
     echo -e "  AUR PKGBUILD: $AUR_VERSION"
+fi
+if [[ -f "lib/shared/lib/version.dart" ]]; then
+    echo -e "  lib/shared/lib/version.dart: $SHARED_VERSION"
+fi
+if [[ -f "lib/shared/pubspec.yaml" ]]; then
+    echo -e "  lib/shared/pubspec.yaml: $SHARED_PUBSPEC_VERSION"
 fi
 
 echo -e "${YELLOW}💡 Next steps:${NC}"

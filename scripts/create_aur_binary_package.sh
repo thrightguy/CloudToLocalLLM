@@ -14,7 +14,10 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VERSION="3.0.2"  # Security Fixes + Docker Non-Root User Implementation
+
+# Get version from version manager
+VERSION=$("$PROJECT_ROOT/scripts/version_manager.sh" get-semantic)
+
 BUILD_DIR="$PROJECT_ROOT/build/linux/x64/release/bundle"
 DAEMON_EXECUTABLE="$PROJECT_ROOT/dist/tray_daemon/linux-x64/cloudtolocalllm-tray"
 OUTPUT_DIR="$PROJECT_ROOT/dist"

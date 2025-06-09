@@ -16,7 +16,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$PROJECT_ROOT/build"
 DIST_DIR="$PROJECT_ROOT/dist"
-PACKAGE_DIR="$DIST_DIR/cloudtolocalllm-3.3.1"
+
+# Get version from version manager
+VERSION=$("$PROJECT_ROOT/scripts/version_manager.sh" get-semantic)
+PACKAGE_DIR="$DIST_DIR/cloudtolocalllm-$VERSION"
 
 # Logging functions
 log_info() {
@@ -235,9 +238,9 @@ create_wrapper_scripts() {
     log_info "Creating wrapper scripts..."
     
     # Main wrapper script
-    cat > "$PACKAGE_DIR/bin/cloudtolocalllm" << 'EOF'
+    cat > "$PACKAGE_DIR/bin/cloudtolocalllm" << EOF
 #!/bin/bash
-# CloudToLocalLLM v3.3.1 unified wrapper script
+# CloudToLocalLLM v$VERSION unified wrapper script
 # Manages tray daemon and launches main Flutter application
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -286,7 +289,7 @@ EOF
 
 # Main build function
 main() {
-    log_info "Starting CloudToLocalLLM unified package build v3.3.1"
+    log_info "Starting CloudToLocalLLM unified package build v$VERSION"
     
     check_prerequisites
     clean_builds
@@ -298,7 +301,7 @@ main() {
     create_wrapper_scripts
     
     # Create version info
-    echo "3.3.1" > "$PACKAGE_DIR/VERSION"
+    echo "$VERSION" > "$PACKAGE_DIR/VERSION"
     
     log_success "Unified package build completed successfully!"
     log_info "Package location: $PACKAGE_DIR"
