@@ -28,15 +28,37 @@ class AppRouter {
       initialLocation: '/',
       debugLogDiagnostics: false,
       routes: [
-        // Home route - platform-specific routing
+        // Home route - platform-specific routing with domain detection
         GoRoute(
           path: '/',
           name: 'home',
           builder: (context, state) {
-            // Web: Show marketing homepage
+            // Web: Check if we're on app subdomain vs root domain
             // Desktop: Redirect to chat interface
             if (kIsWeb) {
-              return const HomepageScreen();
+              // Check if we're on the app subdomain
+              final uri = state.uri;
+              final host = uri.host;
+
+              // If on app subdomain, redirect to login/chat flow
+              if (host.startsWith('app.')) {
+                // Check authentication status and redirect accordingly
+                final authService = context.read<AuthService>();
+                if (authService.isAuthenticated.value) {
+                  return const HomeScreen(); // Go to chat if authenticated
+                } else {
+                  // Redirect to login for app subdomain
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.go('/login');
+                  });
+                  return const LoadingScreen(
+                    message: 'Redirecting to login...',
+                  );
+                }
+              } else {
+                // Root domain - show marketing homepage
+                return const HomepageScreen();
+              }
             } else {
               // For desktop, home is the chat interface
               return const HomeScreen();
@@ -166,8 +188,11 @@ class AppRouter {
         final isDownload = state.matchedLocation == '/download' && kIsWeb;
         final isDocs = state.matchedLocation == '/docs' && kIsWeb;
 
-        // Allow access to marketing pages on web without authentication
-        if (kIsWeb && (isHomepage || isDownload || isDocs)) {
+        // Check if we're on app subdomain
+        final isAppSubdomain = kIsWeb && state.uri.host.startsWith('app.');
+
+        // Allow access to marketing pages on web root domain without authentication
+        if (kIsWeb && !isAppSubdomain && (isHomepage || isDownload || isDocs)) {
           return null;
         }
 
@@ -176,8 +201,8 @@ class AppRouter {
           return null;
         }
 
-        // Redirect to login if not authenticated (for app routes)
-        if (!isAuthenticated) {
+        // For app subdomain or desktop, require authentication
+        if (!isAuthenticated && (isAppSubdomain || !kIsWeb)) {
           return '/login';
         }
 
