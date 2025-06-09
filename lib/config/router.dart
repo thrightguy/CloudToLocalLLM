@@ -9,8 +9,7 @@ import '../screens/loading_screen.dart';
 import '../screens/callback_screen.dart';
 import '../screens/ollama_test_screen.dart';
 
-// Web-specific import for hostname detection
-import 'package:web/web.dart' as web;
+// No web-specific imports needed - using platform-safe approach
 
 import '../screens/settings/llm_provider_settings_screen.dart';
 import '../screens/settings/daemon_settings_screen.dart';
@@ -27,17 +26,13 @@ import '../screens/marketing/documentation_screen.dart';
 String _getCurrentHostname() {
   if (kIsWeb) {
     try {
-      // Use the modern web API to get hostname
-      return web.window.location.hostname;
+      // Use Uri.base as the primary method for hostname detection
+      final currentUrl = Uri.base.toString();
+      final uri = Uri.parse(currentUrl);
+      return uri.host;
     } catch (e) {
-      // Fallback: try to extract from current URL
-      try {
-        final currentUrl = Uri.base.toString();
-        final uri = Uri.parse(currentUrl);
-        return uri.host;
-      } catch (e2) {
-        return '';
-      }
+      // If Uri.base fails, return empty string
+      return '';
     }
   }
   return '';
