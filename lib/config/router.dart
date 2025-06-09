@@ -28,33 +28,20 @@ class AppRouter {
       initialLocation: '/',
       debugLogDiagnostics: false,
       routes: [
-        // Home route - platform-specific routing with domain detection
+        // Home route - platform-specific routing
         GoRoute(
           path: '/',
           name: 'home',
           builder: (context, state) {
-            // Web: Check if we're on app subdomain vs root domain
-            // Desktop: Redirect to chat interface
+            // Web: Domain detection handled by redirect logic
+            // Desktop: Chat interface
             if (kIsWeb) {
               // Check if we're on the app subdomain
-              final uri = state.uri;
-              final host = uri.host;
+              final isAppSubdomain = state.uri.host.startsWith('app.');
 
-              // If on app subdomain, redirect to login/chat flow
-              if (host.startsWith('app.')) {
-                // Check authentication status and redirect accordingly
-                final authService = context.read<AuthService>();
-                if (authService.isAuthenticated.value) {
-                  return const HomeScreen(); // Go to chat if authenticated
-                } else {
-                  // Redirect to login for app subdomain
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    context.go('/login');
-                  });
-                  return const LoadingScreen(
-                    message: 'Redirecting to login...',
-                  );
-                }
+              if (isAppSubdomain) {
+                // App subdomain - show chat interface (auth handled by redirect)
+                return const HomeScreen();
               } else {
                 // Root domain - show marketing homepage
                 return const HomepageScreen();
