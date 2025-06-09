@@ -37,13 +37,23 @@ class AppRouter {
             // Desktop: Chat interface
             if (kIsWeb) {
               // Check if we're on the app subdomain
-              final isAppSubdomain = state.uri.host.startsWith('app.');
+              final currentHost = state.uri.host;
+              final isAppSubdomain =
+                  currentHost.startsWith('app.') ||
+                  currentHost == 'app.cloudtolocalllm.online';
+
+              // Debug logging for troubleshooting
+              debugPrint('[Router] Current host: $currentHost');
+              debugPrint('[Router] Is app subdomain: $isAppSubdomain');
+              debugPrint('[Router] Full URI: ${state.uri}');
 
               if (isAppSubdomain) {
                 // App subdomain - show chat interface (auth handled by redirect)
+                debugPrint('[Router] Showing HomeScreen (chat interface)');
                 return const HomeScreen();
               } else {
                 // Root domain - show marketing homepage
+                debugPrint('[Router] Showing HomepageScreen (marketing)');
                 return const HomepageScreen();
               }
             } else {
@@ -175,25 +185,41 @@ class AppRouter {
         final isDownload = state.matchedLocation == '/download' && kIsWeb;
         final isDocs = state.matchedLocation == '/docs' && kIsWeb;
 
-        // Check if we're on app subdomain
-        final isAppSubdomain = kIsWeb && state.uri.host.startsWith('app.');
+        // Check if we're on app subdomain (improved detection)
+        final currentHost = state.uri.host;
+        final isAppSubdomain =
+            kIsWeb &&
+            (currentHost.startsWith('app.') ||
+                currentHost == 'app.cloudtolocalllm.online');
+
+        // Debug logging for redirect logic
+        debugPrint('[Redirect] Current host: $currentHost');
+        debugPrint('[Redirect] Is app subdomain: $isAppSubdomain');
+        debugPrint('[Redirect] Is authenticated: $isAuthenticated');
+        debugPrint('[Redirect] Matched location: ${state.matchedLocation}');
 
         // Allow access to marketing pages on web root domain without authentication
         if (kIsWeb && !isAppSubdomain && (isHomepage || isDownload || isDocs)) {
+          debugPrint('[Redirect] Allowing access to marketing page');
           return null;
         }
 
         // Allow access to login, callback, and loading pages
         if (isLoggingIn || isCallback || isLoading) {
+          debugPrint('[Redirect] Allowing access to auth/loading page');
           return null;
         }
 
         // For app subdomain or desktop, require authentication
         if (!isAuthenticated && (isAppSubdomain || !kIsWeb)) {
+          debugPrint(
+            '[Redirect] Redirecting to login - authentication required',
+          );
           return '/login';
         }
 
         // Allow access to protected routes
+        debugPrint('[Redirect] Allowing access to protected route');
         return null;
       },
 
