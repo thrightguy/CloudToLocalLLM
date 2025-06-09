@@ -204,8 +204,9 @@ phase3_multiplatform_build() {
     fi
     
     # Build unified package (already completed)
-    if [[ ! -f "dist/cloudtolocalllm-3.4.0-x86_64.tar.gz" ]]; then
-        log_error "Unified package not found. Run ./scripts/create_unified_package.sh first"
+    local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
+    if [[ ! -f "dist/cloudtolocalllm-${current_version}-x86_64.tar.gz" ]]; then
+        log_error "Unified package not found for version ${current_version}. Run ./scripts/create_unified_package.sh first"
         exit 3
     fi
     
@@ -288,11 +289,12 @@ phase5_comprehensive_verification() {
     
     # Test version endpoint
     log_verbose "Testing version endpoint..."
+    local expected_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
     local version_response=$(curl -s https://app.cloudtolocalllm.online/version.json | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
-    if [[ "$version_response" == "3.4.0" ]]; then
+    if [[ "$version_response" == "$expected_version" ]]; then
         log_verbose "✓ Version endpoint correct"
     else
-        log_error "Version endpoint mismatch: expected 3.4.0, got $version_response"
+        log_error "Version endpoint mismatch: expected $expected_version, got $version_response"
         exit 5
     fi
     
@@ -306,19 +308,20 @@ phase6_operational_readiness() {
     log "Confirming operational readiness..."
     
     # Display deployment summary
+    local deployed_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.+]*\).*/\1/')
     echo ""
-    echo -e "${GREEN}🎉 CloudToLocalLLM v3.4.0+001 Deployment Completed Successfully!${NC}"
+    echo -e "${GREEN}🎉 CloudToLocalLLM v${deployed_version} Deployment Completed Successfully!${NC}"
     echo -e "${GREEN}================================================================${NC}"
     echo ""
     echo -e "${BLUE}📋 Deployment Summary:${NC}"
-    echo "  ✅ Version: v3.4.0+001"
+    echo "  ✅ Version: v${deployed_version}"
     echo "  ✅ Git-based Distribution: Repository as single source of truth"
-    echo "  ✅ Static Download: https://cloudtolocalllm.online/cloudtolocalllm-3.4.0-x86_64.tar.gz"
+    echo "  ✅ Static Download: https://cloudtolocalllm.online/cloudtolocalllm-${deployed_version%+*}-x86_64.tar.gz"
     echo "  ✅ Web Platform: https://app.cloudtolocalllm.online"
     echo "  ✅ AUR Package: Ready for submission"
     echo ""
     echo -e "${BLUE}📋 Next Steps:${NC}"
-    echo "  1. Submit AUR package: cd aur-package && git add . && git commit -m 'Update to v3.4.0' && git push"
+    echo "  1. Submit AUR package: cd aur-package && git add . && git commit -m 'Update to v${deployed_version%+*}' && git push"
     echo "  2. Test AUR installation: yay -S cloudtolocalllm"
     echo "  3. Verify platform-specific UI features"
     echo "  4. Monitor deployment health"
@@ -334,9 +337,10 @@ phase6_operational_readiness() {
 # Main execution
 main() {
     # Header
-    echo -e "${BLUE}CloudToLocalLLM Complete Automated Deployment v3.4.0+${NC}"
+    local target_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.+]*\).*/\1/')
+    echo -e "${BLUE}CloudToLocalLLM Complete Automated Deployment v${target_version%+*}+${NC}"
     echo -e "${BLUE}======================================================${NC}"
-    echo "Target: CloudToLocalLLM v3.4.0+001 Production Deployment"
+    echo "Target: CloudToLocalLLM v${target_version} Production Deployment"
     echo "Strategy: Six-Phase Automated Workflow"
     echo "Distribution: Static Download + AUR + VPS"
     echo ""
