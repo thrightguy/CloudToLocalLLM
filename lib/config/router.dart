@@ -30,17 +30,12 @@ String _getCurrentHostname() {
       // Use the modern web API to get hostname
       return web.window.location.hostname;
     } catch (e) {
-      debugPrint(
-        '[Router] Failed to get hostname from web.window.location: $e',
-      );
       // Fallback: try to extract from current URL
       try {
         final currentUrl = Uri.base.toString();
         final uri = Uri.parse(currentUrl);
-        debugPrint('[Router] Fallback hostname from Uri.base: ${uri.host}');
         return uri.host;
       } catch (e2) {
-        debugPrint('[Router] Fallback hostname extraction failed: $e2');
         return '';
       }
     }
@@ -55,9 +50,6 @@ bool _isAppSubdomain() {
   final hostname = _getCurrentHostname();
   final isApp =
       hostname.startsWith('app.') || hostname == 'app.cloudtolocalllm.online';
-
-  debugPrint('[Router] Current hostname: "$hostname"');
-  debugPrint('[Router] Is app subdomain: $isApp');
 
   return isApp;
 }
@@ -83,11 +75,9 @@ class AppRouter {
 
               if (isAppSubdomain) {
                 // App subdomain - show chat interface (auth handled by redirect)
-                debugPrint('[Router] Showing HomeScreen (chat interface)');
                 return const HomeScreen();
               } else {
                 // Root domain - show marketing homepage
-                debugPrint('[Router] Showing HomepageScreen (marketing)');
                 return const HomepageScreen();
               }
             } else {
@@ -222,33 +212,22 @@ class AppRouter {
         // Use robust hostname detection
         final isAppSubdomain = _isAppSubdomain();
 
-        // Debug logging for redirect logic
-        debugPrint('[Redirect] Is app subdomain: $isAppSubdomain');
-        debugPrint('[Redirect] Is authenticated: $isAuthenticated');
-        debugPrint('[Redirect] Matched location: ${state.matchedLocation}');
-
         // Allow access to marketing pages on web root domain without authentication
         if (kIsWeb && !isAppSubdomain && (isHomepage || isDownload || isDocs)) {
-          debugPrint('[Redirect] Allowing access to marketing page');
           return null;
         }
 
         // Allow access to login, callback, and loading pages
         if (isLoggingIn || isCallback || isLoading) {
-          debugPrint('[Redirect] Allowing access to auth/loading page');
           return null;
         }
 
         // For app subdomain or desktop, require authentication
         if (!isAuthenticated && (isAppSubdomain || !kIsWeb)) {
-          debugPrint(
-            '[Redirect] Redirecting to login - authentication required',
-          );
           return '/login';
         }
 
         // Allow access to protected routes
-        debugPrint('[Redirect] Allowing access to protected route');
         return null;
       },
 
