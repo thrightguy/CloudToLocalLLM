@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# CloudToLocalLLM VPS Deployment Script v3.4.0+
+# CloudToLocalLLM VPS Deployment Script v3.4.1+
 # Enhanced with automation flags for CI/CD pipeline support
 
 set -e
@@ -105,7 +105,7 @@ parse_arguments() {
 }
 
 # Header
-echo -e "${BLUE}CloudToLocalLLM VPS Deployment v3.4.0+${NC}"
+echo -e "${BLUE}CloudToLocalLLM VPS Deployment v3.4.1+${NC}"
 echo -e "${BLUE}=======================================${NC}"
 
 # Check if we're on VPS or local development
@@ -224,10 +224,11 @@ update_static_distribution() {
     fi
 
     # Copy unified package files from repository to static homepage
+    local version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
     local dist_files=(
-        "cloudtolocalllm-3.4.0-x86_64.tar.gz"
-        "cloudtolocalllm-3.4.0-x86_64.tar.gz.sha256"
-        "cloudtolocalllm-3.4.0-x86_64-aur-info.txt"
+        "cloudtolocalllm-${version}-x86_64.tar.gz"
+        "cloudtolocalllm-${version}-x86_64.tar.gz.sha256"
+        "cloudtolocalllm-${version}-x86_64-aur-info.txt"
     )
 
     for file in "${dist_files[@]}"; do
