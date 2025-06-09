@@ -3,7 +3,7 @@
 
 # Update these values in aur-package/PKGBUILD:
 pkgver=3.5.1
-sha256sums=('SKIP' '30590ad4e4262fd47b8c39a818084190ba27db02b03b19ac90aefd846f7248fe')
+sha256sums=('SKIP' '88b92e39512095ea8655ecc2030b2180f686418ab11b0b82758d825ba126aae7')
 
 # Static download URL:
 source=(
