@@ -1,0 +1,19 @@
+# AUR PKGBUILD Information for CloudToLocalLLM v3.5.0
+# Static Distribution Configuration
+
+# Update these values in aur-package/PKGBUILD:
+pkgver=3.5.0
+sha256sums=('SKIP' 'a36e08cbf277047c86a43b028a1c5c4bbd8fa4bb6873050ea6b1ee6ddd14741a')
+
+# Static download URL:
+source=(
+    "https://github.com/imrightguy/CloudToLocalLLM/archive/v$pkgver.tar.gz"
+    "https://cloudtolocalllm.online/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
+)
+
+# Deployment workflow for static distribution:
+# 1. Upload cloudtolocalllm-3.5.0-x86_64.tar.gz to https://cloudtolocalllm.online/
+# 2. Update aur-package/PKGBUILD with new version and checksum
+# 3. Test AUR package build locally
+# 4. Submit updated PKGBUILD to AUR
+# 5. Deploy web app to VPS
