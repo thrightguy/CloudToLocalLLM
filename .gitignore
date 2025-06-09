@@ -240,6 +240,9 @@ aur-package/*.pkg.tar.zst
 aur-package/*.tar.gz
 aur-package/*.tar.gz.sha256
 
+# AUR repository directory (prevent submodule issues)
+aur-repo/
+
 # Allow only essential AUR files
 !aur-package/PKGBUILD
 !aur-package/.SRCINFO
