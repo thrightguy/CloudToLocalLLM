@@ -9,6 +9,9 @@ import '../screens/loading_screen.dart';
 import '../screens/callback_screen.dart';
 import '../screens/ollama_test_screen.dart';
 
+// Web-specific import for hostname detection
+import 'package:web/web.dart' as web;
+
 import '../screens/settings/llm_provider_settings_screen.dart';
 import '../screens/settings/daemon_settings_screen.dart';
 import '../screens/settings/connection_status_screen.dart';
@@ -19,6 +22,45 @@ import '../screens/unified_settings_screen.dart';
 import '../screens/marketing/homepage_screen.dart';
 import '../screens/marketing/download_screen.dart';
 import '../screens/marketing/documentation_screen.dart';
+
+/// Utility function to get the current hostname in web environment
+String _getCurrentHostname() {
+  if (kIsWeb) {
+    try {
+      // Use the modern web API to get hostname
+      return web.window.location.hostname;
+    } catch (e) {
+      debugPrint(
+        '[Router] Failed to get hostname from web.window.location: $e',
+      );
+      // Fallback: try to extract from current URL
+      try {
+        final currentUrl = Uri.base.toString();
+        final uri = Uri.parse(currentUrl);
+        debugPrint('[Router] Fallback hostname from Uri.base: ${uri.host}');
+        return uri.host;
+      } catch (e2) {
+        debugPrint('[Router] Fallback hostname extraction failed: $e2');
+        return '';
+      }
+    }
+  }
+  return '';
+}
+
+/// Check if current hostname indicates app subdomain
+bool _isAppSubdomain() {
+  if (!kIsWeb) return false;
+
+  final hostname = _getCurrentHostname();
+  final isApp =
+      hostname.startsWith('app.') || hostname == 'app.cloudtolocalllm.online';
+
+  debugPrint('[Router] Current hostname: "$hostname"');
+  debugPrint('[Router] Is app subdomain: $isApp');
+
+  return isApp;
+}
 
 /// Application router configuration using GoRouter
 class AppRouter {
@@ -36,16 +78,8 @@ class AppRouter {
             // Web: Domain detection handled by redirect logic
             // Desktop: Chat interface
             if (kIsWeb) {
-              // Check if we're on the app subdomain
-              final currentHost = state.uri.host;
-              final isAppSubdomain =
-                  currentHost.startsWith('app.') ||
-                  currentHost == 'app.cloudtolocalllm.online';
-
-              // Debug logging for troubleshooting
-              debugPrint('[Router] Current host: $currentHost');
-              debugPrint('[Router] Is app subdomain: $isAppSubdomain');
-              debugPrint('[Router] Full URI: ${state.uri}');
+              // Use robust hostname detection
+              final isAppSubdomain = _isAppSubdomain();
 
               if (isAppSubdomain) {
                 // App subdomain - show chat interface (auth handled by redirect)
@@ -185,15 +219,10 @@ class AppRouter {
         final isDownload = state.matchedLocation == '/download' && kIsWeb;
         final isDocs = state.matchedLocation == '/docs' && kIsWeb;
 
-        // Check if we're on app subdomain (improved detection)
-        final currentHost = state.uri.host;
-        final isAppSubdomain =
-            kIsWeb &&
-            (currentHost.startsWith('app.') ||
-                currentHost == 'app.cloudtolocalllm.online');
+        // Use robust hostname detection
+        final isAppSubdomain = _isAppSubdomain();
 
         // Debug logging for redirect logic
-        debugPrint('[Redirect] Current host: $currentHost');
         debugPrint('[Redirect] Is app subdomain: $isAppSubdomain');
         debugPrint('[Redirect] Is authenticated: $isAuthenticated');
         debugPrint('[Redirect] Matched location: ${state.matchedLocation}');
