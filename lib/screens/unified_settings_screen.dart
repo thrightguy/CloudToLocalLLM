@@ -254,19 +254,22 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
                   },
                 ),
               ),
-              const Divider(),
-              _buildSettingItem(
-                'Start Minimized',
-                'Start application minimized to system tray',
-                Switch(
-                  value: _startMinimized,
-                  onChanged: (value) {
-                    setState(() {
-                      _startMinimized = value;
-                    });
-                  },
+              // Start minimized setting - Desktop only
+              if (!kIsWeb) ...[
+                const Divider(),
+                _buildSettingItem(
+                  'Start Minimized',
+                  'Start application minimized to system tray',
+                  Switch(
+                    value: _startMinimized,
+                    onChanged: (value) {
+                      setState(() {
+                        _startMinimized = value;
+                      });
+                    },
+                  ),
                 ),
-              ),
+              ],
               // System tray setting (consolidated from System Tray) - Desktop only
               if (!kIsWeb) ...[
                 const Divider(),

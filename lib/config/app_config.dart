@@ -53,7 +53,8 @@ class AppConfig {
   // TEMPORARY: Debug version display for v3.3.1 beta testing
   // TODO: Remove this feature after v3.3.1 testing phase is complete
   // Set to false to disable version overlay across entire application
-  static const bool showDebugVersionOverlay = true;
+  // Disabled for production web builds, enabled for desktop development
+  static const bool showDebugVersionOverlay = !kIsWeb;
 
   // Ollama Configuration (Direct Local Connection for Desktop)
   static const String defaultOllamaHost = 'localhost';
