@@ -3,7 +3,7 @@ description: Manage and run powerful Large Language Models locally, orchestrated
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.5.0+202506091230
+version: 3.5.0+202506091400
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -25,17 +25,17 @@ dependencies:
   web: ^1.1.1
 
   # Streaming and WebSocket support
-  web_socket_channel: ^2.4.0
+  web_socket_channel: ^3.0.3
   stream_channel: ^2.1.2
 
   # Enhanced HTTP handling for streaming
   dio: ^5.3.2
 
   # Real-time event handling
-  rxdart: ^0.27.7
+  rxdart: ^0.28.0
 
   # Connection monitoring
-  connectivity_plus: ^4.0.2
+  connectivity_plus: ^6.1.4
 
   # App Information
   package_info_plus: ^8.1.1
@@ -56,7 +56,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
   # System Integration - Native Flutter system tray integration
-  tray_manager: ^0.2.3
+  tray_manager: ^0.5.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0
