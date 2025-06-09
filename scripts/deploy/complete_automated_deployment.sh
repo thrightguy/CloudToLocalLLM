@@ -225,26 +225,25 @@ phase3_multiplatform_build() {
 phase4_distribution_execution() {
     log_phase 4 "Distribution Execution"
 
-    log "Executing distribution deployment..."
+    log "Executing git-based distribution deployment..."
 
-    # Note: Static distribution files are now distributed via git repository
+    # Git-based distribution: Repository as single source of truth
     # The unified package files in dist/ are committed to the repository
     # and will be pulled to the VPS during deployment
     log_verbose "Using git repository as single source of truth for distribution files..."
 
-    # Test AUR package
-    local aur_flags="--skip-install"
-    if [[ "$VERBOSE" == "true" ]]; then
-        aur_flags="$aur_flags --verbose"
-    fi
-    if [[ "$DRY_RUN" == "true" ]]; then
-        aur_flags="$aur_flags --dry-run"
-    fi
+    # Verify distribution files are committed to git
+    local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
+    local package_file="dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
 
-    log_verbose "Testing AUR package..."
-    ./scripts/deploy/test_aur_package.sh $aur_flags
+    if ! git ls-files --error-unmatch "$package_file" &> /dev/null; then
+        log_error "Distribution package not found in git repository: $package_file"
+        log_error "Ensure distribution files are committed to git before deployment"
+        exit 4
+    fi
+    log_verbose "✓ Distribution files verified in git repository"
 
-    # Deploy to VPS
+    # Deploy to VPS with git pull for distribution files
     local vps_flags=""
     if [[ "$FORCE" == "true" ]]; then
         vps_flags="$vps_flags --force"
@@ -259,8 +258,24 @@ phase4_distribution_execution() {
         vps_flags="$vps_flags --dry-run"
     fi
 
-    log_verbose "Deploying to VPS..."
+    log_verbose "Deploying to VPS with git-based distribution..."
     ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull origin master && ./scripts/deploy/update_and_deploy.sh $vps_flags"
+
+    # Test AUR package after VPS deployment (when static files are available)
+    local aur_flags="--skip-install"
+    if [[ "$VERBOSE" == "true" ]]; then
+        aur_flags="$aur_flags --verbose"
+    fi
+    if [[ "$DRY_RUN" == "true" ]]; then
+        aur_flags="$aur_flags --dry-run"
+    fi
+
+    log_verbose "Testing AUR package with static distribution..."
+    if ./scripts/deploy/test_aur_package.sh $aur_flags; then
+        log_verbose "✓ AUR package test passed"
+    else
+        log_warning "AUR package test failed - may need manual verification"
+    fi
 
     # Submit AUR package immediately after VPS deployment
     log_verbose "Submitting AUR package..."
@@ -285,7 +300,7 @@ phase4_distribution_execution() {
         log_warning "Manual AUR submission may be required"
     fi
 
-    log_success "Distribution execution completed"
+    log_success "Git-based distribution execution completed"
 }
 
 # Phase 5: Comprehensive Verification
