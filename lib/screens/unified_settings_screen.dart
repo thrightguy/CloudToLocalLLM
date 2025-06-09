@@ -11,6 +11,7 @@ import '../components/app_header.dart';
 import '../components/modern_card.dart';
 import '../services/version_service.dart';
 import '../services/auth_service.dart';
+import '../services/tunnel_manager_service.dart';
 
 /// Unified Settings Screen for CloudToLocalLLM v3.3.1+
 ///
@@ -30,7 +31,6 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
 
   // Settings state
   String _selectedTheme = 'dark';
-  String _selectedLLMProvider = 'ollama';
   bool _enableNotifications = true;
   bool _enableSystemTray = true;
   bool _startMinimized = false;
@@ -55,7 +55,6 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
     // This would typically load from a configuration service
     setState(() {
       _selectedTheme = 'dark';
-      _selectedLLMProvider = 'ollama';
       _enableNotifications = true;
       _enableSystemTray = true;
       _startMinimized = false;
@@ -146,28 +145,33 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
   Widget _buildSettingsContent() {
     return Container(
       color: AppTheme.backgroundMain,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          left: AppTheme.spacingL,
-          right: AppTheme.spacingL,
-          bottom: AppTheme.spacingL,
-          // No top padding to ensure content starts at the top
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppConfig.maxContentWidth,
+      child: Column(
+        children: [
+          // Ensure content starts at the top and fills available space
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: AppTheme.spacingL,
+                right: AppTheme.spacingL,
+                top: AppTheme.spacingM, // Small top padding for breathing room
+                bottom: AppTheme.spacingL,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppConfig.maxContentWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(),
+                    SizedBox(height: AppTheme.spacingL),
+                    _buildSectionContent(),
+                  ],
+                ),
+              ),
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Add small top spacing for visual breathing room
-              SizedBox(height: AppTheme.spacingM),
-              _buildSectionHeader(),
-              SizedBox(height: AppTheme.spacingL),
-              _buildSectionContent(),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -362,52 +366,27 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
   }
 
   Widget _buildDesktopLLMProviderSettings() {
-    return Column(
-      children: [
-        ModernCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Desktop platform - Local Ollama + Cloud proxy
-              _buildSettingItem(
-                'LLM Provider',
-                'Choose your preferred LLM provider',
-                DropdownButton<String>(
-                  value: _selectedLLMProvider,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'ollama',
-                      child: Text('Ollama (Local)'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'cloud',
-                      child: Text('Cloud Proxy'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedLLMProvider = value ?? 'ollama';
-                    });
-                  },
-                ),
-              ),
-              const Divider(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => context.go('/settings/llm-provider'),
-                  icon: const Icon(Icons.settings),
-                  label: const Text('Advanced LLM Settings'),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.all(AppTheme.spacingM),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return Consumer<TunnelManagerService>(
+      builder: (context, tunnelManager, child) {
+        return Column(
+          children: [
+            // Connection Status Overview Card
+            _buildDesktopConnectionStatusCard(tunnelManager),
+            SizedBox(height: AppTheme.spacingM),
+
+            // Local Ollama Configuration Card
+            _buildDesktopOllamaConfigCard(tunnelManager),
+            SizedBox(height: AppTheme.spacingM),
+
+            // Cloud Proxy Configuration Card
+            _buildDesktopCloudProxyConfigCard(tunnelManager),
+            SizedBox(height: AppTheme.spacingM),
+
+            // Advanced Tunnel Settings Card
+            _buildDesktopAdvancedTunnelCard(tunnelManager),
+          ],
+        );
+      },
     );
   }
 
@@ -1063,5 +1042,607 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
         ],
       ),
     );
+  }
+
+  // Desktop tunnel management methods
+
+  Widget _buildDesktopConnectionStatusCard(TunnelManagerService tunnelManager) {
+    final connectionStatus = tunnelManager.connectionStatus;
+    final ollamaStatus = connectionStatus['ollama'];
+    final cloudStatus = connectionStatus['cloud'];
+    final isConnecting = tunnelManager.isConnecting;
+    final error = tunnelManager.error;
+
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStatusSectionHeader(
+            'Connection Status',
+            Icons.network_check,
+            _getOverallStatusColor(ollamaStatus, cloudStatus),
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          // Overall Status
+          _buildStatusRow(
+            'Overall Status',
+            _getOverallStatusText(ollamaStatus, cloudStatus, isConnecting),
+            _getOverallStatusColor(ollamaStatus, cloudStatus),
+          ),
+
+          // Local Ollama Status
+          if (ollamaStatus != null) ...[
+            _buildStatusRow(
+              'Local Ollama',
+              ollamaStatus.isConnected ? 'Connected' : 'Disconnected',
+              ollamaStatus.isConnected ? Colors.green : Colors.red,
+            ),
+            if (ollamaStatus.isConnected)
+              _buildStatusRow(
+                'Ollama Endpoint',
+                ollamaStatus.endpoint,
+                AppTheme.textColorLight,
+              ),
+          ],
+
+          // Cloud Proxy Status
+          if (cloudStatus != null) ...[
+            _buildStatusRow(
+              'Cloud Proxy',
+              cloudStatus.isConnected ? 'Connected' : 'Disconnected',
+              cloudStatus.isConnected ? Colors.green : Colors.red,
+            ),
+            if (cloudStatus.isConnected)
+              _buildStatusRow(
+                'Cloud Endpoint',
+                cloudStatus.endpoint,
+                AppTheme.textColorLight,
+              ),
+          ],
+
+          // Error Display
+          if (error != null) ...[
+            SizedBox(height: AppTheme.spacingS),
+            Container(
+              padding: EdgeInsets.all(AppTheme.spacingS),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 16),
+                  SizedBox(width: AppTheme.spacingS),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Refresh Button
+          SizedBox(height: AppTheme.spacingM),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: isConnecting
+                  ? null
+                  : () => _refreshConnections(tunnelManager),
+              icon: isConnecting
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.refresh),
+              label: Text(isConnecting ? 'Connecting...' : 'Refresh Status'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.all(AppTheme.spacingM),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopOllamaConfigCard(TunnelManagerService tunnelManager) {
+    final config = tunnelManager.config;
+    final ollamaStatus = tunnelManager.connectionStatus['ollama'];
+
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStatusSectionHeader(
+            'Local Ollama Configuration',
+            Icons.memory,
+            config.enableLocalOllama ? Colors.blue : Colors.grey,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          // Enable Local Ollama Toggle
+          _buildSettingItem(
+            'Enable Local Ollama',
+            'Connect to local Ollama instance',
+            Switch(
+              value: config.enableLocalOllama,
+              onChanged: (value) =>
+                  _updateOllamaConfig(tunnelManager, enabled: value),
+            ),
+          ),
+
+          if (config.enableLocalOllama) ...[
+            const Divider(),
+
+            // Ollama Host Configuration
+            _buildSettingItem(
+              'Ollama Host',
+              'Local Ollama server address',
+              TextFormField(
+                initialValue: config.ollamaHost,
+                decoration: const InputDecoration(
+                  hintText: 'localhost',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (value) =>
+                    _updateOllamaConfig(tunnelManager, host: value),
+              ),
+            ),
+
+            const Divider(),
+
+            // Ollama Port Configuration
+            _buildSettingItem(
+              'Ollama Port',
+              'Local Ollama server port',
+              TextFormField(
+                initialValue: config.ollamaPort.toString(),
+                decoration: const InputDecoration(
+                  hintText: '11434',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  final port = int.tryParse(value);
+                  if (port != null) {
+                    _updateOllamaConfig(tunnelManager, port: port);
+                  }
+                },
+              ),
+            ),
+
+            const Divider(),
+
+            // Test Ollama Connection
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: ollamaStatus?.isConnected == true
+                    ? null
+                    : () => _testOllamaConnection(tunnelManager),
+                icon: const Icon(Icons.play_arrow),
+                label: Text(
+                  ollamaStatus?.isConnected == true
+                      ? 'Connected'
+                      : 'Test Connection',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ollamaStatus?.isConnected == true
+                      ? Colors.green
+                      : AppTheme.secondaryColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.all(AppTheme.spacingM),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopCloudProxyConfigCard(TunnelManagerService tunnelManager) {
+    final config = tunnelManager.config;
+    final cloudStatus = tunnelManager.connectionStatus['cloud'];
+
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStatusSectionHeader(
+            'Cloud Proxy Configuration',
+            Icons.cloud,
+            config.enableCloudProxy ? Colors.blue : Colors.grey,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          // Enable Cloud Proxy Toggle
+          _buildSettingItem(
+            'Enable Cloud Proxy',
+            'Connect to cloud proxy service',
+            Switch(
+              value: config.enableCloudProxy,
+              onChanged: (value) =>
+                  _updateCloudConfig(tunnelManager, enabled: value),
+            ),
+          ),
+
+          if (config.enableCloudProxy) ...[
+            const Divider(),
+
+            // Cloud Proxy URL Configuration
+            _buildSettingItem(
+              'Cloud Proxy URL',
+              'Cloud proxy service endpoint',
+              TextFormField(
+                initialValue: config.cloudProxyUrl,
+                decoration: const InputDecoration(
+                  hintText: 'https://app.cloudtolocalllm.online',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (value) =>
+                    _updateCloudConfig(tunnelManager, url: value),
+              ),
+            ),
+
+            const Divider(),
+
+            // Test Cloud Connection
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: cloudStatus?.isConnected == true
+                    ? null
+                    : () => _testCloudConnection(tunnelManager),
+                icon: const Icon(Icons.play_arrow),
+                label: Text(
+                  cloudStatus?.isConnected == true
+                      ? 'Connected'
+                      : 'Test Connection',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cloudStatus?.isConnected == true
+                      ? Colors.green
+                      : AppTheme.secondaryColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.all(AppTheme.spacingM),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopAdvancedTunnelCard(TunnelManagerService tunnelManager) {
+    final config = tunnelManager.config;
+
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStatusSectionHeader(
+            'Advanced Tunnel Settings',
+            Icons.tune,
+            Colors.orange,
+          ),
+          SizedBox(height: AppTheme.spacingM),
+
+          // Connection Timeout
+          _buildSettingItem(
+            'Connection Timeout',
+            'Timeout for connection attempts (seconds)',
+            DropdownButton<int>(
+              value: config.connectionTimeout,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 5, child: Text('5 seconds')),
+                DropdownMenuItem(value: 10, child: Text('10 seconds')),
+                DropdownMenuItem(value: 30, child: Text('30 seconds')),
+                DropdownMenuItem(value: 60, child: Text('60 seconds')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  _updateAdvancedConfig(
+                    tunnelManager,
+                    connectionTimeout: value,
+                  );
+                }
+              },
+            ),
+          ),
+
+          const Divider(),
+
+          // Health Check Interval
+          _buildSettingItem(
+            'Health Check Interval',
+            'Interval between health checks (seconds)',
+            DropdownButton<int>(
+              value: config.healthCheckInterval,
+              isExpanded: true,
+              items: const [
+                DropdownMenuItem(value: 15, child: Text('15 seconds')),
+                DropdownMenuItem(value: 30, child: Text('30 seconds')),
+                DropdownMenuItem(value: 60, child: Text('1 minute')),
+                DropdownMenuItem(value: 120, child: Text('2 minutes')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  _updateAdvancedConfig(
+                    tunnelManager,
+                    healthCheckInterval: value,
+                  );
+                }
+              },
+            ),
+          ),
+
+          const Divider(),
+
+          // Reset to Defaults Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _resetToDefaults(tunnelManager),
+              icon: const Icon(Icons.restore),
+              label: const Text('Reset to Defaults'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.all(AppTheme.spacingM),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for tunnel management
+
+  Color _getOverallStatusColor(
+    ConnectionStatus? ollamaStatus,
+    ConnectionStatus? cloudStatus,
+  ) {
+    if (ollamaStatus?.isConnected == true && cloudStatus?.isConnected == true) {
+      return Colors.green;
+    } else if (ollamaStatus?.isConnected == true ||
+        cloudStatus?.isConnected == true) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
+  String _getOverallStatusText(
+    ConnectionStatus? ollamaStatus,
+    ConnectionStatus? cloudStatus,
+    bool isConnecting,
+  ) {
+    if (isConnecting) {
+      return 'Connecting...';
+    } else if (ollamaStatus?.isConnected == true &&
+        cloudStatus?.isConnected == true) {
+      return 'All Connected';
+    } else if (ollamaStatus?.isConnected == true ||
+        cloudStatus?.isConnected == true) {
+      return 'Partially Connected';
+    } else {
+      return 'Disconnected';
+    }
+  }
+
+  Future<void> _refreshConnections(TunnelManagerService tunnelManager) async {
+    try {
+      await tunnelManager.initialize();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connection status refreshed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to refresh connections: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateOllamaConfig(
+    TunnelManagerService tunnelManager, {
+    bool? enabled,
+    String? host,
+    int? port,
+  }) async {
+    try {
+      final currentConfig = tunnelManager.config;
+      final newConfig = TunnelConfig(
+        enableLocalOllama: enabled ?? currentConfig.enableLocalOllama,
+        enableCloudProxy: currentConfig.enableCloudProxy,
+        ollamaHost: host ?? currentConfig.ollamaHost,
+        ollamaPort: port ?? currentConfig.ollamaPort,
+        cloudProxyUrl: currentConfig.cloudProxyUrl,
+        connectionTimeout: currentConfig.connectionTimeout,
+        healthCheckInterval: currentConfig.healthCheckInterval,
+      );
+
+      await tunnelManager.updateConfiguration(newConfig);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ollama configuration updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update Ollama config: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateCloudConfig(
+    TunnelManagerService tunnelManager, {
+    bool? enabled,
+    String? url,
+  }) async {
+    try {
+      final currentConfig = tunnelManager.config;
+      final newConfig = TunnelConfig(
+        enableLocalOllama: currentConfig.enableLocalOllama,
+        enableCloudProxy: enabled ?? currentConfig.enableCloudProxy,
+        ollamaHost: currentConfig.ollamaHost,
+        ollamaPort: currentConfig.ollamaPort,
+        cloudProxyUrl: url ?? currentConfig.cloudProxyUrl,
+        connectionTimeout: currentConfig.connectionTimeout,
+        healthCheckInterval: currentConfig.healthCheckInterval,
+      );
+
+      await tunnelManager.updateConfiguration(newConfig);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cloud proxy configuration updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update cloud config: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateAdvancedConfig(
+    TunnelManagerService tunnelManager, {
+    int? connectionTimeout,
+    int? healthCheckInterval,
+  }) async {
+    try {
+      final currentConfig = tunnelManager.config;
+      final newConfig = TunnelConfig(
+        enableLocalOllama: currentConfig.enableLocalOllama,
+        enableCloudProxy: currentConfig.enableCloudProxy,
+        ollamaHost: currentConfig.ollamaHost,
+        ollamaPort: currentConfig.ollamaPort,
+        cloudProxyUrl: currentConfig.cloudProxyUrl,
+        connectionTimeout: connectionTimeout ?? currentConfig.connectionTimeout,
+        healthCheckInterval:
+            healthCheckInterval ?? currentConfig.healthCheckInterval,
+      );
+
+      await tunnelManager.updateConfiguration(newConfig);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Advanced settings updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update advanced settings: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _testOllamaConnection(TunnelManagerService tunnelManager) async {
+    try {
+      // Force a health check for Ollama
+      await tunnelManager.initialize();
+
+      if (mounted) {
+        final ollamaStatus = tunnelManager.connectionStatus['ollama'];
+        if (ollamaStatus?.isConnected == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ollama connection successful!')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Ollama connection failed: ${ollamaStatus?.error ?? 'Unknown error'}',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to test Ollama connection: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _testCloudConnection(TunnelManagerService tunnelManager) async {
+    try {
+      // Force a health check for cloud proxy
+      await tunnelManager.initialize();
+
+      if (mounted) {
+        final cloudStatus = tunnelManager.connectionStatus['cloud'];
+        if (cloudStatus?.isConnected == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cloud proxy connection successful!')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Cloud proxy connection failed: ${cloudStatus?.error ?? 'Unknown error'}',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to test cloud connection: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _resetToDefaults(TunnelManagerService tunnelManager) async {
+    try {
+      final defaultConfig = TunnelConfig.defaultConfig();
+      await tunnelManager.updateConfiguration(defaultConfig);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings reset to defaults')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to reset settings: $e')));
+      }
+    }
   }
 }
