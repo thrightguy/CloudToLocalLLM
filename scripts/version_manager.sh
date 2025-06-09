@@ -315,9 +315,9 @@ main() {
                 update_shared_pubspec_version "$current_version" "$new_build_number"
                 log_info "Build number incremented (no GitHub release needed)"
             else
-                # For semantic version changes, generate new build number
+                # For semantic version changes, generate new timestamp build number
                 local new_version=$(increment_version "$increment_type")
-                local new_build_number="001"  # Reset build number for new semantic version
+                local new_build_number=$(generate_build_number)  # Use timestamp for new semantic version
                 validate_version_format "$new_version"
                 update_pubspec_version "$new_version" "$new_build_number"
                 update_app_config_version "$new_version"
@@ -341,7 +341,7 @@ main() {
                 exit 1
             fi
             validate_version_format "$2"
-            local new_build_number="001"  # Reset build number for set command
+            local new_build_number=$(generate_build_number)  # Use timestamp for set command
             update_pubspec_version "$2" "$new_build_number"
             update_app_config_version "$2"
             update_shared_version_file "$2" "$new_build_number"

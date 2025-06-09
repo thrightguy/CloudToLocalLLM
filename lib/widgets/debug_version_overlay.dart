@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../services/version_service.dart';
+import '../services/auth_service.dart';
+import '../services/tunnel_manager_service.dart';
 
 /// Debug version overlay for CloudToLocalLLM
 ///
@@ -68,19 +72,54 @@ class _DebugVersionOverlayState extends State<DebugVersionOverlay> {
       return widget.child;
     }
 
-    return Stack(
-      children: [
-        // Main app content
-        widget.child,
+    // Authentication-based visibility
+    return Consumer<AuthService>(
+      builder: (context, authService, child) {
+        final shouldShow = _shouldShowDebugOverlay(authService);
 
-        // Debug overlay in bottom-left corner
-        Positioned(left: 8.0, bottom: 8.0, child: _buildDebugDisplay(context)),
-      ],
+        if (!shouldShow) {
+          return widget.child;
+        }
+
+        return Stack(
+          children: [
+            // Main app content
+            widget.child,
+
+            // Debug overlay with responsive positioning
+            Positioned(
+              left: 12.0,
+              bottom: 12.0,
+              child: SafeArea(child: _buildDebugDisplay(context)),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  /// Determine if debug overlay should be shown based on authentication and platform
+  bool _shouldShowDebugOverlay(AuthService authService) {
+    if (kIsWeb) {
+      // On web: show for logged-in users, hide for anonymous visitors
+      return authService.isAuthenticated.value;
+    } else {
+      // On desktop: always show for development
+      return true;
+    }
   }
 
   /// Build the debug display widget with version information
   Widget _buildDebugDisplay(BuildContext context) {
+    // Calculate responsive dimensions based on screen size
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Ensure overlay doesn't exceed screen boundaries
+    final maxCompactWidth = (screenWidth * 0.4).clamp(200.0, 300.0);
+    final maxExpandedWidth = (screenWidth * 0.5).clamp(280.0, 400.0);
+    final maxExpandedHeight = (screenHeight * 0.2).clamp(120.0, 180.0);
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -89,18 +128,27 @@ class _DebugVersionOverlayState extends State<DebugVersionOverlay> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
         constraints: BoxConstraints(
-          maxWidth: _isExpanded ? 250 : 150,
-          maxHeight: _isExpanded ? 100 : 40,
+          minWidth: 180.0,
+          maxWidth: _isExpanded ? maxExpandedWidth : maxCompactWidth,
+          minHeight: 36.0,
+          maxHeight: _isExpanded ? maxExpandedHeight : 50.0,
         ),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(8.0),
+          color: Colors.black.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: Colors.white.withValues(alpha: 0.4),
             width: 1.0,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 4.0,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: _isLoading
             ? _buildLoadingIndicator()
@@ -117,22 +165,24 @@ class _DebugVersionOverlayState extends State<DebugVersionOverlay> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 8.0,
-          height: 8.0,
+          width: 12.0,
+          height: 12.0,
           child: CircularProgressIndicator(
-            strokeWidth: 1.0,
+            strokeWidth: 1.5,
             valueColor: AlwaysStoppedAnimation<Color>(
-              Colors.white.withValues(alpha: 0.7),
+              Colors.white.withValues(alpha: 0.8),
             ),
           ),
         ),
-        const SizedBox(width: 4.0),
+        const SizedBox(width: 8.0),
         Text(
-          'Loading...',
+          'Loading version...',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 10.0,
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 11.0,
+            fontWeight: FontWeight.w500,
             fontFamily: 'monospace',
+            letterSpacing: 0.3,
           ),
         ),
       ],
@@ -144,106 +194,164 @@ class _DebugVersionOverlayState extends State<DebugVersionOverlay> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Version info
+        // Version info icon
         Icon(
           Icons.info_outline,
-          size: 12.0,
-          color: Colors.white.withValues(alpha: 0.7),
+          size: 14.0,
+          color: Colors.white.withValues(alpha: 0.8),
         ),
-        const SizedBox(width: 4.0),
-        Text(
-          _versionText,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.9),
-            fontSize: 11.0,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'monospace',
+        const SizedBox(width: 6.0),
+
+        // Version text with flexible layout
+        Flexible(
+          child: Text(
+            _versionText,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.95),
+              fontSize: 12.0,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+              letterSpacing: 0.5,
+            ),
+            overflow: TextOverflow.visible,
+            softWrap: false,
           ),
         ),
 
-        // Version indicator for v3.5.2
-        if (_versionText.startsWith('v3.5.2')) ...[
-          const SizedBox(width: 4.0),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.0),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(2.0),
-            ),
-            child: Text(
-              'v3.5.2',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 7.0,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
+        const SizedBox(width: 8.0),
+
+        // Connection status indicator with tooltip
+        Consumer<TunnelManagerService>(
+          builder: (context, tunnelService, child) {
+            final isConnected = tunnelService.isConnected;
+            return Tooltip(
+              message: isConnected ? 'Connected' : 'Disconnected',
+              child: Container(
+                width: 10.0,
+                height: 10.0,
+                decoration: BoxDecoration(
+                  color: isConnected ? Colors.green : Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 0.5,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ],
     );
   }
 
-  /// Build expanded debug info with detailed version information
+  /// Build expanded debug info with detailed version and connection information
   Widget _buildExpandedDebugInfo(BuildContext context) {
+    // Extract version and build number for better display
+    final versionParts = _versionText.split('+');
+    final version = versionParts.isNotEmpty ? versionParts[0] : _versionText;
+    final buildNumber = versionParts.length > 1 ? versionParts[1] : 'N/A';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Version row
+        // Version row with flexible layout
         Row(
           children: [
             Icon(
               Icons.info_outline,
-              size: 12.0,
-              color: Colors.white.withValues(alpha: 0.7),
+              size: 14.0,
+              color: Colors.white.withValues(alpha: 0.8),
             ),
-            const SizedBox(width: 4.0),
-            Text(
-              _versionText,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 11.0,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'monospace',
+            const SizedBox(width: 6.0),
+            Flexible(
+              child: Text(
+                version,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.95),
+                  fontSize: 12.0,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace',
+                  letterSpacing: 0.5,
+                ),
+                overflow: TextOverflow.visible,
               ),
             ),
-            if (_versionText.startsWith('v3.5.2')) ...[
-              const SizedBox(width: 4.0),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 3.0,
-                  vertical: 1.0,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(2.0),
-                ),
-                child: Text(
-                  'v3.5.2',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 7.0,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
 
         const SizedBox(height: 6.0),
 
-        // Build information
-        Text(
-          'Build: ${_versionText.split('+').length > 1 ? _versionText.split('+')[1] : 'N/A'}',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 9.0,
-            fontFamily: 'monospace',
-          ),
+        // Build information with proper spacing
+        Row(
+          children: [
+            Icon(
+              Icons.build_outlined,
+              size: 12.0,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 6.0),
+            Flexible(
+              child: Text(
+                'Build: $buildNumber',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 10.0,
+                  fontFamily: 'monospace',
+                  letterSpacing: 0.3,
+                ),
+                overflow: TextOverflow.visible,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 6.0),
+
+        // Connection status with enhanced display
+        Consumer<TunnelManagerService>(
+          builder: (context, tunnelService, child) {
+            final isConnected = tunnelService.isConnected;
+            final statusText = isConnected ? 'Connected' : 'Disconnected';
+            final statusColor = isConnected ? Colors.green : Colors.red;
+
+            return Row(
+              children: [
+                Icon(
+                  isConnected ? Icons.link : Icons.link_off,
+                  size: 12.0,
+                  color: statusColor,
+                ),
+                const SizedBox(width: 6.0),
+                Flexible(
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      color: statusColor.withValues(alpha: 0.9),
+                      fontSize: 10.0,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'monospace',
+                    ),
+                    overflow: TextOverflow.visible,
+                  ),
+                ),
+                const SizedBox(width: 4.0),
+                Container(
+                  width: 8.0,
+                  height: 8.0,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
