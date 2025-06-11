@@ -208,10 +208,26 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
           create: (context) =>
               StreamingProxyService(authService: context.read<AuthService>()),
         ),
-        // Unified connection service
-        ChangeNotifierProvider(create: (_) => UnifiedConnectionService()),
-        // Tunnel manager service
-        ChangeNotifierProvider(create: (_) => TunnelManagerService()),
+        // Tunnel manager service (must be created before UnifiedConnectionService)
+        ChangeNotifierProvider(
+          create: (_) {
+            final tunnelManager = TunnelManagerService();
+            // Initialize the tunnel manager service asynchronously
+            tunnelManager.initialize();
+            return tunnelManager;
+          },
+        ),
+        // Unified connection service (depends on tunnel manager)
+        ChangeNotifierProvider(
+          create: (context) {
+            final unifiedService = UnifiedConnectionService();
+            final tunnelManager = context.read<TunnelManagerService>();
+            unifiedService.setTunnelManager(tunnelManager);
+            // Initialize the unified connection service
+            unifiedService.initialize();
+            return unifiedService;
+          },
+        ),
       ],
       child: MaterialApp(
         // App configuration

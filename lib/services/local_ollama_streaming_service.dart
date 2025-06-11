@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:rxdart/rxdart.dart';
 import '../config/app_config.dart';
+import '../models/ollama_connection_error.dart';
 import '../models/streaming_message.dart';
 import 'streaming_service.dart';
 
@@ -21,7 +22,10 @@ class LocalOllamaStreamingService extends StreamingService {
       BehaviorSubject<StreamingMessage>();
 
   Timer? _heartbeatTimer;
-  int _reconnectAttempts = 0;
+  Timer? _reconnectTimer;
+  ConnectionRetryState _retryState = ConnectionRetryState.initial();
+  OllamaConnectionError? _lastConnectionError;
+  bool _isCircuitBreakerOpen = false;
 
   LocalOllamaStreamingService({String? baseUrl, StreamingConfig? config})
     : _baseUrl = baseUrl ?? AppConfig.defaultOllamaUrl,
@@ -72,7 +76,10 @@ class LocalOllamaStreamingService extends StreamingService {
           latency: Duration(milliseconds: stopwatch.elapsedMilliseconds),
         );
 
-        _reconnectAttempts = 0;
+        // Reset retry state on successful connection
+        _retryState = ConnectionRetryState.initial();
+        _lastConnectionError = null;
+        _isCircuitBreakerOpen = false;
 
         if (_config.enableHeartbeat) {
           _startHeartbeat();
@@ -92,18 +99,25 @@ class LocalOllamaStreamingService extends StreamingService {
         );
       }
     } catch (e) {
+      // Classify the error for better handling
+      _lastConnectionError = OllamaConnectionError.fromException(e);
+
       _connection = StreamingConnection.error(
-        'Connection failed: $e',
+        _lastConnectionError!.userFriendlyMessage,
         endpoint: _baseUrl,
       );
       _publishStatusEvent();
       notifyListeners();
 
-      debugPrint('🦙 [LocalOllamaStreaming] Connection failed: $e');
+      debugPrint(
+        '🦙 [LocalOllamaStreaming] Connection failed: ${_lastConnectionError!.userFriendlyMessage}',
+      );
 
-      // Attempt reconnection if configured
-      if (_reconnectAttempts < _config.maxReconnectAttempts) {
+      // Implement smart retry logic with exponential backoff
+      if (_shouldRetry()) {
         _scheduleReconnect();
+      } else {
+        _openCircuitBreaker();
       }
 
       rethrow;
@@ -318,19 +332,66 @@ class LocalOllamaStreamingService extends StreamingService {
     });
   }
 
-  void _scheduleReconnect() {
-    _reconnectAttempts++;
+  /// Check if we should retry the connection
+  bool _shouldRetry() {
+    if (_isCircuitBreakerOpen) return false;
+    if (_lastConnectionError?.isRetryable == false) return false;
+    if (_retryState.hasReachedMaxAttempts) return false;
+
+    return true;
+  }
+
+  /// Open circuit breaker to stop aggressive retrying
+  void _openCircuitBreaker() {
+    _isCircuitBreakerOpen = true;
     debugPrint(
-      '🦙 [LocalOllamaStreaming] Scheduling reconnect attempt $_reconnectAttempts',
+      '🦙 [LocalOllamaStreaming] Circuit breaker opened - stopping retries',
     );
 
-    Timer(_config.reconnectDelay, () async {
+    // Schedule circuit breaker reset after a longer delay
+    Timer(const Duration(minutes: 5), () {
+      _isCircuitBreakerOpen = false;
+      _retryState = ConnectionRetryState.initial();
+      debugPrint(
+        '🦙 [LocalOllamaStreaming] Circuit breaker reset - retries enabled',
+      );
+    });
+  }
+
+  /// Schedule reconnection with exponential backoff
+  void _scheduleReconnect() {
+    _retryState = _retryState.nextRetryAttempt(
+      maxAttempts: _config.maxReconnectAttempts,
+      baseDelay: _config.reconnectDelay,
+      maxDelay: const Duration(minutes: 2),
+    );
+
+    debugPrint(
+      '🦙 [LocalOllamaStreaming] Scheduling reconnect attempt ${_retryState.attemptCount} '
+      'in ${_retryState.currentDelay.inSeconds}s',
+    );
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_retryState.currentDelay, () async {
+      if (_isCircuitBreakerOpen) return;
+
       try {
         await establishConnection();
       } catch (e) {
         debugPrint('🦙 [LocalOllamaStreaming] Reconnect failed: $e');
       }
     });
+  }
+
+  /// Reset connection state for manual retry
+  void resetConnectionState() {
+    _retryState = ConnectionRetryState.initial();
+    _lastConnectionError = null;
+    _isCircuitBreakerOpen = false;
+    _reconnectTimer?.cancel();
+    debugPrint(
+      '🦙 [LocalOllamaStreaming] Connection state reset for manual retry',
+    );
   }
 
   void _publishStatusEvent() {
@@ -349,6 +410,7 @@ class LocalOllamaStreamingService extends StreamingService {
     debugPrint('🦙 [LocalOllamaStreaming] Disposing service');
 
     _heartbeatTimer?.cancel();
+    _reconnectTimer?.cancel();
     _messageSubject.close();
     _httpClient.close();
 

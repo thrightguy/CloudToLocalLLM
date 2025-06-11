@@ -50,17 +50,19 @@ class SettingsSidebar extends StatelessWidget {
           icon: Icons.palette,
           subtitle: 'Display settings',
         ),
+        // Renamed from 'LLM Provider' to 'Tunnel Connection'
         const SettingsSection(
-          id: 'llm-provider',
-          title: 'LLM Provider',
-          icon: Icons.memory,
-          subtitle: 'Cloud proxy settings',
+          id: 'tunnel-connection', // Changed ID
+          title: 'Tunnel Connection', // Changed title
+          icon: Icons.settings_ethernet, // Changed icon to reflect tunneling
+          subtitle: 'Cloud proxy & Ollama', // Updated subtitle
         ),
+        // Added 'Model Download Manager' for web
         const SettingsSection(
-          id: 'cloud-sync',
-          title: 'Cloud & Sync',
-          icon: Icons.cloud,
-          subtitle: 'Premium features',
+          id: 'model-download-manager',
+          title: 'Model Manager',
+          icon: Icons.download_for_offline,
+          subtitle: 'View Ollama models',
         ),
         const SettingsSection(
           id: 'about',
@@ -84,23 +86,25 @@ class SettingsSidebar extends StatelessWidget {
           icon: Icons.palette,
           subtitle: 'Display settings',
         ),
+        // Renamed from 'LLM Provider' to 'Tunnel Connection'
         const SettingsSection(
-          id: 'llm-provider',
-          title: 'LLM Provider',
-          icon: Icons.memory,
-          subtitle: 'Local & cloud config',
+          id: 'tunnel-connection', // Changed ID
+          title: 'Tunnel Connection', // Changed title
+          icon: Icons.settings_ethernet, // Changed icon
+          subtitle: 'Local & cloud config', // Updated subtitle
+        ),
+        // Added 'Model Download Manager' for desktop
+        const SettingsSection(
+          id: 'model-download-manager',
+          title: 'Model Manager',
+          icon: Icons.download_for_offline,
+          subtitle: 'Manage Ollama models',
         ),
         const SettingsSection(
           id: 'system-tray',
           title: 'System Tray',
           icon: Icons.desktop_windows,
           subtitle: 'Advanced tray settings',
-        ),
-        const SettingsSection(
-          id: 'cloud-sync',
-          title: 'Cloud & Sync',
-          icon: Icons.cloud,
-          subtitle: 'Secure tunnel & sync',
         ),
         const SettingsSection(
           id: 'about',

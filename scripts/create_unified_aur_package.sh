@@ -89,7 +89,7 @@ check_prerequisites() {
     fi
 
     # Check required tools
-    for tool in tar gzip sha256sum; do
+    for tool in tar gzip sha256sum makepkg; do
         if ! command -v "$tool" &> /dev/null; then
             log_error "Required tool not found: $tool"
             exit 1
@@ -227,26 +227,80 @@ generate_checksums() {
     # Create checksum info for AUR PKGBUILD
     cat > "$PACKAGE_NAME-aur-info.txt" << EOF
 # AUR PKGBUILD Information for CloudToLocalLLM v$VERSION
+# Static Distribution Configuration
 
 # Update these values in aur-package/PKGBUILD:
 pkgver=$VERSION
 sha256sums=('SKIP' '$checksum')
 
-# GitHub release download URL:
+# Static download URL:
 source=(
     "https://github.com/imrightguy/CloudToLocalLLM/archive/v\$pkgver.tar.gz"
-    "https://github.com/imrightguy/CloudToLocalLLM/releases/download/v\${pkgver}/cloudtolocalllm-\${pkgver}-x86_64.tar.gz"
+    "https://cloudtolocalllm.online/cloudtolocalllm-\${pkgver}-x86_64.tar.gz"
 )
 
-# Deployment workflow:
-# 1. Create GitHub release v$VERSION
-# 2. Upload cloudtolocalllm-$VERSION-x86_64.tar.gz to GitHub release assets
-# 3. Update aur-package/PKGBUILD with new version and checksum
-# 4. Test AUR package build locally
-# 5. Submit updated PKGBUILD to AUR
+# Deployment workflow for static distribution:
+# 1. Upload cloudtolocalllm-$VERSION-x86_64.tar.gz to https://cloudtolocalllm.online/
+# 2. Update aur-package/PKGBUILD with new version and checksum (AUTOMATED)
+# 3. Test AUR package build locally
+# 4. Submit updated PKGBUILD to AUR
+# 5. Deploy web app to VPS
+
+# Note: PKGBUILD and .SRCINFO are automatically updated by this script
 EOF
     
     log_success "Checksums and AUR info generated"
+}
+
+# Update AUR PKGBUILD and .SRCINFO files
+update_aur_package() {
+    log "Updating AUR PKGBUILD and .SRCINFO files..."
+
+    cd "$OUTPUT_DIR"
+    local checksum=$(cut -d' ' -f1 "$PACKAGE_NAME.tar.gz.sha256")
+    local aur_dir="$PROJECT_ROOT/aur-package"
+
+    if [[ ! -d "$aur_dir" ]]; then
+        log_error "AUR package directory not found: $aur_dir"
+        exit 1
+    fi
+
+    if [[ ! -f "$aur_dir/PKGBUILD" ]]; then
+        log_error "PKGBUILD not found: $aur_dir/PKGBUILD"
+        exit 1
+    fi
+
+    log "  Updating PKGBUILD version to $VERSION..."
+    # Update pkgver in PKGBUILD
+    sed -i "s/^pkgver=.*/pkgver=$VERSION/" "$aur_dir/PKGBUILD"
+
+    log "  Updating PKGBUILD SHA256 checksum..."
+    # Update SHA256 checksum in PKGBUILD
+    # Find the line with sha256sums and replace the hash
+    sed -i "/sha256sums=(/,/)/ {
+        s/'[a-f0-9]\{64\}'/'$checksum'/g
+        s/# cloudtolocalllm-[0-9.]*-x86_64\.tar\.gz/# cloudtolocalllm-$VERSION-x86_64.tar.gz/g
+    }" "$aur_dir/PKGBUILD"
+
+    log "  Regenerating .SRCINFO..."
+    # Change to AUR directory and regenerate .SRCINFO
+    cd "$aur_dir"
+    if ! makepkg --printsrcinfo > .SRCINFO; then
+        log_error "Failed to regenerate .SRCINFO"
+        exit 1
+    fi
+
+    log "  Validating updated checksums..."
+    # Verify the checksum was updated correctly
+    local pkgbuild_checksum=$(grep -A1 "sha256sums=(" PKGBUILD | grep -o "'[a-f0-9]\{64\}'" | tr -d "'")
+    if [[ "$pkgbuild_checksum" != "$checksum" ]]; then
+        log_error "Checksum validation failed. PKGBUILD: $pkgbuild_checksum, Expected: $checksum"
+        exit 1
+    fi
+
+    log_success "AUR PKGBUILD and .SRCINFO updated successfully"
+    log "  Version: $VERSION"
+    log "  SHA256: $checksum"
 }
 
 # Test package integrity
@@ -294,11 +348,14 @@ display_package_info() {
     echo "  • $OUTPUT_DIR/$PACKAGE_NAME-aur-info.txt"
     echo ""
     echo -e "${YELLOW}📋 Next steps:${NC}"
-    echo "  1. Create GitHub release v$VERSION: scripts/release/create_github_release.sh"
-    echo "  2. Upload package to GitHub release assets"
-    echo "  3. Update aur-package/PKGBUILD with new version and checksum"
-    echo "  4. Test AUR package build locally"
-    echo "  5. Submit updated PKGBUILD to AUR"
+    echo "  1. Test AUR package build locally: cd aur-package && makepkg -si"
+    echo "  2. Commit updated PKGBUILD and .SRCINFO to git"
+    echo "  3. Submit updated PKGBUILD to AUR repository"
+    echo "  4. Deploy to VPS: scripts/deploy/complete_automated_deployment.sh"
+    echo ""
+    echo -e "${GREEN}✅ AUR PKGBUILD automatically updated with:${NC}"
+    echo "  • Version: $VERSION"
+    echo "  • SHA256: $(cut -d' ' -f1 "$PACKAGE_NAME.tar.gz.sha256")"
 }
 
 # Cleanup
@@ -317,6 +374,7 @@ main() {
     add_metadata
     create_archive
     generate_checksums
+    update_aur_package
     test_package
     display_package_info
     cleanup

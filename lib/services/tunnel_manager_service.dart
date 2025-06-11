@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../models/ollama_connection_error.dart';
 import '../models/streaming_message.dart';
 import 'streaming_service.dart';
 import 'local_ollama_streaming_service.dart';
@@ -41,6 +42,11 @@ class TunnelManagerService extends ChangeNotifier {
   LocalOllamaStreamingService? _ollamaStreamingService;
   StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
 
+  // Debouncing for notifyListeners to prevent excessive rebuilds
+  Timer? _notifyDebounceTimer;
+  static const Duration _notifyDebounceDelay = Duration(milliseconds: 300);
+  bool _isDisposed = false;
+
   // Getters
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
@@ -52,6 +58,16 @@ class TunnelManagerService extends ChangeNotifier {
   /// Get the local Ollama streaming service
   LocalOllamaStreamingService? get ollamaStreamingService =>
       _ollamaStreamingService;
+
+  /// Debounced notifyListeners to prevent excessive UI rebuilds
+  void _debouncedNotifyListeners() {
+    _notifyDebounceTimer?.cancel();
+    _notifyDebounceTimer = Timer(_notifyDebounceDelay, () {
+      if (!_isDisposed) {
+        notifyListeners();
+      }
+    });
+  }
 
   /// Initialize the tunnel manager service
   Future<void> initialize() async {
@@ -74,7 +90,7 @@ class TunnelManagerService extends ChangeNotifier {
     // Listen to status events
     _setupStatusEventListener();
 
-    notifyListeners();
+    _debouncedNotifyListeners();
   }
 
   /// Load configuration from storage
@@ -138,7 +154,7 @@ class TunnelManagerService extends ChangeNotifier {
               latency: event.latency?.inMilliseconds.toDouble() ?? 0.0,
             );
             _updateOverallStatus();
-            notifyListeners();
+            _debouncedNotifyListeners();
           }
         } else if (event.state == StreamingConnectionState.error ||
             event.state == StreamingConnectionState.disconnected) {
@@ -152,7 +168,7 @@ class TunnelManagerService extends ChangeNotifier {
               lastCheck: event.timestamp,
             );
             _updateOverallStatus();
-            notifyListeners();
+            _debouncedNotifyListeners();
           }
         }
       },
@@ -166,7 +182,7 @@ class TunnelManagerService extends ChangeNotifier {
   Future<void> _initializeConnections() async {
     _isConnecting = true;
     _error = null;
-    notifyListeners();
+    _debouncedNotifyListeners();
 
     try {
       // Initialize local Ollama connection
@@ -186,7 +202,7 @@ class TunnelManagerService extends ChangeNotifier {
       debugPrint('🚇 [TunnelManager] Connection initialization error: $e');
     } finally {
       _isConnecting = false;
-      notifyListeners();
+      _debouncedNotifyListeners();
     }
   }
 
@@ -269,14 +285,19 @@ class TunnelManagerService extends ChangeNotifier {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
+      final connectionError = OllamaConnectionError.fromException(e);
       _connectionStatus['ollama'] = ConnectionStatus(
         type: 'ollama',
         isConnected: false,
         endpoint: ollamaUrl,
-        error: e.toString(),
+        error: connectionError.userFriendlyMessage,
         lastCheck: DateTime.now(),
+        connectionError: connectionError,
+        retryState: ConnectionRetryState.initial(),
       );
-      debugPrint('🚇 [TunnelManager] Ollama connection failed: $e');
+      debugPrint(
+        '🚇 [TunnelManager] Ollama connection failed: ${connectionError.userFriendlyMessage}',
+      );
     }
   }
 
@@ -385,7 +406,7 @@ class TunnelManagerService extends ChangeNotifier {
             lastCheck: DateTime.now(),
             latency: message['latency']?.toDouble() ?? status.latency,
           );
-          notifyListeners();
+          _debouncedNotifyListeners();
         }
         break;
 
@@ -398,7 +419,7 @@ class TunnelManagerService extends ChangeNotifier {
                   .toList() ??
               [];
           _connectionStatus['cloud'] = status.copyWith(models: models);
-          notifyListeners();
+          _debouncedNotifyListeners();
         }
         break;
 
@@ -478,7 +499,7 @@ class TunnelManagerService extends ChangeNotifier {
     }
 
     _updateOverallStatus();
-    notifyListeners();
+    _debouncedNotifyListeners();
   }
 
   /// Check Ollama health
@@ -533,7 +554,19 @@ class TunnelManagerService extends ChangeNotifier {
     _isConnected = false;
     _connectionStatus.clear();
 
-    notifyListeners();
+    _debouncedNotifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _notifyDebounceTimer?.cancel();
+    _healthCheckTimer?.cancel();
+    _statusSubscription?.cancel();
+    _cloudWebSocket?.close();
+    _httpClient.close();
+    _ollamaStreamingService?.dispose();
+    super.dispose();
   }
 
   /// Force reconnection to all endpoints
@@ -605,6 +638,8 @@ class ConnectionStatus {
   final String? error;
   final DateTime lastCheck;
   final double latency;
+  final OllamaConnectionError? connectionError;
+  final ConnectionRetryState? retryState;
 
   const ConnectionStatus({
     required this.type,
@@ -615,6 +650,8 @@ class ConnectionStatus {
     this.error,
     required this.lastCheck,
     this.latency = 0.0,
+    this.connectionError,
+    this.retryState,
   });
 
   ConnectionStatus copyWith({
@@ -626,6 +663,8 @@ class ConnectionStatus {
     String? error,
     DateTime? lastCheck,
     double? latency,
+    OllamaConnectionError? connectionError,
+    ConnectionRetryState? retryState,
   }) {
     return ConnectionStatus(
       type: type ?? this.type,
@@ -636,6 +675,8 @@ class ConnectionStatus {
       error: error ?? this.error,
       lastCheck: lastCheck ?? this.lastCheck,
       latency: latency ?? this.latency,
+      connectionError: connectionError ?? this.connectionError,
+      retryState: retryState ?? this.retryState,
     );
   }
 }

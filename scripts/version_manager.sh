@@ -12,6 +12,7 @@ PUBSPEC_FILE="$PROJECT_ROOT/pubspec.yaml"
 APP_CONFIG_FILE="$PROJECT_ROOT/lib/config/app_config.dart"
 SHARED_VERSION_FILE="$PROJECT_ROOT/lib/shared/lib/version.dart"
 SHARED_PUBSPEC_FILE="$PROJECT_ROOT/lib/shared/pubspec.yaml"
+ASSETS_VERSION_FILE="$PROJECT_ROOT/assets/version.json"
 
 # Colors for output
 RED='\033[0;31m'
@@ -255,6 +256,43 @@ update_shared_pubspec_version() {
     log_success "Updated shared/pubspec.yaml version to $full_version"
 }
 
+# Update version in assets/version.json
+update_assets_version_json() {
+    local new_version="$1"
+    local new_build_number="$2"
+
+    log_info "Updating assets/version.json to $new_version"
+
+    if [[ ! -f "$ASSETS_VERSION_FILE" ]]; then
+        log_warning "assets/version.json not found, skipping update"
+        return
+    fi
+
+    # Create backup
+    cp "$ASSETS_VERSION_FILE" "$ASSETS_VERSION_FILE.backup"
+
+    # Generate build timestamp
+    local build_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+    # Read current git commit (preserve existing value if available)
+    local git_commit="unknown"
+    if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+        git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    fi
+
+    # Update the JSON file using sed (preserving existing git_commit if extraction fails)
+    sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$new_version\"/" "$ASSETS_VERSION_FILE"
+    sed -i "s/\"build_number\": \"[^\"]*\"/\"build_number\": \"$new_build_number\"/" "$ASSETS_VERSION_FILE"
+    sed -i "s/\"build_date\": \"[^\"]*\"/\"build_date\": \"$build_timestamp\"/" "$ASSETS_VERSION_FILE"
+
+    # Only update git_commit if we successfully got one
+    if [[ "$git_commit" != "unknown" ]]; then
+        sed -i "s/\"git_commit\": \"[^\"]*\"/\"git_commit\": \"$git_commit\"/" "$ASSETS_VERSION_FILE"
+    fi
+
+    log_success "Updated assets/version.json to $new_version"
+}
+
 # Validate version format
 validate_version_format() {
     local version="$1"
@@ -313,6 +351,7 @@ main() {
                 update_app_config_version "$current_version"
                 update_shared_version_file "$current_version" "$new_build_number"
                 update_shared_pubspec_version "$current_version" "$new_build_number"
+                update_assets_version_json "$current_version" "$new_build_number"
                 log_info "Build number incremented (no GitHub release needed)"
             else
                 # For semantic version changes, generate new timestamp build number
@@ -323,6 +362,7 @@ main() {
                 update_app_config_version "$new_version"
                 update_shared_version_file "$new_version" "$new_build_number"
                 update_shared_pubspec_version "$new_version" "$new_build_number"
+                update_assets_version_json "$new_version" "$new_build_number"
 
                 # Check if GitHub release should be created
                 if should_create_github_release "$new_version"; then
@@ -346,6 +386,7 @@ main() {
             update_app_config_version "$2"
             update_shared_version_file "$2" "$new_build_number"
             update_shared_pubspec_version "$2" "$new_build_number"
+            update_assets_version_json "$2" "$new_build_number"
             show_version_info
             ;;
         "validate")

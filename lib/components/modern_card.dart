@@ -39,13 +39,9 @@ class _ModernCardState extends State<ModernCard>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.02,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -101,15 +97,24 @@ class _ModernCardState extends State<ModernCard>
               child: Material(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
-                child: InkWell(
-                  onTap: widget.onTap,
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
-                  child: Container(
-                    padding:
-                        widget.padding ?? EdgeInsets.all(AppTheme.spacingL),
-                    child: widget.child,
-                  ),
-                ),
+                child: widget.onTap != null
+                    ? InkWell(
+                        onTap: widget.onTap,
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusM,
+                        ),
+                        child: Container(
+                          padding:
+                              widget.padding ??
+                              EdgeInsets.all(AppTheme.spacingL),
+                          child: widget.child,
+                        ),
+                      )
+                    : Container(
+                        padding:
+                            widget.padding ?? EdgeInsets.all(AppTheme.spacingL),
+                        child: widget.child,
+                      ),
               ),
             ),
           ),
@@ -152,8 +157,9 @@ class InfoCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(AppTheme.spacingS),
                   decoration: BoxDecoration(
-                    color: (iconColor ?? AppTheme.primaryColor)
-                        .withValues(alpha: 0.1),
+                    color: (iconColor ?? AppTheme.primaryColor).withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                   ),
                   child: Icon(
@@ -168,10 +174,10 @@ class InfoCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
                 ),
               ),
             ],
@@ -183,49 +189,47 @@ class InfoCard extends StatelessWidget {
           Text(
             description,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textColorLight,
-                  fontSize: 16,
-                  height: 1.5,
-                ),
+              color: AppTheme.textColorLight,
+              fontSize: 16,
+              height: 1.5,
+            ),
           ),
 
           // Features list
           if (features != null && features!.isNotEmpty) ...[
             SizedBox(height: AppTheme.spacingL),
-            ...features!.map((feature) => Padding(
-                  padding: EdgeInsets.only(bottom: AppTheme.spacingS),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentColor,
-                          borderRadius: BorderRadius.circular(3),
+            ...features!.map(
+              (feature) => Padding(
+                padding: EdgeInsets.only(bottom: AppTheme.spacingS),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentColor,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    SizedBox(width: AppTheme.spacingM),
+                    Expanded(
+                      child: Text(
+                        feature,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textColor,
+                          fontSize: 15,
+                          height: 1.4,
                         ),
                       ),
-                      SizedBox(width: AppTheme.spacingM),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.textColor,
-                                    fontSize: 15,
-                                    height: 1.4,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
 
           // Action button
-          if (action != null) ...[
-            SizedBox(height: AppTheme.spacingL),
-            action!,
-          ],
+          if (action != null) ...[SizedBox(height: AppTheme.spacingL), action!],
         ],
       ),
     );
