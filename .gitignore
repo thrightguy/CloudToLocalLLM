@@ -256,3 +256,4 @@ aur-repo/
 !aur-package/.SRCINFO
 !aur-package/cloudtolocalllm.install
 !aur-package/*.md
+backups/
