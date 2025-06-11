@@ -1,0 +1,35 @@
+{
+    "name": "CloudToLocalLLM",
+    "short_name": "CloudToLocalLLM",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#181a20",
+    "theme_color": "#a777e3",
+    "description": "Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
