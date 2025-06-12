@@ -65,10 +65,21 @@ build_flutter_app() {
         exit 1
     fi
 
-    log "  Running flutter build linux --release..."
-    if ! flutter build linux --release; then
-        log_error "Failed to build Flutter app"
-        exit 1
+    log "  Running flutter build linux --release with build-time timestamp injection..."
+
+    # Use build-time timestamp injection if available
+    local build_script="$PROJECT_ROOT/scripts/flutter_build_with_timestamp.sh"
+    if [[ -f "$build_script" && -x "$build_script" ]]; then
+        if ! "$build_script" linux --release; then
+            log_error "Failed to build Flutter app with timestamp injection"
+            exit 1
+        fi
+    else
+        log_warning "Build timestamp injection script not found, using direct Flutter build"
+        if ! flutter build linux --release; then
+            log_error "Failed to build Flutter app"
+            exit 1
+        fi
     fi
 
     if [[ ! -f "build/linux/x64/release/bundle/cloudtolocalllm" ]]; then

@@ -1,9 +1,20 @@
 #!/bin/bash
 
-# CloudToLocalLLM AUR Package Submission Script
+# CloudToLocalLLM AUR Package Submission Script v3.5.5+
 # Submits the AUR package update following the script-first resolution principle
+# Enhanced with robust network operations and timeout handling
 
 set -e
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AUR_DIR="$PROJECT_ROOT/aur-package"
+
+# Load deployment utilities if available
+if [[ -f "$SCRIPT_DIR/deployment_utils.sh" ]]; then
+    source "$SCRIPT_DIR/deployment_utils.sh"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -11,11 +22,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-
-# Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-AUR_DIR="$PROJECT_ROOT/aur-package"
 
 # Flags
 FORCE=false
@@ -235,12 +241,28 @@ submit_to_aur() {
     log_verbose "Committing with message: $commit_message"
     git commit -m "$commit_message"
 
-    # Push to AUR
+    # Push to AUR with enhanced error handling
     log "Pushing to AUR repository..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        git push origin master
+
+    # Use enhanced git operations if available, otherwise fallback
+    if command -v git_execute &> /dev/null; then
+        if ! git_execute push origin master; then
+            log_error "Failed to push to AUR repository"
+            exit 3
+        fi
     else
-        git push origin master 2>/dev/null
+        # Fallback with timeout
+        if [[ "$VERBOSE" == "true" ]]; then
+            if ! timeout 120 git push origin master; then
+                log_error "Git push to AUR timed out or failed"
+                exit 3
+            fi
+        else
+            if ! timeout 120 git push origin master 2>/dev/null; then
+                log_error "Git push to AUR timed out or failed"
+                exit 3
+            fi
+        fi
     fi
 
     log_success "AUR package submitted successfully"
@@ -262,14 +284,24 @@ verify_submission() {
     log_verbose "Waiting for AUR to update..."
     sleep 5
 
-    # Check if package appears on AUR website
+    # Check if package appears on AUR website with enhanced retry
     local aur_url="https://aur.archlinux.org/packages/cloudtolocalllm"
     log_verbose "Checking AUR package page: $aur_url"
 
-    if curl -s -f "$aur_url" > /dev/null 2>&1; then
-        log_success "AUR package page accessible"
+    # Use enhanced curl if available, otherwise fallback
+    if command -v curl_with_retry &> /dev/null; then
+        if curl_with_retry "$aur_url" --max-retries 3 > /dev/null; then
+            log_success "AUR package page accessible"
+        else
+            log_warning "AUR package page not immediately accessible (may take time to update)"
+        fi
     else
-        log_warning "AUR package page not immediately accessible (may take time to update)"
+        # Fallback implementation
+        if curl -f -s --connect-timeout 10 "$aur_url" > /dev/null 2>&1; then
+            log_success "AUR package page accessible"
+        else
+            log_warning "AUR package page not immediately accessible (may take time to update)"
+        fi
     fi
 }
 
@@ -312,16 +344,13 @@ main() {
     update_srcinfo
 
     if check_changes; then
-        # Confirmation prompt for non-force mode
+        # Non-interactive execution for force mode
         if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
             log_warning "About to submit AUR package update for v$version"
             log_warning "This will commit and push changes to the AUR repository"
-            read -p "Continue? (y/N): " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                log "AUR submission cancelled by user"
-                exit 0
-            fi
+            log_warning "Use --force flag for automated/CI environments"
+            log "Proceeding with submission in 5 seconds..."
+            sleep 5
         fi
 
         submit_to_aur "$version"

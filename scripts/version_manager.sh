@@ -73,22 +73,17 @@ get_build_number() {
     fi
 }
 
-# Generate new build number based on current timestamp
+# Generate new build number based on current timestamp (YYYYMMDDHHMM format)
 generate_build_number() {
     date +"%Y%m%d%H%M"
 }
 
-# Increment build number for patch releases
+# Increment build number - generates placeholder for build-time injection
+# Build timestamp will be injected at actual build execution time
 increment_build_number() {
-    local current_build=$(get_build_number)
-
-    # If current build is numeric, increment it
-    if [[ "$current_build" =~ ^[0-9]+$ ]]; then
-        printf "%03d" $((current_build + 1))
-    else
-        # If it's a timestamp format, generate new one
-        generate_build_number
-    fi
+    # Generate placeholder timestamp that will be replaced at build time
+    # This allows version preparation without finalizing the build timestamp
+    echo "BUILD_TIME_PLACEHOLDER"
 }
 
 # Check if version qualifies for GitHub release
@@ -218,9 +213,10 @@ update_shared_version_file() {
     # Create backup
     cp "$SHARED_VERSION_FILE" "$SHARED_VERSION_FILE.backup"
 
-    # Generate build timestamp
+    # Generate build timestamp and ensure build number is in YYYYMMDDHHMM format
     local build_timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    local build_number_int=$(date +%Y%m%d%H%M)
+    # Use the provided build_number parameter which should already be in YYYYMMDDHHMM format
+    local build_number_int="$new_build_number"
 
     # Update all version constants
     sed -i "s/static const String mainAppVersion = '[^']*';/static const String mainAppVersion = '$new_version';/" "$SHARED_VERSION_FILE"
@@ -393,6 +389,48 @@ main() {
             local version=$(get_semantic_version)
             validate_version_format "$version"
             ;;
+        "prepare")
+            if [[ -z "${2:-}" ]]; then
+                log_error "Usage: $0 prepare <major|minor|patch|build>"
+                exit 1
+            fi
+
+            local current_version=$(get_semantic_version)
+            local increment_type="$2"
+
+            if [[ "$increment_type" == "build" ]]; then
+                # For build preparation, keep same semantic version with placeholder
+                local placeholder_build="BUILD_TIME_PLACEHOLDER"
+                validate_version_format "$current_version"
+                update_pubspec_version "$current_version" "$placeholder_build"
+                update_app_config_version "$current_version"
+                update_shared_version_file "$current_version" "$placeholder_build"
+                update_shared_pubspec_version "$current_version" "$placeholder_build"
+                update_assets_version_json "$current_version" "$placeholder_build"
+                log_info "Version prepared for build-time timestamp injection"
+            else
+                # For semantic version changes, prepare with placeholder
+                local new_version=$(increment_version "$increment_type")
+                local placeholder_build="BUILD_TIME_PLACEHOLDER"
+                validate_version_format "$new_version"
+                update_pubspec_version "$new_version" "$placeholder_build"
+                update_app_config_version "$new_version"
+                update_shared_version_file "$new_version" "$placeholder_build"
+                update_shared_pubspec_version "$new_version" "$placeholder_build"
+                update_assets_version_json "$new_version" "$placeholder_build"
+
+                # Check if GitHub release should be created
+                if should_create_github_release "$new_version"; then
+                    log_warning "This is a MAJOR version update - GitHub release should be created!"
+                    log_info "Run: git tag v$new_version && git push origin v$new_version"
+                else
+                    log_info "Minor/patch update - no GitHub release needed"
+                fi
+            fi
+
+            log_info "Version prepared with placeholder. Use build-time injection during actual build."
+            show_version_info
+            ;;
         "help"|"--help"|"-h"|"")
             echo "CloudToLocalLLM Version Manager"
             echo ""
@@ -403,7 +441,8 @@ main() {
             echo "  get-semantic     Get semantic version (MAJOR.MINOR.PATCH)"
             echo "  get-build        Get build number"
             echo "  info             Show detailed version information"
-            echo "  increment <type> Increment version (major|minor|patch|build)"
+            echo "  increment <type> Increment version (major|minor|patch|build) - immediate timestamp"
+            echo "  prepare <type>   Prepare version (major|minor|patch|build) - build-time timestamp"
             echo "  set <version>    Set specific version (MAJOR.MINOR.PATCH)"
             echo "  validate         Validate current version format"
             echo "  help             Show this help message"
@@ -412,14 +451,25 @@ main() {
             echo "  major            Creates GitHub release (x.0.0) - significant changes"
             echo "  minor            No GitHub release (x.y.0) - feature additions"
             echo "  patch            No GitHub release (x.y.z) - bug fixes"
-            echo "  build            No GitHub release (x.y.z+nnn) - incremental builds"
+            echo "  build            No GitHub release (x.y.z+YYYYMMDDHHMM) - timestamp builds"
+            echo ""
+            echo "Build Number Format:"
+            echo "  YYYYMMDDHHMM     Timestamp format representing build creation time"
+            echo "  Example: 202506092204 = December 9, 2025 at 22:04"
             echo ""
             echo "Examples:"
             echo "  $0 info                    # Show current version info"
-            echo "  $0 increment build         # Increment build number only"
-            echo "  $0 increment patch         # Increment patch version"
+            echo "  $0 increment build         # Increment build number with immediate timestamp"
+            echo "  $0 prepare build           # Prepare build increment for build-time timestamp"
+            echo "  $0 increment patch         # Increment patch version with immediate timestamp"
+            echo "  $0 prepare patch           # Prepare patch increment for build-time timestamp"
             echo "  $0 increment major         # Increment major (creates GitHub release)"
-            echo "  $0 set 3.1.0              # Set version to 3.1.0"
+            echo "  $0 set 3.1.0              # Set version to 3.1.0 with immediate timestamp"
+            echo ""
+            echo "Build-Time Workflow:"
+            echo "  1. $0 prepare build        # Prepare version with placeholder"
+            echo "  2. flutter build ...       # Build process injects actual timestamp"
+            echo "  3. Artifacts have real build creation time"
             ;;
         *)
             log_error "Unknown command: $1"

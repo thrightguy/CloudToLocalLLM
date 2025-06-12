@@ -1,10 +1,22 @@
 #!/bin/bash
 
-# CloudToLocalLLM AUR Package Testing Script v3.4.0+
+# CloudToLocalLLM AUR Package Testing Script v3.5.5+
 # Automated testing of AUR package build and installation
 # Supports non-interactive execution for CI/CD pipelines
+# Enhanced with robust timeout handling and error recovery
 
 set -e
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AUR_DIR="$PROJECT_ROOT/aur-package"
+TEMP_TEST_DIR="/tmp/cloudtolocalllm-aur-test-$$"
+
+# Load deployment utilities if available
+if [[ -f "$SCRIPT_DIR/deployment_utils.sh" ]]; then
+    source "$SCRIPT_DIR/deployment_utils.sh"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,12 +24,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-
-# Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-AUR_DIR="$PROJECT_ROOT/aur-package"
-TEMP_TEST_DIR="/tmp/cloudtolocalllm-aur-test-$$"
 
 # Flags
 DRY_RUN=false
@@ -194,11 +200,19 @@ build_package() {
         return 0
     fi
 
-    # Build package
+    # Build package with timeout to prevent hanging
+    local build_timeout=1800  # 30 minutes for makepkg
+
     if [[ "$VERBOSE" == "true" ]]; then
-        makepkg --noconfirm
+        if ! timeout $build_timeout makepkg --noconfirm; then
+            log_error "Package build timed out or failed"
+            exit 3
+        fi
     else
-        makepkg --noconfirm > /dev/null 2>&1
+        if ! timeout $build_timeout makepkg --noconfirm > /dev/null 2>&1; then
+            log_error "Package build timed out or failed"
+            exit 3
+        fi
     fi
 
     # Verify package was created
@@ -262,9 +276,13 @@ test_installation() {
         return 0
     fi
 
-    # Install package
+    # Install package with timeout
     if [[ "$FORCE" == "true" ]]; then
-        sudo pacman -U "$package_file" --noconfirm
+        local install_timeout=300  # 5 minutes for package installation
+        if ! timeout $install_timeout sudo pacman -U "$package_file" --noconfirm; then
+            log_error "Package installation timed out or failed"
+            exit 4
+        fi
     else
         log_warning "Package installation requires sudo privileges"
         log "Install command: sudo pacman -U $package_file --noconfirm"
@@ -358,8 +376,24 @@ main() {
     echo -e "${GREEN}📦 Package ready for AUR submission${NC}"
 }
 
-# Error handling
-trap 'log_error "Script failed at line $LINENO. Check logs above for details."' ERR
+# Enhanced error handling with cleanup
+cleanup_on_error() {
+    local exit_code=$?
+    log_error "Script failed at line $LINENO with exit code $exit_code"
+    log_error "Check logs above for details"
+
+    # Cleanup test environment
+    cleanup
+
+    exit $exit_code
+}
+
+# Setup signal handlers for graceful shutdown
+if command -v setup_signal_handlers &> /dev/null; then
+    setup_signal_handlers cleanup
+fi
+
+trap 'cleanup_on_error' ERR
 
 # Parse arguments and execute
 parse_arguments "$@"

@@ -114,16 +114,24 @@ build() {
     flutter clean
     flutter pub get
     
-    # Build Flutter application
-    flutter build linux --release
+    # Build Flutter application with build-time timestamp injection
+    if [[ -f "scripts/flutter_build_with_timestamp.sh" && -x "scripts/flutter_build_with_timestamp.sh" ]]; then
+        scripts/flutter_build_with_timestamp.sh linux --release
+    else
+        flutter build linux --release
+    fi
     
     # Apply tray manager fix if needed
     if [[ -f scripts/fix_tray_manager_deprecation.sh ]]; then
         bash scripts/fix_tray_manager_deprecation.sh apply || true
     fi
     
-    # Rebuild with fixes
-    flutter build linux --release
+    # Rebuild with fixes and build-time timestamp injection
+    if [[ -f "scripts/flutter_build_with_timestamp.sh" && -x "scripts/flutter_build_with_timestamp.sh" ]]; then
+        scripts/flutter_build_with_timestamp.sh linux --release
+    else
+        flutter build linux --release
+    fi
 }
 
 package() {

@@ -1,9 +1,18 @@
 #!/bin/bash
 
-# CloudToLocalLLM VPS Deployment Script v3.4.1+
+# CloudToLocalLLM VPS Deployment Script v3.5.5+
 # Enhanced with automation flags for CI/CD pipeline support
+# Robust network operations and timeout handling
 
 set -e
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load deployment utilities if available
+if [[ -f "$SCRIPT_DIR/deployment_utils.sh" ]]; then
+    source "$SCRIPT_DIR/deployment_utils.sh"
+fi
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -154,10 +163,25 @@ pull_latest_changes() {
         return 0
     fi
 
-    if [[ "$VERBOSE" == "true" ]]; then
-        git pull origin master
+    # Use enhanced git operations if available, otherwise fallback to basic git
+    if command -v git_execute &> /dev/null; then
+        if ! git_execute pull origin master; then
+            log_error "Failed to pull latest changes from GitHub"
+            exit 4
+        fi
     else
-        git pull origin master &> /dev/null
+        # Fallback with timeout
+        if [[ "$VERBOSE" == "true" ]]; then
+            if ! timeout 120 git pull origin master; then
+                log_error "Git pull timed out or failed"
+                exit 4
+            fi
+        else
+            if ! timeout 120 git pull origin master &> /dev/null; then
+                log_error "Git pull timed out or failed"
+                exit 4
+            fi
+        fi
     fi
 
     log_success "Latest changes pulled"
@@ -203,12 +227,61 @@ build_flutter_web() {
         fi
     fi
 
-    # Build web application
-    log_verbose "Building web application..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        flutter build web --no-tree-shake-icons
+    # Build web application with build-time timestamp injection
+    log_verbose "Building web application with build-time timestamp injection..."
+    local build_timeout=600  # 10 minutes for Flutter build
+
+    # Check if build-time injection is available
+    local build_script="./scripts/flutter_build_with_timestamp.sh"
+    local build_injector="./scripts/build_time_version_injector.sh"
+    local build_injection_available=false
+
+    if [[ -f "$build_script" && -x "$build_script" && -f "$build_injector" && -x "$build_injector" ]]; then
+        build_injection_available=true
+        log_verbose "Build-time timestamp injection available"
     else
-        flutter build web --no-tree-shake-icons &> /dev/null
+        log_warning "Build-time injection components not available, using fallback"
+    fi
+
+    if [[ "$build_injection_available" == "true" ]]; then
+        # Use build-time timestamp injection wrapper
+        local build_args="web --no-tree-shake-icons"
+
+        if [[ "$VERBOSE" == "true" ]]; then
+            build_args="--verbose $build_args"
+        fi
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            build_args="--dry-run $build_args"
+        fi
+
+        if ! timeout $build_timeout "$build_script" $build_args; then
+            log_error "Flutter web build with timestamp injection timed out or failed"
+            exit 3
+        fi
+
+        log_success "Web application built with build-time timestamp injection"
+    else
+        # Fallback to direct Flutter build (legacy mode)
+        log_warning "Using fallback Flutter build (no timestamp injection)"
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+            log "DRY RUN: Would execute: flutter build web --no-tree-shake-icons"
+        else
+            if [[ "$VERBOSE" == "true" ]]; then
+                if ! timeout $build_timeout flutter build web --no-tree-shake-icons; then
+                    log_error "Flutter web build timed out or failed"
+                    exit 3
+                fi
+            else
+                if ! timeout $build_timeout flutter build web --no-tree-shake-icons &> /dev/null; then
+                    log_error "Flutter web build timed out or failed"
+                    exit 3
+                fi
+            fi
+        fi
+
+        log_success "Web application built (fallback mode)"
     fi
 
     log_success "Flutter web build completed"
@@ -318,25 +391,38 @@ perform_health_checks() {
         docker compose -f docker-compose.yml ps
     fi
 
-    # Verify web app accessibility
+    # Verify web app accessibility with enhanced retry logic
     log_verbose "Testing web app accessibility..."
-    local max_attempts=5
-    local attempt=1
 
-    while [[ $attempt -le $max_attempts ]]; do
-        if curl -s -o /dev/null -w "%{http_code}" https://app.cloudtolocalllm.online | grep -q "200\|301\|302"; then
-            log_success "Web app is accessible at https://app.cloudtolocalllm.online"
-            return 0
+    # Use enhanced wait_for_service if available, otherwise fallback
+    if command -v wait_for_service &> /dev/null; then
+        if ! wait_for_service "https://app.cloudtolocalllm.online" 120 10; then
+            log_error "Web app failed to become accessible"
+            log_error "Check logs with: docker compose -f docker-compose.yml logs"
+            exit 4
         fi
+    else
+        # Fallback implementation
+        local max_attempts=12
+        local attempt=1
 
-        log_verbose "Attempt $attempt/$max_attempts failed, retrying in 5 seconds..."
-        sleep 5
-        ((attempt++))
-    done
+        while [[ $attempt -le $max_attempts ]]; do
+            if curl -f -s --connect-timeout 10 https://app.cloudtolocalllm.online &> /dev/null; then
+                log_success "Web app is accessible at https://app.cloudtolocalllm.online"
+                return 0
+            fi
 
-    log_error "Web app accessibility check failed after $max_attempts attempts"
-    log_error "Check logs with: docker compose -f docker-compose.yml logs"
-    exit 4
+            log_verbose "Attempt $attempt/$max_attempts failed, retrying in 10 seconds..."
+            sleep 10
+            ((attempt++))
+        done
+
+        log_error "Web app accessibility check failed after $max_attempts attempts"
+        log_error "Check logs with: docker compose -f docker-compose.yml logs"
+        exit 4
+    fi
+
+    log_success "Web app is accessible at https://app.cloudtolocalllm.online"
 }
 
 # Display deployment summary

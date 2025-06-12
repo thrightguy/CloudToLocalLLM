@@ -83,9 +83,10 @@ if [[ -f "lib/shared/lib/version.dart" ]]; then
     # Create backup
     cp "lib/shared/lib/version.dart" "lib/shared/lib/version.dart.backup"
 
-    # Generate build timestamp and number
+    # Generate build timestamp and use existing build number from pubspec.yaml
     BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    BUILD_NUMBER_INT=$(date +%Y%m%d%H%M)
+    # Use the build number from pubspec.yaml to maintain consistency
+    BUILD_NUMBER_INT="$PUBSPEC_BUILD"
 
     # Update all version constants
     sed -i "s/static const String mainAppVersion = '[^']*';/static const String mainAppVersion = '$PUBSPEC_VERSION';/" lib/shared/lib/version.dart
