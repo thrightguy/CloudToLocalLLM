@@ -34,6 +34,8 @@
 # ============================================================================
 
 # Distribution directory - now fully tracked for git-based distribution
+# Allow all files in dist/ directory (overrides general *.tar.gz exclusion)
+!dist/**
 
 # Allow small metadata files
 !dist/metadata/
@@ -215,7 +217,7 @@ bfg.jar
 cloudtolocalllm-enhanced-tray*
 cloudtolocalllm-settings*
 cloudtolocalllm-v*.tar.gz
-cloudtolocalllm-*.tar.gz
+# cloudtolocalllm-*.tar.gz - removed to allow dist/ directory tracking
 
 # Version-specific binaries
 cloudtolocalllm-*-stable.tar.gz
