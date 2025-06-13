@@ -233,24 +233,30 @@ phase2_version_management() {
     if [[ "${BUILD_TIME_INJECTION_AVAILABLE:-false}" == "true" ]]; then
         log "Using build-time timestamp injection workflow..."
 
-        # Check if version is already prepared with placeholder
-        if [[ "$current_build_number" == "BUILD_TIME_PLACEHOLDER" ]]; then
-            log_verbose "Version already prepared with placeholder"
-        else
-            log "Preparing version with placeholder for build-time injection..."
-            if [[ "$DRY_RUN" == "true" ]]; then
-                log "DRY RUN: Would prepare version with placeholder"
+        # Use simplified timestamp injection instead of placeholder system
+        log "Generating real timestamp and updating all version files..."
+        if [[ "$DRY_RUN" == "true" ]]; then
+            log "DRY RUN: Would inject real timestamp into version files"
+            if [[ "$VERBOSE" == "true" ]]; then
+                "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh" --dry-run --verbose
             else
-                # Use prepare command to set placeholder
-                if ! "$PROJECT_ROOT/scripts/version_manager.sh" prepare build; then
-                    log_error "Failed to prepare version with placeholder"
+                "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh" --dry-run
+            fi
+        else
+            # Use simple timestamp injector to set real timestamp immediately
+            if [[ "$VERBOSE" == "true" ]]; then
+                if ! "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh" --verbose; then
+                    log_error "Failed to inject real timestamp into version files"
                     exit 2
                 fi
-                log_success "Version prepared with placeholder for build-time injection"
+            else
+                if ! "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh"; then
+                    log_error "Failed to inject real timestamp into version files"
+                    exit 2
+                fi
             fi
+            log_success "Real timestamp injected into all version files - no more BUILD_TIME_PLACEHOLDER!"
         fi
-    else
-        log_warning "Build-time injection not available - using existing version"
 
         # Verify version consistency in fallback mode
         local assets_version=$(grep '"version"' assets/version.json | cut -d'"' -f4 2>/dev/null || echo "unknown")
@@ -489,14 +495,13 @@ phase5_comprehensive_verification() {
         if [[ "$deployed_build_number" =~ ^[0-9]{12}$ ]]; then
             log_verbose "✓ Deployed build number format valid: $deployed_build_number"
 
-            # If build-time injection was used, verify it's not a placeholder
-            if [[ "${BUILD_TIME_INJECTION_AVAILABLE:-false}" == "true" ]]; then
-                if [[ "$deployed_build_number" != "BUILD_TIME_PLACEHOLDER" ]]; then
-                    log_success "✓ Build-time timestamp injection verified: $deployed_build_number"
+            # Verify timestamp is real (not placeholder) and reasonable
+            if [[ "$deployed_build_number" != "BUILD_TIME_PLACEHOLDER" ]]; then
+                log_success "✓ Real timestamp injection verified: $deployed_build_number"
 
-                    # Validate timestamp is reasonable (within last 24 hours)
-                    local current_timestamp=$(date +"%Y%m%d%H%M")
-                    local timestamp_diff=$((current_timestamp - deployed_build_number))
+                # Validate timestamp is reasonable (within last 24 hours)
+                local current_timestamp=$(date +"%Y%m%d%H%M")
+                local timestamp_diff=$((current_timestamp - deployed_build_number))
 
                     if [[ $timestamp_diff -ge 0 && $timestamp_diff -le 10000 ]]; then
                         log_verbose "✓ Build timestamp is recent and valid"
@@ -504,12 +509,9 @@ phase5_comprehensive_verification() {
                         log_warning "Build timestamp seems unusual: $deployed_build_number (diff: $timestamp_diff)"
                     fi
                 else
-                    log_error "Build number is still placeholder - timestamp injection failed"
+                    log_error "❌ BUILD_TIME_PLACEHOLDER found in deployed version - timestamp injection failed"
                     exit 5
                 fi
-            else
-                log_verbose "✓ Build number valid (fallback mode): $deployed_build_number"
-            fi
         else
             log_error "Deployed build number format invalid: $deployed_build_number"
             exit 5
