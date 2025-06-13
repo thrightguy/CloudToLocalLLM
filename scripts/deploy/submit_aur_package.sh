@@ -256,31 +256,23 @@ submit_to_aur() {
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log "DRY RUN: Would commit and push to AUR"
-        log "DRY RUN: Commit message: Update to v$version - unified Flutter architecture"
+        log "DRY RUN: Commit message: Update to v$version - GitHub raw URL distribution"
         log_success "DRY RUN: AUR submission simulation completed"
         return 0
     fi
 
     cd "$AUR_DIR"
 
-    # Add files (including distribution file for local approach)
-    log_verbose "Adding PKGBUILD, .SRCINFO, and distribution files to git..."
+    # Add only PKGBUILD and .SRCINFO files (git-based distribution tracking)
+    log_verbose "Adding PKGBUILD and .SRCINFO to git (GitHub raw URL approach)..."
     git add PKGBUILD .SRCINFO
 
-    # Add distribution file if it exists (local file approach)
-    local version=$(get_version)
-    local dist_file="cloudtolocalllm-${version}-x86_64.tar.gz"
-    if [[ -f "$dist_file" ]]; then
-        log_verbose "Adding local distribution file: $dist_file"
-        git add "$dist_file"
-    fi
+    # DO NOT add distribution files - they are served from GitHub raw URLs
+    # This follows the git-based distribution tracking approach to avoid AUR size limits
+    log_verbose "Using GitHub raw URL distribution - no binary files included in AUR"
 
-    # Commit with version-specific message (include local file info if applicable)
-    local commit_message="Update to v$version - unified Flutter architecture"
-    local dist_file="cloudtolocalllm-${version}-x86_64.tar.gz"
-    if [[ -f "$dist_file" ]]; then
-        commit_message="Update to v$version - unified Flutter architecture (local distribution file included)"
-    fi
+    # Commit with version-specific message for GitHub raw URL approach
+    local commit_message="Update to v$version - GitHub raw URL distribution"
     log_verbose "Committing with message: $commit_message"
     git commit -m "$commit_message"
 

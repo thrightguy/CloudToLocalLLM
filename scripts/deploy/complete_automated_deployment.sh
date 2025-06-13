@@ -426,27 +426,12 @@ phase4_distribution_execution() {
     fi
 
     # Submit AUR package immediately after VPS deployment
-    log_verbose "Submitting AUR package..."
+    log_verbose "Submitting AUR package using GitHub raw URL distribution..."
 
-    # Prepare AUR package with local distribution file (eliminates 404 errors)
-    log_verbose "Preparing AUR package with local distribution file..."
-    local aur_prep_flags=""
-    if [[ "$FORCE" == "true" ]]; then
-        aur_prep_flags="$aur_prep_flags --force"
-    fi
-    if [[ "$VERBOSE" == "true" ]]; then
-        aur_prep_flags="$aur_prep_flags --verbose"
-    fi
-    if [[ "$DRY_RUN" == "true" ]]; then
-        aur_prep_flags="$aur_prep_flags --dry-run"
-    fi
-
-    if ./scripts/prepare_aur_local_package.sh $aur_prep_flags; then
-        log_success "AUR package prepared with local distribution file"
-    else
-        log_warning "AUR package preparation failed - continuing with deployment"
-        log_warning "Manual AUR preparation may be required"
-    fi
+    # Skip local distribution file preparation - use GitHub raw URL approach
+    log_verbose "Using git-based distribution tracking (GitHub raw URLs)..."
+    log_verbose "AUR package already configured with correct GitHub raw URL and SHA256"
+    log_verbose "No local binary file preparation needed - avoiding AUR size limits"
 
     # Prepare AUR submission flags
     local aur_submit_flags=""
