@@ -8,12 +8,14 @@ import 'package:provider/provider.dart';
 
 import '../components/app_header.dart';
 import '../components/modern_card.dart';
+import '../components/model_download_manager.dart';
 import '../components/ollama_setup_guide.dart';
 import '../components/settings_sidebar.dart';
 import '../config/app_config.dart';
 import '../config/theme.dart';
 import '../models/ollama_connection_error.dart';
 import '../services/auth_service.dart';
+import '../services/ollama_service.dart';
 import '../services/tunnel_manager_service.dart';
 import '../services/version_service.dart';
 
@@ -561,92 +563,16 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
 
   // New method to build the Model Download Manager section
   Widget _buildModelDownloadManagerSettings() {
-    // For web, model management is part of the Tunnel Configuration card (_refreshAvailableModels)
-    // For desktop, this could be a more dedicated UI if needed,
-    // but for now, we can provide a message or integrate with existing Ollama interactions.
-    if (kIsWeb) {
-      return Column(
-        children: [
-          ModernCard(
-            child: Padding(
-              padding: EdgeInsets.all(AppTheme.spacingM),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.download_for_offline,
-                    size: 64,
-                    color: AppTheme.textColorLight,
-                  ),
-                  SizedBox(height: AppTheme.spacingM),
-                  Text(
-                    'Model management for the web version is available within the "Tunnel Configuration" section, allowing you to refresh and view available models from your connected Ollama instance.',
-                    style: TextStyle(color: AppTheme.textColorLight),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: AppTheme.spacingM),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _selectedSectionId =
-                            'llm-provider'; // or 'tunnel-connection'
-                      });
-                    },
-                    icon: const Icon(Icons.settings_ethernet),
-                    label: const Text('Go to Tunnel Configuration'),
-                  ),
-                ],
-              ),
-            ),
+    return Consumer<OllamaService>(
+      builder: (context, ollamaService, child) {
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            child: const ModelDownloadManager(),
           ),
-        ],
-      );
-    } else {
-      // Desktop: Could integrate with OllamaService or provide instructions
-      return Consumer<TunnelManagerService>(
-        // Or OllamaService if more appropriate
-        builder: (context, tunnelManager, child) {
-          return Column(
-            children: [
-              ModernCard(
-                child: Padding(
-                  padding: EdgeInsets.all(AppTheme.spacingM),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons
-                            .download_for_offline, // Ensure this icon is present
-                        size: 64,
-                        color: AppTheme.textColorLight,
-                      ),
-                      SizedBox(height: AppTheme.spacingM),
-                      Text(
-                        'Manage your Ollama models directly through the Ollama application or command-line interface. This section will provide more integrated features in the future.', // Ensure this text is present
-                        style: TextStyle(color: AppTheme.textColorLight),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: AppTheme.spacingM),
-                      // Placeholder for actual model management UI or button to open Ollama
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // Placeholder: Implement opening Ollama or showing instructions
-                          debugPrint(
-                            '⚙️ [Settings] Open Ollama button pressed (not implemented)',
-                          );
-                        }, // Ensure onPressed is present
-                        icon: const Icon(
-                          Icons.open_in_new,
-                        ), // Ensure this icon is present
-                        label: const Text('Open Ollama (if available)'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    }
+        );
+      },
+    );
   }
 
   Widget _buildServiceErrorCard(String errorMessage) {

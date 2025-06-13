@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:window_manager/window_manager.dart';
 
-/// Service for managing window state and visibility
+/// Service for managing window state and visibility using window_manager_plus
 class WindowManagerService {
   static final WindowManagerService _instance =
       WindowManagerService._internal();
@@ -10,62 +10,79 @@ class WindowManagerService {
 
   bool _isWindowVisible = true;
   bool _isMinimizedToTray = false;
+  bool _isInitialized = false;
+
+  /// Initialize the window manager service
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      // Initialize window_manager if not on web
+      if (!kIsWeb) {
+        await windowManager.ensureInitialized();
+        await windowManager.setPreventClose(true);
+        _isInitialized = true;
+        debugPrint("🪟 [WindowManager] Window manager service initialized");
+      }
+    } catch (e) {
+      debugPrint("🪟 [WindowManager] Failed to initialize window manager: $e");
+    }
+  }
 
   /// Show the application window
   Future<void> showWindow() async {
     try {
-      if (Platform.isLinux) {
-        // For Linux, we can use platform channels or system calls
-        // Run window command asynchronously to avoid blocking UI
-        _executeLinuxWindowCommand('show');
+      if (!kIsWeb && _isInitialized) {
+        await windowManager.show();
+        await windowManager.focus();
       }
       _isWindowVisible = true;
       _isMinimizedToTray = false;
-      debugPrint("Window shown");
+      debugPrint("🪟 [WindowManager] Window shown");
     } catch (e) {
-      debugPrint("Failed to show window: $e");
+      debugPrint("🪟 [WindowManager] Failed to show window: $e");
     }
   }
 
   /// Hide the application window to system tray
   Future<void> hideToTray() async {
     try {
-      if (Platform.isLinux) {
-        _executeLinuxWindowCommand('hide');
+      if (!kIsWeb && _isInitialized) {
+        await windowManager.hide();
       }
       _isWindowVisible = false;
       _isMinimizedToTray = true;
-      debugPrint("Window hidden to tray");
+      debugPrint("🪟 [WindowManager] Window hidden to tray");
     } catch (e) {
-      debugPrint("Failed to hide window: $e");
+      debugPrint("🪟 [WindowManager] Failed to hide window: $e");
     }
   }
 
   /// Minimize the window (but keep it in taskbar)
   Future<void> minimizeWindow() async {
     try {
-      if (Platform.isLinux) {
-        _executeLinuxWindowCommand('minimize');
+      if (!kIsWeb && _isInitialized) {
+        await windowManager.minimize();
       }
       _isWindowVisible = false;
       _isMinimizedToTray = false;
-      debugPrint("Window minimized");
+      debugPrint("🪟 [WindowManager] Window minimized");
     } catch (e) {
-      debugPrint("Failed to minimize window: $e");
+      debugPrint("🪟 [WindowManager] Failed to minimize window: $e");
     }
   }
 
   /// Maximize the window
   Future<void> maximizeWindow() async {
     try {
-      if (Platform.isLinux) {
-        _executeLinuxWindowCommand('maximize');
+      if (!kIsWeb && _isInitialized) {
+        await windowManager.maximize();
       }
       _isWindowVisible = true;
       _isMinimizedToTray = false;
-      debugPrint("Window maximized");
+      debugPrint("🪟 [WindowManager] Window maximized");
     } catch (e) {
-      debugPrint("Failed to maximize window: $e");
+      debugPrint("🪟 [WindowManager] Failed to maximize window: $e");
     }
   }
 
@@ -78,55 +95,17 @@ class WindowManagerService {
     }
   }
 
-  /// Execute Linux-specific window management commands
-  void _executeLinuxWindowCommand(String command) {
-    // Run window commands asynchronously to avoid blocking UI
-    () async {
-      try {
-        // Use application name to identify our window
-        switch (command) {
-          case 'show':
-            // Bring window to front and show it with timeout
-            await Process.run('wmctrl', ['-a', 'CloudToLocalLLM'])
-                .timeout(const Duration(seconds: 3), onTimeout: () {
-              debugPrint("Window show command timed out");
-              return ProcessResult(0, 1, '', 'Timeout');
-            });
-            break;
-          case 'hide':
-            // Hide the window (this is tricky in Linux, might need different approach)
-            await Process.run(
-                    'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,hidden'])
-                .timeout(const Duration(seconds: 3), onTimeout: () {
-              debugPrint("Window hide command timed out");
-              return ProcessResult(0, 1, '', 'Timeout');
-            });
-            break;
-          case 'minimize':
-            await Process.run(
-                    'wmctrl', ['-r', 'CloudToLocalLLM', '-b', 'add,minimized'])
-                .timeout(const Duration(seconds: 3), onTimeout: () {
-              debugPrint("Window minimize command timed out");
-              return ProcessResult(0, 1, '', 'Timeout');
-            });
-            break;
-          case 'maximize':
-            await Process.run('wmctrl', [
-              '-r',
-              'CloudToLocalLLM',
-              '-b',
-              'add,maximized_vert,maximized_horz'
-            ]).timeout(const Duration(seconds: 3), onTimeout: () {
-              debugPrint("Window maximize command timed out");
-              return ProcessResult(0, 1, '', 'Timeout');
-            });
-            break;
-        }
-      } catch (e) {
-        debugPrint("Failed to execute window command '$command': $e");
-        // Fallback: try alternative methods or ignore
+  /// Force close the application (for quit functionality)
+  Future<void> forceClose() async {
+    try {
+      if (!kIsWeb && _isInitialized) {
+        await windowManager.setPreventClose(false);
+        await windowManager.destroy();
       }
-    }();
+      debugPrint("🪟 [WindowManager] Application force closed");
+    } catch (e) {
+      debugPrint("🪟 [WindowManager] Failed to force close: $e");
+    }
   }
 
   /// Check if window is currently visible
@@ -134,6 +113,9 @@ class WindowManagerService {
 
   /// Check if window is minimized to tray
   bool get isMinimizedToTray => _isMinimizedToTray;
+
+  /// Check if window manager is initialized
+  bool get isInitialized => _isInitialized;
 
   /// Set window visibility state (for internal tracking)
   void setWindowVisible(bool visible) {
@@ -145,7 +127,20 @@ class WindowManagerService {
 
   /// Handle window close event (should minimize to tray instead of closing)
   Future<bool> handleWindowClose() async {
-    await hideToTray();
-    return false; // Prevent actual window close
+    try {
+      await hideToTray();
+      debugPrint(
+        "🪟 [WindowManager] Window close intercepted, minimized to tray",
+      );
+      return false; // Prevent actual window close
+    } catch (e) {
+      debugPrint("🪟 [WindowManager] Failed to handle window close: $e");
+      return true; // Allow close if error occurs
+    }
+  }
+
+  /// Dispose of the window manager service
+  void dispose() {
+    debugPrint("🪟 [WindowManager] Window manager service disposed");
   }
 }

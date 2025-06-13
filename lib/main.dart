@@ -7,12 +7,14 @@ import 'config/theme.dart';
 import 'config/router.dart';
 import 'config/app_config.dart';
 import 'services/auth_service.dart';
+import 'services/ollama_service.dart';
 import 'services/streaming_proxy_service.dart';
 import 'services/unified_connection_service.dart';
 import 'services/tunnel_manager_service.dart';
 import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
 import 'widgets/debug_version_overlay.dart';
+import 'widgets/window_listener_widget.dart';
 
 // Global navigator key for navigation from system tray
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -69,7 +71,11 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
     try {
       debugPrint("🚀 [SystemTray] Initializing native tray service...");
 
-      // Initialize tunnel manager service first
+      // Initialize window manager service first
+      final windowManager = WindowManagerService();
+      await windowManager.initialize();
+
+      // Initialize tunnel manager service
       final tunnelManager = TunnelManagerService();
       await tunnelManager.initialize();
 
@@ -79,11 +85,11 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         tunnelManager: tunnelManager,
         onShowWindow: () {
           debugPrint("🪟 [SystemTray] Native tray requested to show window");
-          WindowManagerService().showWindow();
+          windowManager.showWindow();
         },
         onHideWindow: () {
           debugPrint("🫥 [SystemTray] Native tray requested to hide window");
-          WindowManagerService().hideToTray();
+          windowManager.hideToTray();
         },
         onSettings: () {
           debugPrint("⚙️ [SystemTray] Native tray requested to open settings");
@@ -93,7 +99,7 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
           debugPrint(
             "🚪 [SystemTray] Native tray requested to quit application",
           );
-          // Quit application logic would go here
+          windowManager.forceClose();
         },
       );
 
@@ -208,10 +214,18 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
           create: (context) =>
               StreamingProxyService(authService: context.read<AuthService>()),
         ),
+        // Ollama service
+        ChangeNotifierProvider(
+          create: (context) =>
+              OllamaService(authService: context.read<AuthService>()),
+        ),
         // Tunnel manager service (must be created before UnifiedConnectionService)
         ChangeNotifierProvider(
-          create: (_) {
-            final tunnelManager = TunnelManagerService();
+          create: (context) {
+            final authService = context.read<AuthService>();
+            final tunnelManager = TunnelManagerService(
+              authService: authService,
+            );
             // Initialize the tunnel manager service asynchronously
             tunnelManager.initialize();
             return tunnelManager;
@@ -250,36 +264,38 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
   Widget _buildMainApp() {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
-        return DebugVersionWrapper(
-          child: MaterialApp.router(
-            // App configuration
-            title: AppConfig.appName,
-            debugShowCheckedModeBanner: false,
+        return WindowListenerWidget(
+          child: DebugVersionWrapper(
+            child: MaterialApp.router(
+              // App configuration
+              title: AppConfig.appName,
+              debugShowCheckedModeBanner: false,
 
-            // Theme configuration
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: AppConfig.enableDarkMode
-                ? ThemeMode.dark
-                : ThemeMode.light,
+              // Theme configuration
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: AppConfig.enableDarkMode
+                  ? ThemeMode.dark
+                  : ThemeMode.light,
 
-            // Router configuration
-            routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
+              // Router configuration
+              routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
 
-            // Builder for additional configuration
-            builder: (context, child) {
-              return MediaQuery(
-                // Ensure text scaling doesn't break the UI
-                data: MediaQuery.of(context).copyWith(
-                  textScaler: TextScaler.linear(
-                    MediaQuery.of(
-                      context,
-                    ).textScaler.scale(1.0).clamp(0.8, 1.2),
+              // Builder for additional configuration
+              builder: (context, child) {
+                return MediaQuery(
+                  // Ensure text scaling doesn't break the UI
+                  data: MediaQuery.of(context).copyWith(
+                    textScaler: TextScaler.linear(
+                      MediaQuery.of(
+                        context,
+                      ).textScaler.scale(1.0).clamp(0.8, 1.2),
+                    ),
                   ),
-                ),
-                child: child!,
-              );
-            },
+                  child: child!,
+                );
+              },
+            ),
           ),
         );
       },

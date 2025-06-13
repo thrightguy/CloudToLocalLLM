@@ -8,6 +8,7 @@ import '../models/ollama_connection_error.dart';
 import '../models/streaming_message.dart';
 import 'streaming_service.dart';
 import 'local_ollama_streaming_service.dart';
+import 'auth_service.dart';
 
 /// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
 ///
@@ -17,6 +18,10 @@ class TunnelManagerService extends ChangeNotifier {
   static const String _authTokenKey = 'cloudtolocalllm_auth_token';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final AuthService? _authService;
+
+  // Constructor
+  TunnelManagerService({AuthService? authService}) : _authService = authService;
 
   // Connection state
   bool _isConnected = false;
@@ -428,9 +433,27 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Get authentication token from secure storage
+  /// Get authentication token from AuthService or fallback to secure storage
   Future<String?> _getAuthToken() async {
-    return await _secureStorage.read(key: _authTokenKey);
+    // First try to get token from AuthService if available
+    final authService = _authService;
+    if (authService != null) {
+      final token = authService.getAccessToken();
+      if (token != null) {
+        debugPrint('🚇 [TunnelManager] Using token from AuthService');
+        return token;
+      }
+    }
+
+    // Fallback to secure storage for backward compatibility
+    final storedToken = await _secureStorage.read(key: _authTokenKey);
+    if (storedToken != null) {
+      debugPrint('🚇 [TunnelManager] Using token from secure storage');
+      return storedToken;
+    }
+
+    debugPrint('🚇 [TunnelManager] No authentication token available');
+    return null;
   }
 
   /// Update overall connection status
