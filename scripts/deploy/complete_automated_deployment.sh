@@ -445,12 +445,16 @@ phase4_distribution_execution() {
         aur_submit_flags="$aur_submit_flags --dry-run"
     fi
 
-    # Submit AUR package with error handling that doesn't block deployment
-    if ./scripts/deploy/submit_aur_package.sh $aur_submit_flags; then
-        log_success "AUR package submitted successfully"
+    # Submit AUR package with proper handling of "no changes" case
+    local aur_exit_code=0
+    ./scripts/deploy/submit_aur_package.sh $aur_submit_flags || aur_exit_code=$?
+
+    if [[ $aur_exit_code -eq 0 ]]; then
+        log_success "AUR package submission completed successfully"
     else
-        log_warning "AUR package submission failed - continuing with deployment"
-        log_warning "Manual AUR submission may be required"
+        log_warning "AUR package submission returned exit code $aur_exit_code"
+        log_warning "This may indicate the package is already up to date"
+        log_warning "Continuing with deployment - manual verification may be needed"
     fi
 
     log_success "Git-based distribution execution completed"

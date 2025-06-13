@@ -8,13 +8,7 @@
 # BINARY FILES AND ARCHIVES (>25MB) - EXCLUDED FROM GIT
 # ============================================================================
 
-# All binary archives and packages
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.zip
-*.7z
-*.rar
+# Large binary executables only (compressed archives now tracked for git-based distribution)
 *.AppImage
 *.deb
 *.rpm
@@ -33,17 +27,9 @@
 # DISTRIBUTION AND BUILD DIRECTORIES - EXCLUDED
 # ============================================================================
 
-# Distribution directory - now fully tracked for git-based distribution
-# Allow all files in dist/ directory (overrides general *.tar.gz exclusion)
-!dist/**
-
-# Allow small metadata files
-!dist/metadata/
-!dist/**/*.md5
-!dist/**/*.sha256
-!dist/**/*.txt
-!dist/**/checksums.txt
-!dist/binary_checksums.txt
+# Distribution directory - fully tracked for git-based distribution
+# All files in dist/ directory are now tracked (compressed archives allowed)
+# No exclusions needed since compressed files are no longer globally excluded
 
 # Build directories
 build/
@@ -233,8 +219,7 @@ aur-package/pkg/
 aur-package/src/
 aur-package/test-package/
 aur-package/*.pkg.tar.zst
-aur-package/*.tar.gz
-aur-package/*.tar.gz.sha256
+# Note: *.tar.gz files now allowed for git-based distribution tracking
 
 # AUR repository directory (prevent submodule issues)
 aur-repo/
@@ -247,12 +232,7 @@ aur-repo/
 backups/
 
 # CloudToLocalLLM Binary File Management
-# Exclude large original files (>50MB) but include split parts
-dist/*.tar.gz
-dist/*.AppImage
+# Git-based distribution tracking - all distribution files now tracked
+# Large executables excluded but compressed archives allowed
 dist/**/cloudtolocalllm-enhanced-tray
 dist/**/cloudtolocalllm-settings
-# Include split parts and checksums
-!dist/*.part*
-!dist/**/binary_checksums.txt
-!dist/binary_checksums.txt

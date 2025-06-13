@@ -233,8 +233,8 @@ check_changes() {
     cd "$AUR_DIR"
 
     if git diff --quiet && git diff --cached --quiet; then
-        log_warning "No changes detected in AUR package"
-        log_warning "Package may already be up to date"
+        log "No changes detected in AUR package"
+        log "Package is already up to date with current version"
         return 1
     fi
 
@@ -392,8 +392,8 @@ main() {
         verify_submission "$version"
         display_summary "$version"
     else
-        log_warning "No submission needed - package already up to date"
-        exit 0
+        log_success "No submission needed - package already up to date"
+        return 0
     fi
 }
 
