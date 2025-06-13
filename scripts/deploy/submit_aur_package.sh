@@ -263,12 +263,24 @@ submit_to_aur() {
 
     cd "$AUR_DIR"
 
-    # Add files
-    log_verbose "Adding PKGBUILD and .SRCINFO to git..."
+    # Add files (including distribution file for local approach)
+    log_verbose "Adding PKGBUILD, .SRCINFO, and distribution files to git..."
     git add PKGBUILD .SRCINFO
 
-    # Commit with version-specific message
+    # Add distribution file if it exists (local file approach)
+    local version=$(get_version)
+    local dist_file="cloudtolocalllm-${version}-x86_64.tar.gz"
+    if [[ -f "$dist_file" ]]; then
+        log_verbose "Adding local distribution file: $dist_file"
+        git add "$dist_file"
+    fi
+
+    # Commit with version-specific message (include local file info if applicable)
     local commit_message="Update to v$version - unified Flutter architecture"
+    local dist_file="cloudtolocalllm-${version}-x86_64.tar.gz"
+    if [[ -f "$dist_file" ]]; then
+        commit_message="Update to v$version - unified Flutter architecture (local distribution file included)"
+    fi
     log_verbose "Committing with message: $commit_message"
     git commit -m "$commit_message"
 
