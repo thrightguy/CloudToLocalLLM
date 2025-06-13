@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# CloudToLocalLLM Static Distribution Upload Script v3.4.0+
-# Uploads package to static download location with integrity validation
+# CloudToLocalLLM Distribution Upload Script v3.5.6+
+# Uploads package to download location for Flutter-native homepage
 # Supports non-interactive execution for CI/CD pipelines
 
 set -e
@@ -21,7 +21,7 @@ DIST_DIR="$PROJECT_ROOT/dist"
 # VPS Configuration
 VPS_HOST="cloudtolocalllm.online"
 VPS_USER="cloudllm"
-VPS_DOWNLOAD_DIR="/opt/cloudtolocalllm/static_homepage/downloads"
+VPS_DOWNLOAD_DIR="/opt/cloudtolocalllm/downloads"
 
 # Flags
 DRY_RUN=false

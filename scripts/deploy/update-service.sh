@@ -41,7 +41,6 @@ Usage: $0 <service> [options]
 
 Services:
   nginx-proxy       Update nginx reverse proxy
-  static-site       Update static website and documentation
   flutter-app       Update Flutter web application
   api-backend       Update API backend
 
@@ -54,7 +53,7 @@ Options:
 
 Examples:
   $0 flutter-app                    # Update Flutter app
-  $0 static-site --no-downtime      # Update static site with minimal downtime
+  $0 flutter-app --no-downtime      # Update Flutter app with minimal downtime
   $0 api-backend --backup           # Update API backend with backup
   $0 nginx-proxy --rollback         # Rollback nginx proxy
 
@@ -154,17 +153,7 @@ build_assets() {
             flutter build web --release --web-renderer html
             log_success "Flutter web application built"
             ;;
-        static-site)
-            log_info "Building documentation site..."
-            if [ -d "$PROJECT_ROOT/docs-site" ] && [ -f "$PROJECT_ROOT/docs-site/package.json" ]; then
-                cd "$PROJECT_ROOT/docs-site"
-                npm ci
-                npm run build
-                log_success "Documentation site built"
-            else
-                log_warning "Documentation site not found, skipping build"
-            fi
-            ;;
+
         api-backend)
             log_info "Installing API backend dependencies..."
             if [ -f "$PROJECT_ROOT/api-backend/package.json" ]; then
@@ -190,7 +179,7 @@ update_with_zero_downtime() {
             log_info "Reloading nginx configuration..."
             docker-compose -f "$COMPOSE_FILE" exec nginx-proxy nginx -s reload
             ;;
-        static-site|flutter-app)
+        flutter-app)
             # These can be updated with minimal downtime
             local temp_service="${SERVICE}-temp"
             

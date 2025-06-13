@@ -11,7 +11,7 @@ source=(
     "https://cloudtolocalllm.online/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 )
 
-# Deployment workflow for static distribution:
+# Deployment workflow for Flutter-native distribution:
 # 1. Upload cloudtolocalllm-3.5.5-x86_64.tar.gz to https://cloudtolocalllm.online/
 # 2. Update aur-package/PKGBUILD with new version and checksum (AUTOMATED)
 # 3. Test AUR package build locally

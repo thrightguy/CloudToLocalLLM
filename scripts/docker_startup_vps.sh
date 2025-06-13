@@ -122,12 +122,12 @@ main() {
 
     log_success "CloudToLocalLLM startup completed successfully!"
     log_info "Application should be available at:"
-    log_info "- Homepage: http://cloudtolocalllm.online"
-    log_info "- Web App: http://app.cloudtolocalllm.online"
+    log_info "- Flutter Homepage: http://cloudtolocalllm.online"
+    log_info "- Flutter Web App: http://app.cloudtolocalllm.online"
 
     if [ -d "${PROJECT_DIR}/certbot/live/cloudtolocalllm.online" ]; then
-        log_info "- HTTPS Homepage: https://cloudtolocalllm.online"
-        log_info "- HTTPS Web App: https://app.cloudtolocalllm.online"
+        log_info "- HTTPS Flutter Homepage: https://cloudtolocalllm.online"
+        log_info "- HTTPS Flutter Web App: https://app.cloudtolocalllm.online"
     fi
 }
 

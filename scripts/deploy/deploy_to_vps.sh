@@ -79,9 +79,9 @@ create_backup() {
     # Backup docker-compose files
     cp docker-compose*.yml "$backup_path/" 2>/dev/null || true
     
-    # Backup static homepage
-    if [[ -d "static_homepage" ]]; then
-        cp -r static_homepage "$backup_path/"
+    # Backup Flutter web build
+    if [[ -d "build/web" ]]; then
+        cp -r build/web "$backup_path/"
     fi
     
     # Backup nginx config

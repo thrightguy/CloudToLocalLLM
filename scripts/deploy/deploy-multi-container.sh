@@ -49,7 +49,6 @@ Options:
 
 Services (deploy specific services only):
   nginx-proxy       Nginx reverse proxy
-  static-site       Static website and documentation
   flutter-app       Flutter web application
   api-backend       API backend for bridge communication
   all               Deploy all services (default)
@@ -58,7 +57,7 @@ Examples:
   $0                          # Deploy all services
   $0 --build                  # Rebuild and deploy all services
   $0 flutter-app              # Deploy only Flutter app
-  $0 --build static-site      # Rebuild and deploy static site
+  $0 --build flutter-app      # Rebuild and deploy Flutter app
   $0 --ssl-setup              # Set up SSL certificates
 
 EOF
@@ -98,7 +97,7 @@ while [[ $# -gt 0 ]]; do
             show_usage
             exit 0
             ;;
-        nginx-proxy|static-site|flutter-app|api-backend|all)
+        nginx-proxy|flutter-app|api-backend|all)
             SERVICES+=("$1")
             shift
             ;;
@@ -373,9 +372,7 @@ main() {
         build_flutter_web
     fi
     
-    if [[ " ${SERVICES[@]} " =~ " static-site " ]] || [[ " ${SERVICES[@]} " =~ " all " ]]; then
-        build_docs
-    fi
+
     
     # Set up SSL if requested
     if [ "$SSL_SETUP" = true ]; then

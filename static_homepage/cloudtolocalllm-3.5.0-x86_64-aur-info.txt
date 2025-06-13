@@ -1,5 +1,5 @@
 # AUR PKGBUILD Information for CloudToLocalLLM v3.5.0
-# Static Distribution Configuration
+# Flutter-Native Distribution Configuration
 
 # Update these values in aur-package/PKGBUILD:
 pkgver=3.5.0
@@ -11,7 +11,7 @@ source=(
     "https://cloudtolocalllm.online/cloudtolocalllm-${pkgver}-x86_64.tar.gz"
 )
 
-# Deployment workflow for static distribution:
+# Deployment workflow for Flutter-native distribution:
 # 1. Upload cloudtolocalllm-3.5.0-x86_64.tar.gz to https://cloudtolocalllm.online/
 # 2. Update aur-package/PKGBUILD with new version and checksum
 # 3. Test AUR package build locally

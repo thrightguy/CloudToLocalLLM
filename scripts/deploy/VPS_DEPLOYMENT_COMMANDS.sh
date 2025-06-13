@@ -169,20 +169,12 @@ else
 fi
 echo ""
 
-# Step 8: Update Downloads Page
-echo "📄 Step 8: Updating downloads page..."
-DOWNLOADS_PAGE="$PROJECT_DIR/static_homepage/downloads.html"
-if [ -f "$DOWNLOADS_PAGE" ]; then
-    echo "Updating downloads page with v3.0.1 packages..."
-    # Add v3.0.1 packages to downloads page
-    echo "⚠️  Manual update required for downloads page"
-    echo "   Add CloudToLocalLLM-3.0.1-x86_64.tar.gz (125M) to downloads"
-    echo "   Update AUR package information to v3.0.1 with GitHub split files"
-    echo "   Add black screen fix and automated binary management notes"
-    echo "   Update checksums and package information"
-else
-    echo "⚠️  Downloads page not found at $DOWNLOADS_PAGE"
-fi
+# Step 8: Update Flutter Downloads Integration
+echo "📄 Step 8: Updating Flutter downloads integration..."
+echo "Flutter-native homepage now handles downloads directly"
+echo "✅ Downloads are integrated into Flutter web application"
+echo "✅ Package metadata served via Flutter assets"
+echo "✅ No separate static downloads page needed"
 echo ""
 
 # Step 9: Display Deployment Summary

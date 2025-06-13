@@ -34,7 +34,7 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Deploy core services only (nginx-proxy, static-site, flutter-app)
+# Deploy core services only (nginx-proxy, flutter-app)
 deploy_core() {
     log_info "Deploying core services to VPS..."
     
@@ -74,20 +74,7 @@ services:
       - cloudllm-network
     restart: unless-stopped
     depends_on:
-      - static-site
       - flutter-app
-
-  # Static Website Container
-  static-site:
-    image: nginx:1.25-alpine
-    container_name: cloudtolocalllm-static-site
-    volumes:
-      - ./static_homepage:/usr/share/nginx/html:ro
-      - ./config/nginx/nginx-static-simple.conf:/etc/nginx/nginx.conf:ro
-      - ./logs/static:/var/log/nginx
-    networks:
-      - cloudllm-network
-    restart: unless-stopped
 
   # Flutter Web Application Container
   flutter-app:

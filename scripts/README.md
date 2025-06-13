@@ -213,9 +213,11 @@ sudo chown -R cloudllm:cloudllm /opt/cloudtolocalllm
 ## 🌐 Application URLs
 
 After successful deployment:
-- **Homepage**: http://cloudtolocalllm.online
-- **Web App**: http://app.cloudtolocalllm.online
+- **Flutter Homepage**: http://cloudtolocalllm.online
+- **Flutter Web App**: http://app.cloudtolocalllm.online
 - **HTTPS** (if certificates configured): https://cloudtolocalllm.online
+
+Note: CloudToLocalLLM v3.4.0+ uses unified Flutter-native architecture where the homepage is served by Flutter, eliminating the need for separate static site containers.
 
 ## 🔧 Troubleshooting
 
