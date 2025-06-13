@@ -243,6 +243,17 @@ build_flutter_web() {
         log_warning "Build-time injection components not available, using fallback"
     fi
 
+    # Check if version has placeholder and needs preparation
+    local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *//')
+    if [[ "$current_version" == *"BUILD_TIME_PLACEHOLDER"* ]]; then
+        log_verbose "Version has placeholder, preparing for build-time injection..."
+        if [[ "$build_injection_available" != "true" ]]; then
+            log_error "Version has placeholder but build-time injection not available"
+            log_error "Cannot proceed with fallback build when placeholder version is present"
+            exit 3
+        fi
+    fi
+
     if [[ "$build_injection_available" == "true" ]]; then
         # Use build-time timestamp injection wrapper
         local build_args="web --no-tree-shake-icons"

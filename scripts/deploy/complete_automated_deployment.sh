@@ -386,11 +386,21 @@ phase4_distribution_execution() {
     fi
 
     log_verbose "Deploying to VPS with enhanced error handling..."
-    local vps_deploy_cmd="cd /opt/cloudtolocalllm && git pull origin master && ./scripts/deploy/update_and_deploy.sh $vps_flags"
+    local vps_deploy_cmd="cd /opt/cloudtolocalllm && git stash && git pull origin master && ./scripts/deploy/update_and_deploy.sh $vps_flags"
 
     if ! ssh_execute "cloudllm@cloudtolocalllm.online" "$vps_deploy_cmd" 300 3; then
         log_error "VPS deployment failed after multiple attempts"
-        exit 4
+        log_error "Attempting recovery with force reset..."
+
+        # Try recovery with force reset
+        local recovery_cmd="cd /opt/cloudtolocalllm && git reset --hard HEAD && git clean -fd && git pull origin master && ./scripts/deploy/update_and_deploy.sh $vps_flags"
+
+        if ! ssh_execute "cloudllm@cloudtolocalllm.online" "$recovery_cmd" 300 1; then
+            log_error "VPS deployment recovery failed"
+            exit 4
+        fi
+
+        log_success "VPS deployment recovered successfully"
     fi
 
     # Test AUR package after VPS deployment (when static files are available)

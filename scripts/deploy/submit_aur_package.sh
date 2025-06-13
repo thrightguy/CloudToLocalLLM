@@ -147,11 +147,42 @@ verify_pkgbuild_version() {
     local pkgbuild_version=$(grep "^pkgver=" PKGBUILD | cut -d'=' -f2)
     
     if [[ "$pkgbuild_version" != "$expected_version" ]]; then
-        log_error "PKGBUILD version mismatch:"
-        log_error "  Expected: $expected_version"
-        log_error "  Found: $pkgbuild_version"
-        log_error "Please run version synchronization first"
-        exit 1
+        log_warning "PKGBUILD version mismatch:"
+        log_warning "  Expected: $expected_version"
+        log_warning "  Found: $pkgbuild_version"
+
+        if [[ "$FORCE" == "true" ]]; then
+            log "Force mode enabled, attempting to fix version mismatch..."
+
+            # Get the SHA256 checksum for the expected version
+            local package_file="cloudtolocalllm-${expected_version}-x86_64.tar.gz"
+            local sha256_file="../dist/${package_file}.sha256"
+
+            if [[ -f "$sha256_file" ]]; then
+                local new_sha256=$(cat "$sha256_file")
+                log_verbose "Found SHA256 for $expected_version: $new_sha256"
+
+                # Update PKGBUILD version and checksum
+                sed -i "s/^pkgver=.*/pkgver=$expected_version/" PKGBUILD
+                sed -i "s/'[a-f0-9]\{64\}'/'$new_sha256'/" PKGBUILD
+
+                # Regenerate .SRCINFO
+                if command -v makepkg &> /dev/null; then
+                    makepkg --printsrcinfo > .SRCINFO
+                    log_success "Updated PKGBUILD to version $expected_version"
+                else
+                    log_error "makepkg not available, cannot regenerate .SRCINFO"
+                    exit 1
+                fi
+            else
+                log_error "SHA256 file not found: $sha256_file"
+                log_error "Cannot automatically fix version mismatch"
+                exit 1
+            fi
+        else
+            log_error "Use --force flag to automatically fix version mismatch"
+            exit 1
+        fi
     fi
     
     log_success "PKGBUILD version verified: $pkgbuild_version"
