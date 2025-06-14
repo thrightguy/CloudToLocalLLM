@@ -5,9 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/ollama_connection_error.dart';
-import '../models/streaming_message.dart';
 import 'streaming_service.dart';
-import 'local_ollama_streaming_service.dart';
 import 'auth_service.dart';
 
 /// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
@@ -43,8 +41,7 @@ class TunnelManagerService extends ChangeNotifier {
   // Configuration
   TunnelConfig _config = TunnelConfig.defaultConfig();
 
-  // Streaming services
-  LocalOllamaStreamingService? _ollamaStreamingService;
+  // Cloud streaming services only
   StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
 
   // Debouncing for notifyListeners to prevent excessive rebuilds
@@ -60,9 +57,8 @@ class TunnelManagerService extends ChangeNotifier {
   Map<String, ConnectionStatus> get connectionStatus =>
       Map.unmodifiable(_connectionStatus);
 
-  /// Get the local Ollama streaming service
-  LocalOllamaStreamingService? get ollamaStreamingService =>
-      _ollamaStreamingService;
+  /// Get cloud streaming service (local Ollama is now handled separately)
+  /// TODO: Implement cloud streaming service
 
   /// Debounced notifyListeners to prevent excessive UI rebuilds
   void _debouncedNotifyListeners() {
@@ -111,70 +107,37 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Initialize streaming services
+  /// Initialize cloud streaming services
+  /// Local Ollama is now handled independently
   Future<void> _initializeStreamingServices() async {
     try {
-      debugPrint('🚇 [TunnelManager] Initializing streaming services...');
+      debugPrint('🚇 [TunnelManager] Initializing cloud streaming services...');
 
-      // Initialize local Ollama streaming service if enabled
-      if (_config.enableLocalOllama) {
-        final ollamaUrl = 'http://${_config.ollamaHost}:${_config.ollamaPort}';
-        _ollamaStreamingService = LocalOllamaStreamingService(
-          baseUrl: ollamaUrl,
-          config: StreamingConfig.local(),
-        );
-        debugPrint(
-          '🚇 [TunnelManager] Local Ollama streaming service initialized',
-        );
-      }
+      // TODO: Initialize cloud streaming service when implemented
 
       debugPrint(
-        '🚇 [TunnelManager] Streaming services initialized successfully',
+        '🚇 [TunnelManager] Cloud streaming services initialized successfully',
       );
     } catch (e) {
       debugPrint(
-        '🚇 [TunnelManager] Failed to initialize streaming services: $e',
+        '🚇 [TunnelManager] Failed to initialize cloud streaming services: $e',
       );
     }
   }
 
-  /// Setup status event listener
+  /// Setup status event listener for cloud services only
+  /// Local Ollama events are now handled independently
   void _setupStatusEventListener() {
     _statusSubscription?.cancel();
     _statusSubscription = StatusEventBus().statusStream.listen(
       (event) {
         debugPrint('🚇 [TunnelManager] Received status event: $event');
 
-        // Update connection status based on streaming service events
-        if (event.state == StreamingConnectionState.connected ||
-            event.state == StreamingConnectionState.streaming) {
-          // Update Ollama connection status if this is from local Ollama
-          if (event.endpoint?.contains(_config.ollamaHost) == true) {
-            _connectionStatus['ollama'] = ConnectionStatus(
-              type: 'ollama',
-              isConnected: true,
-              endpoint: event.endpoint!,
-              version: 'Streaming',
-              lastCheck: event.timestamp,
-              latency: event.latency?.inMilliseconds.toDouble() ?? 0.0,
-            );
-            _updateOverallStatus();
-            _debouncedNotifyListeners();
-          }
-        } else if (event.state == StreamingConnectionState.error ||
-            event.state == StreamingConnectionState.disconnected) {
-          // Update connection status for errors
-          if (event.endpoint?.contains(_config.ollamaHost) == true) {
-            _connectionStatus['ollama'] = ConnectionStatus(
-              type: 'ollama',
-              isConnected: false,
-              endpoint: event.endpoint ?? 'Unknown',
-              error: event.error,
-              lastCheck: event.timestamp,
-            );
-            _updateOverallStatus();
-            _debouncedNotifyListeners();
-          }
+        // Only handle cloud proxy events now
+        // Local Ollama events are handled by LocalOllamaConnectionService
+        if (event.endpoint?.contains(_config.cloudProxyUrl) == true) {
+          // TODO: Handle cloud proxy streaming events when implemented
+          debugPrint('🚇 [TunnelManager] Cloud proxy event: ${event.state}');
         }
       },
       onError: (error) {
@@ -183,18 +146,14 @@ class TunnelManagerService extends ChangeNotifier {
     );
   }
 
-  /// Initialize all configured connections
+  /// Initialize cloud proxy connections only
+  /// Local Ollama is now handled independently
   Future<void> _initializeConnections() async {
     _isConnecting = true;
     _error = null;
     _debouncedNotifyListeners();
 
     try {
-      // Initialize local Ollama connection
-      if (_config.enableLocalOllama) {
-        await _initializeOllamaConnection();
-      }
-
       // Initialize cloud proxy connection
       if (_config.enableCloudProxy) {
         await _initializeCloudConnection();
@@ -203,106 +162,13 @@ class TunnelManagerService extends ChangeNotifier {
       // Update overall connection status
       _updateOverallStatus();
     } catch (e) {
-      _error = 'Failed to initialize connections: $e';
-      debugPrint('🚇 [TunnelManager] Connection initialization error: $e');
+      _error = 'Failed to initialize cloud connections: $e';
+      debugPrint(
+        '🚇 [TunnelManager] Cloud connection initialization error: $e',
+      );
     } finally {
       _isConnecting = false;
       _debouncedNotifyListeners();
-    }
-  }
-
-  /// Initialize local Ollama connection
-  Future<void> _initializeOllamaConnection() async {
-    final ollamaUrl = 'http://${_config.ollamaHost}:${_config.ollamaPort}';
-
-    try {
-      debugPrint('🚇 [TunnelManager] Testing Ollama connection to $ollamaUrl');
-
-      // Use streaming service for connection if available
-      if (_ollamaStreamingService != null) {
-        final connected = await _ollamaStreamingService!.testConnection();
-        if (connected) {
-          final models = await _ollamaStreamingService!.getAvailableModels();
-
-          _connectionStatus['ollama'] = ConnectionStatus(
-            type: 'ollama',
-            isConnected: true,
-            endpoint: ollamaUrl,
-            version: 'Streaming Enabled',
-            models: models,
-            lastCheck: DateTime.now(),
-            latency: _ollamaStreamingService!.connection.latency.inMilliseconds
-                .toDouble(),
-          );
-
-          debugPrint(
-            '🚇 [TunnelManager] Ollama streaming connection successful: ${models.length} models',
-          );
-          return;
-        }
-      }
-
-      // Fallback to HTTP connection test
-      final response = await _httpClient
-          .get(
-            Uri.parse('$ollamaUrl/api/version'),
-            headers: {'Content-Type': 'application/json'},
-          )
-          .timeout(Duration(seconds: _config.connectionTimeout));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final version = data['version'] ?? 'Unknown';
-
-        // Get available models
-        final modelsResponse = await _httpClient
-            .get(
-              Uri.parse('$ollamaUrl/api/tags'),
-              headers: {'Content-Type': 'application/json'},
-            )
-            .timeout(Duration(seconds: _config.connectionTimeout));
-
-        List<String> models = [];
-        if (modelsResponse.statusCode == 200) {
-          final modelsData = json.decode(modelsResponse.body);
-          models =
-              (modelsData['models'] as List?)
-                  ?.map((model) => model['name']?.toString() ?? '')
-                  .where((name) => name.isNotEmpty)
-                  .toList() ??
-              [];
-        }
-
-        _connectionStatus['ollama'] = ConnectionStatus(
-          type: 'ollama',
-          isConnected: true,
-          endpoint: ollamaUrl,
-          version: version,
-          models: models,
-          lastCheck: DateTime.now(),
-          latency: 0,
-        );
-
-        debugPrint(
-          '🚇 [TunnelManager] Ollama HTTP connection successful: $version, ${models.length} models',
-        );
-      } else {
-        throw Exception('HTTP ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      final connectionError = OllamaConnectionError.fromException(e);
-      _connectionStatus['ollama'] = ConnectionStatus(
-        type: 'ollama',
-        isConnected: false,
-        endpoint: ollamaUrl,
-        error: connectionError.userFriendlyMessage,
-        lastCheck: DateTime.now(),
-        connectionError: connectionError,
-        retryState: ConnectionRetryState.initial(),
-      );
-      debugPrint(
-        '🚇 [TunnelManager] Ollama connection failed: ${connectionError.userFriendlyMessage}',
-      );
     }
   }
 
@@ -496,11 +362,10 @@ class TunnelManagerService extends ChangeNotifier {
       try {
         final stopwatch = Stopwatch()..start();
 
-        if (type == 'ollama') {
-          await _checkOllamaHealth(status);
-        } else if (type == 'cloud') {
+        if (type == 'cloud') {
           await _checkCloudHealth(status);
         }
+        // Local Ollama health is now handled independently
 
         stopwatch.stop();
 
@@ -525,19 +390,7 @@ class TunnelManagerService extends ChangeNotifier {
     _debouncedNotifyListeners();
   }
 
-  /// Check Ollama health
-  Future<void> _checkOllamaHealth(ConnectionStatus status) async {
-    final response = await _httpClient
-        .get(
-          Uri.parse('${status.endpoint}/api/version'),
-          headers: {'Content-Type': 'application/json'},
-        )
-        .timeout(Duration(seconds: 5));
-
-    if (response.statusCode != 200) {
-      throw Exception('HTTP ${response.statusCode}');
-    }
-  }
+  /// Local Ollama health is now handled independently by LocalOllamaConnectionService
 
   /// Check cloud proxy health
   Future<void> _checkCloudHealth(ConnectionStatus status) async {
@@ -570,9 +423,7 @@ class TunnelManagerService extends ChangeNotifier {
     _cloudWebSocket?.close();
     _httpClient.close();
 
-    // Dispose streaming services
-    _ollamaStreamingService?.dispose();
-    _ollamaStreamingService = null;
+    // Cloud streaming services cleanup (local Ollama handled separately)
 
     _isConnected = false;
     _connectionStatus.clear();
@@ -588,7 +439,7 @@ class TunnelManagerService extends ChangeNotifier {
     _statusSubscription?.cancel();
     _cloudWebSocket?.close();
     _httpClient.close();
-    _ollamaStreamingService?.dispose();
+    // Local Ollama streaming service is now handled separately
     super.dispose();
   }
 
@@ -617,15 +468,10 @@ class TunnelManagerService extends ChangeNotifier {
     debugPrint('🚇 [TunnelManager] Configuration updated successfully');
   }
 
-  /// Get best available connection for routing requests
+  /// Get cloud connection status (local Ollama handled separately)
   String? getBestConnection() {
-    // Prioritize local Ollama if available
-    final ollamaStatus = _connectionStatus['ollama'];
-    if (ollamaStatus?.isConnected == true) {
-      return 'ollama';
-    }
-
-    // Fallback to cloud proxy
+    // Only handle cloud proxy connections now
+    // Local Ollama connections are managed by LocalOllamaConnectionService
     final cloudStatus = _connectionStatus['cloud'];
     if (cloudStatus?.isConnected == true) {
       return 'cloud';
@@ -634,15 +480,13 @@ class TunnelManagerService extends ChangeNotifier {
     return null;
   }
 
-  /// Get connection status for system tray display
+  /// Get cloud connection status for system tray display
+  /// Local Ollama status is now handled separately
   TrayConnectionStatus getTrayConnectionStatus() {
-    final ollamaConnected = _connectionStatus['ollama']?.isConnected ?? false;
     final cloudConnected = _connectionStatus['cloud']?.isConnected ?? false;
 
-    if (ollamaConnected && cloudConnected) {
+    if (cloudConnected) {
       return TrayConnectionStatus.allConnected;
-    } else if (ollamaConnected || cloudConnected) {
-      return TrayConnectionStatus.partiallyConnected;
     } else if (_isConnecting) {
       return TrayConnectionStatus.connecting;
     } else {
@@ -704,21 +548,18 @@ class ConnectionStatus {
   }
 }
 
-/// Tunnel configuration
+/// Tunnel configuration (cloud proxy only)
+///
+/// Local Ollama connections are now handled independently
+/// and are not part of tunnel management.
 class TunnelConfig {
-  final bool enableLocalOllama;
   final bool enableCloudProxy;
-  final String ollamaHost;
-  final int ollamaPort;
   final String cloudProxyUrl;
   final int connectionTimeout;
   final int healthCheckInterval;
 
   const TunnelConfig({
-    required this.enableLocalOllama,
     required this.enableCloudProxy,
-    required this.ollamaHost,
-    required this.ollamaPort,
     required this.cloudProxyUrl,
     required this.connectionTimeout,
     required this.healthCheckInterval,
@@ -726,10 +567,7 @@ class TunnelConfig {
 
   factory TunnelConfig.defaultConfig() {
     return const TunnelConfig(
-      enableLocalOllama: true,
       enableCloudProxy: true,
-      ollamaHost: 'localhost',
-      ollamaPort: 11434,
       cloudProxyUrl: 'https://app.cloudtolocalllm.online',
       connectionTimeout: 10,
       healthCheckInterval: 30,

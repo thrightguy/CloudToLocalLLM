@@ -4,15 +4,17 @@ import 'package:rxdart/rxdart.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../models/streaming_message.dart';
-import 'tunnel_manager_service.dart';
+
 import 'streaming_service.dart';
 
+import 'connection_manager_service.dart';
+
 /// Enhanced chat service with real-time streaming support
-/// 
+///
 /// Provides progressive message streaming, real-time UI updates,
 /// and integration with the tunnel manager for connection routing.
 class StreamingChatService extends ChangeNotifier {
-  final TunnelManagerService _tunnelManager;
+  final ConnectionManagerService _connectionManager;
 
   List<Conversation> _conversations = [];
   Conversation? _currentConversation;
@@ -21,12 +23,12 @@ class StreamingChatService extends ChangeNotifier {
   bool _isStreaming = false;
 
   // Streaming state
-  final BehaviorSubject<String> _streamingContentSubject = 
+  final BehaviorSubject<String> _streamingContentSubject =
       BehaviorSubject<String>.seeded('');
   StreamSubscription<StreamingMessage>? _currentStreamSubscription;
   String _currentStreamingMessageId = '';
 
-  StreamingChatService(this._tunnelManager) {
+  StreamingChatService(this._connectionManager) {
     _initializeService();
   }
 
@@ -46,18 +48,19 @@ class StreamingChatService extends ChangeNotifier {
     // Load conversations from local storage (placeholder)
     _loadConversations();
 
-    // Listen to tunnel manager changes
-    _tunnelManager.addListener(_onTunnelManagerChanged);
+    // Listen to connection manager changes
+    _connectionManager.addListener(_onConnectionManagerChanged);
   }
 
-  /// Handle tunnel manager changes
-  void _onTunnelManagerChanged() {
+  /// Handle connection manager changes
+  void _onConnectionManagerChanged() {
     // Update available models when connections change
-    final ollamaStatus = _tunnelManager.connectionStatus['ollama'];
-    if (ollamaStatus?.isConnected == true && ollamaStatus!.models.isNotEmpty) {
+    final availableModels = _connectionManager.availableModels;
+    if (availableModels.isNotEmpty) {
       // Auto-select first model if none selected
-      if (_selectedModel == null && ollamaStatus.models.isNotEmpty) {
-        _selectedModel = ollamaStatus.models.first;
+      if (_selectedModel == null) {
+        _selectedModel = availableModels.first;
+        debugPrint('💬 [StreamingChat] Auto-selected model: $_selectedModel');
         notifyListeners();
       }
     }
@@ -86,7 +89,9 @@ class StreamingChatService extends ChangeNotifier {
   /// Save conversations to storage (placeholder implementation)
   void _saveConversations() {
     // TODO: Implement actual storage saving
-    debugPrint('💾 [StreamingChat] Saving ${_conversations.length} conversations');
+    debugPrint(
+      '💾 [StreamingChat] Saving ${_conversations.length} conversations',
+    );
   }
 
   /// Create a new conversation
@@ -105,10 +110,10 @@ class StreamingChatService extends ChangeNotifier {
   /// Select a conversation
   void selectConversation(Conversation conversation) {
     _currentConversation = conversation;
-    
+
     // Cancel any ongoing streaming
     _cancelCurrentStream();
-    
+
     notifyListeners();
   }
 
@@ -117,7 +122,9 @@ class StreamingChatService extends ChangeNotifier {
     _conversations.removeWhere((c) => c.id == conversation.id);
 
     if (_currentConversation?.id == conversation.id) {
-      _currentConversation = _conversations.isNotEmpty ? _conversations.first : null;
+      _currentConversation = _conversations.isNotEmpty
+          ? _conversations.first
+          : null;
     }
 
     _saveConversations();
@@ -143,8 +150,9 @@ class StreamingChatService extends ChangeNotifier {
 
     // Update current conversation's default model
     if (_currentConversation != null) {
-      final index =
-          _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+      final index = _conversations.indexWhere(
+        (c) => c.id == _currentConversation!.id,
+      );
       if (index != -1) {
         _conversations[index] = _conversations[index].updateModel(model);
         _currentConversation = _conversations[index];
@@ -183,7 +191,11 @@ class StreamingChatService extends ChangeNotifier {
       // Get streaming service
       final streamingService = _getStreamingService();
       if (streamingService == null) {
-        throw StateError('No streaming service available');
+        debugPrint(
+          '💬 [StreamingChat] No streaming service available, falling back to non-streaming chat',
+        );
+        await _fallbackToNonStreamingChat(content.trim());
+        return;
       }
 
       // Start streaming
@@ -204,10 +216,20 @@ class StreamingChatService extends ChangeNotifier {
         onError: (error) => _handleStreamingError(error),
         onDone: () => _handleStreamingComplete(),
       );
-
     } catch (e) {
-      // Remove streaming message and add error
-      _removeLastMessage();
+      debugPrint('💬 [StreamingChat] Error in sendMessage: $e');
+
+      // Remove streaming message if it was added
+      if (_currentConversation != null &&
+          _currentConversation!.messages.isNotEmpty) {
+        final lastMessage = _currentConversation!.messages.last;
+        if (lastMessage.isStreaming) {
+          _removeLastMessage();
+          debugPrint(
+            '💬 [StreamingChat] Removed streaming message due to error',
+          );
+        }
+      }
 
       final errorMessage = Message.assistant(
         content: 'Sorry, I encountered an error: ${e.toString()}',
@@ -218,6 +240,7 @@ class StreamingChatService extends ChangeNotifier {
       _addMessageToCurrentConversation(errorMessage);
     } finally {
       _setLoading(false);
+      _setStreaming(false);
     }
   }
 
@@ -247,12 +270,13 @@ class StreamingChatService extends ChangeNotifier {
   /// Handle streaming error
   void _handleStreamingError(dynamic error) {
     debugPrint('💬 [StreamingChat] Streaming error: $error');
-    
+
     _setStreaming(false);
     _removeLastMessage();
 
     final errorMessage = Message.assistant(
-      content: 'Sorry, I encountered an error while streaming: ${error.toString()}',
+      content:
+          'Sorry, I encountered an error while streaming: ${error.toString()}',
       model: _selectedModel!,
       status: MessageStatus.error,
       error: error.toString(),
@@ -263,14 +287,14 @@ class StreamingChatService extends ChangeNotifier {
   /// Handle streaming completion
   void _handleStreamingComplete() {
     debugPrint('💬 [StreamingChat] Streaming completed');
-    
+
     _setStreaming(false);
-    
+
     // Convert streaming message to final assistant message
     final finalContent = _streamingContentSubject.value;
     if (finalContent.isNotEmpty) {
       _removeLastMessage();
-      
+
       final assistantMessage = Message.assistant(
         content: finalContent,
         model: _selectedModel!,
@@ -285,24 +309,30 @@ class StreamingChatService extends ChangeNotifier {
 
   /// Update the streaming message content
   void _updateStreamingMessage(String content) {
-    if (_currentConversation == null || _currentStreamingMessageId.isEmpty) return;
+    if (_currentConversation == null || _currentStreamingMessageId.isEmpty) {
+      return;
+    }
 
-    final index = _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+    final index = _conversations.indexWhere(
+      (c) => c.id == _currentConversation!.id,
+    );
     if (index != -1) {
       final conversation = _conversations[index];
       final messageIndex = conversation.messages.indexWhere(
         (m) => m.id == _currentStreamingMessageId,
       );
-      
+
       if (messageIndex != -1) {
         final updatedMessage = conversation.messages[messageIndex].copyWith(
           content: content,
         );
-        
+
         final updatedMessages = List<Message>.from(conversation.messages);
         updatedMessages[messageIndex] = updatedMessage;
-        
-        _conversations[index] = conversation.copyWith(messages: updatedMessages);
+
+        _conversations[index] = conversation.copyWith(
+          messages: updatedMessages,
+        );
         _currentConversation = _conversations[index];
         notifyListeners();
       }
@@ -311,14 +341,69 @@ class StreamingChatService extends ChangeNotifier {
 
   /// Get the appropriate streaming service
   StreamingService? _getStreamingService() {
-    // Prioritize local Ollama streaming service
-    final ollamaStreamingService = _tunnelManager.ollamaStreamingService;
-    if (ollamaStreamingService != null && ollamaStreamingService.connection.isActive) {
-      return ollamaStreamingService;
-    }
+    // Use connection manager to get the best streaming service
+    return _connectionManager.getStreamingService();
+  }
 
-    // TODO: Add cloud streaming service support
-    return null;
+  /// Fallback to non-streaming chat when streaming is not available
+  Future<void> _fallbackToNonStreamingChat(String content) async {
+    try {
+      debugPrint('💬 [StreamingChat] Using fallback non-streaming chat');
+
+      // Add loading message for assistant
+      final loadingMessage = Message.loading(model: _selectedModel!);
+      _addMessageToCurrentConversation(loadingMessage);
+
+      // Get conversation history for context
+      final history = _buildMessageHistory();
+
+      // Use connection manager for fallback chat
+      final response = await _connectionManager.sendChatMessage(
+        model: _selectedModel!,
+        message: content,
+        history: history,
+      );
+
+      // Remove loading message
+      _removeLastMessage();
+
+      if (response != null) {
+        final assistantMessage = Message.assistant(
+          content: response,
+          model: _selectedModel!,
+        );
+        _addMessageToCurrentConversation(assistantMessage);
+        debugPrint('💬 [StreamingChat] Fallback chat completed successfully');
+      } else {
+        final errorMessage = Message.assistant(
+          content:
+              'Sorry, I encountered an error while processing your request.',
+          model: _selectedModel!,
+          status: MessageStatus.error,
+          error: 'Connection error',
+        );
+        _addMessageToCurrentConversation(errorMessage);
+      }
+    } catch (e) {
+      debugPrint('💬 [StreamingChat] Fallback chat error: $e');
+
+      // Remove loading message if it exists
+      if (_currentConversation != null &&
+          _currentConversation!.messages.isNotEmpty) {
+        final lastMessage = _currentConversation!.messages.last;
+        if (lastMessage.isLoading) {
+          _removeLastMessage();
+        }
+      }
+
+      final errorMessage = Message.assistant(
+        content: 'Sorry, I encountered an error: ${e.toString()}',
+        model: _selectedModel!,
+        status: MessageStatus.error,
+        error: e.toString(),
+      );
+      _addMessageToCurrentConversation(errorMessage);
+    }
   }
 
   /// Cancel current streaming
@@ -337,8 +422,9 @@ class StreamingChatService extends ChangeNotifier {
         return;
       }
 
-      final index =
-          _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+      final index = _conversations.indexWhere(
+        (c) => c.id == _currentConversation!.id,
+      );
       if (index != -1) {
         _conversations[index] = _conversations[index].addMessage(message);
         _currentConversation = _conversations[index];
@@ -346,7 +432,8 @@ class StreamingChatService extends ChangeNotifier {
         notifyListeners();
       } else {
         debugPrint(
-            'Warning: Current conversation not found in conversations list');
+          'Warning: Current conversation not found in conversations list',
+        );
       }
     } catch (e) {
       debugPrint('Error adding message to conversation: $e');
@@ -356,17 +443,21 @@ class StreamingChatService extends ChangeNotifier {
   /// Remove the last message from current conversation
   void _removeLastMessage() {
     try {
-      if (_currentConversation == null || _currentConversation!.messages.isEmpty) {
+      if (_currentConversation == null ||
+          _currentConversation!.messages.isEmpty) {
         return;
       }
 
-      final index =
-          _conversations.indexWhere((c) => c.id == _currentConversation!.id);
+      final index = _conversations.indexWhere(
+        (c) => c.id == _currentConversation!.id,
+      );
       if (index != -1) {
         final messages = List<Message>.from(_currentConversation!.messages);
         messages.removeLast();
-        
-        _conversations[index] = _conversations[index].copyWith(messages: messages);
+
+        _conversations[index] = _conversations[index].copyWith(
+          messages: messages,
+        );
         _currentConversation = _conversations[index];
         _saveConversations();
         notifyListeners();
@@ -381,14 +472,18 @@ class StreamingChatService extends ChangeNotifier {
     if (_currentConversation == null) return [];
 
     return _currentConversation!.messages
-        .where((m) =>
-            m.role != MessageRole.system && 
-            m.status == MessageStatus.sent &&
-            !m.isStreaming)
-        .map((m) => {
-              'role': m.role == MessageRole.user ? 'user' : 'assistant',
-              'content': m.content,
-            })
+        .where(
+          (m) =>
+              m.role != MessageRole.system &&
+              m.status == MessageStatus.sent &&
+              !m.isStreaming,
+        )
+        .map(
+          (m) => {
+            'role': m.role == MessageRole.user ? 'user' : 'assistant',
+            'content': m.content,
+          },
+        )
         .toList();
   }
 
@@ -416,11 +511,11 @@ class StreamingChatService extends ChangeNotifier {
   @override
   void dispose() {
     debugPrint('💬 [StreamingChat] Disposing service');
-    
+
     _cancelCurrentStream();
     _streamingContentSubject.close();
-    _tunnelManager.removeListener(_onTunnelManagerChanged);
-    
+    _connectionManager.removeListener(_onConnectionManagerChanged);
+
     super.dispose();
   }
 }

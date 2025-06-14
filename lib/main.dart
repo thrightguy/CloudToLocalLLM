@@ -11,6 +11,9 @@ import 'services/ollama_service.dart';
 import 'services/streaming_proxy_service.dart';
 import 'services/unified_connection_service.dart';
 import 'services/tunnel_manager_service.dart';
+import 'services/local_ollama_connection_service.dart';
+import 'services/connection_manager_service.dart';
+import 'services/streaming_chat_service.dart';
 import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
 import 'widgets/debug_version_overlay.dart';
@@ -75,41 +78,8 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
       final windowManager = WindowManagerService();
       await windowManager.initialize();
 
-      // Initialize tunnel manager service
-      final tunnelManager = TunnelManagerService();
-      await tunnelManager.initialize();
-
-      // Initialize native tray service
-      final nativeTray = NativeTrayService();
-      final success = await nativeTray.initialize(
-        tunnelManager: tunnelManager,
-        onShowWindow: () {
-          debugPrint("🪟 [SystemTray] Native tray requested to show window");
-          windowManager.showWindow();
-        },
-        onHideWindow: () {
-          debugPrint("🫥 [SystemTray] Native tray requested to hide window");
-          windowManager.hideToTray();
-        },
-        onSettings: () {
-          debugPrint("⚙️ [SystemTray] Native tray requested to open settings");
-          _navigateToRoute('/settings');
-        },
-        onQuit: () {
-          debugPrint(
-            "🚪 [SystemTray] Native tray requested to quit application",
-          );
-          windowManager.forceClose();
-        },
-      );
-
-      if (success) {
-        debugPrint(
-          "✅ [SystemTray] Native tray service initialized successfully",
-        );
-      } else {
-        debugPrint("❌ [SystemTray] Failed to initialize native tray service");
-      }
+      // Note: Tray service will be initialized after providers are set up
+      // This ensures all required services are available
     } catch (e, stackTrace) {
       debugPrint("💥 [SystemTray] Failed to initialize system tray: $e");
       debugPrint("💥 [SystemTray] Stack trace: $stackTrace");
@@ -219,7 +189,16 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
           create: (context) =>
               OllamaService(authService: context.read<AuthService>()),
         ),
-        // Tunnel manager service (must be created before UnifiedConnectionService)
+        // Local Ollama connection service (independent of tunnel)
+        ChangeNotifierProvider(
+          create: (context) {
+            final localOllama = LocalOllamaConnectionService();
+            // Initialize the local Ollama service asynchronously
+            localOllama.initialize();
+            return localOllama;
+          },
+        ),
+        // Tunnel manager service (cloud proxy only)
         ChangeNotifierProvider(
           create: (context) {
             final authService = context.read<AuthService>();
@@ -231,12 +210,34 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
             return tunnelManager;
           },
         ),
-        // Unified connection service (depends on tunnel manager)
+        // Connection manager service (coordinates local and cloud)
+        ChangeNotifierProvider(
+          create: (context) {
+            final localOllama = context.read<LocalOllamaConnectionService>();
+            final tunnelManager = context.read<TunnelManagerService>();
+            final connectionManager = ConnectionManagerService(
+              localOllama: localOllama,
+              tunnelManager: tunnelManager,
+            );
+            // Initialize the connection manager service
+            connectionManager.initialize();
+            return connectionManager;
+          },
+        ),
+        // Streaming chat service (uses connection manager)
+        ChangeNotifierProvider(
+          create: (context) {
+            final connectionManager = context.read<ConnectionManagerService>();
+            return StreamingChatService(connectionManager);
+          },
+        ),
+        // Unified connection service (depends on connection manager)
         ChangeNotifierProvider(
           create: (context) {
             final unifiedService = UnifiedConnectionService();
-            final tunnelManager = context.read<TunnelManagerService>();
-            unifiedService.setTunnelManager(tunnelManager);
+            // TODO: Update UnifiedConnectionService to use ConnectionManagerService
+            // final connectionManager = context.read<ConnectionManagerService>();
+            // unifiedService.setConnectionManager(connectionManager);
             // Initialize the unified connection service
             unifiedService.initialize();
             return unifiedService;
@@ -264,6 +265,11 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
   Widget _buildMainApp() {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
+        // Initialize tray service after providers are available
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _initializeTrayService(context);
+        });
+
         return WindowListenerWidget(
           child: DebugVersionWrapper(
             child: MaterialApp.router(
@@ -300,5 +306,62 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         );
       },
     );
+  }
+
+  bool _trayInitialized = false;
+
+  /// Initialize tray service after providers are available
+  Future<void> _initializeTrayService(BuildContext context) async {
+    if (_trayInitialized) return;
+    _trayInitialized = true;
+
+    try {
+      debugPrint("🚀 [SystemTray] Initializing native tray service...");
+
+      // Get services from providers
+      final connectionManager = context.read<ConnectionManagerService>();
+      final localOllama = context.read<LocalOllamaConnectionService>();
+      final tunnelManager = context.read<TunnelManagerService>();
+
+      // Get window manager service
+      final windowManager = WindowManagerService();
+
+      // Initialize native tray service
+      final nativeTray = NativeTrayService();
+      final success = await nativeTray.initialize(
+        connectionManager: connectionManager,
+        localOllama: localOllama,
+        tunnelManager: tunnelManager,
+        onShowWindow: () {
+          debugPrint("🪟 [SystemTray] Native tray requested to show window");
+          windowManager.showWindow();
+        },
+        onHideWindow: () {
+          debugPrint("🫥 [SystemTray] Native tray requested to hide window");
+          windowManager.hideToTray();
+        },
+        onSettings: () {
+          debugPrint("⚙️ [SystemTray] Native tray requested to open settings");
+          _navigateToRoute('/settings');
+        },
+        onQuit: () {
+          debugPrint(
+            "🚪 [SystemTray] Native tray requested to quit application",
+          );
+          windowManager.forceClose();
+        },
+      );
+
+      if (success) {
+        debugPrint(
+          "✅ [SystemTray] Native tray service initialized successfully",
+        );
+      } else {
+        debugPrint("❌ [SystemTray] Failed to initialize native tray service");
+      }
+    } catch (e, stackTrace) {
+      debugPrint("💥 [SystemTray] Failed to initialize system tray: $e");
+      debugPrint("💥 [SystemTray] Stack trace: $stackTrace");
+    }
   }
 }

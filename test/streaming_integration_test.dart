@@ -1,22 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:cloudtolocalllm/services/tunnel_manager_service.dart';
+import 'package:cloudtolocalllm/services/connection_manager_service.dart';
 import 'package:cloudtolocalllm/services/streaming_chat_service.dart';
 import 'package:cloudtolocalllm/services/local_ollama_streaming_service.dart';
 import 'package:cloudtolocalllm/services/streaming_service.dart';
 import 'package:cloudtolocalllm/models/streaming_message.dart';
 
 /// Mock classes for testing
-class MockTunnelManagerService extends Mock implements TunnelManagerService {}
+class MockConnectionManagerService extends Mock
+    implements ConnectionManagerService {}
 
 void main() {
   group('Streaming Integration Tests', () {
-    late MockTunnelManagerService mockTunnelManager;
+    late MockConnectionManagerService mockConnectionManager;
     late StreamingChatService streamingChatService;
 
     setUp(() {
-      mockTunnelManager = MockTunnelManagerService();
-      streamingChatService = StreamingChatService(mockTunnelManager);
+      mockConnectionManager = MockConnectionManagerService();
+      streamingChatService = StreamingChatService(mockConnectionManager);
     });
 
     tearDown(() {

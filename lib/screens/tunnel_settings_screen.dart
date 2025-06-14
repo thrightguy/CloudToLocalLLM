@@ -20,15 +20,12 @@ class TunnelSettingsScreen extends StatefulWidget {
 class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Configuration controllers
-  late TextEditingController _ollamaHostController;
-  late TextEditingController _ollamaPortController;
+  // Configuration controllers (cloud proxy only)
   late TextEditingController _cloudProxyUrlController;
   late TextEditingController _connectionTimeoutController;
   late TextEditingController _healthCheckIntervalController;
 
-  // Local configuration state
-  bool _enableLocalOllama = true;
+  // Local configuration state (cloud proxy only)
   bool _enableCloudProxy = true;
   bool _isModified = false;
 
@@ -42,10 +39,7 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     final tunnelManager = context.read<TunnelManagerService>();
     final config = tunnelManager.config;
 
-    _ollamaHostController = TextEditingController(text: config.ollamaHost);
-    _ollamaPortController = TextEditingController(
-      text: config.ollamaPort.toString(),
-    );
+    // Initialize cloud proxy controllers only
     _cloudProxyUrlController = TextEditingController(
       text: config.cloudProxyUrl,
     );
@@ -56,12 +50,9 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
       text: config.healthCheckInterval.toString(),
     );
 
-    _enableLocalOllama = config.enableLocalOllama;
     _enableCloudProxy = config.enableCloudProxy;
 
     // Add listeners to detect changes
-    _ollamaHostController.addListener(_onConfigChanged);
-    _ollamaPortController.addListener(_onConfigChanged);
     _cloudProxyUrlController.addListener(_onConfigChanged);
     _connectionTimeoutController.addListener(_onConfigChanged);
     _healthCheckIntervalController.addListener(_onConfigChanged);
@@ -77,8 +68,6 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
 
   @override
   void dispose() {
-    _ollamaHostController.dispose();
-    _ollamaPortController.dispose();
     _cloudProxyUrlController.dispose();
     _connectionTimeoutController.dispose();
     _healthCheckIntervalController.dispose();
@@ -114,8 +103,6 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildConnectionStatusCard(tunnelManager),
-                  const SizedBox(height: 24),
-                  _buildOllamaConfigSection(),
                   const SizedBox(height: 24),
                   _buildCloudProxyConfigSection(),
                   const SizedBox(height: 24),
@@ -238,81 +225,8 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     );
   }
 
-  Widget _buildOllamaConfigSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.computer,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Local Ollama Configuration',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Enable Local Ollama'),
-              subtitle: const Text('Connect to local Ollama instance'),
-              value: _enableLocalOllama,
-              onChanged: (value) {
-                setState(() {
-                  _enableLocalOllama = value;
-                  _isModified = true;
-                });
-              },
-            ),
-            if (_enableLocalOllama) ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ollamaHostController,
-                decoration: const InputDecoration(
-                  labelText: 'Host',
-                  hintText: 'localhost',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a host';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ollamaPortController,
-                decoration: const InputDecoration(
-                  labelText: 'Port',
-                  hintText: '11434',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a port';
-                  }
-                  final port = int.tryParse(value);
-                  if (port == null || port < 1 || port > 65535) {
-                    return 'Please enter a valid port (1-65535)';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  // Local Ollama configuration is now managed independently
+  // through LocalOllamaConnectionService, not through this tunnel settings screen
 
   Widget _buildCloudProxyConfigSection() {
     return Card(
@@ -567,12 +481,9 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     }
 
     try {
-      // Create new configuration and apply it
+      // Create new configuration for cloud proxy only
       final newConfig = TunnelConfig(
-        enableLocalOllama: _enableLocalOllama,
         enableCloudProxy: _enableCloudProxy,
-        ollamaHost: _ollamaHostController.text.trim(),
-        ollamaPort: int.parse(_ollamaPortController.text.trim()),
         cloudProxyUrl: _cloudProxyUrlController.text.trim(),
         connectionTimeout: int.parse(_connectionTimeoutController.text.trim()),
         healthCheckInterval: int.parse(
@@ -591,7 +502,7 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Configuration saved successfully'),
+            content: Text('Cloud proxy configuration saved successfully'),
             backgroundColor: Colors.green,
           ),
         );

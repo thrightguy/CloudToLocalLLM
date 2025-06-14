@@ -684,7 +684,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     BuildContext context,
     TunnelManagerService tunnelManager,
   ) {
-    final config = tunnelManager.config;
+    // Local Ollama configuration is now managed independently
 
     return Container(
       padding: EdgeInsets.all(AppTheme.spacingM),
@@ -712,56 +712,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: AppTheme.spacingM),
 
-          _buildSettingItem(
-            context,
-            'Enable Local Ollama',
-            'Connect to local Ollama instance',
-            Switch(
-              value: config.enableLocalOllama,
-              onChanged: (value) {
-                // TODO: Update configuration
-              },
+          // Local Ollama configuration is now managed independently
+          Container(
+            padding: EdgeInsets.all(AppTheme.spacingS),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue, size: 16),
+                SizedBox(width: AppTheme.spacingS),
+                Expanded(
+                  child: Text(
+                    'Local Ollama connections are now managed independently through the LocalOllamaConnectionService. Use the unified settings screen for configuration.',
+                    style: TextStyle(color: Colors.blue[700], fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          if (config.enableLocalOllama) ...[
-            SizedBox(height: AppTheme.spacingM),
-            _buildSettingItem(
-              context,
-              'Host',
-              'Ollama server host address',
-              TextFormField(
-                initialValue: config.ollamaHost,
-                decoration: InputDecoration(
-                  hintText: 'localhost',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                onChanged: (value) {
-                  // TODO: Update configuration
-                },
-              ),
-            ),
-
-            SizedBox(height: AppTheme.spacingM),
-            _buildSettingItem(
-              context,
-              'Port',
-              'Ollama server port',
-              TextFormField(
-                initialValue: config.ollamaPort.toString(),
-                decoration: InputDecoration(
-                  hintText: '11434',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  // TODO: Update configuration
-                },
-              ),
-            ),
-          ],
         ],
       ),
     );

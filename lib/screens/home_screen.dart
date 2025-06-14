@@ -6,8 +6,7 @@ import '../config/app_config.dart';
 import '../models/conversation.dart';
 import '../services/auth_service.dart';
 import '../services/streaming_chat_service.dart';
-import '../services/tunnel_manager_service.dart';
-import '../services/ollama_service.dart';
+import '../services/connection_manager_service.dart';
 import '../components/conversation_list.dart';
 import '../components/message_bubble.dart';
 import '../components/message_input.dart';
@@ -22,93 +21,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  StreamingChatService? _streamingChatService;
-  TunnelManagerService? _tunnelManagerService;
-  OllamaService? _ollamaService;
   bool _isSidebarCollapsed = false;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Initialize services after the first frame to access context
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeServices();
-    });
-  }
-
-  /// Initialize all services with streaming support
-  Future<void> _initializeServices() async {
-    try {
-      debugPrint('[DEBUG] HomeScreen: Initializing services...');
-
-      final authService = Provider.of<AuthService>(context, listen: false);
-      debugPrint(
-        '[DEBUG] HomeScreen: AuthService obtained - isAuthenticated: ${authService.isAuthenticated.value}',
-      );
-
-      // Initialize tunnel manager service
-      final tunnelManagerService = TunnelManagerService();
-      await tunnelManagerService.initialize();
-
-      // Initialize Ollama service (for fallback)
-      final ollamaService = OllamaService(authService: authService);
-
-      // Initialize streaming chat service
-      final streamingChatService = StreamingChatService(tunnelManagerService);
-
-      setState(() {
-        _tunnelManagerService = tunnelManagerService;
-        _ollamaService = ollamaService;
-        _streamingChatService = streamingChatService;
-      });
-
-      debugPrint('[DEBUG] HomeScreen: Services initialized successfully');
-
-      // Test connections asynchronously (non-blocking)
-      _testConnectionAsync();
-    } catch (e) {
-      debugPrint('[DEBUG] HomeScreen: Service initialization error: $e');
-      // Don't block the UI even if service initialization fails
-    }
-  }
-
-  /// Test connections asynchronously without blocking the UI
-  Future<void> _testConnectionAsync() async {
-    try {
-      debugPrint('[DEBUG] Starting async connection tests...');
-
-      // Test tunnel manager connections
-      if (_tunnelManagerService != null) {
-        debugPrint('[DEBUG] Testing tunnel manager connections...');
-        // Tunnel manager will handle its own connection testing
-      }
-
-      // Test Ollama service connection
-      if (_ollamaService != null) {
-        _ollamaService!
-            .testConnection()
-            .then((connected) {
-              debugPrint(
-                '[DEBUG] Ollama connection test completed: $connected',
-              );
-              if (!connected) {
-                debugPrint(
-                  '[DEBUG] Ollama connection failed, but UI remains functional',
-                );
-              } else {
-                debugPrint('[DEBUG] Ollama connection successful');
-              }
-            })
-            .catchError((error) {
-              debugPrint('[DEBUG] Ollama connection test error: $error');
-            });
-      }
-
-      debugPrint('[DEBUG] Connection tests started (non-blocking)');
-    } catch (e) {
-      debugPrint('[DEBUG] Connection test initialization error: $e');
-    }
+    // Services are now provided by the main app providers
+    debugPrint('[DEBUG] HomeScreen: Using provider-based services');
   }
 
   @override
@@ -131,88 +51,71 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
-    // Show loading screen if services are not initialized yet
-    if (_streamingChatService == null || _ollamaService == null) {
-      return Scaffold(
-        backgroundColor: AppTheme.backgroundMain,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
+    // Services are provided by the main app, no need for loading check
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundMain,
+      body: Column(
+        children: [
+          // Header with gradient background
+          Container(
+            decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
+            child: _buildHeader(context),
+          ),
 
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: _streamingChatService),
-        ChangeNotifierProvider.value(value: _ollamaService),
-        if (_tunnelManagerService != null)
-          ChangeNotifierProvider.value(value: _tunnelManagerService),
-      ],
-      child: Scaffold(
-        backgroundColor: AppTheme.backgroundMain,
-        body: Column(
-          children: [
-            // Header with gradient background
-            Container(
-              decoration: const BoxDecoration(
-                gradient: AppTheme.headerGradient,
-              ),
-              child: _buildHeader(context),
+          // Main chat interface
+          Expanded(
+            child: Row(
+              children: [
+                // Conversation sidebar
+                if (!isMobile || !_isSidebarCollapsed)
+                  Consumer<StreamingChatService>(
+                    builder: (context, chatService, child) {
+                      return ConversationList(
+                        conversations: chatService.conversations,
+                        selectedConversation: chatService.currentConversation,
+                        onConversationSelected: (conversationId) {
+                          final conversation = chatService.conversations
+                              .firstWhere((c) => c.id == conversationId);
+                          chatService.selectConversation(conversation);
+                        },
+                        onConversationDeleted: (conversationId) {
+                          final conversation = chatService.conversations
+                              .firstWhere((c) => c.id == conversationId);
+                          chatService.deleteConversation(conversation);
+                        },
+                        onConversationRenamed: (conversationId, newTitle) {
+                          final conversation = chatService.conversations
+                              .firstWhere((c) => c.id == conversationId);
+                          chatService.updateConversationTitle(
+                            conversation,
+                            newTitle,
+                          );
+                        },
+                        onNewConversation: () =>
+                            chatService.createConversation(),
+                        isCollapsed: _isSidebarCollapsed,
+                      );
+                    },
+                  ),
+
+                // Main chat area
+                Expanded(child: _buildChatArea(context)),
+              ],
             ),
-
-            // Main chat interface
-            Expanded(
-              child: Row(
-                children: [
-                  // Conversation sidebar
-                  if (!isMobile || !_isSidebarCollapsed)
-                    Consumer<StreamingChatService>(
-                      builder: (context, chatService, child) {
-                        return ConversationList(
-                          conversations: chatService.conversations,
-                          selectedConversation: chatService.currentConversation,
-                          onConversationSelected: (conversationId) {
-                            final conversation = chatService.conversations
-                                .firstWhere((c) => c.id == conversationId);
-                            chatService.selectConversation(conversation);
-                          },
-                          onConversationDeleted: (conversationId) {
-                            final conversation = chatService.conversations
-                                .firstWhere((c) => c.id == conversationId);
-                            chatService.deleteConversation(conversation);
-                          },
-                          onConversationRenamed: (conversationId, newTitle) {
-                            final conversation = chatService.conversations
-                                .firstWhere((c) => c.id == conversationId);
-                            chatService.updateConversationTitle(
-                              conversation,
-                              newTitle,
-                            );
-                          },
-                          onNewConversation: () =>
-                              chatService.createConversation(),
-                          isCollapsed: _isSidebarCollapsed,
-                        );
-                      },
-                    ),
-
-                  // Main chat area
-                  Expanded(child: _buildChatArea(context)),
-                ],
-              ),
-            ),
-          ],
-        ),
-        floatingActionButton: isMobile && _isSidebarCollapsed
-            ? Consumer<StreamingChatService>(
-                builder: (context, chatService, child) {
-                  return FloatingActionButton(
-                    onPressed: () => chatService.createConversation(),
-                    backgroundColor: AppTheme.primaryColor,
-                    child: const Icon(Icons.add, color: Colors.white),
-                  );
-                },
-              )
-            : null,
+          ),
+        ],
       ),
+      floatingActionButton: isMobile && _isSidebarCollapsed
+          ? Consumer<StreamingChatService>(
+              builder: (context, chatService, child) {
+                return FloatingActionButton(
+                  onPressed: () => chatService.createConversation(),
+                  backgroundColor: AppTheme.primaryColor,
+                  child: const Icon(Icons.add, color: Colors.white),
+                );
+              },
+            )
+          : null,
     );
   }
 
@@ -255,9 +158,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const Spacer(),
 
           // Model selector
-          Consumer2<StreamingChatService, OllamaService>(
-            builder: (context, chatService, ollamaService, child) {
-              final models = ollamaService.models.map((m) => m.name).toList();
+          Consumer2<StreamingChatService, ConnectionManagerService>(
+            builder: (context, chatService, connectionManager, child) {
+              final models = connectionManager.availableModels;
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: AppTheme.spacingS),
                 decoration: BoxDecoration(
