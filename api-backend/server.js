@@ -210,12 +210,18 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     logger.info(`Bridge disconnected: ${bridgeId}`);
     bridgeConnections.delete(bridgeId);
+
+    // Clean up any pending requests for this bridge
+    cleanupPendingRequestsForBridge(bridgeId);
   });
 
   // Handle errors
   ws.on('error', (error) => {
     logger.error(`Bridge ${bridgeId} error:`, error);
     bridgeConnections.delete(bridgeId);
+
+    // Clean up any pending requests for this bridge
+    cleanupPendingRequestsForBridge(bridgeId);
   });
 
   // Send ping every 30 seconds
@@ -232,6 +238,36 @@ wss.on('connection', (ws, req) => {
   }, 30000);
 });
 
+// Store for pending requests (requestId -> response handler)
+const pendingRequests = new Map();
+
+// Clean up pending requests for a disconnected bridge
+function cleanupPendingRequestsForBridge(bridgeId) {
+  const requestsToCleanup = [];
+
+  for (const [requestId, handler] of pendingRequests.entries()) {
+    if (handler.bridgeId === bridgeId) {
+      requestsToCleanup.push(requestId);
+    }
+  }
+
+  requestsToCleanup.forEach(requestId => {
+    const handler = pendingRequests.get(requestId);
+    if (handler) {
+      clearTimeout(handler.timeout);
+      pendingRequests.delete(requestId);
+
+      // Send error response to client
+      handler.res.status(503).json({
+        error: 'Bridge disconnected',
+        message: 'The bridge connection was lost while processing your request.'
+      });
+
+      logger.warn(`Cleaned up pending request ${requestId} due to bridge ${bridgeId} disconnect`);
+    }
+  });
+}
+
 // Handle messages from bridge
 function handleBridgeMessage(bridgeId, message) {
   const bridge = bridgeConnections.get(bridgeId);
@@ -245,11 +281,49 @@ function handleBridgeMessage(bridgeId, message) {
   switch (message.type) {
   case 'pong':
     // Update last ping time
+    logger.debug(`Received pong from bridge ${bridgeId}`);
     break;
 
   case 'response':
-    // Handle Ollama response - forward to web client if needed
-    logger.debug(`Received Ollama response from bridge ${bridgeId}`);
+    // Handle Ollama response from bridge
+    const requestId = message.id;
+    const responseHandler = pendingRequests.get(requestId);
+
+    if (responseHandler) {
+      logger.debug(`Received Ollama response from bridge ${bridgeId} for request ${requestId}`);
+
+      // Clear timeout and remove from pending requests
+      clearTimeout(responseHandler.timeout);
+      pendingRequests.delete(requestId);
+
+      // Send response to original HTTP client
+      const { res } = responseHandler;
+      const responseData = message.data;
+
+      // Set response headers
+      if (responseData.headers) {
+        Object.entries(responseData.headers).forEach(([key, value]) => {
+          res.setHeader(key, value);
+        });
+      }
+
+      // Send response with status code and body
+      res.status(responseData.statusCode || 200);
+
+      if (responseData.body) {
+        // Try to parse as JSON first, fallback to plain text
+        try {
+          const jsonBody = JSON.parse(responseData.body);
+          res.json(jsonBody);
+        } catch {
+          res.send(responseData.body);
+        }
+      } else {
+        res.end();
+      }
+    } else {
+      logger.warn(`Received response for unknown request: ${requestId}`);
+    }
     break;
 
   default:
@@ -392,6 +466,27 @@ app.all('/ollama/*', authenticateToken, async(req, res) => {
   const bridge = userBridges[0];
   const requestId = uuidv4();
 
+  // Set up timeout for the request (30 seconds)
+  const timeout = setTimeout(() => {
+    const responseHandler = pendingRequests.get(requestId);
+    if (responseHandler) {
+      pendingRequests.delete(requestId);
+      logger.warn(`Request timeout for ${requestId}`);
+      res.status(504).json({
+        error: 'Gateway timeout',
+        message: 'The bridge did not respond within the timeout period.'
+      });
+    }
+  }, 30000);
+
+  // Store response handler for correlation
+  pendingRequests.set(requestId, {
+    res,
+    timeout,
+    bridgeId: bridge.bridgeId,
+    startTime: new Date()
+  });
+
   // Forward request to bridge
   const bridgeMessage = {
     type: 'request',
@@ -407,15 +502,12 @@ app.all('/ollama/*', authenticateToken, async(req, res) => {
 
   try {
     bridge.ws.send(JSON.stringify(bridgeMessage));
-
-    // For now, return a placeholder response
-    // In a full implementation, you'd wait for the bridge response
-    res.json({
-      message: 'Request forwarded to bridge',
-      requestId,
-      bridgeId: bridge.bridgeId
-    });
+    logger.debug(`Forwarded request ${requestId} to bridge ${bridge.bridgeId}`);
   } catch (error) {
+    // Clean up on send failure
+    clearTimeout(timeout);
+    pendingRequests.delete(requestId);
+
     logger.error(`Failed to forward request to bridge ${bridge.bridgeId}:`, error);
     res.status(500).json({ error: 'Failed to communicate with bridge' });
   }

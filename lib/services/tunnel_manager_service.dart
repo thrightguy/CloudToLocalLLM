@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -229,73 +230,220 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Establish WebSocket connection to cloud proxy
+  /// Establish WebSocket bridge connection to cloud proxy
   Future<void> _establishCloudWebSocket(String authToken) async {
     try {
-      final wsUrl = '${_config.cloudProxyUrl.replaceFirst('http', 'ws')}/ws';
-      _cloudWebSocket = await WebSocket.connect(
-        wsUrl,
-        headers: {'Authorization': 'Bearer $authToken'},
-      );
+      // Connect to bridge endpoint instead of status endpoint
+      final wsUrl =
+          '${_config.cloudProxyUrl.replaceFirst('http', 'ws')}/ws/bridge?token=$authToken';
+      debugPrint('🚇 [TunnelManager] Connecting to bridge: $wsUrl');
+
+      _cloudWebSocket = await WebSocket.connect(wsUrl);
 
       _cloudWebSocket!.listen(
         (data) {
           try {
             final message = json.decode(data);
-            _handleCloudWebSocketMessage(message);
+            _handleCloudBridgeMessage(message);
           } catch (e) {
-            debugPrint(
-              '🚇 [TunnelManager] Error parsing WebSocket message: $e',
-            );
+            debugPrint('🚇 [TunnelManager] Error parsing bridge message: $e');
           }
         },
         onError: (error) {
-          debugPrint('🚇 [TunnelManager] Cloud WebSocket error: $error');
+          debugPrint('🚇 [TunnelManager] Cloud bridge WebSocket error: $error');
           _cloudWebSocket = null;
+          _updateConnectionStatus(false, 'WebSocket error: $error');
         },
         onDone: () {
-          debugPrint('🚇 [TunnelManager] Cloud WebSocket connection closed');
+          debugPrint(
+            '🚇 [TunnelManager] Cloud bridge WebSocket connection closed',
+          );
           _cloudWebSocket = null;
+          _updateConnectionStatus(false, 'Connection closed');
         },
       );
 
-      debugPrint('🚇 [TunnelManager] Cloud WebSocket connection established');
+      debugPrint(
+        '🚇 [TunnelManager] Cloud bridge WebSocket connection established',
+      );
     } catch (e) {
-      debugPrint('🚇 [TunnelManager] Failed to establish cloud WebSocket: $e');
+      debugPrint(
+        '🚇 [TunnelManager] Failed to establish cloud bridge WebSocket: $e',
+      );
+      _updateConnectionStatus(false, 'Failed to connect: $e');
     }
   }
 
-  /// Handle incoming WebSocket messages from cloud proxy
-  void _handleCloudWebSocketMessage(Map<String, dynamic> message) {
+  /// Handle incoming bridge messages from cloud proxy
+  void _handleCloudBridgeMessage(Map<String, dynamic> message) {
     final type = message['type'];
+    final messageId = message['id'];
+
+    debugPrint(
+      '🚇 [TunnelManager] Received bridge message: $type (ID: $messageId)',
+    );
 
     switch (type) {
-      case 'status_update':
-        final status = _connectionStatus['cloud'];
-        if (status != null) {
-          _connectionStatus['cloud'] = status.copyWith(
-            lastCheck: DateTime.now(),
-            latency: message['latency']?.toDouble() ?? status.latency,
-          );
-          _debouncedNotifyListeners();
+      case 'auth':
+        // Bridge authentication successful
+        final data = message['data'];
+        if (data['success'] == true) {
+          final bridgeId = data['bridgeId'];
+          debugPrint('🚇 [TunnelManager] Bridge authenticated: $bridgeId');
+          _updateConnectionStatus(true, null);
         }
         break;
 
-      case 'model_update':
-        final status = _connectionStatus['cloud'];
-        if (status != null) {
-          final models =
-              (message['models'] as List?)
-                  ?.map((model) => model.toString())
-                  .toList() ??
-              [];
-          _connectionStatus['cloud'] = status.copyWith(models: models);
-          _debouncedNotifyListeners();
-        }
+      case 'ping':
+        // Respond to ping with pong
+        _sendBridgeMessage({
+          'type': 'pong',
+          'id': _generateUuid(),
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+        break;
+
+      case 'request':
+        // Handle incoming Ollama request from cloud
+        _handleOllamaRequest(message);
         break;
 
       default:
-        debugPrint('🚇 [TunnelManager] Unknown WebSocket message type: $type');
+        debugPrint('🚇 [TunnelManager] Unknown bridge message type: $type');
+    }
+  }
+
+  /// Handle bridge messages (public for testing)
+  @visibleForTesting
+  void handleCloudBridgeMessage(Map<String, dynamic> message) {
+    _handleCloudBridgeMessage(message);
+  }
+
+  /// Update connection status helper
+  void _updateConnectionStatus(bool isConnected, String? error) {
+    _connectionStatus['cloud'] = ConnectionStatus(
+      type: 'cloud',
+      isConnected: isConnected,
+      endpoint: _config.cloudProxyUrl,
+      error: error,
+      lastCheck: DateTime.now(),
+      latency: 0,
+    );
+    _debouncedNotifyListeners();
+  }
+
+  /// Update connection status (public for testing)
+  @visibleForTesting
+  void updateConnectionStatus(bool isConnected, String? error) {
+    _updateConnectionStatus(isConnected, error);
+  }
+
+  /// Generate a simple UUID v4
+  String _generateUuid() {
+    final random = Random();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+
+    // Set version (4) and variant bits
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
+  }
+
+  /// Generate UUID (public for testing)
+  @visibleForTesting
+  String generateUuid() {
+    return _generateUuid();
+  }
+
+  /// Send message through bridge WebSocket
+  void _sendBridgeMessage(Map<String, dynamic> message) {
+    if (_cloudWebSocket != null &&
+        _cloudWebSocket!.readyState == WebSocket.open) {
+      try {
+        final jsonMessage = json.encode(message);
+        _cloudWebSocket!.add(jsonMessage);
+        debugPrint(
+          '🚇 [TunnelManager] Sent bridge message: ${message['type']}',
+        );
+      } catch (e) {
+        debugPrint('🚇 [TunnelManager] Failed to send bridge message: $e');
+      }
+    } else {
+      debugPrint(
+        '🚇 [TunnelManager] Cannot send message - WebSocket not connected',
+      );
+    }
+  }
+
+  /// Handle incoming Ollama request from cloud
+  Future<void> _handleOllamaRequest(Map<String, dynamic> message) async {
+    final requestId = message['id'];
+    final data = message['data'];
+
+    debugPrint('🚇 [TunnelManager] Handling Ollama request: $requestId');
+
+    try {
+      // Extract request details
+      final method = data['method'] ?? 'GET';
+      final path = data['path'] ?? '/';
+      final headers = Map<String, String>.from(data['headers'] ?? {});
+      final body = data['body'];
+
+      // Forward request to local Ollama
+      final ollamaUrl = 'http://localhost:11434$path';
+      final uri = Uri.parse(ollamaUrl);
+
+      http.Response response;
+
+      switch (method.toUpperCase()) {
+        case 'GET':
+          response = await _httpClient.get(uri, headers: headers);
+          break;
+        case 'POST':
+          response = await _httpClient.post(uri, headers: headers, body: body);
+          break;
+        case 'PUT':
+          response = await _httpClient.put(uri, headers: headers, body: body);
+          break;
+        case 'DELETE':
+          response = await _httpClient.delete(uri, headers: headers);
+          break;
+        default:
+          throw Exception('Unsupported HTTP method: $method');
+      }
+
+      // Send response back through bridge
+      _sendBridgeMessage({
+        'type': 'response',
+        'id': requestId,
+        'data': {
+          'statusCode': response.statusCode,
+          'headers': response.headers,
+          'body': response.body,
+        },
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      debugPrint('🚇 [TunnelManager] Ollama request completed: $requestId');
+    } catch (e) {
+      debugPrint('🚇 [TunnelManager] Ollama request failed: $e');
+
+      // Send error response
+      _sendBridgeMessage({
+        'type': 'response',
+        'id': requestId,
+        'data': {
+          'statusCode': 500,
+          'headers': {'content-type': 'application/json'},
+          'body': json.encode({
+            'error': 'Internal server error',
+            'message': e.toString(),
+          }),
+        },
+        'timestamp': DateTime.now().toIso8601String(),
+      });
     }
   }
 
@@ -438,7 +586,14 @@ class TunnelManagerService extends ChangeNotifier {
     _healthCheckTimer?.cancel();
     _statusSubscription?.cancel();
     _cloudWebSocket?.close();
-    _httpClient.close();
+
+    // Only close HTTP client if it was initialized
+    try {
+      _httpClient.close();
+    } catch (e) {
+      // HTTP client was not initialized, ignore
+    }
+
     // Local Ollama streaming service is now handled separately
     super.dispose();
   }
