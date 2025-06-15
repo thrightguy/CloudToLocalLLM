@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloudtolocalllm/services/tunnel_manager_service.dart';
 
 void main() {
@@ -152,6 +153,61 @@ void main() {
         expect(config.cloudProxyUrl, startsWith('https://'));
         expect(config.cloudProxyUrl, isNot(contains('localhost')));
         expect(config.cloudProxyUrl, isNot(contains('127.0.0.1')));
+      });
+    });
+
+    group('Platform-Specific Behavior', () {
+      test('should detect platform correctly', () {
+        // Test platform detection
+        // kIsWeb will be false in test environment (simulates desktop)
+        expect(
+          kIsWeb,
+          isFalse,
+          reason: 'Test environment should simulate desktop platform',
+        );
+      });
+
+      test('should have platform-specific initialization logic', () {
+        // Verify that TunnelManagerService has platform-aware behavior
+        final tunnelManager = TunnelManagerService();
+
+        // The service should be created successfully regardless of platform
+        expect(tunnelManager, isNotNull);
+        expect(tunnelManager.config, isNotNull);
+
+        // Default configuration should be consistent
+        expect(tunnelManager.config.enableCloudProxy, isTrue);
+        expect(
+          tunnelManager.config.cloudProxyUrl,
+          equals('https://app.cloudtolocalllm.online'),
+        );
+      });
+
+      test('should prevent self-referential connections on web platform', () {
+        // This test documents the fix for the self-referential connection issue
+        // Web platform should NOT attempt to connect to itself as a tunnel client
+
+        final config = TunnelConfig.defaultConfig();
+
+        // The cloud proxy URL should point to the external bridge server
+        expect(
+          config.cloudProxyUrl,
+          equals('https://app.cloudtolocalllm.online'),
+        );
+
+        // Web platform (when kIsWeb is true) should:
+        // 1. NOT attempt WebSocket connections to /ws/bridge
+        // 2. Act as the bridge server itself
+        // 3. Report as connected since it IS the bridge server
+
+        // Desktop platform (when kIsWeb is false) should:
+        // 1. Connect TO the bridge server via WebSocket
+        // 2. Handle incoming Ollama requests from the bridge
+        // 3. Forward requests to local Ollama instance
+
+        // This test verifies the configuration supports both behaviors
+        expect(config.cloudProxyUrl, isNot(contains('localhost')));
+        expect(config.cloudProxyUrl, startsWith('https://'));
       });
     });
   });

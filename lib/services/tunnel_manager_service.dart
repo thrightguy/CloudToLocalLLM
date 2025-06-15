@@ -76,6 +76,7 @@ class TunnelManagerService extends ChangeNotifier {
     _httpClient = http.Client();
 
     debugPrint('🚇 [TunnelManager] Initializing tunnel manager service...');
+    debugPrint('🚇 [TunnelManager] Platform: ${kIsWeb ? "Web" : "Desktop"}');
 
     // Load configuration
     await _loadConfiguration();
@@ -83,8 +84,20 @@ class TunnelManagerService extends ChangeNotifier {
     // Initialize streaming services
     await _initializeStreamingServices();
 
-    // Start initial connection attempts
-    await _initializeConnections();
+    // Platform-specific initialization
+    if (kIsWeb) {
+      // Web platform: Act as bridge server, not tunnel client
+      debugPrint(
+        '🚇 [TunnelManager] Web platform detected - acting as bridge server',
+      );
+      await _initializeWebBridgeServer();
+    } else {
+      // Desktop platform: Act as tunnel client
+      debugPrint(
+        '🚇 [TunnelManager] Desktop platform detected - acting as tunnel client',
+      );
+      await _initializeConnections();
+    }
 
     // Start health monitoring
     _startHealthChecks();
@@ -122,6 +135,34 @@ class TunnelManagerService extends ChangeNotifier {
     } catch (e) {
       debugPrint(
         '🚇 [TunnelManager] Failed to initialize cloud streaming services: $e',
+      );
+    }
+  }
+
+  /// Initialize web platform as bridge server
+  /// Web platform doesn't connect as tunnel client - it IS the bridge server
+  Future<void> _initializeWebBridgeServer() async {
+    try {
+      debugPrint('🚇 [TunnelManager] Initializing web bridge server...');
+
+      // Web platform is the bridge server, so mark as connected
+      _connectionStatus['cloud'] = ConnectionStatus(
+        type: 'cloud',
+        isConnected: true,
+        endpoint: _config.cloudProxyUrl,
+        version: 'Bridge Server',
+        lastCheck: DateTime.now(),
+        latency: 0,
+      );
+
+      debugPrint(
+        '🚇 [TunnelManager] Web bridge server initialized successfully',
+      );
+      _updateOverallStatus();
+    } catch (e) {
+      _error = 'Failed to initialize web bridge server: $e';
+      debugPrint(
+        '🚇 [TunnelManager] Web bridge server initialization error: $e',
       );
     }
   }
@@ -213,8 +254,15 @@ class TunnelManagerService extends ChangeNotifier {
           '🚇 [TunnelManager] Cloud proxy connection successful: $version',
         );
 
-        // Establish WebSocket connection for real-time updates
-        await _establishCloudWebSocket(authToken);
+        // Only establish WebSocket connection on desktop platform
+        // Web platform IS the bridge server, so no client connection needed
+        if (!kIsWeb) {
+          await _establishCloudWebSocket(authToken);
+        } else {
+          debugPrint(
+            '🚇 [TunnelManager] Skipping WebSocket connection on web platform (bridge server)',
+          );
+        }
       } else {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
@@ -231,7 +279,16 @@ class TunnelManagerService extends ChangeNotifier {
   }
 
   /// Establish WebSocket bridge connection to cloud proxy
+  /// Only for desktop platform - web platform IS the bridge server
   Future<void> _establishCloudWebSocket(String authToken) async {
+    // Safety check: Web platform should never attempt WebSocket client connections
+    if (kIsWeb) {
+      debugPrint(
+        '🚇 [TunnelManager] Skipping WebSocket connection - web platform is bridge server',
+      );
+      return;
+    }
+
     try {
       // Connect to bridge endpoint instead of status endpoint
       final wsUrl =
@@ -378,10 +435,19 @@ class TunnelManagerService extends ChangeNotifier {
   }
 
   /// Handle incoming Ollama request from cloud
+  /// Only desktop platform should handle these - web platform doesn't have local Ollama
   Future<void> _handleOllamaRequest(Map<String, dynamic> message) async {
     final requestId = message['id'];
-    final data = message['data'];
 
+    // Safety check: Web platform should never handle Ollama requests
+    if (kIsWeb) {
+      debugPrint(
+        '🚇 [TunnelManager] Ignoring Ollama request on web platform: $requestId',
+      );
+      return;
+    }
+
+    final data = message['data'];
     debugPrint('🚇 [TunnelManager] Handling Ollama request: $requestId');
 
     try {
@@ -603,7 +669,13 @@ class TunnelManagerService extends ChangeNotifier {
     debugPrint('🚇 [TunnelManager] Forcing reconnection to all endpoints...');
 
     _connectionStatus.clear();
-    await _initializeConnections();
+
+    // Platform-specific reconnection
+    if (kIsWeb) {
+      await _initializeWebBridgeServer();
+    } else {
+      await _initializeConnections();
+    }
   }
 
   /// Update tunnel configuration and reinitialize connections
@@ -617,8 +689,12 @@ class TunnelManagerService extends ChangeNotifier {
     _cloudWebSocket?.close();
     _cloudWebSocket = null;
 
-    // Reinitialize with new configuration
-    await _initializeConnections();
+    // Platform-specific reinitialization
+    if (kIsWeb) {
+      await _initializeWebBridgeServer();
+    } else {
+      await _initializeConnections();
+    }
 
     debugPrint('🚇 [TunnelManager] Configuration updated successfully');
   }
