@@ -175,13 +175,7 @@ const wss = new WebSocketServer({
 
 wss.on('connection', (ws, req) => {
   const bridgeId = uuidv4();
-  const userId = req.user?.sub;
-
-  if (!userId) {
-    logger.error('WebSocket connection established but no user ID found');
-    ws.close(1008, 'Authentication failed');
-    return;
-  }
+  const userId = req.user.sub;
 
   logger.info(`Bridge connected: ${bridgeId} for user: ${userId}`);
 

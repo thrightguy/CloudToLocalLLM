@@ -472,6 +472,13 @@ phase5_comprehensive_verification() {
         return 0
     fi
 
+    # Test API backend health first
+    log_verbose "Testing API backend health..."
+    if ! wait_for_service "https://app.cloudtolocalllm.online/api/health" 120 10; then
+        log_error "API backend failed to become healthy"
+        exit 5
+    fi
+
     # Test web platform with enhanced error handling
     log_verbose "Testing web platform accessibility..."
     if ! wait_for_service "https://app.cloudtolocalllm.online" 120 10; then
@@ -585,6 +592,8 @@ phase6_operational_readiness() {
     echo "  ✅ Git-based Distribution: Repository as single source of truth"
     echo "  ✅ Static Download: https://cloudtolocalllm.online/cloudtolocalllm-${deployed_semantic_version}-x86_64.tar.gz"
     echo "  ✅ Web Platform: https://app.cloudtolocalllm.online"
+    echo "  ✅ API Backend: https://app.cloudtolocalllm.online/api/health"
+    echo "  ✅ Tunnel Server: wss://app.cloudtolocalllm.online/ws/bridge"
     echo "  ✅ AUR Package: Submitted and available"
     echo ""
     echo -e "${BLUE}📋 Build Timestamp Correlation:${NC}"

@@ -222,11 +222,8 @@ check_deployment_status() {
         git log --oneline -5
         
         echo -e "\n=== Docker Status ==="
-        if [ -f "docker-compose.multi.yml" ]; then
-            echo "Multi-container architecture detected"
-            docker compose -f docker-compose.multi.yml ps 2>/dev/null || docker-compose -f docker-compose.multi.yml ps 2>/dev/null || echo "Could not check multi-container status"
-        elif [ -f "docker-compose.yml" ]; then
-            echo "Legacy single container detected"
+        if [ -f "docker-compose.yml" ]; then
+            echo "Current container architecture detected"
             docker compose ps 2>/dev/null || docker-compose ps 2>/dev/null || echo "Could not check container status"
         else
             echo "No docker-compose configuration found"
@@ -388,9 +385,9 @@ deploy_multi_container() {
             cd ..
         fi
         
-        # Deploy with multi-container script
-        echo "Deploying multi-container architecture..."
-        ./scripts/deploy/deploy-multi-container.sh --build $([ "$SSL_RENEW" = true ] && echo "--ssl-setup")
+        # Deploy with current architecture
+        echo "Deploying current architecture..."
+        ./scripts/deploy/update_and_deploy.sh $([ "$SSL_RENEW" = true ] && echo "--ssl-setup")
         
         echo "Deployment completed"
 EOF
@@ -418,13 +415,13 @@ verify_deployment() {
         cd /opt/cloudtolocalllm
         
         echo "=== Container Status ==="
-        docker compose -f docker-compose.multi.yml ps 2>/dev/null || docker-compose -f docker-compose.multi.yml ps 2>/dev/null || echo "Could not check container status"
+        docker compose ps 2>/dev/null || docker-compose ps 2>/dev/null || echo "Could not check container status"
 
         echo -e "\n=== Health Checks ==="
-        for service in nginx-proxy static-site flutter-app api-backend; do
-            if (docker compose -f docker-compose.multi.yml ps "$service" 2>/dev/null || docker-compose -f docker-compose.multi.yml ps "$service" 2>/dev/null) | grep -q "Up (healthy)"; then
+        for service in webapp api-backend postfix-mail certbot; do
+            if (docker compose ps "$service" 2>/dev/null || docker-compose ps "$service" 2>/dev/null) | grep -q "Up (healthy)"; then
                 echo "✓ $service: Healthy"
-            elif (docker compose -f docker-compose.multi.yml ps "$service" 2>/dev/null || docker-compose -f docker-compose.multi.yml ps "$service" 2>/dev/null) | grep -q "Up"; then
+            elif (docker compose ps "$service" 2>/dev/null || docker-compose ps "$service" 2>/dev/null) | grep -q "Up"; then
                 echo "⚠ $service: Running (health check pending)"
             else
                 echo "✗ $service: Not running"
@@ -432,9 +429,9 @@ verify_deployment() {
         done
 
         echo -e "\n=== Service Logs (last 10 lines each) ==="
-        for service in nginx-proxy static-site flutter-app api-backend; do
+        for service in webapp api-backend postfix-mail certbot; do
             echo "--- $service ---"
-            docker compose -f docker-compose.multi.yml logs --tail=10 "$service" 2>/dev/null || docker-compose -f docker-compose.multi.yml logs --tail=10 "$service" 2>/dev/null || echo "No logs available for $service"
+            docker compose logs --tail=10 "$service" 2>/dev/null || docker-compose logs --tail=10 "$service" 2>/dev/null || echo "No logs available for $service"
         done
 EOF
     
@@ -443,7 +440,6 @@ EOF
     
     local urls=(
         "https://cloudtolocalllm.online"
-        "https://docs.cloudtolocalllm.online"
         "https://app.cloudtolocalllm.online"
         "https://app.cloudtolocalllm.online/api/health"
     )
@@ -575,12 +571,12 @@ main() {
         log_info ""
         log_info "URLs to test:"
         log_info "  • Main site: https://cloudtolocalllm.online"
-        log_info "  • Documentation: https://docs.cloudtolocalllm.online"
         log_info "  • Web app: https://app.cloudtolocalllm.online"
         log_info "  • API health: https://app.cloudtolocalllm.online/api/health"
+        log_info "  • Tunnel server: wss://app.cloudtolocalllm.online/ws/bridge"
         log_info ""
         log_info "Monitor with:"
-        log_info "  ssh $VPS_USER@$VPS_HOST 'cd /opt/cloudtolocalllm && docker-compose -f docker-compose.multi.yml logs -f'"
+        log_info "  ssh $VPS_USER@$VPS_HOST 'cd /opt/cloudtolocalllm && docker-compose logs -f'"
     fi
 }
 

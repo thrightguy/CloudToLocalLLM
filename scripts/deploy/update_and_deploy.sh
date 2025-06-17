@@ -388,6 +388,28 @@ perform_health_checks() {
         docker compose -f docker-compose.yml ps
     fi
 
+    # Verify API backend health
+    log_verbose "Testing API backend health..."
+    local api_max_attempts=12
+    local api_attempt=1
+
+    while [[ $api_attempt -le $api_max_attempts ]]; do
+        if curl -f -s --connect-timeout 10 https://app.cloudtolocalllm.online/api/health &> /dev/null; then
+            log_success "API backend is healthy"
+            break
+        fi
+
+        if [[ $api_attempt -eq $api_max_attempts ]]; then
+            log_error "API backend health check failed after $api_max_attempts attempts"
+            log_error "Check api-backend logs with: docker compose -f docker-compose.yml logs api-backend"
+            exit 4
+        fi
+
+        log_verbose "API health check attempt $api_attempt/$api_max_attempts failed, retrying in 10 seconds..."
+        sleep 10
+        ((api_attempt++))
+    done
+
     # Verify web app accessibility with enhanced retry logic
     log_verbose "Testing web app accessibility..."
 
@@ -431,6 +453,8 @@ display_summary() {
     echo -e "${GREEN}=====================${NC}"
     echo "  - Main site: https://cloudtolocalllm.online"
     echo "  - Web app: https://app.cloudtolocalllm.online"
+    echo "  - API backend: https://app.cloudtolocalllm.online/api/health"
+    echo "  - Tunnel server: wss://app.cloudtolocalllm.online/ws/bridge"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""

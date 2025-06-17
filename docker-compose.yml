@@ -26,6 +26,27 @@ services:
       retries: 3
       start_period: 15s
 
+  # API Backend Container (for tunnel server and bridge communication)
+  api-backend:
+    build:
+      context: .
+      dockerfile: config/docker/Dockerfile.api-backend
+    container_name: cloudtolocalllm-api-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - AUTH0_DOMAIN=dev-xafu7oedkd5wlrbo.us.auth0.com
+      - AUTH0_AUDIENCE=https://app.cloudtolocalllm.online
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
   # Postfix Mail Server for direct email sending
   # WARNING: Ensuring email deliverability with a self-hosted MTA is complex.
   # Requires proper rDNS (PTR), SPF, DKIM, DMARC, and an IP with good reputation.
@@ -88,3 +109,7 @@ services:
           sleep 12h & wait $${!};
         done;
       '
+
+networks:
+  default:
+    name: cloudtolocalllm_default
