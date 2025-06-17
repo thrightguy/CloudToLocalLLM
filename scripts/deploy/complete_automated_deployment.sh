@@ -376,6 +376,66 @@ phase4_distribution_execution() {
     fi
     log_verbose "✓ Distribution files verified in git repository"
 
+    # CRITICAL FIX: Push to GitHub repository BEFORE AUR submission
+    # AUR packages reference GitHub raw URLs, so files must exist on GitHub first
+    log "Pushing distribution files to GitHub repository..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would push to GitHub repository"
+    else
+        if ! git push origin master; then
+            log_error "Failed to push to GitHub repository"
+            log_error "AUR submission requires files to be available on GitHub"
+            exit 4
+        fi
+        log_success "✓ Distribution files pushed to GitHub repository"
+
+        # Verify GitHub raw URL accessibility with retry logic
+        log_verbose "Verifying GitHub raw URL accessibility..."
+        local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
+        local max_attempts=5
+        local attempt=1
+        local github_accessible=false
+
+        while [[ $attempt -le $max_attempts ]]; do
+            log_verbose "Attempt $attempt/$max_attempts: Testing GitHub raw URL accessibility..."
+
+            if curl -s -I "$github_url" | head -1 | grep -q "200"; then
+                log_success "✓ GitHub raw URL accessible: $github_url"
+                github_accessible=true
+                break
+            else
+                log_verbose "GitHub raw URL not yet accessible, waiting 10 seconds..."
+                sleep 10
+                ((attempt++))
+            fi
+        done
+
+        if [[ "$github_accessible" != "true" ]]; then
+            log_error "GitHub raw URL not accessible after $max_attempts attempts"
+            log_error "URL: $github_url"
+            log_error "This will cause AUR installation failures"
+            exit 4
+        fi
+
+        # Verify checksum consistency between local and GitHub
+        log_verbose "Verifying checksum consistency between local and GitHub files..."
+        local local_sha256=$(cat "dist/cloudtolocalllm-${current_version}-x86_64.tar.gz.sha256" 2>/dev/null | cut -d' ' -f1 || echo "")
+        if [[ -n "$local_sha256" ]]; then
+            local github_sha256=$(curl -s "$github_url" | sha256sum | cut -d' ' -f1)
+            if [[ "$local_sha256" == "$github_sha256" ]]; then
+                log_success "✓ Checksum verified: local and GitHub files match"
+            else
+                log_error "Checksum mismatch between local and GitHub files"
+                log_error "Local: $local_sha256"
+                log_error "GitHub: $github_sha256"
+                exit 4
+            fi
+        else
+            log_warning "Local SHA256 file not found, skipping checksum verification"
+        fi
+    fi
+
     # Deploy to VPS with git pull for distribution files
     local vps_flags=""
     if [[ "$FORCE" == "true" ]]; then
@@ -428,9 +488,22 @@ phase4_distribution_execution() {
     # Submit AUR package immediately after VPS deployment
     log_verbose "Submitting AUR package using GitHub raw URL distribution..."
 
+    # Final verification before AUR submission
+    log_verbose "Performing final GitHub raw URL verification before AUR submission..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
+        if ! curl -s -I "$github_url" | head -1 | grep -q "200"; then
+            log_error "GitHub raw URL not accessible before AUR submission"
+            log_error "URL: $github_url"
+            log_error "AUR installation will fail - aborting AUR submission"
+            exit 4
+        fi
+        log_success "✓ Final GitHub raw URL verification passed"
+    fi
+
     # Skip local distribution file preparation - use GitHub raw URL approach
     log_verbose "Using git-based distribution tracking (GitHub raw URLs)..."
-    log_verbose "AUR package already configured with correct GitHub raw URL and SHA256"
+    log_verbose "AUR package configured with verified GitHub raw URL and SHA256"
     log_verbose "No local binary file preparation needed - avoiding AUR size limits"
 
     # Prepare AUR submission flags

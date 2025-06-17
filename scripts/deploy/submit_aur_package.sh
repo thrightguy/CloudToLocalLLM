@@ -159,8 +159,32 @@ verify_pkgbuild_version() {
             local sha256_file="../dist/${package_file}.sha256"
 
             if [[ -f "$sha256_file" ]]; then
-                local new_sha256=$(cat "$sha256_file")
+                local new_sha256=$(cat "$sha256_file" | cut -d' ' -f1)
                 log_verbose "Found SHA256 for $expected_version: $new_sha256"
+
+                # Verify GitHub raw URL accessibility before updating PKGBUILD
+                local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/${package_file}"
+                log_verbose "Verifying GitHub raw URL accessibility: $github_url"
+
+                if curl -s -I "$github_url" | head -1 | grep -q "200"; then
+                    log_verbose "✓ GitHub raw URL accessible"
+
+                    # Verify checksum matches GitHub file
+                    local github_sha256=$(curl -s "$github_url" | sha256sum | cut -d' ' -f1)
+                    if [[ "$new_sha256" == "$github_sha256" ]]; then
+                        log_verbose "✓ SHA256 checksum verified against GitHub file"
+                    else
+                        log_error "SHA256 mismatch between local and GitHub files"
+                        log_error "Local: $new_sha256"
+                        log_error "GitHub: $github_sha256"
+                        log_error "Cannot proceed with AUR submission"
+                        exit 1
+                    fi
+                else
+                    log_error "GitHub raw URL not accessible: $github_url"
+                    log_error "AUR installation will fail - cannot proceed"
+                    exit 1
+                fi
 
                 # Update PKGBUILD version and checksum
                 sed -i "s/^pkgver=.*/pkgver=$expected_version/" PKGBUILD
