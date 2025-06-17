@@ -11,6 +11,7 @@ import '../components/modern_card.dart';
 import '../components/model_download_manager.dart';
 import '../components/ollama_setup_guide.dart';
 import '../components/settings_sidebar.dart';
+import '../components/tunnel_connection_wizard.dart';
 import '../config/app_config.dart';
 import '../config/theme.dart';
 import '../models/ollama_connection_error.dart';
@@ -1624,6 +1625,60 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
             contentPadding: EdgeInsets.zero,
           ),
           SizedBox(height: AppTheme.spacingM),
+
+          // Tunnel Setup Wizard Button (prominent)
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.auto_fix_high,
+                  color: AppTheme.primaryColor,
+                  size: 32,
+                ),
+                SizedBox(height: AppTheme.spacingS),
+                Text(
+                  'Setup Tunnel Connection',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: AppTheme.spacingS),
+                Text(
+                  'Use the guided wizard to configure your tunnel connection step-by-step',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+                SizedBox(height: AppTheme.spacingM),
+                ElevatedButton.icon(
+                  onPressed: () => _showTunnelWizard(),
+                  icon: const Icon(Icons.settings_ethernet),
+                  label: const Text('Launch Tunnel Wizard'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingL,
+                      vertical: AppTheme.spacingM,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: AppTheme.spacingM),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -1896,6 +1951,30 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => OllamaSetupGuide(connectionError: error),
+    );
+  }
+
+  /// Show the tunnel connection wizard
+  void _showTunnelWizard() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TunnelConnectionWizard(
+        onComplete: () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tunnel connection configured successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh the settings to show updated status
+          setState(() {});
+        },
+        onCancel: () {
+          Navigator.of(context).pop();
+        },
+      ),
     );
   }
 }

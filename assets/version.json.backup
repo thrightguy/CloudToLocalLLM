@@ -1,6 +1,6 @@
 {
-  "version": "3.5.10",
-  "build_number": "202506141427",
-  "build_date": "2025-06-14T18:27:06Z",
-  "git_commit": "822b358"
+  "version": "3.5.12",
+  "build_number": "202506171256",
+  "build_date": "2025-06-17T16:56:35Z",
+  "git_commit": "75e3abd"
 }

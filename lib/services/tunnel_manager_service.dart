@@ -27,6 +27,11 @@ class TunnelManagerService extends ChangeNotifier {
   bool _isConnecting = false;
   String? _error;
 
+  // Enhanced connection state for wizard integration
+  bool _isWizardMode = false;
+  String? _wizardStepError;
+  Map<String, dynamic>? _lastConnectionTest;
+
   // Connection status for different endpoints
   final Map<String, ConnectionStatus> _connectionStatus = {};
 
@@ -723,6 +728,363 @@ class TunnelManagerService extends ChangeNotifier {
     } else {
       return TrayConnectionStatus.disconnected;
     }
+  }
+
+  // Enhanced methods for wizard integration
+
+  /// Enable wizard mode for enhanced status reporting
+  void enableWizardMode() {
+    _isWizardMode = true;
+    _wizardStepError = null;
+    _lastConnectionTest = null;
+    _debouncedNotifyListeners();
+  }
+
+  /// Disable wizard mode
+  void disableWizardMode() {
+    _isWizardMode = false;
+    _wizardStepError = null;
+    _lastConnectionTest = null;
+    _debouncedNotifyListeners();
+  }
+
+  /// Get wizard-specific status information
+  Map<String, dynamic> getWizardStatus() {
+    return {
+      'isWizardMode': _isWizardMode,
+      'isConnecting': _isConnecting,
+      'isConnected': _isConnected,
+      'error': _error,
+      'wizardStepError': _wizardStepError,
+      'lastConnectionTest': _lastConnectionTest,
+      'connectionStatus': _connectionStatus,
+    };
+  }
+
+  /// Test connection with detailed reporting for wizard
+  Future<Map<String, dynamic>> testConnectionForWizard(
+    TunnelConfig testConfig,
+  ) async {
+    _isWizardMode = true;
+    _wizardStepError = null;
+
+    final steps = <Map<String, dynamic>>[];
+    final testResult = <String, dynamic>{
+      'success': false,
+      'timestamp': DateTime.now().toIso8601String(),
+      'config': {
+        'cloudProxyUrl': testConfig.cloudProxyUrl,
+        'enableCloudProxy': testConfig.enableCloudProxy,
+        'connectionTimeout': testConfig.connectionTimeout,
+      },
+      'steps': steps,
+      'error': null,
+      'serverInfo': null,
+    };
+
+    try {
+      _isConnecting = true;
+      _debouncedNotifyListeners();
+
+      // Step 1: Test HTTP connectivity
+      steps.add({
+        'name': 'HTTP Connectivity',
+        'status': 'testing',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      final authToken = await _getAuthToken();
+      if (authToken == null) {
+        throw Exception('No authentication token available');
+      }
+
+      final response = await _httpClient
+          .get(
+            Uri.parse('${testConfig.cloudProxyUrl}/api/health'),
+            headers: {'Authorization': 'Bearer $authToken'},
+          )
+          .timeout(Duration(seconds: testConfig.connectionTimeout));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        testResult['serverInfo'] = data;
+
+        steps.last['status'] = 'success';
+        steps.last['result'] = 'Server responded successfully';
+
+        // Step 2: Test WebSocket connectivity (desktop only)
+        if (!kIsWeb) {
+          steps.add({
+            'name': 'WebSocket Connectivity',
+            'status': 'testing',
+            'timestamp': DateTime.now().toIso8601String(),
+          });
+
+          try {
+            final wsUrl =
+                '${testConfig.cloudProxyUrl.replaceFirst('https://', 'wss://')}/ws/bridge';
+            final testWebSocket = await WebSocket.connect(
+              wsUrl,
+            ).timeout(Duration(seconds: testConfig.connectionTimeout));
+
+            await testWebSocket.close();
+
+            steps.last['status'] = 'success';
+            steps.last['result'] = 'WebSocket connection successful';
+          } catch (e) {
+            steps.last['status'] = 'failed';
+            steps.last['error'] = e.toString();
+            throw Exception('WebSocket test failed: $e');
+          }
+        }
+
+        testResult['success'] = true;
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      testResult['error'] = e.toString();
+      _wizardStepError = e.toString();
+
+      // Mark current step as failed
+      if (steps.isNotEmpty) {
+        steps.last['status'] = 'failed';
+        steps.last['error'] = e.toString();
+      }
+    } finally {
+      _isConnecting = false;
+      _lastConnectionTest = testResult;
+      _debouncedNotifyListeners();
+    }
+
+    return testResult;
+  }
+
+  /// Get detailed connection diagnostics for troubleshooting
+  Map<String, dynamic> getConnectionDiagnostics() {
+    final diagnostics = <String, dynamic>{
+      'timestamp': DateTime.now().toIso8601String(),
+      'platform': kIsWeb ? 'web' : 'desktop',
+      'config': {
+        'enableCloudProxy': _config.enableCloudProxy,
+        'cloudProxyUrl': _config.cloudProxyUrl,
+        'connectionTimeout': _config.connectionTimeout,
+        'healthCheckInterval': _config.healthCheckInterval,
+      },
+      'connectionStatus': {},
+      'lastErrors': [],
+      'networkInfo': {},
+    };
+
+    // Add connection status details
+    for (final entry in _connectionStatus.entries) {
+      final status = entry.value;
+      diagnostics['connectionStatus'][entry.key] = {
+        'isConnected': status.isConnected,
+        'endpoint': status.endpoint,
+        'version': status.version,
+        'error': status.error,
+        'lastCheck': status.lastCheck.toIso8601String(),
+        'latency': status.latency,
+      };
+    }
+
+    // Add recent errors
+    final recentErrors = _connectionStatus.values
+        .where((status) => status.error != null)
+        .map(
+          (status) => {
+            'type': status.type,
+            'error': status.error,
+            'timestamp': status.lastCheck.toIso8601String(),
+          },
+        )
+        .toList();
+    diagnostics['lastErrors'] = recentErrors;
+
+    return diagnostics;
+  }
+
+  /// Validate end-to-end tunnel functionality
+  Future<Map<String, dynamic>> validateTunnelEndToEnd() async {
+    final validationResult = <String, dynamic>{
+      'success': false,
+      'timestamp': DateTime.now().toIso8601String(),
+      'tests': <Map<String, dynamic>>[],
+      'error': null,
+      'summary': {},
+    };
+
+    final tests = <Map<String, dynamic>>[];
+    validationResult['tests'] = tests;
+
+    try {
+      // Test 1: Authentication validation
+      tests.add({
+        'name': 'Authentication Validation',
+        'status': 'testing',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      final authToken = await _getAuthToken();
+      if (authToken == null) {
+        tests.last['status'] = 'failed';
+        tests.last['error'] = 'No authentication token available';
+        throw Exception('Authentication validation failed');
+      }
+
+      tests.last['status'] = 'success';
+      tests.last['result'] = 'Authentication token validated';
+
+      // Test 2: Server connectivity
+      tests.add({
+        'name': 'Server Connectivity',
+        'status': 'testing',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      final healthResponse = await _httpClient
+          .get(
+            Uri.parse('${_config.cloudProxyUrl}/api/health'),
+            headers: {'Authorization': 'Bearer $authToken'},
+          )
+          .timeout(Duration(seconds: _config.connectionTimeout));
+
+      if (healthResponse.statusCode != 200) {
+        tests.last['status'] = 'failed';
+        tests.last['error'] =
+            'HTTP ${healthResponse.statusCode}: ${healthResponse.body}';
+        throw Exception('Server connectivity test failed');
+      }
+
+      final healthData = json.decode(healthResponse.body);
+      tests.last['status'] = 'success';
+      tests.last['result'] = 'Server health check passed';
+      tests.last['serverInfo'] = healthData;
+
+      // Test 3: WebSocket bridge connectivity (desktop only)
+      if (!kIsWeb) {
+        tests.add({
+          'name': 'WebSocket Bridge',
+          'status': 'testing',
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+
+        try {
+          final wsUrl =
+              '${_config.cloudProxyUrl.replaceFirst('https://', 'wss://')}/ws/bridge';
+          final testWebSocket = await WebSocket.connect(
+            wsUrl,
+          ).timeout(Duration(seconds: _config.connectionTimeout));
+
+          // Send a test message
+          final testMessage = {
+            'type': 'ping',
+            'id': _generateUuid(),
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+
+          testWebSocket.add(json.encode(testMessage));
+
+          // Wait for response
+          bool receivedResponse = false;
+          final responseCompleter = Completer<void>();
+
+          testWebSocket.listen(
+            (data) {
+              try {
+                final response = json.decode(data);
+                if (response['type'] == 'pong') {
+                  receivedResponse = true;
+                  responseCompleter.complete();
+                }
+              } catch (e) {
+                // Ignore parsing errors
+              }
+            },
+            onError: (error) {
+              if (!responseCompleter.isCompleted) {
+                responseCompleter.completeError(error);
+              }
+            },
+          );
+
+          await responseCompleter.future.timeout(const Duration(seconds: 5));
+          await testWebSocket.close();
+
+          if (receivedResponse) {
+            tests.last['status'] = 'success';
+            tests.last['result'] = 'WebSocket bridge communication successful';
+          } else {
+            tests.last['status'] = 'failed';
+            tests.last['error'] = 'No response received from bridge';
+            throw Exception('WebSocket bridge test failed');
+          }
+        } catch (e) {
+          tests.last['status'] = 'failed';
+          tests.last['error'] = e.toString();
+          throw Exception('WebSocket bridge test failed: $e');
+        }
+      }
+
+      // Test 4: Ollama proxy test (if available)
+      tests.add({
+        'name': 'Ollama Proxy Test',
+        'status': 'testing',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      try {
+        final ollamaResponse = await _httpClient
+            .get(
+              Uri.parse('${_config.cloudProxyUrl}/api/ollama/api/tags'),
+              headers: {'Authorization': 'Bearer $authToken'},
+            )
+            .timeout(Duration(seconds: _config.connectionTimeout));
+
+        if (ollamaResponse.statusCode == 200) {
+          final ollamaData = json.decode(ollamaResponse.body);
+          tests.last['status'] = 'success';
+          tests.last['result'] = 'Ollama proxy connection successful';
+          tests.last['models'] = ollamaData['models'] ?? [];
+        } else {
+          tests.last['status'] = 'warning';
+          tests.last['result'] =
+              'Ollama proxy not available (this is normal if Ollama is not running)';
+        }
+      } catch (e) {
+        tests.last['status'] = 'warning';
+        tests.last['result'] =
+            'Ollama proxy test skipped (Ollama may not be running)';
+      }
+
+      // All critical tests passed
+      validationResult['success'] = true;
+      validationResult['summary'] = {
+        'totalTests': tests.length,
+        'passedTests': tests
+            .where((test) => test['status'] == 'success')
+            .length,
+        'failedTests': tests.where((test) => test['status'] == 'failed').length,
+        'warningTests': tests
+            .where((test) => test['status'] == 'warning')
+            .length,
+      };
+    } catch (e) {
+      validationResult['error'] = e.toString();
+      validationResult['summary'] = {
+        'totalTests': tests.length,
+        'passedTests': tests
+            .where((test) => test['status'] == 'success')
+            .length,
+        'failedTests': tests.where((test) => test['status'] == 'failed').length,
+        'warningTests': tests
+            .where((test) => test['status'] == 'warning')
+            .length,
+      };
+    }
+
+    return validationResult;
   }
 }
 
