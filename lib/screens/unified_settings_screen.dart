@@ -513,11 +513,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
 
   Widget _buildDesktopLLMProviderSettings() {
     // This section now represents "Tunnel Connection" settings for desktop.
-    // It should include:
-    // 1. Connection Status Overview (_buildDesktopConnectionStatusCard)
-    // 2. Local Ollama Configuration (_buildDesktopOllamaConfigCard)
-    // 3. Cloud Proxy Configuration (_buildDesktopCloudProxyConfigCard)
-    // 4. Advanced Tunnel Settings (_buildDesktopAdvancedTunnelCard)
+    // Prioritize setup wizard and streamline the UI
     return Consumer<TunnelManagerService>(
       builder: (context, tunnelManager, child) {
         try {
@@ -531,25 +527,39 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
             );
           }
 
+          // Check if user needs setup wizard (no authentication or first time)
+          final needsSetup = !Provider.of<AuthService>(
+            context,
+            listen: false,
+          ).isAuthenticated.value;
+
           return Column(
             children: [
-              // Educational info about the tunnel proxy service
-              _buildTunnelProxyInfoCard(),
-              SizedBox(height: AppTheme.spacingM),
+              // Compact info about the tunnel service
+              _buildCompactTunnelInfoCard(),
+              SizedBox(height: AppTheme.spacingS),
 
-              // Connection Status Overview Card
-              _buildDesktopConnectionStatusCard(tunnelManager),
-              SizedBox(height: AppTheme.spacingM),
+              // Prioritize Setup Wizard for new users
+              if (needsSetup) ...[
+                _buildTunnelSetupWizardCard(),
+                SizedBox(height: AppTheme.spacingS),
+              ],
+
+              // Unified Connection Status (removes duplicate)
+              _buildUnifiedConnectionStatusCard(tunnelManager),
+              SizedBox(height: AppTheme.spacingS),
 
               // Local Ollama Configuration Card
               _buildDesktopOllamaConfigCard(tunnelManager),
-              SizedBox(height: AppTheme.spacingM),
+              SizedBox(height: AppTheme.spacingS),
 
-              // Cloud Proxy Configuration Card
-              _buildDesktopCloudProxyConfigCard(tunnelManager),
-              SizedBox(height: AppTheme.spacingM),
+              // Cloud Proxy Configuration Card (only if authenticated)
+              if (!needsSetup) ...[
+                _buildDesktopCloudProxyConfigCard(tunnelManager),
+                SizedBox(height: AppTheme.spacingS),
+              ],
 
-              // Advanced Tunnel Settings Card
+              // Advanced Tunnel Settings Card (collapsible)
               _buildDesktopAdvancedTunnelCard(tunnelManager),
             ],
           );
@@ -711,6 +721,83 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
     );
   }
 
+  // Compact version of tunnel info card - reduced size and content
+  Widget _buildCompactTunnelInfoCard() {
+    return ModernCard(
+      child: Padding(
+        padding: EdgeInsets.all(AppTheme.spacingS),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 18),
+            SizedBox(width: AppTheme.spacingS),
+            Expanded(
+              child: Text(
+                kIsWeb
+                    ? 'Secure tunnel proxy connecting web interface to local Ollama'
+                    : 'Secure tunnel allowing web access to your local Ollama instance',
+                style: TextStyle(color: AppTheme.textColorLight, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Tunnel Setup Wizard Card - prioritized for new users
+  Widget _buildTunnelSetupWizardCard() {
+    return ModernCard(
+      child: Padding(
+        padding: EdgeInsets.all(AppTheme.spacingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_fix_high,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+                SizedBox(width: AppTheme.spacingS),
+                Text(
+                  'Setup Tunnel Connection',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: AppTheme.spacingS),
+            Text(
+              'Configure your tunnel connection to access local Ollama from web browsers and remote clients.',
+              style: TextStyle(color: AppTheme.textColorLight, fontSize: 13),
+            ),
+            SizedBox(height: AppTheme.spacingM),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showTunnelWizard,
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Start Setup Wizard'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingM,
+                    vertical: AppTheme.spacingS,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeatureItem(String text) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 2),
@@ -720,6 +807,66 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
           Text(
             text,
             style: TextStyle(color: AppTheme.textColorLight, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper methods for unified connection status
+  Color _getUnifiedStatusColor(
+    bool isLocalConnected,
+    bool isCloudAuthenticated,
+  ) {
+    if (isLocalConnected && isCloudAuthenticated) return Colors.green;
+    if (isLocalConnected || isCloudAuthenticated) return Colors.orange;
+    return Colors.red;
+  }
+
+  Widget _buildCompactStatusItem(
+    String label,
+    String status,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(AppTheme.spacingS),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              SizedBox(width: AppTheme.spacingXS),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 2),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -1307,120 +1454,153 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
 
   // Desktop tunnel management methods
 
-  Widget _buildDesktopConnectionStatusCard(TunnelManagerService tunnelManager) {
-    final connectionStatus = tunnelManager.connectionStatus;
-    final ollamaStatus = connectionStatus['ollama'];
-    final cloudStatus = connectionStatus['cloud'];
-    final isConnecting = tunnelManager.isConnecting;
-    final error = tunnelManager.error;
+  // Removed: _buildDesktopConnectionStatusCard - replaced by _buildUnifiedConnectionStatusCard
+  // This method was creating duplicate connection status displays
 
-    return ModernCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildStatusSectionHeader(
-            'Connection Status',
-            Icons.network_check,
-            _getOverallStatusColor(ollamaStatus, cloudStatus),
-          ),
-          SizedBox(height: AppTheme.spacingM),
+  // Unified Connection Status Card - replaces duplicate status displays
+  Widget _buildUnifiedConnectionStatusCard(TunnelManagerService tunnelManager) {
+    return Consumer<LocalOllamaConnectionService>(
+      builder: (context, localOllama, child) {
+        return Consumer<AuthService>(
+          builder: (context, authService, child) {
+            final isLocalConnected = localOllama.isConnected;
+            final isCloudAuthenticated = authService.isAuthenticated.value;
+            final localError = localOllama.error;
+            final isConnecting = tunnelManager.isConnecting;
 
-          // Overall Status
-          _buildStatusRow(
-            'Overall Status',
-            _getOverallStatusText(ollamaStatus, cloudStatus, isConnecting),
-            _getOverallStatusColor(ollamaStatus, cloudStatus),
-          ),
-
-          // Local Ollama Status
-          if (ollamaStatus != null) ...[
-            _buildStatusRow(
-              'Local Ollama',
-              ollamaStatus.isConnected ? 'Connected' : 'Disconnected',
-              ollamaStatus.isConnected ? Colors.green : Colors.red,
-            ),
-            if (ollamaStatus.isConnected)
-              _buildStatusRow(
-                'Ollama Endpoint',
-                ollamaStatus.endpoint,
-                AppTheme.textColorLight,
-              ),
-            if (ollamaStatus.isConnected)
-              _buildStatusRow(
-                'Ollama Version',
-                ollamaStatus.version ?? 'N/A',
-                AppTheme.textColorLight,
-              ),
-          ],
-
-          // Cloud Proxy Status
-          if (cloudStatus != null) ...[
-            _buildStatusRow(
-              'Cloud Proxy',
-              cloudStatus.isConnected ? 'Connected' : 'Disconnected',
-              cloudStatus.isConnected ? Colors.green : Colors.red,
-            ),
-            if (cloudStatus.isConnected)
-              _buildStatusRow(
-                'Proxy Endpoint',
-                cloudStatus.endpoint,
-                AppTheme.textColorLight,
-              ),
-          ],
-
-          // Error Display
-          if (error != null) ...[
-            SizedBox(height: AppTheme.spacingS),
-            Container(
-              padding: EdgeInsets.all(AppTheme.spacingS),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-              ),
-              child: Row(
+            return ModernCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: 16),
-                  SizedBox(width: AppTheme.spacingS),
-                  Expanded(
-                    child: Text(
-                      error,
-                      style: TextStyle(color: Colors.red, fontSize: 12),
+                  _buildStatusSectionHeader(
+                    'Connection Status',
+                    Icons.network_check,
+                    _getUnifiedStatusColor(
+                      isLocalConnected,
+                      isCloudAuthenticated,
                     ),
+                  ),
+                  SizedBox(height: AppTheme.spacingS),
+
+                  // Compact status display
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCompactStatusItem(
+                          'Local Ollama',
+                          isLocalConnected ? 'Connected' : 'Disconnected',
+                          isLocalConnected ? Colors.green : Colors.red,
+                          Icons.computer,
+                        ),
+                      ),
+                      SizedBox(width: AppTheme.spacingS),
+                      Expanded(
+                        child: _buildCompactStatusItem(
+                          'Cloud Tunnel',
+                          isCloudAuthenticated ? 'Authenticated' : 'Not Setup',
+                          isCloudAuthenticated ? Colors.green : Colors.orange,
+                          Icons.cloud,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Error Display (compact)
+                  if (localError != null) ...[
+                    SizedBox(height: AppTheme.spacingS),
+                    Container(
+                      padding: EdgeInsets.all(AppTheme.spacingS),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusS,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 14,
+                          ),
+                          SizedBox(width: AppTheme.spacingS),
+                          Expanded(
+                            child: Text(
+                              localError.toString(),
+                              style: TextStyle(color: Colors.red, fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Compact action buttons
+                  SizedBox(height: AppTheme.spacingS),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: isConnecting
+                              ? null
+                              : () async {
+                                  await localOllama.testConnection();
+                                  // Note: TunnelManager doesn't have testConnections method
+                                  // This will be handled by the individual service tests
+                                },
+                          icon: isConnecting
+                              ? SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(Icons.refresh, size: 16),
+                          label: Text('Test', style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppTheme.spacingS,
+                              vertical: AppTheme.spacingXS,
+                            ),
+                            minimumSize: Size(0, 32),
+                          ),
+                        ),
+                      ),
+                      if (!isCloudAuthenticated) ...[
+                        SizedBox(width: AppTheme.spacingS),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _showTunnelWizard,
+                            icon: Icon(Icons.auto_fix_high, size: 16),
+                            label: Text(
+                              'Setup',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.secondaryColor,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppTheme.spacingS,
+                                vertical: AppTheme.spacingXS,
+                              ),
+                              minimumSize: Size(0, 32),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
-            ),
-          ],
-
-          // Refresh Button
-          SizedBox(height: AppTheme.spacingM),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: isConnecting
-                  ? null
-                  : () => _refreshConnections(tunnelManager),
-              icon: isConnecting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.refresh),
-              label: Text(isConnecting ? 'Connecting...' : 'Refresh Status'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.all(AppTheme.spacingM),
-              ),
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
