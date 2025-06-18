@@ -126,6 +126,27 @@ get_release_type() {
 }
 
 # Increment version based on type (major, minor, patch, build)
+#
+# CloudToLocalLLM Semantic Versioning Strategy:
+#
+# PATCH (0.0.X+YYYYMMDDHHMM):
+#   - Hotfixes and critical bug fixes requiring immediate deployment
+#   - Security updates and emergency patches
+#   - Critical stability fixes that can't wait for next minor release
+#   - Example: Database connection fix, authentication bug, crash fix
+#
+# MINOR (0.X.0+YYYYMMDDHHMM):
+#   - Feature additions and new functionality
+#   - Quality of life improvements and UI enhancements
+#   - Planned feature releases and capability expansions
+#   - Example: New tunnel features, UI improvements, API additions
+#
+# MAJOR (X.0.0+YYYYMMDDHHMM):
+#   - Breaking changes and architectural overhauls
+#   - Significant API changes requiring user adaptation
+#   - Major platform or framework migrations
+#   - Example: Flutter 4.0 migration, API v2 breaking changes
+#
 increment_version() {
     local increment_type="$1"
     local current_version=$(get_semantic_version)
@@ -138,19 +159,22 @@ increment_version() {
     # Increment based on type
     case "$increment_type" in
         "major")
+            # MAJOR: Breaking changes, architectural overhauls, significant API changes
             major=$((major + 1))
             minor=0
             patch=0
             ;;
         "minor")
+            # MINOR: Feature additions, UI enhancements, planned functionality
             minor=$((minor + 1))
             patch=0
             ;;
         "patch")
+            # PATCH: Hotfixes, security updates, critical bug fixes
             patch=$((patch + 1))
             ;;
         "build")
-            # Don't change semantic version for build increments
+            # BUILD: Timestamp-only increment, no semantic version change
             ;;
         *)
             log_error "Invalid increment type. Use: major, minor, patch, or build"
@@ -447,11 +471,30 @@ main() {
             echo "  validate         Validate current version format"
             echo "  help             Show this help message"
             echo ""
-            echo "Version Strategy:"
-            echo "  major            Creates GitHub release (x.0.0) - significant changes"
-            echo "  minor            No GitHub release (x.y.0) - feature additions"
-            echo "  patch            No GitHub release (x.y.z) - bug fixes"
-            echo "  build            No GitHub release (x.y.z+YYYYMMDDHHMM) - timestamp builds"
+            echo "CloudToLocalLLM Semantic Versioning Strategy:"
+            echo ""
+            echo "  PATCH (0.0.X+YYYYMMDDHHMM) - URGENT FIXES:"
+            echo "    • Hotfixes and critical bug fixes requiring immediate deployment"
+            echo "    • Security updates and emergency patches"
+            echo "    • Critical stability fixes that can't wait for next minor release"
+            echo "    • Examples: Database connection fix, authentication bug, crash fix"
+            echo ""
+            echo "  MINOR (0.X.0+YYYYMMDDHHMM) - PLANNED FEATURES:"
+            echo "    • Feature additions and new functionality"
+            echo "    • Quality of life improvements and UI enhancements"
+            echo "    • Planned feature releases and capability expansions"
+            echo "    • Examples: New tunnel features, UI improvements, API additions"
+            echo ""
+            echo "  MAJOR (X.0.0+YYYYMMDDHHMM) - BREAKING CHANGES:"
+            echo "    • Breaking changes and architectural overhauls"
+            echo "    • Significant API changes requiring user adaptation"
+            echo "    • Major platform or framework migrations"
+            echo "    • Examples: Flutter 4.0 migration, API v2 breaking changes"
+            echo "    • Creates GitHub release automatically"
+            echo ""
+            echo "  BUILD (X.Y.Z+YYYYMMDDHHMM) - TIMESTAMP ONLY:"
+            echo "    • No semantic version change, only build timestamp update"
+            echo "    • Used for CI/CD builds and testing iterations"
             echo ""
             echo "Build Number Format:"
             echo "  YYYYMMDDHHMM     Timestamp format representing build creation time"

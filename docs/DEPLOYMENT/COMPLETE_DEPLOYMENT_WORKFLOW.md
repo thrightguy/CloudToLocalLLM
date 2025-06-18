@@ -893,11 +893,18 @@ ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && ./scripts/deploy
 
 #### **Version Management**
 ```bash
+# CloudToLocalLLM Semantic Versioning Strategy:
+# PATCH (0.0.X) - Urgent fixes: hotfixes, security updates, critical bugs
+# MINOR (0.X.0) - Planned features: new functionality, UI enhancements
+# MAJOR (X.0.0) - Breaking changes: architectural overhauls, API changes
+
 # Show current version
 ./scripts/version_manager.sh info
 
-# Increment version
-./scripts/version_manager.sh increment patch
+# Increment version based on change type
+./scripts/version_manager.sh increment patch    # For urgent fixes
+./scripts/version_manager.sh increment minor    # For planned features
+./scripts/version_manager.sh increment major    # For breaking changes
 
 # Synchronize versions
 ./scripts/deploy/sync_versions.sh
@@ -936,6 +943,41 @@ ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull origin 
 # Check VPS status
 curl -s https://app.cloudtolocalllm.online/version.json | jq '.version'
 ```
+
+---
+
+## 📋 **Versioning Decision Guide**
+
+### **Choose the Right Version Increment**
+
+Before starting deployment, determine the appropriate version increment:
+
+| Question | Answer | Version Type | Example |
+|----------|--------|--------------|---------|
+| Does this break existing functionality? | Yes | **MAJOR** | API v2 migration, Flutter upgrade |
+| Is this an urgent fix that can't wait? | Yes | **PATCH** | Security vulnerability, crash fix |
+| Does this add new features/functionality? | Yes | **MINOR** | New UI features, tunnel enhancements |
+| Is this just a build/timestamp update? | Yes | **BUILD** | CI/CD builds, testing iterations |
+
+### **Deployment Urgency by Version Type**
+
+**PATCH Releases (🚨 URGENT):**
+- Deploy immediately during business hours
+- Fast-track all 6 phases with minimal testing
+- Focus on fix verification only
+- Enhanced monitoring post-deployment
+
+**MINOR Releases (📅 PLANNED):**
+- Deploy during scheduled maintenance windows
+- Standard 6-phase deployment with full testing
+- Complete AUR verification required
+- Standard monitoring and validation
+
+**MAJOR Releases (⚠️ COORDINATED):**
+- Deploy during planned major release windows
+- Extended 6-phase deployment with comprehensive testing
+- Migration testing and rollback preparation
+- Extended monitoring and user communication
 
 ---
 

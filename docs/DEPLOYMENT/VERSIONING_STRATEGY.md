@@ -2,219 +2,233 @@
 
 ## Overview
 
-CloudToLocalLLM implements a granular build numbering system to maintain detailed version tracking while reducing unnecessary GitHub release proliferation.
+CloudToLocalLLM follows a strict semantic versioning scheme that aligns release types with deployment urgency and testing requirements. This strategy ensures appropriate prioritization of different types of changes and helps teams understand the impact and urgency of each release.
 
-## Version Format
+## Semantic Versioning Format
 
-**Format**: `MAJOR.MINOR.PATCH+BUILD`
+**Format:** `MAJOR.MINOR.PATCH+YYYYMMDDHHMM`
 
-### Components
+- **MAJOR.MINOR.PATCH**: Semantic version following semver.org standards
+- **YYYYMMDDHHMM**: Build timestamp in 12-digit format (Year-Month-Day-Hour-Minute)
 
-- **Major Version (X)**: Significant feature releases or architecture changes
-- **Minor Version (Y)**: Feature additions or notable improvements  
-- **Patch Version (Z)**: Bug fixes and small updates
-- **Build Number (+NNN)**: Incremental builds for the same patch version
+**Example:** `3.5.14+202506172035` = Version 3.5.14 built on June 17, 2025 at 20:35
 
-### Examples
-- `3.1.1+001` - Version 3.1.1, build 001
-- `3.1.1+002` - Version 3.1.1, build 002 (patch increment)
-- `3.2.0+001` - Version 3.2.0, build 001 (minor increment)
-- `4.0.0+001` - Version 4.0.0, build 001 (major increment)
+## Release Type Classifications
 
-## Release Strategy
+### 🚨 PATCH Releases (0.0.X+YYYYMMDDHHMM)
 
-### GitHub Releases
-- **Created ONLY for major version updates** (e.g., 3.0.0 → 4.0.0)
-- Minor and patch updates do NOT create GitHub releases
-- Reduces release clutter while maintaining version traceability
+**Purpose:** Urgent fixes requiring immediate deployment
 
-### Build Number Strategy
-- **Major/Minor/Patch increments**: Reset build number to `001`
-- **Build increments**: Increment build number (001 → 002 → 003...)
-- Build numbers use 3-digit zero-padded format
+**Use Cases:**
+- **Hotfixes**: Critical bugs affecting user functionality
+- **Security Updates**: Vulnerabilities requiring immediate patching
+- **Emergency Patches**: System failures, data corruption, or service outages
+- **Critical Stability Fixes**: Crashes, memory leaks, or performance degradation
 
-## Version Progression Examples
+**Examples:**
+- Database connection timeout causing login failures
+- Authentication bypass vulnerability
+- Application crash on startup
+- Memory leak causing system instability
+- API endpoint returning 500 errors
 
-```
-Current: v3.0.3+202506031900 (old format)
-↓
-v3.1.1+001 (new format - minor update, no GitHub release)
-↓
-v3.1.1+002 (build increment, no GitHub release)
-↓
-v3.1.2+001 (patch increment, no GitHub release)
-↓
-v3.2.0+001 (minor increment, no GitHub release)
-↓
-v4.0.0+001 (major increment, CREATE GitHub release)
-```
+**Deployment Characteristics:**
+- **Urgency**: High - Deploy immediately
+- **Testing**: Minimal testing, focus on fix verification
+- **Approval**: Fast-track approval process
+- **Rollback Plan**: Required before deployment
 
-## Implementation
+### 🔧 MINOR Releases (0.X.0+YYYYMMDDHHMM)
 
-### Version Manager Script
+**Purpose:** Planned feature additions and improvements
 
-Use `scripts/version_manager.sh` for all version operations:
+**Use Cases:**
+- **Feature Additions**: New functionality and capabilities
+- **Quality of Life Improvements**: User experience enhancements
+- **UI Enhancements**: Interface improvements and visual updates
+- **API Expansions**: New endpoints or enhanced existing functionality
+- **Performance Optimizations**: Non-critical performance improvements
+
+**Examples:**
+- New tunnel connection management features
+- Enhanced system tray functionality
+- Improved settings interface
+- Additional model download options
+- Better error messaging and user guidance
+
+**Deployment Characteristics:**
+- **Urgency**: Medium - Deploy during planned release windows
+- **Testing**: Full testing suite including integration tests
+- **Approval**: Standard approval process
+- **Documentation**: Feature documentation required
+
+### 💥 MAJOR Releases (X.0.0+YYYYMMDDHHMM)
+
+**Purpose:** Breaking changes and architectural overhauls
+
+**Use Cases:**
+- **Breaking Changes**: API changes requiring user adaptation
+- **Architectural Overhauls**: Fundamental system redesigns
+- **Platform Migrations**: Framework or technology stack changes
+- **Significant API Changes**: Non-backward-compatible modifications
+
+**Examples:**
+- Flutter framework major version upgrade
+- API v2 with breaking endpoint changes
+- Database schema migration requiring data transformation
+- Authentication system overhaul
+- Complete UI framework replacement
+
+**Deployment Characteristics:**
+- **Urgency**: Low - Planned major releases with advance notice
+- **Testing**: Comprehensive testing including migration testing
+- **Approval**: Extended approval process with stakeholder review
+- **Documentation**: Migration guides and breaking change documentation
+- **GitHub Release**: Automatically creates GitHub release
+
+## Version Management Commands
+
+### Using the Version Manager Script
 
 ```bash
-# Show current version info
+# Show current version information
 ./scripts/version_manager.sh info
 
-# Increment build number only
-./scripts/version_manager.sh increment build
+# Increment version types
+./scripts/version_manager.sh increment patch    # For urgent fixes
+./scripts/version_manager.sh increment minor    # For planned features
+./scripts/version_manager.sh increment major    # For breaking changes
+./scripts/version_manager.sh increment build    # For timestamp updates
 
-# Increment patch version (resets build to 001)
-./scripts/version_manager.sh increment patch
-
-# Increment minor version (resets build to 001)
-./scripts/version_manager.sh increment minor
-
-# Increment major version (resets build to 001, triggers GitHub release)
-./scripts/version_manager.sh increment major
+# Prepare versions for build-time injection
+./scripts/version_manager.sh prepare patch      # Prepare with placeholder
+./scripts/version_manager.sh prepare minor      # Build-time timestamp injection
 ```
 
-### Smart Deployment Script
+### Decision Matrix
 
-Use `scripts/deploy/smart_deploy.sh` for automated deployments:
+| Change Type | Version Increment | Deployment Urgency | Testing Level | Example |
+|-------------|-------------------|-------------------|---------------|---------|
+| Critical Bug Fix | PATCH | Immediate | Minimal | Login failure fix |
+| Security Vulnerability | PATCH | Immediate | Security-focused | Auth bypass patch |
+| New Feature | MINOR | Planned | Full | Tunnel management UI |
+| UI Enhancement | MINOR | Planned | Full | Settings redesign |
+| Breaking API Change | MAJOR | Planned | Comprehensive | API v2 migration |
+| Framework Upgrade | MAJOR | Planned | Comprehensive | Flutter 4.0 |
+
+## Deployment Workflow Integration
+
+### 6-Phase Deployment Considerations
+
+**PATCH Releases:**
+- **Phase 1-3**: Expedited execution
+- **Phase 4**: Minimal distribution testing
+- **Phase 5**: Immediate VPS deployment
+- **Phase 6**: Fast-track verification
+
+**MINOR Releases:**
+- **Phase 1-3**: Standard execution
+- **Phase 4**: Full distribution testing
+- **Phase 5**: Scheduled VPS deployment
+- **Phase 6**: Complete verification including AUR testing
+
+**MAJOR Releases:**
+- **Phase 1-3**: Extended testing and validation
+- **Phase 4**: Comprehensive distribution testing
+- **Phase 5**: Coordinated VPS deployment with rollback plan
+- **Phase 6**: Extended verification and monitoring
+
+## GitHub Release Strategy
+
+### Automatic GitHub Releases
+
+**MAJOR versions only** (X.0.0) automatically trigger GitHub release creation:
 
 ```bash
-# Build increment (no GitHub release)
-./scripts/deploy/smart_deploy.sh build
-
-# Patch release (no GitHub release)
-./scripts/deploy/smart_deploy.sh patch
-
-# Minor release (no GitHub release)
-./scripts/deploy/smart_deploy.sh minor
-
-# Major release (creates GitHub release)
-./scripts/deploy/smart_deploy.sh major
+# Major version increment automatically suggests GitHub release
+./scripts/version_manager.sh increment major
+# Output: "This is a MAJOR version update - GitHub release should be created!"
+# Output: "Run: git tag v3.0.0 && git push origin v3.0.0"
 ```
 
-## Distribution Strategy
-
-### Major Versions (x.0.0)
-- **GitHub Releases**: Full release with binary assets
-- **AUR Package**: Updated with GitHub release URLs
-- **VPS Deployment**: Updated with new version
-- **Documentation**: Full release notes and announcements
-
-### Minor/Patch Versions (x.y.z)
-- **GitHub Releases**: None created
-- **AUR Package**: Updated with alternative distribution method
-- **VPS Deployment**: Updated with new version
-- **Documentation**: Changelog updates only
-
-### Build Increments (x.y.z+nnn)
-- **GitHub Releases**: None created
-- **AUR Package**: Updated build number only
-- **VPS Deployment**: Updated with new build
-- **Documentation**: Internal tracking only
-
-## File Updates
-
-### Automatic Updates
-- `pubspec.yaml` - Version field updated automatically
-- `assets/version.json` - Version and build number updated
-- `lib/config/app_config.dart` - App version constant updated (if exists)
-
-### Manual Updates Required
-- `aur-package/PKGBUILD` - Package version and source URLs
-- `aur-package/.SRCINFO` - Generated from PKGBUILD
-- Release documentation and changelogs
-
-## AUR Package Handling
-
-### Major Versions
-- Source URLs point to GitHub Releases
-- Full binary assets available
-- Standard AUR package update process
-
-### Minor/Patch Versions
-- Alternative distribution methods used
-- May use previous major version binaries temporarily
-- Special handling in PKGBUILD for version mapping
-
-### Build Increments
-- Version number updated in PKGBUILD
-- Same source binaries as base version
-- Minimal AUR repository changes
-
-## Benefits
-
-### Reduced GitHub Release Clutter
-- Only major versions create releases
-- Cleaner release history for users
-- Focus on significant updates
-
-### Detailed Version Tracking
-- Build numbers provide granular tracking
-- Easy identification of incremental changes
-- Better debugging and support capabilities
-
-### Flexible Distribution
-- Major versions: Full GitHub release process
-- Minor versions: Streamlined distribution
-- Build increments: Minimal overhead
-
-### Development Efficiency
-- Automated version management
-- Clear release criteria
-- Reduced manual release overhead
-
-## Migration from Old Format
-
-### Old Format
-- `3.0.3+202506031900` (timestamp-based build numbers)
-- GitHub releases for all versions
-- Manual version management
-
-### New Format
-- `3.1.1+001` (sequential build numbers)
-- GitHub releases only for major versions
-- Automated version management with smart deployment
-
-### Transition Process
-1. Update to new format: `3.1.1+001`
-2. Implement new version manager features
-3. Deploy smart deployment script
-4. Update AUR package handling
-5. Document new process for team
+**MINOR and PATCH versions** do not create GitHub releases to avoid release noise.
 
 ## Best Practices
 
-### For Developers
-- Use version manager script for all version changes
-- Test smart deployment script in development
-- Follow semantic versioning principles
-- Document changes appropriately for version type
+### Version Selection Guidelines
 
-### For Releases
-- Major versions: Full testing and documentation
-- Minor versions: Feature testing and changelog
-- Patch versions: Bug fix verification
-- Build increments: Basic functionality testing
+1. **Ask: "Is this change breaking existing functionality?"**
+   - Yes → MAJOR release
+   - No → Continue to next question
 
-### For AUR Maintenance
-- Update PKGBUILD for each version change
-- Test package builds locally before submission
-- Maintain alternative distribution for non-major versions
-- Keep AUR repository synchronized with deployments
+2. **Ask: "Is this an urgent fix that can't wait?"**
+   - Yes → PATCH release
+   - No → Continue to next question
 
-## Troubleshooting
+3. **Ask: "Does this add new functionality or features?"**
+   - Yes → MINOR release
+   - No → BUILD update
 
-### Version Manager Issues
-- Check `pubspec.yaml` format
-- Verify script permissions
-- Validate version format with `validate` command
+### Common Mistakes to Avoid
 
-### Deployment Issues
-- Ensure all scripts are executable
-- Check VPS connectivity
-- Verify AUR package build process
+❌ **Using PATCH for planned features**
+- Patch releases should be reserved for urgent fixes only
 
-### AUR Package Issues
-- Test local package builds
-- Verify source URL accessibility
-- Check checksum accuracy for new versions
+❌ **Using MINOR for breaking changes**
+- Breaking changes always require MAJOR version increment
 
-This versioning strategy provides a balance between detailed tracking and release management efficiency, supporting CloudToLocalLLM's development and distribution needs.
+❌ **Creating GitHub releases for every version**
+- Only MAJOR versions warrant GitHub releases
+
+❌ **Inconsistent versioning across team**
+- Use the version manager script to ensure consistency
+
+### Emergency Hotfix Process
+
+1. **Identify Critical Issue**: Confirm issue requires immediate fix
+2. **Create Hotfix Branch**: `git checkout -b hotfix/critical-auth-fix`
+3. **Implement Fix**: Minimal code changes to address issue
+4. **Version Increment**: `./scripts/version_manager.sh increment patch`
+5. **Fast-Track Testing**: Focus on fix verification only
+6. **Deploy Immediately**: Use expedited 6-phase deployment
+7. **Monitor Closely**: Enhanced monitoring post-deployment
+
+## Version History Examples
+
+```
+3.6.0+202506180800  ← MINOR: New tunnel management features
+3.5.15+202506171200 ← PATCH: Critical authentication fix
+3.5.14+202506170900 ← MINOR: UI enhancements and settings improvements
+3.5.13+202506160800 ← PATCH: Database connection timeout fix
+4.0.0+202506150900  ← MAJOR: Flutter 4.0 migration (GitHub release)
+```
+
+## Integration with 6-Phase Deployment
+
+### Version-Specific Deployment Adjustments
+
+**PATCH Releases (Urgent):**
+- **Phase 1**: Expedited pre-flight validation
+- **Phase 2**: Fast-track version synchronization
+- **Phase 3**: Minimal build testing (focus on fix verification)
+- **Phase 4**: Streamlined distribution with essential testing only
+- **Phase 5**: Immediate VPS deployment with enhanced monitoring
+- **Phase 6**: Fast-track operational readiness with critical path verification
+
+**MINOR Releases (Planned):**
+- **Phase 1**: Standard pre-flight validation
+- **Phase 2**: Complete version synchronization
+- **Phase 3**: Full multi-platform build testing
+- **Phase 4**: Comprehensive distribution testing including AUR
+- **Phase 5**: Scheduled VPS deployment during maintenance window
+- **Phase 6**: Complete operational readiness including mandatory AUR verification
+
+**MAJOR Releases (Breaking):**
+- **Phase 1**: Extended pre-flight validation with migration testing
+- **Phase 2**: Comprehensive version synchronization with documentation updates
+- **Phase 3**: Extensive multi-platform build testing with compatibility verification
+- **Phase 4**: Full distribution testing with rollback preparation
+- **Phase 5**: Coordinated VPS deployment with staged rollout
+- **Phase 6**: Extended operational readiness with comprehensive monitoring
+
+This versioning strategy ensures that deployment urgency aligns with the type of changes being released, enabling appropriate testing and approval processes for each release type.
