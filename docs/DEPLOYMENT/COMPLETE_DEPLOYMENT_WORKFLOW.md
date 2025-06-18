@@ -916,14 +916,16 @@ flutter build web --release --no-tree-shake-icons
 
 #### **AUR Commands**
 ```bash
-# Test package
+# Test package (local testing only - does NOT validate real AUR experience)
 cd aur-package && makepkg -si --noconfirm
 
-# Generate .SRCINFO
-makepkg --printsrcinfo > .SRCINFO
+# Submit to AUR (USE AUTOMATION SCRIPT - NOT MANUAL GIT COMMANDS)
+./scripts/deploy/submit_aur_package.sh --force --verbose
 
-# Submit to AUR
-git add PKGBUILD .SRCINFO && git commit -m "Update to v$(./scripts/version_manager.sh get-semantic)" && git push origin master
+# MANDATORY: Test real AUR installation (deployment gate)
+yay -Sc --noconfirm  # Clear cache if needed
+yay -S cloudtolocalllm --noconfirm
+cloudtolocalllm --version  # Verify correct version
 ```
 
 #### **VPS Commands**
@@ -933,6 +935,56 @@ ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull origin 
 
 # Check VPS status
 curl -s https://app.cloudtolocalllm.online/version.json | jq '.version'
+```
+
+---
+
+## 🔧 **Troubleshooting Common Issues**
+
+### **AUR Installation Failures**
+
+#### Problem: `yay -S cloudtolocalllm` fails with 404 errors
+```bash
+# Solution: Clear yay cache and force fresh download
+yay -Sc --noconfirm
+rm -rf ~/.cache/yay/cloudtolocalllm
+yay -S cloudtolocalllm --noconfirm
+```
+
+#### Problem: SHA256 checksum mismatch
+```bash
+# Check if GitHub raw URLs are accessible
+curl -I https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-X.X.X-x86_64.tar.gz
+
+# Verify checksums match between dist/ and AUR PKGBUILD
+cat dist/cloudtolocalllm-X.X.X-x86_64.tar.gz.sha256
+grep sha256sums aur-package/PKGBUILD
+```
+
+#### Problem: Package extraction fails
+```bash
+# Check archive structure
+tar -tzf dist/cloudtolocalllm-X.X.X-x86_64.tar.gz | head -10
+# Should show: cloudtolocalllm-X.X.X-x86_64/ directory structure
+```
+
+### **Script Failures**
+
+#### Problem: `create_aur_binary_package.sh` fails with "File not found"
+**Solution**: Binary file management is permanently disabled in v3.5.14+. If you see this error, ensure you're using the updated script.
+
+#### Problem: Manual operations temptation
+**Solution**: Always fix the automation script instead of bypassing it. Follow script-first resolution principle.
+
+### **Version Verification Issues**
+
+#### Problem: Application reports wrong version after installation
+```bash
+# Check package info
+pacman -Qi cloudtolocalllm
+
+# Verify application logs show correct version
+cloudtolocalllm --version 2>&1 | grep "VersionService"
 ```
 
 ---
@@ -1039,12 +1091,16 @@ echo "✅ Quick update completed!"
 set -e
 
 echo "📦 AUR Package Update"
-cd aur-package
-makepkg --printsrcinfo > .SRCINFO
-git add PKGBUILD .SRCINFO
-git commit -m "Update AUR package to $(./scripts/version_manager.sh get-semantic)"
-git push origin master
-echo "✅ AUR package updated!"
+# USE AUTOMATION SCRIPT - NOT MANUAL GIT COMMANDS
+./scripts/deploy/submit_aur_package.sh --force --verbose
+
+# MANDATORY: Test real AUR installation
+echo "🧪 Testing real AUR installation..."
+yay -Sc --noconfirm  # Clear cache
+yay -S cloudtolocalllm --noconfirm
+cloudtolocalllm --version  # Verify version
+yay -R cloudtolocalllm --noconfirm  # Clean up
+echo "✅ AUR package updated and verified!"
 ```
 
 #### **VPS-Only Deployment**

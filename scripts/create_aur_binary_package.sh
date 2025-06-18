@@ -54,9 +54,12 @@ check_prerequisites() {
     fi
 
     # Check if daemon is built (optional for unified architecture)
+    # CloudToLocalLLM v3.5.14+ uses unified architecture with integrated system tray
+    # Separate tray daemon is optional and not required for package functionality
     if [ ! -f "$DAEMON_EXECUTABLE" ]; then
         print_warning "Tray daemon not found: $DAEMON_EXECUTABLE"
         print_warning "Creating package without separate tray daemon (unified architecture)"
+        print_status "Unified architecture: System tray integrated into main application"
         DAEMON_EXECUTABLE=""
     fi
 
@@ -247,7 +250,11 @@ display_package_info() {
     
     echo -e "${GREEN}Contents:${NC}"
     echo "  ✅ Flutter application (cloudtolocalllm)"
-    echo "  ✅ System tray daemon (cloudtolocalllm-tray)"
+    if [ -n "$DAEMON_EXECUTABLE" ] && [ -f "$DAEMON_EXECUTABLE" ]; then
+        echo "  ✅ System tray daemon (cloudtolocalllm-tray)"
+    else
+        echo "  ✅ Unified architecture (integrated system tray)"
+    fi
     echo "  ✅ Application data and libraries"
     echo "  ✅ Flutter assets and fonts"
     echo ""
@@ -265,8 +272,11 @@ display_package_info() {
 manage_binary_files() {
     print_status "Managing binary files for GitHub compatibility..."
 
-    # Skip binary file management during package creation to avoid conflicts
-    print_status "Skipping binary file management during package creation"
+    # PERMANENTLY DISABLED: Binary file management causes "File not found" errors
+    # during package creation and is not needed for AUR distribution packages.
+    # AUR packages use GitHub raw URLs, not local binary file splitting.
+    print_status "Binary file management disabled for AUR package creation"
+    print_status "AUR packages use GitHub raw URL distribution - no file splitting needed"
 }
 
 # Main execution
@@ -286,7 +296,8 @@ main() {
 
     # Final binary file management after package creation
     print_status "Final binary file management..."
-    print_status "Skipping final binary file management - package creation complete"
+    print_status "Binary file management permanently disabled for AUR packages"
+    print_status "AUR distribution uses GitHub raw URLs - no post-processing needed"
 }
 
 # Run main function

@@ -103,6 +103,22 @@ Phase 6: Operational Readiness
 ./scripts/deploy/submit_aur_package.sh --force --verbose
 ```
 
+### MANDATORY AUR Installation Verification (v3.5.14+)
+```bash
+# Clear cache if testing updated packages
+yay -Sc --noconfirm
+rm -rf ~/.cache/yay/cloudtolocalllm
+
+# Test real AUR installation (DEPLOYMENT GATE)
+yay -S cloudtolocalllm --noconfirm
+
+# Verify correct version in application logs
+cloudtolocalllm --version
+
+# Clean up
+yay -R cloudtolocalllm --noconfirm
+```
+
 ## Error Handling
 
 ### AUR Submission Failures
@@ -168,6 +184,44 @@ Phase 6: Operational Readiness
 - ⚠️ "AUR package submission failed - continuing with deployment"
 - ⚠️ "Manual AUR submission may be required"
 - ❌ Exit codes 1-3 from submit_aur_package.sh
+
+## Lessons Learned from v3.5.14 Deployment
+
+### Critical Issues Identified and Fixed
+
+#### 1. Binary File Management Conflicts
+**Problem**: `scripts/create_aur_binary_package.sh` failed with "File not found" errors due to problematic binary file management during package creation.
+
+**Solution**: Permanently disabled binary file management for AUR packages since they use GitHub raw URL distribution, not local file splitting.
+
+#### 2. Insufficient AUR Testing
+**Problem**: Local `makepkg` testing does not validate the real AUR user experience. Manual `pacman -U` testing missed GitHub distribution chain failures.
+
+**Solution**: Implemented mandatory `yay -S cloudtolocalllm` testing as a deployment gate to validate the complete chain: Git → GitHub raw URLs → AUR → User installation.
+
+#### 3. Manual AUR Submission Errors
+**Problem**: Manual git commands for AUR submission were error-prone and inconsistent with script-first resolution principle.
+
+**Solution**: Enforced use of `./scripts/deploy/submit_aur_package.sh --force --verbose` for all AUR submissions.
+
+#### 4. Archive Structure Incompatibility
+**Problem**: Distribution package created flat archive structure, but AUR PKGBUILD expected `cloudtolocalllm-${pkgver}-x86_64/` subdirectory.
+
+**Solution**: Fixed package creation script to generate correct directory structure that AUR PKGBUILD expects.
+
+### Updated Deployment Requirements
+
+#### Mandatory Verification Steps (v3.5.14+)
+1. **Real AUR Installation Test**: `yay -S cloudtolocalllm` must succeed
+2. **Version Verification**: Application must report correct version in logs
+3. **Distribution Chain Validation**: Complete Git → GitHub → AUR → User flow
+4. **Cache Management**: Clear yay cache when testing updated packages
+
+#### Script-First Resolution Enforcement
+- **NO manual file operations** during deployment
+- **NO manual git commands** for AUR submission
+- **NO bypassing automation scripts** even when they fail
+- **FIX the scripts** instead of working around them
 
 ## Future Enhancements
 

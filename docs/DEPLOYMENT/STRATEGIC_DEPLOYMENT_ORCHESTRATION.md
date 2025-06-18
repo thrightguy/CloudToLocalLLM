@@ -299,6 +299,9 @@ flutter build web --release --no-tree-shake-icons
 
 ### **Gate Criteria** ✅
 - [ ] **Success Validation**: All deployment objectives achieved
+- [ ] **MANDATORY AUR Verification**: Real-world `yay -S cloudtolocalllm` installation test passed
+- [ ] **Live Endpoint Verification**: All web endpoints serve correct version
+- [ ] **Distribution Chain Validation**: Git → GitHub raw URLs → AUR → User installation complete
 - [ ] **Documentation**: Deployment artifacts and logs archived
 - [ ] **Monitoring**: Post-deployment monitoring active and configured
 - [ ] **Rollback Verification**: Emergency procedures tested and ready
