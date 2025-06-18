@@ -53,22 +53,11 @@ check_prerequisites() {
         exit 1
     fi
 
-    # Check if daemon is built (try both original and reassembled)
+    # Check if daemon is built (optional for unified architecture)
     if [ ! -f "$DAEMON_EXECUTABLE" ]; then
-        # Try to reassemble if parts exist
-        if ls "$PROJECT_ROOT/dist/tray_daemon/linux-x64/cloudtolocalllm-enhanced-tray.gz.part"* >/dev/null 2>&1; then
-            print_status "Reassembling tray daemon from split parts..."
-            cd "$PROJECT_ROOT/dist/tray_daemon/linux-x64"
-            cat cloudtolocalllm-enhanced-tray.gz.part* > cloudtolocalllm-enhanced-tray.gz
-            gunzip cloudtolocalllm-enhanced-tray.gz
-            chmod +x cloudtolocalllm-enhanced-tray
-            ln -sf cloudtolocalllm-enhanced-tray cloudtolocalllm-tray
-            cd "$PROJECT_ROOT"
-        else
-            print_error "Tray daemon not found: $DAEMON_EXECUTABLE"
-            print_error "Please run: ./scripts/build/build_tray_daemon.sh"
-            exit 1
-        fi
+        print_warning "Tray daemon not found: $DAEMON_EXECUTABLE"
+        print_warning "Creating package without separate tray daemon (unified architecture)"
+        DAEMON_EXECUTABLE=""
     fi
 
     print_status "Prerequisites check passed"
@@ -107,21 +96,25 @@ copy_flutter_app() {
 
 # Copy tray daemon
 copy_tray_daemon() {
-    print_status "Copying tray daemon..."
-    
-    # Copy daemon executable
-    cp "$DAEMON_EXECUTABLE" "$PACKAGE_DIR/cloudtolocalllm-tray"
-    
-    # Make executable
-    chmod +x "$PACKAGE_DIR/cloudtolocalllm-tray"
-    
-    # Verify daemon
-    if [ ! -f "$PACKAGE_DIR/cloudtolocalllm-tray" ]; then
-        print_error "Failed to copy tray daemon"
-        exit 1
+    if [ -n "$DAEMON_EXECUTABLE" ] && [ -f "$DAEMON_EXECUTABLE" ]; then
+        print_status "Copying tray daemon..."
+
+        # Copy daemon executable
+        cp "$DAEMON_EXECUTABLE" "$PACKAGE_DIR/cloudtolocalllm-tray"
+
+        # Make executable
+        chmod +x "$PACKAGE_DIR/cloudtolocalllm-tray"
+
+        # Verify daemon
+        if [ ! -f "$PACKAGE_DIR/cloudtolocalllm-tray" ]; then
+            print_error "Failed to copy tray daemon"
+            exit 1
+        fi
+
+        print_status "Tray daemon copied successfully"
+    else
+        print_status "Skipping tray daemon copy (unified architecture)"
     fi
-    
-    print_status "Tray daemon copied successfully"
 }
 
 # Create package archive
@@ -184,10 +177,14 @@ test_package() {
     # Check required files
     local required_files=(
         "cloudtolocalllm"
-        "cloudtolocalllm-tray"
         "data/flutter_assets/AssetManifest.json"
         "lib/libapp.so"
     )
+
+    # Add tray daemon to required files if it exists
+    if [ -n "$DAEMON_EXECUTABLE" ] && [ -f "$DAEMON_EXECUTABLE" ]; then
+        required_files+=("cloudtolocalllm-tray")
+    fi
     
     local missing_files=0
     for file in "${required_files[@]}"; do
@@ -212,11 +209,15 @@ test_package() {
         exit 1
     fi
     
-    if [ -x "$test_dir/$PACKAGE_NAME/cloudtolocalllm-tray" ]; then
-        print_status "Tray daemon executable is valid"
+    if [ -f "$test_dir/$PACKAGE_NAME/cloudtolocalllm-tray" ]; then
+        if [ -x "$test_dir/$PACKAGE_NAME/cloudtolocalllm-tray" ]; then
+            print_status "Tray daemon executable is valid"
+        else
+            print_error "Tray daemon is not executable"
+            exit 1
+        fi
     else
-        print_error "Tray daemon is not executable"
-        exit 1
+        print_status "Tray daemon not included (unified architecture)"
     fi
     
     # Clean up test directory
@@ -264,16 +265,8 @@ display_package_info() {
 manage_binary_files() {
     print_status "Managing binary files for GitHub compatibility..."
 
-    # Run binary file management to ensure files are properly split
-    if [ -f "$PROJECT_ROOT/scripts/manage_binary_files.sh" ]; then
-        if ! "$PROJECT_ROOT/scripts/manage_binary_files.sh" auto; then
-            print_error "Failed to manage binary files"
-            exit 1
-        fi
-        print_status "Binary files managed successfully"
-    else
-        print_warning "Binary management script not found, skipping file splitting"
-    fi
+    # Skip binary file management during package creation to avoid conflicts
+    print_status "Skipping binary file management during package creation"
 }
 
 # Main execution
@@ -293,10 +286,7 @@ main() {
 
     # Final binary file management after package creation
     print_status "Final binary file management..."
-    if [ -f "$PROJECT_ROOT/scripts/manage_binary_files.sh" ]; then
-        "$PROJECT_ROOT/scripts/manage_binary_files.sh" auto --force
-        print_status "All binary files are GitHub-ready"
-    fi
+    print_status "Skipping final binary file management - package creation complete"
 }
 
 # Run main function
