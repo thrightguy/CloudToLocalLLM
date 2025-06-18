@@ -6,6 +6,13 @@ This is the **ONE AND ONLY** deployment document for CloudToLocalLLM. Follow thi
 
 **📊 Estimated Total Time: 45-90 minutes** (First-time: 90 min, Updates: 45 min)
 
+**📖 Related Documentation:**
+- **Visual Workflow Diagrams**: [`DEPLOYMENT_WORKFLOW_DIAGRAM.md`](./DEPLOYMENT_WORKFLOW_DIAGRAM.md)
+- **Versioning Strategy**: [`VERSIONING_STRATEGY.md`](./VERSIONING_STRATEGY.md)
+- **Script-First Resolution**: [`SCRIPT_FIRST_RESOLUTION_GUIDE.md`](./SCRIPT_FIRST_RESOLUTION_GUIDE.md)
+- **AUR Integration Details**: [`AUR_INTEGRATION_CHANGES.md`](./AUR_INTEGRATION_CHANGES.md)
+- **Build-Time Injection**: [`SIX_PHASE_BUILD_TIME_INJECTION_INTEGRATION.md`](./SIX_PHASE_BUILD_TIME_INJECTION_INTEGRATION.md)
+
 ## 🏗️ **ARCHITECTURE UPDATE (v3.4.0+)**
 
 **Unified Flutter Web Architecture**: CloudToLocalLLM now uses a single Flutter application for both marketing and application functionality:
@@ -305,6 +312,8 @@ sftp imrightguy@frs.sourceforge.net
 ```
 
 **⚠️ CHECKPOINT:** Verify both Linux and web builds completed successfully!
+
+**📖 For build-time timestamp injection integration, see:** [`docs/DEPLOYMENT/SIX_PHASE_BUILD_TIME_INJECTION_INTEGRATION.md`](./SIX_PHASE_BUILD_TIME_INJECTION_INTEGRATION.md)
 
 ### **Phase 3: AUR Package Deployment** (⏱️ 15-20 minutes)
 
@@ -935,6 +944,9 @@ yay -S cloudtolocalllm --noconfirm
 cloudtolocalllm --version  # Verify correct version
 ```
 
+**📖 For detailed AUR integration guidance, see:** [`docs/DEPLOYMENT/AUR_INTEGRATION_CHANGES.md`](./AUR_INTEGRATION_CHANGES.md)
+**📖 For script-first resolution principles, see:** [`docs/DEPLOYMENT/SCRIPT_FIRST_RESOLUTION_GUIDE.md`](./SCRIPT_FIRST_RESOLUTION_GUIDE.md)
+
 #### **VPS Commands**
 ```bash
 # Deploy to VPS
@@ -958,6 +970,8 @@ Before starting deployment, determine the appropriate version increment:
 | Is this an urgent fix that can't wait? | Yes | **PATCH** | Security vulnerability, crash fix |
 | Does this add new features/functionality? | Yes | **MINOR** | New UI features, tunnel enhancements |
 | Is this just a build/timestamp update? | Yes | **BUILD** | CI/CD builds, testing iterations |
+
+**📖 For detailed versioning strategy, see:** [`docs/DEPLOYMENT/VERSIONING_STRATEGY.md`](./VERSIONING_STRATEGY.md)
 
 ### **Deployment Urgency by Version Type**
 
