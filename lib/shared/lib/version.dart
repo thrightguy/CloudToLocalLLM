@@ -8,22 +8,22 @@ import 'package:package_info_plus/package_info_plus.dart';
 /// Version constants for all CloudToLocalLLM components
 class CloudToLocalLLMVersions {
   // Main application version
-  static const String mainAppVersion = '3.5.13';
-  static const int mainAppBuildNumber = 202506171720;
+  static const String mainAppVersion = '3.5.14';
+  static const int mainAppBuildNumber = 202506172035;
 
   // Tunnel manager version (integrated in v3.5.0+)
-  static const String tunnelManagerVersion = '3.5.13';
-  static const int tunnelManagerBuildNumber = 202506171720;
+  static const String tunnelManagerVersion = '3.5.14';
+  static const int tunnelManagerBuildNumber = 202506172035;
 
   // Shared library version
-  static const String sharedLibraryVersion = '3.5.13';
-  static const int sharedLibraryBuildNumber = 202506171720;
+  static const String sharedLibraryVersion = '3.5.14';
+  static const int sharedLibraryBuildNumber = 202506172035;
 
   // Tray daemon version (deprecated - now integrated)
   static const String trayDaemonVersion = 'deprecated';
 
   // Build timestamp (updated during build process)
-  static const String buildTimestamp = '2025-06-17T22:25:14Z';
+  static const String buildTimestamp = '2025-06-18T00:35:14Z';
 
   // Git commit hash (updated during build process)
   static const String gitCommitHash = 'ecosystem-update';
