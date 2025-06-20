@@ -1,0 +1,25 @@
+﻿CloudToLocalLLM v3.6.0
+========================
+
+Package Type: Unified Windows Package
+Architecture: x64
+Build Date: 2025-06-19 20:03:11
+
+Contents:
+- Flutter Windows application (cloudtolocalllm.exe)
+- Integrated system tray functionality
+- All required libraries and data files
+- PowerShell and Batch wrapper scripts
+
+Installation:
+1. Extract package to desired location
+2. Run cloudtolocalllm.exe directly or use wrapper scripts
+3. Optionally add to PATH for command-line access
+
+Security Features:
+- Native Windows application
+- Secure authentication flow
+- Local data storage
+
+For more information, visit:
+https://github.com/imrightguy/CloudToLocalLLM

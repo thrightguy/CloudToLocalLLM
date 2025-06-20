@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # CloudToLocalLLM Unified Flutter Web Architecture Deployment Script
 # Version: 3.4.0+ - Complete unified architecture deployment
@@ -73,13 +73,13 @@ EXAMPLES:
     $0 --dry-run        # Simulate deployment
 
 DEPLOYMENT FEATURES:
-    ✅ Unified Flutter web architecture
-    ✅ Single container for all web content
-    ✅ Static-site container elimination
-    ✅ Marketing pages in Flutter
-    ✅ Documentation in Flutter
-    ✅ Platform-specific routing (kIsWeb)
-    ✅ Zero external container dependencies
+    âœ… Unified Flutter web architecture
+    âœ… Single container for all web content
+    âœ… Static-site container elimination
+    âœ… Marketing pages in Flutter
+    âœ… Documentation in Flutter
+    âœ… Platform-specific routing (kIsWeb)
+    âœ… Zero external container dependencies
 
 EOF
 }
@@ -138,7 +138,7 @@ validate_environment() {
             log_error "Required tool not found: $tool"
             exit 1
         fi
-        log_verbose "✓ Tool available: $tool"
+        log_verbose "âœ“ Tool available: $tool"
     done
     
     # Check unified architecture files
@@ -153,7 +153,7 @@ validate_environment() {
             log_error "Required unified architecture file not found: $file"
             exit 1
         fi
-        log_verbose "✓ Unified architecture file: $file"
+        log_verbose "âœ“ Unified architecture file: $file"
     done
     
     # Check for static-site container removal
@@ -247,23 +247,23 @@ deploy_vps() {
         set -e
         cd /opt/cloudtolocalllm
         
-        echo "🔄 Pulling latest changes..."
+        echo "ðŸ”„ Pulling latest changes..."
         git pull origin master
         
-        echo "🏗️ Building Flutter web application..."
+        echo "ðŸ—ï¸ Building Flutter web application..."
         flutter clean
         flutter pub get
         flutter build web --release --no-tree-shake-icons
         
-        echo "🐳 Restarting Docker containers..."
+        echo "ðŸ³ Restarting Docker containers..."
         docker-compose -f docker-compose.multi.yml down --timeout 30
         docker-compose -f docker-compose.multi.yml build --no-cache
         docker-compose -f docker-compose.multi.yml up -d
         
-        echo "⏳ Waiting for containers to be ready..."
+        echo "â³ Waiting for containers to be ready..."
         sleep 15
         
-        echo "✅ VPS deployment completed"
+        echo "âœ… VPS deployment completed"
 EOF
     
     # Verify VPS deployment
@@ -336,37 +336,37 @@ verify_vps_deployment() {
 # Show deployment summary
 show_summary() {
     echo ""
-    echo -e "${GREEN}🎉 CloudToLocalLLM Unified Flutter Web Architecture Deployed!${NC}"
+    echo -e "${GREEN}ðŸŽ‰ CloudToLocalLLM Unified Flutter Web Architecture Deployed!${NC}"
     echo -e "${GREEN}============================================================${NC}"
     echo ""
-    echo -e "${BLUE}📋 Deployment Summary:${NC}"
-    echo "  ✅ Architecture: Unified Flutter Web"
-    echo "  ✅ Static-site container: Eliminated"
-    echo "  ✅ Marketing pages: Flutter-native"
-    echo "  ✅ Documentation: Flutter-native"
-    echo "  ✅ Platform detection: kIsWeb routing"
+    echo -e "${BLUE}ðŸ“‹ Deployment Summary:${NC}"
+    echo "  âœ… Architecture: Unified Flutter Web"
+    echo "  âœ… Static-site container: Eliminated"
+    echo "  âœ… Marketing pages: Flutter-native"
+    echo "  âœ… Documentation: Flutter-native"
+    echo "  âœ… Platform detection: kIsWeb routing"
     echo ""
     
     if [[ "$LOCAL_DEPLOY" == "true" ]]; then
-        echo -e "${BLUE}📋 Local Endpoints:${NC}"
-        echo "  • Flutter App: http://localhost (via Docker)"
-        echo "  • Container Status: docker-compose -f $COMPOSE_FILE ps"
-        echo "  • Logs: docker-compose -f $COMPOSE_FILE logs -f"
+        echo -e "${BLUE}ðŸ“‹ Local Endpoints:${NC}"
+        echo "  â€¢ Flutter App: http://localhost (via Docker)"
+        echo "  â€¢ Container Status: docker-compose -f $COMPOSE_FILE ps"
+        echo "  â€¢ Logs: docker-compose -f $COMPOSE_FILE logs -f"
     else
-        echo -e "${BLUE}📋 Production Endpoints:${NC}"
-        echo "  • Homepage: https://$VPS_HOST (Flutter marketing)"
-        echo "  • Web App: https://app.$VPS_HOST (Flutter chat)"
-        echo "  • Documentation: https://docs.$VPS_HOST (Flutter docs)"
-        echo "  • API Health: https://app.$VPS_HOST/api/health"
+        echo -e "${BLUE}ðŸ“‹ Production Endpoints:${NC}"
+        echo "  â€¢ Homepage: https://$VPS_HOST (Flutter marketing)"
+        echo "  â€¢ Web App: https://app.$VPS_HOST (Flutter chat)"
+        echo "  â€¢ Documentation: https://docs.$VPS_HOST (Flutter docs)"
+        echo "  â€¢ API Health: https://app.$VPS_HOST/api/health"
     fi
     
     echo ""
-    echo -e "${BLUE}📋 Architecture Benefits:${NC}"
-    echo "  • Single Flutter application for all web content"
-    echo "  • Consistent Material Design 3 theming"
-    echo "  • Simplified deployment and maintenance"
-    echo "  • Reduced infrastructure complexity"
-    echo "  • Zero external container dependencies"
+    echo -e "${BLUE}ðŸ“‹ Architecture Benefits:${NC}"
+    echo "  â€¢ Single Flutter application for all web content"
+    echo "  â€¢ Consistent Material Design 3 theming"
+    echo "  â€¢ Simplified deployment and maintenance"
+    echo "  â€¢ Reduced infrastructure complexity"
+    echo "  â€¢ Zero external container dependencies"
     echo ""
 }
 
@@ -382,9 +382,9 @@ main() {
     # Confirmation prompt (unless force or dry-run)
     if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
         if [[ "$LOCAL_DEPLOY" == "true" ]]; then
-            echo -e "${YELLOW}⚠️  About to deploy unified architecture locally${NC}"
+            echo -e "${YELLOW}âš ï¸  About to deploy unified architecture locally${NC}"
         else
-            echo -e "${YELLOW}⚠️  About to deploy unified architecture to production VPS${NC}"
+            echo -e "${YELLOW}âš ï¸  About to deploy unified architecture to production VPS${NC}"
         fi
         read -p "Continue? (y/N): " -n 1 -r
         echo

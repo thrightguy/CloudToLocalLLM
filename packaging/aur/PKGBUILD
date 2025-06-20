@@ -1,6 +1,6 @@
 # Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
 pkgname=cloudtolocalllm-desktop
-pkgver=3.0.0
+pkgver=3.6.0
 pkgrel=1
 pkgdesc="Local LLM Management with Enhanced System Tray Architecture and Universal Connection Management"
 arch=('x86_64')
