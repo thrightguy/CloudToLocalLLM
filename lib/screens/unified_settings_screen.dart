@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../components/app_header.dart';
 import '../components/modern_card.dart';
@@ -27,14 +28,16 @@ import '../services/version_service.dart';
 /// with a sidebar for settings sections and a main content area.
 /// This provides a consistent user experience across the application.
 class UnifiedSettingsScreen extends StatefulWidget {
-  const UnifiedSettingsScreen({super.key});
+  final String? initialSection;
+
+  const UnifiedSettingsScreen({super.key, this.initialSection});
 
   @override
   State<UnifiedSettingsScreen> createState() => _UnifiedSettingsScreenState();
 }
 
 class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
-  String _selectedSectionId = 'general';
+  late String _selectedSectionId;
   bool _isSidebarCollapsed = false;
   bool _hasInitializedMobileLayout = false;
 
@@ -60,6 +63,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedSectionId = widget.initialSection ?? 'general';
     _initializeSettings();
   }
 
@@ -347,6 +351,9 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
       // Add a case for 'model-download-manager'
       case 'model-download-manager':
         return _buildModelDownloadManagerSettings();
+      // Add a case for 'downloads' (web platform only)
+      case 'downloads':
+        return _buildDownloadsSettings();
       case 'about':
         return _buildAboutSettings();
       default:
@@ -585,6 +592,345 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
         );
       },
     );
+  }
+
+  // New method to build the Downloads section (web platform only)
+  Widget _buildDownloadsSettings() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.all(AppTheme.spacingM),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDownloadsHeader(),
+            SizedBox(height: AppTheme.spacingL),
+            _buildWindowsDesktopDownload(),
+            SizedBox(height: AppTheme.spacingL),
+            _buildSystemRequirements(),
+            SizedBox(height: AppTheme.spacingL),
+            _buildInstallationInstructions(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDownloadsHeader() {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.download, color: AppTheme.primaryColor, size: 24),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Desktop Client Downloads',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          Text(
+            'Download the CloudToLocalLLM desktop client to connect your local Ollama instance to this web interface.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppTheme.textColor),
+          ),
+          SizedBox(height: AppTheme.spacingS),
+          Container(
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              border: Border.all(
+                color: AppTheme.primaryColor.withValues(alpha: 0.3),
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: AppTheme.primaryColor,
+                  size: 20,
+                ),
+                SizedBox(width: AppTheme.spacingS),
+                Expanded(
+                  child: Text(
+                    'The desktop client creates a secure tunnel between your local Ollama instance and this web interface.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWindowsDesktopDownload() {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.desktop_windows,
+                color: AppTheme.secondaryColor,
+                size: 20,
+              ),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Windows Desktop Client',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.secondaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          Text(
+            'Download the Windows desktop application to connect your local Ollama instance.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: Replace with actual download URL
+                    final url =
+                        'https://cloudtolocalllm.online/dist/windows/cloudtolocalllm.exe';
+                    _launchUrl(url);
+                  },
+                  icon: const Icon(Icons.download),
+                  label: const Text('Download .exe (Portable)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.all(AppTheme.spacingM),
+                  ),
+                ),
+              ),
+              SizedBox(width: AppTheme.spacingM),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: Replace with actual installer URL
+                    final url =
+                        'https://cloudtolocalllm.online/dist/windows/cloudtolocalllm-installer.msi';
+                    _launchUrl(url);
+                  },
+                  icon: const Icon(Icons.install_desktop),
+                  label: const Text('Download Installer (.msi)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.secondaryColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.all(AppTheme.spacingM),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingS),
+          Text(
+            'Choose portable .exe for no installation required, or .msi installer for system integration.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSystemRequirements() {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.computer, color: Colors.orange, size: 20),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'System Requirements',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          Container(
+            padding: EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Minimum Requirements:',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: AppTheme.spacingS),
+                ...[
+                  'OS: Windows 10 or later (64-bit)',
+                  'Memory: 512MB RAM minimum, 1GB recommended',
+                  'Storage: 200MB available space',
+                  'Network: Internet connection for cloud proxy',
+                ].map(
+                  (req) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• $req',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: AppTheme.spacingM),
+                Text(
+                  'For Local Ollama:',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: AppTheme.spacingS),
+                ...[
+                  'Ollama installed and running on localhost:11434',
+                  'At least one Ollama model downloaded',
+                  'Firewall configured to allow local connections',
+                ].map(
+                  (req) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• $req',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstallationInstructions() {
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.help_outline, color: Colors.blue, size: 20),
+              SizedBox(width: AppTheme.spacingS),
+              Text(
+                'Installation Instructions',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          _buildInstructionStep(
+            '1. Download the Desktop Client',
+            'Choose either the portable .exe or the .msi installer from the download section above.',
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          _buildInstructionStep(
+            '2. Install Ollama (if not already installed)',
+            'Download and install Ollama from ollama.ai, then download at least one model (e.g., "ollama pull llama2").',
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          _buildInstructionStep(
+            '3. Run CloudToLocalLLM Desktop Client',
+            'Launch the desktop application. It will automatically detect your local Ollama instance and create a secure tunnel.',
+          ),
+          SizedBox(height: AppTheme.spacingM),
+          _buildInstructionStep(
+            '4. Connect from Web Interface',
+            'Return to this web interface and authenticate. The desktop client will appear as connected, allowing you to chat with your local models.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionStep(String title, String description) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppTheme.primaryColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: AppTheme.spacingXS),
+        Text(
+          description,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to launch URLs
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not launch $url'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error launching URL: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildServiceErrorCard(String errorMessage) {

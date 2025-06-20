@@ -1,30 +1,67 @@
-// This is a basic Flutter widget test.
+// CloudToLocalLLM Widget Tests
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic widget tests for the CloudToLocalLLM application.
+// Tests the main app initialization and basic functionality.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cloudtolocalllm/main.dart';
+import 'test_config.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  setUpAll(() {
+    // Initialize test configuration with mocks
+    TestConfig.initialize();
+  });
+
+  tearDownAll(() {
+    // Clean up test configuration
+    TestConfig.cleanup();
+  });
+
+  testWidgets('CloudToLocalLLM app initialization test', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const CloudToLocalLLMApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Wait for a reasonable amount of time for initialization
+    await tester.pump(const Duration(seconds: 1));
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Verify that the app loads without crashing
+    expect(find.byType(MaterialApp), findsWidgets);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Look for loading screen or main app content
+    final loadingFinder = find.text('Initializing CloudToLocalLLM...');
+    final appFinder = find.byType(MaterialApp);
+
+    // Either loading screen or main app should be present
+    expect(
+      loadingFinder.evaluate().isNotEmpty || appFinder.evaluate().isNotEmpty,
+      isTrue,
+    );
+
+    // Clean up any pending timers
+    await tester.pumpAndSettle(const Duration(seconds: 5));
+  });
+
+  testWidgets('App handles plugin initialization gracefully', (
+    WidgetTester tester,
+  ) async {
+    // This test verifies that the app doesn't crash when plugins are mocked
+    await tester.pumpWidget(const CloudToLocalLLMApp());
+
+    // Pump a few frames to allow for async initialization
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Verify no exceptions were thrown and app is still running
+    expect(tester.takeException(), isNull);
+    expect(find.byType(MaterialApp), findsWidgets);
+
+    // Clean up any pending timers
+    await tester.pumpAndSettle(const Duration(seconds: 5));
   });
 }

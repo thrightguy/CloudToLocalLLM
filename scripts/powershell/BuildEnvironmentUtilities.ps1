@@ -218,14 +218,15 @@ function Test-WSLCommand {
     param(
         [Parameter(Mandatory = $true)]
         [string]$DistroName,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$CommandName
     )
-    
+
     try {
-        Invoke-WSLCommand -DistroName $DistroName -Command "which $CommandName" -PassThru 2>$null | Out-Null
-        return $LASTEXITCODE -eq 0
+        # Use a more reliable approach to test command availability
+        $result = wsl -d $DistroName -- bash -c "command -v $CommandName >/dev/null 2>&1; echo `$?"
+        return $result.Trim() -eq "0"
     }
     catch {
         return $false

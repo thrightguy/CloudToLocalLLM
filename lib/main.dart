@@ -16,6 +16,7 @@ import 'services/connection_manager_service.dart';
 import 'services/streaming_chat_service.dart';
 import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
+import 'services/desktop_client_detection_service.dart';
 import 'widgets/debug_version_overlay.dart';
 import 'widgets/window_listener_widget.dart';
 
@@ -208,6 +209,18 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
             // Initialize the tunnel manager service asynchronously
             tunnelManager.initialize();
             return tunnelManager;
+          },
+        ),
+        // Desktop client detection service (web platform only)
+        ChangeNotifierProvider(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            final clientDetection = DesktopClientDetectionService(
+              authService: authService,
+            );
+            // Initialize the client detection service asynchronously
+            clientDetection.initialize();
+            return clientDetection;
           },
         ),
         // Connection manager service (coordinates local and cloud)

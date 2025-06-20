@@ -11,6 +11,7 @@ import '../components/conversation_list.dart';
 import '../components/message_bubble.dart';
 import '../components/message_input.dart';
 import '../components/app_logo.dart';
+import '../components/desktop_client_prompt.dart';
 
 /// Modern ChatGPT-like chat interface
 class HomeScreen extends StatefulWidget {
@@ -318,6 +319,9 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppTheme.backgroundMain,
           child: Column(
             children: [
+              // Desktop client prompt (compact, web only)
+              const DismissibleDesktopClientPrompt(showCompact: true),
+
               // Chat messages
               Expanded(
                 child: Container(
@@ -346,51 +350,61 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 64,
-            color: AppTheme.textColorLight,
-          ),
-          SizedBox(height: AppTheme.spacingL),
-          Text(
-            'Welcome to CloudToLocalLLM',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: AppTheme.textColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: AppTheme.spacingM),
-          Text(
-            'Start a new conversation to begin chatting with your local LLM',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppTheme.textColorLight),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppTheme.spacingXL),
-          Consumer<StreamingChatService>(
-            builder: (context, chatService, child) {
-              return ElevatedButton.icon(
-                onPressed: () => chatService.createConversation(),
-                icon: const Icon(Icons.add),
-                label: const Text('Start New Conversation'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacingL,
-                    vertical: AppTheme.spacingM,
+    return Column(
+      children: [
+        // Desktop client prompt (web only)
+        const DismissibleDesktopClientPrompt(),
+
+        // Main empty state content
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.chat_bubble_outline,
+                  size: 64,
+                  color: AppTheme.textColorLight,
+                ),
+                SizedBox(height: AppTheme.spacingL),
+                Text(
+                  'Welcome to CloudToLocalLLM',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppTheme.textColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            },
+                SizedBox(height: AppTheme.spacingM),
+                Text(
+                  'Start a new conversation to begin chatting with your local LLM',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.textColorLight,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppTheme.spacingXL),
+                Consumer<StreamingChatService>(
+                  builder: (context, chatService, child) {
+                    return ElevatedButton.icon(
+                      onPressed: () => chatService.createConversation(),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Start New Conversation'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacingL,
+                          vertical: AppTheme.spacingM,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

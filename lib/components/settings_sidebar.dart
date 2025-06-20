@@ -64,6 +64,13 @@ class SettingsSidebar extends StatelessWidget {
           icon: Icons.download_for_offline,
           subtitle: 'View Ollama models',
         ),
+        // Added 'Downloads' section for web platform
+        const SettingsSection(
+          id: 'downloads',
+          title: 'Downloads',
+          icon: Icons.download,
+          subtitle: 'Desktop client & installation',
+        ),
         const SettingsSection(
           id: 'about',
           title: 'About',

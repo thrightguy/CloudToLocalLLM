@@ -158,6 +158,14 @@ class AppRouter {
           builder: (context, state) => const UnifiedSettingsScreen(),
         ),
 
+        // Settings with specific section
+        GoRoute(
+          path: '/settings/downloads',
+          name: 'settings-downloads',
+          builder: (context, state) =>
+              const UnifiedSettingsScreen(initialSection: 'downloads'),
+        ),
+
         // Tunnel Settings route (legacy/advanced tunnel configuration)
         GoRoute(
           path: '/settings/tunnels',
