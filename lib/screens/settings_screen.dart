@@ -957,7 +957,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Switch(
               value: config.enableCloudProxy,
               onChanged: (value) {
-                // TODO: Update configuration
+                _updateCloudProxyConfig(tunnelManager, enabled: value);
               },
             ),
           ),
@@ -976,7 +976,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   isDense: true,
                 ),
                 onChanged: (value) {
-                  // TODO: Update configuration
+                  _updateCloudProxyConfig(tunnelManager, url: value);
                 },
               ),
             ),
@@ -1621,5 +1621,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  /// Update cloud proxy configuration
+  Future<void> _updateCloudProxyConfig(
+    TunnelManagerService tunnelManager, {
+    bool? enabled,
+    String? url,
+  }) async {
+    try {
+      final currentConfig = tunnelManager.config;
+      final newConfig = TunnelConfig(
+        enableCloudProxy: enabled ?? currentConfig.enableCloudProxy,
+        cloudProxyUrl: url ?? currentConfig.cloudProxyUrl,
+        connectionTimeout: currentConfig.connectionTimeout,
+        healthCheckInterval: currentConfig.healthCheckInterval,
+      );
+
+      await tunnelManager.updateConfiguration(newConfig);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cloud proxy configuration updated'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('⚙️ [Settings] Failed to update cloud proxy config: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update cloud proxy config: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
