@@ -39,7 +39,7 @@ class _ModernCardState extends State<ModernCard>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.01).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
@@ -71,6 +71,7 @@ class _ModernCardState extends State<ModernCard>
           onExit: (_) => _onHover(false),
           child: Transform.scale(
             scale: _scaleAnimation.value,
+            alignment: Alignment.center, // Ensure scaling is centered
             child: Container(
               width: widget.width,
               height: widget.height,

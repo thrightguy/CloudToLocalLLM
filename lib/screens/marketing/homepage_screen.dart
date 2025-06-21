@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Marketing homepage screen - web-only
 /// Replicates the static site design with Material Design 3
@@ -187,7 +188,19 @@ class HomepageScreen extends StatelessWidget {
           SizedBox(
             width: 220,
             child: ElevatedButton(
-              onPressed: () => context.go('/chat'),
+              onPressed: () async {
+                // Redirect to app subdomain instead of local route
+                if (kIsWeb) {
+                  // Use url_launcher to navigate to app subdomain
+                  final uri = Uri.parse('https://app.cloudtolocalllm.online');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, webOnlyWindowName: '_self');
+                  }
+                } else {
+                  // For desktop, use local routing
+                  context.go('/chat');
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6e8efb),
                 foregroundColor: Colors.white,
