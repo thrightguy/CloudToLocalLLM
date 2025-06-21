@@ -8,6 +8,7 @@ import '../models/streaming_message.dart';
 import 'streaming_service.dart';
 
 import 'connection_manager_service.dart';
+import 'conversation_storage_service.dart';
 
 /// Enhanced chat service with real-time streaming support
 ///
@@ -15,6 +16,8 @@ import 'connection_manager_service.dart';
 /// and integration with the tunnel manager for connection routing.
 class StreamingChatService extends ChangeNotifier {
   final ConnectionManagerService _connectionManager;
+  final ConversationStorageService _storageService =
+      ConversationStorageService();
 
   List<Conversation> _conversations = [];
   Conversation? _currentConversation;
@@ -45,11 +48,24 @@ class StreamingChatService extends ChangeNotifier {
 
   /// Initialize the service
   void _initializeService() {
-    // Load conversations from local storage (placeholder)
-    _loadConversations();
+    // Initialize storage service and load conversations
+    _initializeStorage();
 
     // Listen to connection manager changes
     _connectionManager.addListener(_onConnectionManagerChanged);
+  }
+
+  /// Initialize storage service and load conversations
+  Future<void> _initializeStorage() async {
+    try {
+      await _storageService.initialize();
+      await _loadConversations();
+      debugPrint('💬 [StreamingChat] Storage service initialized');
+    } catch (e) {
+      debugPrint('💬 [StreamingChat] Failed to initialize storage: $e');
+      // Fall back to in-memory conversations
+      await _loadConversations();
+    }
   }
 
   /// Handle connection manager changes
@@ -66,32 +82,68 @@ class StreamingChatService extends ChangeNotifier {
     }
   }
 
-  /// Load conversations from storage (placeholder implementation)
-  void _loadConversations() {
-    // TODO: Implement actual storage loading
-    // For now, create a sample conversation if none exist
-    if (_conversations.isEmpty) {
-      final sampleConversation = Conversation.create(
-        title: 'Welcome Chat',
-        model: _selectedModel,
-      );
+  /// Load conversations from storage
+  Future<void> _loadConversations() async {
+    try {
+      final loadedConversations = await _storageService.loadConversations();
 
-      final welcomeMessage = Message.system(
-        content:
-            'Welcome to CloudToLocalLLM! I\'m ready to help you with any questions or tasks. What would you like to talk about?',
-      );
-
-      _conversations = [sampleConversation.addMessage(welcomeMessage)];
-      _currentConversation = _conversations.first;
+      if (loadedConversations.isNotEmpty) {
+        _conversations = loadedConversations;
+        _currentConversation = _conversations.first;
+        debugPrint(
+          '💬 [StreamingChat] Loaded ${_conversations.length} conversations from storage',
+        );
+      } else {
+        // Create a sample conversation if none exist
+        _createWelcomeConversation();
+      }
+    } catch (e) {
+      debugPrint('💬 [StreamingChat] Error loading conversations: $e');
+      // Fall back to creating a welcome conversation
+      _createWelcomeConversation();
     }
+
+    notifyListeners();
   }
 
-  /// Save conversations to storage (placeholder implementation)
-  void _saveConversations() {
-    // TODO: Implement actual storage saving
-    debugPrint(
-      '💾 [StreamingChat] Saving ${_conversations.length} conversations',
+  /// Create a welcome conversation when no conversations exist
+  void _createWelcomeConversation() {
+    final sampleConversation = Conversation.create(
+      title: 'Welcome Chat',
+      model: _selectedModel,
     );
+
+    final welcomeMessage = Message.system(
+      content:
+          'Welcome to CloudToLocalLLM! I\'m ready to help you with any questions or tasks. What would you like to talk about?',
+    );
+
+    _conversations = [sampleConversation.addMessage(welcomeMessage)];
+    _currentConversation = _conversations.first;
+
+    // Save the welcome conversation
+    _saveConversations();
+  }
+
+  /// Save conversations to storage
+  void _saveConversations() {
+    // Save asynchronously without blocking the UI
+    _saveConversationsAsync().catchError((e) {
+      debugPrint('💬 [StreamingChat] Error saving conversations: $e');
+    });
+  }
+
+  /// Save conversations to storage asynchronously
+  Future<void> _saveConversationsAsync() async {
+    try {
+      await _storageService.saveConversations(_conversations);
+      debugPrint(
+        '💾 [StreamingChat] Saved ${_conversations.length} conversations to storage',
+      );
+    } catch (e) {
+      debugPrint('💬 [StreamingChat] Failed to save conversations: $e');
+      rethrow;
+    }
   }
 
   /// Create a new conversation
@@ -504,7 +556,14 @@ class StreamingChatService extends ChangeNotifier {
     _cancelCurrentStream();
     _conversations.clear();
     _currentConversation = null;
-    _saveConversations();
+
+    // Clear from storage asynchronously
+    _storageService.clearAllConversations().catchError((e) {
+      debugPrint(
+        '💬 [StreamingChat] Error clearing conversations from storage: $e',
+      );
+    });
+
     notifyListeners();
   }
 
@@ -515,6 +574,7 @@ class StreamingChatService extends ChangeNotifier {
     _cancelCurrentStream();
     _streamingContentSubject.close();
     _connectionManager.removeListener(_onConnectionManagerChanged);
+    _storageService.dispose();
 
     super.dispose();
   }

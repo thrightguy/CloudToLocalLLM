@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This guide covers installation of CloudToLocalLLM v3.4.0+ with the unified Flutter-native architecture. The application features integrated system tray functionality and requires no external daemon processes.
+This guide covers installation of CloudToLocalLLM v3.6.2+ with the unified Flutter-native architecture. The application features integrated system tray functionality and requires no external daemon processes.
 
 **Supported Platforms:**
 - **Linux**: AUR (Arch), Static Package, Manual Build
@@ -54,17 +54,17 @@ Download the pre-built static package for any Linux distribution.
 #### **Installation**
 ```bash
 # Download the latest package
-wget https://cloudtolocalllm.online/download/cloudtolocalllm-3.4.0-x86_64.tar.gz
+wget https://cloudtolocalllm.online/download/cloudtolocalllm-3.6.2-x86_64.tar.gz
 
 # Verify checksum (optional but recommended)
-wget https://cloudtolocalllm.online/download/cloudtolocalllm-3.4.0-x86_64.tar.gz.sha256
-sha256sum -c cloudtolocalllm-3.4.0-x86_64.tar.gz.sha256
+wget https://cloudtolocalllm.online/download/cloudtolocalllm-3.6.2-x86_64.tar.gz.sha256
+sha256sum -c cloudtolocalllm-3.6.2-x86_64.tar.gz.sha256
 
 # Extract the package
-tar -xzf cloudtolocalllm-3.4.0-x86_64.tar.gz
+tar -xzf cloudtolocalllm-3.6.2-x86_64.tar.gz
 
 # Move to installation directory
-sudo mv cloudtolocalllm-3.4.0-x86_64 /opt/cloudtolocalllm
+sudo mv cloudtolocalllm-3.6.2-x86_64 /opt/cloudtolocalllm
 
 # Create symlink for easy access
 sudo ln -s /opt/cloudtolocalllm/bin/cloudtolocalllm /usr/local/bin/cloudtolocalllm

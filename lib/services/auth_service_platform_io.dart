@@ -36,7 +36,8 @@ class AuthServicePlatform extends ChangeNotifier {
       // Fallback to desktop service for unknown platforms
       _platformService = AuthServiceDesktop();
       debugPrint(
-          '⚠️ Unknown platform, falling back to Desktop Authentication Service');
+        '⚠️ Unknown platform, falling back to Desktop Authentication Service',
+      );
     }
 
     // Listen to platform service changes
@@ -66,7 +67,8 @@ class AuthServicePlatform extends ChangeNotifier {
       return await _platformService.loginWithBiometrics();
     } else {
       throw UnsupportedError(
-          'Biometric authentication is only available on mobile platforms');
+        'Biometric authentication is only available on mobile platforms',
+      );
     }
   }
 
@@ -102,7 +104,16 @@ class AuthServicePlatform extends ChangeNotifier {
 
   /// Get the current access token for API authentication
   String? getAccessToken() {
-    // TODO: Implement in mobile and desktop services
+    // Delegate to platform-specific service
+    if (_platformService.runtimeType.toString() == 'AuthServiceDesktop') {
+      // For desktop, get token from credential
+      return _platformService.credential?.accessToken;
+    } else if (_platformService.runtimeType.toString() == 'AuthServiceMobile') {
+      // For mobile, get token from stored credentials
+      // Note: This is a stub implementation - actual mobile implementation
+      // would need to access stored credentials from Auth0 CredentialsManager
+      return _platformService.accessToken;
+    }
     return null;
   }
 

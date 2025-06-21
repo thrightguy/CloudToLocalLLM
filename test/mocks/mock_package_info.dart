@@ -1,5 +1,4 @@
 ﻿// Mock implementation for package_info_plus plugin
-import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 class MockPackageInfo extends Mock {

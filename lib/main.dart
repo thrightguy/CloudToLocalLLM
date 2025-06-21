@@ -17,7 +17,7 @@ import 'services/streaming_chat_service.dart';
 import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
 import 'services/desktop_client_detection_service.dart';
-import 'widgets/debug_version_overlay.dart';
+import 'services/setup_wizard_service.dart';
 import 'widgets/window_listener_widget.dart';
 
 // Global navigator key for navigation from system tray
@@ -199,18 +199,6 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
             return localOllama;
           },
         ),
-        // Tunnel manager service (cloud proxy only)
-        ChangeNotifierProvider(
-          create: (context) {
-            final authService = context.read<AuthService>();
-            final tunnelManager = TunnelManagerService(
-              authService: authService,
-            );
-            // Initialize the tunnel manager service asynchronously
-            tunnelManager.initialize();
-            return tunnelManager;
-          },
-        ),
         // Desktop client detection service (web platform only)
         ChangeNotifierProvider(
           create: (context) {
@@ -223,14 +211,44 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
             return clientDetection;
           },
         ),
+        // Setup wizard service (web platform only)
+        ChangeNotifierProvider(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            final clientDetection = context
+                .read<DesktopClientDetectionService>();
+            final setupWizard = SetupWizardService(
+              authService: authService,
+              clientDetectionService: clientDetection,
+            );
+            return setupWizard;
+          },
+        ),
+        // Tunnel manager service (cloud proxy only)
+        ChangeNotifierProvider(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            final clientDetection = context
+                .read<DesktopClientDetectionService>();
+            final tunnelManager = TunnelManagerService(
+              authService: authService,
+              clientDetectionService: clientDetection,
+            );
+            // Initialize the tunnel manager service asynchronously
+            tunnelManager.initialize();
+            return tunnelManager;
+          },
+        ),
         // Connection manager service (coordinates local and cloud)
         ChangeNotifierProvider(
           create: (context) {
             final localOllama = context.read<LocalOllamaConnectionService>();
             final tunnelManager = context.read<TunnelManagerService>();
+            final authService = context.read<AuthService>();
             final connectionManager = ConnectionManagerService(
               localOllama: localOllama,
               tunnelManager: tunnelManager,
+              authService: authService,
             );
             // Initialize the connection manager service
             connectionManager.initialize();
@@ -248,9 +266,8 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         ChangeNotifierProvider(
           create: (context) {
             final unifiedService = UnifiedConnectionService();
-            // TODO: Update UnifiedConnectionService to use ConnectionManagerService
-            // final connectionManager = context.read<ConnectionManagerService>();
-            // unifiedService.setConnectionManager(connectionManager);
+            final connectionManager = context.read<ConnectionManagerService>();
+            unifiedService.setConnectionManager(connectionManager);
             // Initialize the unified connection service
             unifiedService.initialize();
             return unifiedService;
@@ -284,37 +301,35 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
         });
 
         return WindowListenerWidget(
-          child: DebugVersionWrapper(
-            child: MaterialApp.router(
-              // App configuration
-              title: AppConfig.appName,
-              debugShowCheckedModeBanner: false,
+          child: MaterialApp.router(
+            // App configuration
+            title: AppConfig.appName,
+            debugShowCheckedModeBanner: false,
 
-              // Theme configuration
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: AppConfig.enableDarkMode
-                  ? ThemeMode.dark
-                  : ThemeMode.light,
+            // Theme configuration
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: AppConfig.enableDarkMode
+                ? ThemeMode.dark
+                : ThemeMode.light,
 
-              // Router configuration
-              routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
+            // Router configuration
+            routerConfig: AppRouter.createRouter(navigatorKey: navigatorKey),
 
-              // Builder for additional configuration
-              builder: (context, child) {
-                return MediaQuery(
-                  // Ensure text scaling doesn't break the UI
-                  data: MediaQuery.of(context).copyWith(
-                    textScaler: TextScaler.linear(
-                      MediaQuery.of(
-                        context,
-                      ).textScaler.scale(1.0).clamp(0.8, 1.2),
-                    ),
+            // Builder for additional configuration
+            builder: (context, child) {
+              return MediaQuery(
+                // Ensure text scaling doesn't break the UI
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(
+                    MediaQuery.of(
+                      context,
+                    ).textScaler.scale(1.0).clamp(0.8, 1.2),
                   ),
-                  child: child!,
-                );
-              },
-            ),
+                ),
+                child: child!,
+              );
+            },
           ),
         );
       },

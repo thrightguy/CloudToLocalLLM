@@ -44,7 +44,7 @@ flutter run -d linux
 - Add screenshots or logs if helpful
 
 #### **✨ Feature Requests**
-- Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md)
+- Use the [feature request template](.github/ISSUE_TEMPLATE/bug_report.md) or create a GitHub Discussion
 - Explain the use case and benefits
 - Consider implementation complexity
 - Discuss in GitHub Discussions first for major features
@@ -188,7 +188,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/chat_message.dart';
-import '../services/chat_service.dart';
+import '../services/streaming_chat_service.dart';
 
 // Class definition
 /// Widget for displaying chat messages with proper formatting
@@ -238,20 +238,23 @@ class NativeTrayService {
 ```dart
 // Unit test example
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cloudtolocalllm/services/chat_service.dart';
+import 'package:cloudtolocalllm/services/streaming_chat_service.dart';
+import 'package:cloudtolocalllm/services/connection_manager_service.dart';
 
 void main() {
-  group('ChatService', () {
-    late ChatService chatService;
-    
+  group('StreamingChatService', () {
+    late StreamingChatService chatService;
+    late MockConnectionManagerService mockConnectionManager;
+
     setUp(() {
-      chatService = ChatService();
+      mockConnectionManager = MockConnectionManagerService();
+      chatService = StreamingChatService(mockConnectionManager);
     });
-    
+
     test('should create new conversation', () {
-      final conversation = chatService.createConversation();
-      expect(conversation.id, isNotNull);
-      expect(chatService.conversations, contains(conversation));
+      chatService.createConversation();
+      expect(chatService.conversations.length, greaterThan(1)); // Welcome + new
+      expect(chatService.currentConversation, isNotNull);
     });
   });
 }

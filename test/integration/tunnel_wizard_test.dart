@@ -6,9 +6,19 @@ import 'package:cloudtolocalllm/main.dart' as app;
 import 'package:cloudtolocalllm/services/auth_service.dart';
 import 'package:cloudtolocalllm/services/tunnel_manager_service.dart';
 import 'package:cloudtolocalllm/components/tunnel_connection_wizard.dart';
+import '../test_config.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize test configuration with plugin mocks
+  setUpAll(() {
+    TestConfig.initialize();
+  });
+
+  tearDownAll(() {
+    TestConfig.cleanup();
+  });
 
   group('Tunnel Connection Wizard Integration Tests', () {
     testWidgets('Complete tunnel wizard workflow', (WidgetTester tester) async {
@@ -54,15 +64,15 @@ void main() {
       expect(find.text('Tunnel Connection Setup'), findsNothing);
     });
 
-    testWidgets('Tunnel wizard UI components validation', (WidgetTester tester) async {
+    testWidgets('Tunnel wizard UI components validation', (
+      WidgetTester tester,
+    ) async {
       // Create a test widget with the wizard
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider<AuthService>(
-                create: (_) => AuthService(),
-              ),
+              ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
               ChangeNotifierProvider<TunnelManagerService>(
                 create: (_) => TunnelManagerService(),
               ),
@@ -90,7 +100,10 @@ void main() {
 
       // Verify wizard components
       expect(find.text('Tunnel Connection Setup'), findsOneWidget);
-      expect(find.text('Configure your CloudToLocalLLM tunnel connection'), findsOneWidget);
+      expect(
+        find.text('Configure your CloudToLocalLLM tunnel connection'),
+        findsOneWidget,
+      );
 
       // Verify step indicators
       expect(find.text('Authentication'), findsOneWidget);
@@ -110,14 +123,21 @@ void main() {
 
       // Verify authentication step content
       expect(find.text('Authentication Required'), findsOneWidget);
-      expect(find.text('Please authenticate with your CloudToLocalLLM account to continue.'), findsOneWidget);
+      expect(
+        find.text(
+          'Please authenticate with your CloudToLocalLLM account to continue.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Login'), findsOneWidget);
     });
 
-    testWidgets('Enhanced authentication service validation', (WidgetTester tester) async {
+    testWidgets('Enhanced authentication service validation', (
+      WidgetTester tester,
+    ) async {
       // Create a test widget with auth service
       late AuthService authService;
-      
+
       await tester.pumpWidget(
         MaterialApp(
           home: ChangeNotifierProvider<AuthService>(
@@ -164,10 +184,12 @@ void main() {
       expect(authService.lastTokenValidation, isA<DateTime?>());
     });
 
-    testWidgets('Tunnel manager wizard integration validation', (WidgetTester tester) async {
+    testWidgets('Tunnel manager wizard integration validation', (
+      WidgetTester tester,
+    ) async {
       // Create a test widget with tunnel manager
       late TunnelManagerService tunnelManager;
-      
+
       await tester.pumpWidget(
         MaterialApp(
           home: ChangeNotifierProvider<TunnelManagerService>(
@@ -191,7 +213,7 @@ void main() {
                       ElevatedButton(
                         onPressed: () async {
                           final diagnostics = tunnel.getConnectionDiagnostics();
-                          print('Diagnostics: $diagnostics');
+                          debugPrint('Diagnostics: $diagnostics');
                         },
                         child: const Text('Get Diagnostics'),
                       ),

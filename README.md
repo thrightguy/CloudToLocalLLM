@@ -1,6 +1,6 @@
 # CloudToLocalLLM: Your Personal AI Powerhouse 🌩️💻
 
-[![Version](https://img.shields.io/badge/version-3.6.0-blue.svg)](https://github.com/imrightguy/CloudToLocalLLM/releases)
+[![Version](https://img.shields.io/badge/version-3.6.2-blue.svg)](https://github.com/imrightguy/CloudToLocalLLM/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.8+-blue.svg)](https://flutter.dev)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20Web-lightgrey.svg)](https://github.com/imrightguy/CloudToLocalLLM)
@@ -9,9 +9,9 @@
 
 **CloudToLocalLLM** bridges the gap between powerful cloud-based Large Language Models (LLMs) and the privacy and control of local execution. It offers a seamless, multi-tenant experience for interacting with local LLMs via a sophisticated cloud-hosted web interface and a robust system tray application.
 
-This project is currently in **Alpha (v3.6.0)**. Expect rapid development and potential breaking changes.
+This project is currently in **Alpha (v3.6.2)**. Expect rapid development and potential breaking changes.
 
-## 🌟 Key Highlights (v3.6.0)
+## 🌟 Key Highlights (v3.6.2)
 
 *   **Modern Multi-Container Architecture**: Ensures scalability, resilience, and maintainability. (See [System Architecture](docs/ARCHITECTURE/SYSTEM_ARCHITECTURE.md))
 *   **Unified Flutter-Native Architecture**: Single Flutter application with integrated system tray functionality, eliminating external dependencies.
@@ -109,7 +109,7 @@ cd /path/to/CloudToLocalLLM
 ./scripts/deploy/deploy-multi-container.sh --build --ssl-setup
 # For a more automated deployment, consider scripts like ./scripts/deploy/push-to-live.sh
 ```
-This setup provides a scalable and secure environment for multiple users. See `docs/OPERATIONS/SELF_HOSTING_VPS.md` for detailed instructions.
+This setup provides a scalable and secure environment for multiple users. See `docs/OPERATIONS/SELF_HOSTING.md` for detailed instructions.
 
 ### Legacy Single Container (Deprecated)
 The legacy single-container deployment is deprecated and no longer supported. Please migrate to the multi-container architecture.
@@ -234,16 +234,16 @@ CloudToLocalLLM features comprehensive, well-organized documentation. The docume
     *   [Streaming Proxy Architecture](docs/ARCHITECTURE/STREAMING_PROXY_ARCHITECTURE.md)
 *   **Deployment & Operations**:
     *   [Complete Deployment Workflow](docs/DEPLOYMENT/COMPLETE_DEPLOYMENT_WORKFLOW.md)
-    *   [Self-Hosting on VPS](docs/OPERATIONS/SELF_HOSTING_VPS.md)
+    *   [Self-Hosting on VPS](docs/OPERATIONS/SELF_HOSTING.md)
     *   [Versioning Strategy](docs/DEPLOYMENT/VERSIONING_STRATEGY.md)
 *   **User Guides**:
     *   [Installation Guide](docs/USER_DOCUMENTATION/INSTALLATION_GUIDE.md)
     *   [First Time Setup](docs/USER_DOCUMENTATION/FIRST_TIME_SETUP.md)
-    *   *(Coming Soon) User Troubleshooting Guide*
+    *   [User Troubleshooting Guide](docs/USER_DOCUMENTATION/USER_TROUBLESHOOTING_GUIDE.md)
 *   **Development**:
     *   [Developer Onboarding](docs/DEVELOPMENT/DEVELOPER_ONBOARDING.md)
     *   [Contribution Guidelines](CONTRIBUTING.md)
-    *   *(Coming Soon) API Documentation*
+    *   [API Documentation](docs/DEVELOPMENT/API_DOCUMENTATION.md)
 
 - **Self-Hosters**: Use [Self-Hosting Guide](docs/OPERATIONS/SELF_HOSTING.md) → [Infrastructure Guide](docs/OPERATIONS/INFRASTRUCTURE_GUIDE.md)
 

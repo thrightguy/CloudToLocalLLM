@@ -93,7 +93,7 @@ CloudToLocalLLM/
 - **TunnelManagerService**: Connection management
 - **UnifiedConnectionService**: Platform-specific connections
 - **AuthService**: Authentication handling
-- **ChatService**: Chat functionality
+- **StreamingChatService**: Chat functionality with real-time streaming
 
 ---
 

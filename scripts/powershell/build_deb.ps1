@@ -11,13 +11,13 @@ param(
     [switch]$Help
 )
 
-# Import utilities
-$utilsPath = Join-Path $PSScriptRoot "utils.ps1"
+# Import build environment utilities
+$utilsPath = Join-Path $PSScriptRoot "BuildEnvironmentUtilities.ps1"
 if (Test-Path $utilsPath) {
     . $utilsPath
 }
 else {
-    Write-Error "Utils module not found at $utilsPath"
+    Write-Error "BuildEnvironmentUtilities module not found at $utilsPath"
     exit 1
 }
 

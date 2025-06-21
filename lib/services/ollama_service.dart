@@ -19,15 +19,13 @@ class OllamaService extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  OllamaService({
-    String? baseUrl,
-    Duration? timeout,
-    AuthService? authService,
-  })  : _isWeb = kIsWeb,
-        _baseUrl = baseUrl ??
-            (kIsWeb ? AppConfig.cloudOllamaUrl : AppConfig.defaultOllamaUrl),
-        _timeout = timeout ?? AppConfig.ollamaTimeout,
-        _authService = authService {
+  OllamaService({String? baseUrl, Duration? timeout, AuthService? authService})
+    : _isWeb = kIsWeb,
+      _baseUrl =
+          baseUrl ??
+          (kIsWeb ? AppConfig.cloudOllamaUrl : AppConfig.defaultOllamaUrl),
+      _timeout = timeout ?? AppConfig.ollamaTimeout,
+      _authService = authService {
     // Debug logging for service initialization
     if (kDebugMode) {
       debugPrint('[DEBUG] OllamaService initialized:');
@@ -35,7 +33,8 @@ class OllamaService extends ChangeNotifier {
       debugPrint('[DEBUG] - Base URL: $_baseUrl');
       debugPrint('[DEBUG] - Timeout: $_timeout');
       debugPrint(
-          '[DEBUG] - Auth Service: ${_authService != null ? 'provided' : 'null'}');
+        '[DEBUG] - Auth Service: ${_authService != null ? 'provided' : 'null'}',
+      );
       AppConfig.logConfiguration();
     }
   }
@@ -50,9 +49,7 @@ class OllamaService extends ChangeNotifier {
 
   /// Get HTTP headers with authentication for API requests
   Map<String, String> _getHeaders() {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     // Add authentication header for web platform
     if (_isWeb && _authService != null) {
@@ -81,14 +78,12 @@ class OllamaService extends ChangeNotifier {
           : '$_baseUrl/api/version';
       if (kDebugMode) {
         debugPrint(
-            '[DEBUG] Making ${_isWeb ? 'authenticated' : 'direct'} request to: $url');
+          '[DEBUG] Making ${_isWeb ? 'authenticated' : 'direct'} request to: $url',
+        );
       }
 
       final response = await http
-          .get(
-            Uri.parse(url),
-            headers: _getHeaders(),
-          )
+          .get(Uri.parse(url), headers: _getHeaders())
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
@@ -98,7 +93,8 @@ class OllamaService extends ChangeNotifier {
           _isConnected = data['status'] == 'healthy' || data['bridges'] != null;
           _version = 'Bridge Connected';
           debugPrint(
-              'Connected to Ollama bridge: ${data['bridges'] ?? 0} bridges');
+            'Connected to Ollama bridge: ${data['bridges'] ?? 0} bridges',
+          );
         } else {
           // For desktop, check direct Ollama response
           _version = data['version'] as String?;
@@ -132,30 +128,31 @@ class OllamaService extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final url =
-          _isWeb ? '$_baseUrl/api/ollama/api/tags' : '$_baseUrl/api/tags';
+      final url = _isWeb
+          ? '$_baseUrl/api/ollama/api/tags'
+          : '$_baseUrl/api/tags';
       debugPrint('[DEBUG] Getting models from: $url');
 
       final response = await http
-          .get(
-            Uri.parse(url),
-            headers: _getHeaders(),
-          )
+          .get(Uri.parse(url), headers: _getHeaders())
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final modelsList = data['models'] as List<dynamic>? ?? [];
 
-        _models =
-            modelsList.map((model) => OllamaModel.fromJson(model)).toList();
+        _models = modelsList
+            .map((model) => OllamaModel.fromJson(model))
+            .toList();
         debugPrint(
-            'Found ${_models.length} Ollama models via ${_isWeb ? 'bridge' : 'direct connection'}');
+          'Found ${_models.length} Ollama models via ${_isWeb ? 'bridge' : 'direct connection'}',
+        );
         return _models;
       } else {
         _setError('Failed to get models: HTTP ${response.statusCode}');
         debugPrint(
-            '[DEBUG] Models request failed with status: ${response.statusCode}');
+          '[DEBUG] Models request failed with status: ${response.statusCode}',
+        );
         debugPrint('[DEBUG] Response body: ${response.body}');
         return [];
       }
@@ -183,8 +180,9 @@ class OllamaService extends ChangeNotifier {
         {'role': 'user', 'content': message},
       ];
 
-      final url =
-          _isWeb ? '$_baseUrl/api/ollama/api/chat' : '$_baseUrl/api/chat';
+      final url = _isWeb
+          ? '$_baseUrl/api/ollama/api/chat'
+          : '$_baseUrl/api/chat';
       debugPrint('[DEBUG] Sending chat message to: $url');
 
       final response = await http
@@ -203,12 +201,14 @@ class OllamaService extends ChangeNotifier {
         final data = json.decode(response.body);
         final responseMessage = data['message']?['content'] as String?;
         debugPrint(
-            'Chat response received via ${_isWeb ? 'bridge' : 'direct connection'}');
+          'Chat response received via ${_isWeb ? 'bridge' : 'direct connection'}',
+        );
         return responseMessage;
       } else {
         _setError('Chat failed: HTTP ${response.statusCode}');
         debugPrint(
-            '[DEBUG] Chat request failed with status: ${response.statusCode}');
+          '[DEBUG] Chat request failed with status: ${response.statusCode}',
+        );
         debugPrint('[DEBUG] Response body: ${response.body}');
         return null;
       }
@@ -227,8 +227,9 @@ class OllamaService extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final url =
-          _isWeb ? '$_baseUrl/api/ollama/api/pull' : '$_baseUrl/api/pull';
+      final url = _isWeb
+          ? '$_baseUrl/api/ollama/api/pull'
+          : '$_baseUrl/api/pull';
       debugPrint('[DEBUG] Pulling model from: $url');
 
       final response = await http
@@ -237,19 +238,69 @@ class OllamaService extends ChangeNotifier {
             headers: _getHeaders(),
             body: json.encode({'name': modelName}),
           )
-          .timeout(const Duration(
-              minutes: 10)); // Longer timeout for model downloads
+          .timeout(
+            const Duration(minutes: 10),
+          ); // Longer timeout for model downloads
 
       final success = response.statusCode == 200;
       debugPrint(
-          '[DEBUG] Model pull ${success ? 'successful' : 'failed'} via ${_isWeb ? 'bridge' : 'direct connection'}');
+        '[DEBUG] Model pull ${success ? 'successful' : 'failed'} via ${_isWeb ? 'bridge' : 'direct connection'}',
+      );
       if (!success) {
         debugPrint('[DEBUG] Pull response: ${response.body}');
       }
+
+      // Refresh models list if successful
+      if (success) {
+        await getModels();
+      }
+
       return success;
     } catch (e) {
       _setError('Failed to pull model: $e');
       debugPrint('Error pulling model: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Delete a model from Ollama (platform-aware)
+  Future<bool> deleteModel(String modelName) async {
+    try {
+      _setLoading(true);
+      _clearError();
+
+      final url = _isWeb
+          ? '$_baseUrl/api/ollama/api/delete'
+          : '$_baseUrl/api/delete';
+      debugPrint('🦙 [OllamaService] Deleting model from: $url');
+
+      final response = await http
+          .delete(
+            Uri.parse(url),
+            headers: _getHeaders(),
+            body: json.encode({'name': modelName}),
+          )
+          .timeout(_timeout);
+
+      final success = response.statusCode == 200;
+      debugPrint(
+        '🦙 [OllamaService] Model deletion ${success ? 'successful' : 'failed'} via ${_isWeb ? 'bridge' : 'direct connection'}',
+      );
+
+      if (!success) {
+        debugPrint('🦙 [OllamaService] Delete response: ${response.body}');
+        _setError('Failed to delete model: HTTP ${response.statusCode}');
+      } else {
+        // Refresh models list after successful deletion
+        await getModels();
+      }
+
+      return success;
+    } catch (e) {
+      _setError('Failed to delete model: $e');
+      debugPrint('🦙 [OllamaService] Error deleting model: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -279,12 +330,7 @@ class OllamaModel {
   final int? size;
   final DateTime? modifiedAt;
 
-  const OllamaModel({
-    required this.name,
-    this.tag,
-    this.size,
-    this.modifiedAt,
-  });
+  const OllamaModel({required this.name, this.tag, this.size, this.modifiedAt});
 
   factory OllamaModel.fromJson(Map<String, dynamic> json) {
     return OllamaModel(

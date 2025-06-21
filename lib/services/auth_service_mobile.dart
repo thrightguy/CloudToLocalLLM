@@ -2,18 +2,25 @@ import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import '../models/user_model.dart';
 
-// Mock types for web/desktop builds (auth0_flutter is mobile-only)
+// Stub types for non-mobile builds (auth0_flutter is mobile-only)
+// These provide safe fallback behavior instead of throwing UnimplementedError
 class Auth0 {
   Auth0(String domain, String clientId);
-  late final CredentialsManager credentialsManager;
-  late final WebAuthentication Function({required String scheme})
-      webAuthentication;
-  late final Api api;
+  late final CredentialsManager credentialsManager = CredentialsManager();
+  late final Api api = Api();
+
+  WebAuthentication webAuthentication({required String scheme}) {
+    return WebAuthentication();
+  }
 }
 
 class CredentialsManager {
   Future<bool> hasValidCredentials() async => false;
-  Future<Credentials> credentials() async => throw UnimplementedError();
+  Future<Credentials> credentials() async {
+    // Return empty credentials instead of throwing
+    return Credentials(accessToken: '');
+  }
+
   Future<void> storeCredentials(Credentials credentials) async {}
   Future<void> clearCredentials() async {}
   Future<void> enableBiometrics({
@@ -25,14 +32,26 @@ class CredentialsManager {
 }
 
 class WebAuthentication {
-  Future<Credentials> login({String? audience, Set<String>? scopes}) async =>
-      throw UnimplementedError();
+  Future<Credentials> login({String? audience, Set<String>? scopes}) async {
+    // Return empty credentials instead of throwing
+    return Credentials(accessToken: '');
+  }
+
   Future<void> logout() async {}
 }
 
 class Api {
-  Future<UserProfile> userInfo({required String accessToken}) async =>
-      throw UnimplementedError();
+  Future<UserProfile> userInfo({required String accessToken}) async {
+    // Return empty user profile instead of throwing
+    return UserProfile(
+      sub: '',
+      email: null,
+      name: null,
+      pictureUrl: null,
+      nickname: null,
+      isEmailVerified: false,
+    );
+  }
 }
 
 class Credentials {
@@ -58,13 +77,19 @@ class UserProfile {
   });
 }
 
-/// Mobile-specific authentication service using Auth0 Flutter SDK
-/// Supports iOS and Android with native authentication flows
+/// Mobile-specific authentication service stub for non-mobile platforms
 ///
-/// NOTE: This is currently a placeholder implementation with mock types.
-/// When building for mobile platforms, replace the mock imports above with:
-/// import 'package:auth0_flutter/auth0_flutter.dart';
-/// and add auth0_flutter to pubspec.yaml dependencies.
+/// This is a stub implementation that provides safe fallback behavior
+/// when the application is built for non-mobile platforms (web/desktop).
+///
+/// For actual mobile platform support:
+/// 1. Add auth0_flutter dependency to pubspec.yaml
+/// 2. Replace the stub types above with: import 'package:auth0_flutter/auth0_flutter.dart';
+/// 3. Implement proper mobile authentication flows
+///
+/// Currently returns empty/default values instead of throwing UnimplementedError
+/// to ensure the application doesn't crash when mobile authentication is attempted
+/// on non-mobile platforms.
 class AuthServiceMobile extends ChangeNotifier {
   late final Auth0 _auth0;
 
@@ -90,10 +115,7 @@ class AuthServiceMobile extends ChangeNotifier {
       notifyListeners();
 
       // Initialize Auth0 with domain and client ID
-      _auth0 = Auth0(
-        AppConfig.auth0Domain,
-        AppConfig.auth0ClientId,
-      );
+      _auth0 = Auth0(AppConfig.auth0Domain, AppConfig.auth0ClientId);
 
       // Check for existing authentication
       await _checkAuthenticationStatus();
@@ -109,8 +131,8 @@ class AuthServiceMobile extends ChangeNotifier {
   Future<void> _checkAuthenticationStatus() async {
     try {
       // Check if we have stored credentials
-      final hasValidCredentials =
-          await _auth0.credentialsManager.hasValidCredentials();
+      final hasValidCredentials = await _auth0.credentialsManager
+          .hasValidCredentials();
 
       if (hasValidCredentials) {
         // Retrieve stored credentials
@@ -133,7 +155,9 @@ class AuthServiceMobile extends ChangeNotifier {
       notifyListeners();
 
       // Use Auth0 Universal Login with native browser
-      _credentials = await _auth0.webAuthentication(scheme: 'app').login(
+      _credentials = await _auth0
+          .webAuthentication(scheme: 'app')
+          .login(
             audience: AppConfig.auth0Audience,
             scopes: AppConfig.auth0Scopes.toSet(),
           );
@@ -161,22 +185,18 @@ class AuthServiceMobile extends ChangeNotifier {
       _isLoading.value = true;
       notifyListeners();
 
-      // Enable biometric authentication
-      await _auth0.credentialsManager.enableBiometrics(
-        title: 'Authenticate with Biometrics',
-        subtitle: 'Use your fingerprint or face to access CloudToLocalLLM',
-        description:
-            'Biometric authentication provides secure and convenient access',
-        negativeButtonText: 'Cancel',
+      // Stub implementation: biometric authentication not available on non-mobile platforms
+      debugPrint(
+        'Biometric authentication not available on non-mobile platforms',
       );
 
-      // Retrieve credentials with biometric prompt
-      _credentials = await _auth0.credentialsManager.credentials();
+      // For non-mobile platforms, this should not be called, but if it is,
+      // we'll just fail gracefully without throwing an error
+      _isAuthenticated.value = false;
 
-      if (_credentials != null) {
-        await _loadUserProfile();
-        _isAuthenticated.value = true;
-      }
+      throw UnsupportedError(
+        'Biometric authentication is only available on mobile platforms',
+      );
     } catch (e) {
       debugPrint('Biometric login error: $e');
       _isAuthenticated.value = false;
@@ -217,8 +237,8 @@ class AuthServiceMobile extends ChangeNotifier {
     try {
       if (_credentials != null && _credentials!.accessToken.isNotEmpty) {
         // Check if token needs refresh (Auth0 SDK handles this automatically)
-        final hasValidCredentials =
-            await _auth0.credentialsManager.hasValidCredentials();
+        final hasValidCredentials = await _auth0.credentialsManager
+            .hasValidCredentials();
 
         if (!hasValidCredentials) {
           // Token expired, try to refresh
@@ -238,8 +258,9 @@ class AuthServiceMobile extends ChangeNotifier {
     try {
       if (_credentials?.accessToken != null) {
         // Get user info from Auth0
-        final userProfile =
-            await _auth0.api.userInfo(accessToken: _credentials!.accessToken);
+        final userProfile = await _auth0.api.userInfo(
+          accessToken: _credentials!.accessToken,
+        );
 
         // Create user model from Auth0 profile
         _currentUser = UserModel(
@@ -278,8 +299,10 @@ class AuthServiceMobile extends ChangeNotifier {
   /// Check if biometric authentication is available
   Future<bool> isBiometricAvailable() async {
     try {
-      // This would need to be implemented based on platform capabilities
-      // For now, return false as a placeholder
+      // Stub implementation: biometrics not available on non-mobile platforms
+      debugPrint(
+        'Biometric authentication not available on non-mobile platforms',
+      );
       return false;
     } catch (e) {
       debugPrint('Biometric availability check error: $e');

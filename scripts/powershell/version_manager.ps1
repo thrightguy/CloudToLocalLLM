@@ -202,23 +202,152 @@ function Update-AppConfigVersion {
         [Parameter(Mandatory = $true)]
         [string]$NewVersion
     )
-    
+
     Write-LogInfo "Updating app_config.dart version to $NewVersion"
-    
+
     if (-not (Test-Path $AppConfigFile)) {
         Write-LogWarning "app_config.dart not found, skipping update"
         return
     }
-    
+
     # Create backup
     Copy-Item $AppConfigFile "$AppConfigFile.backup" -Force
-    
+
     # Update version constant
     $content = Get-Content $AppConfigFile -Raw
     $updatedContent = $content -replace "static const String appVersion = '[^']*';", "static const String appVersion = '$NewVersion';"
-    
+
     Set-Content -Path $AppConfigFile -Value $updatedContent -Encoding UTF8 -NoNewline
     Write-LogSuccess "Updated app_config.dart version to $NewVersion"
+}
+
+# Update version in shared/lib/version.dart
+function Update-SharedVersionFile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$NewVersion,
+
+        [Parameter(Mandatory = $true)]
+        [string]$NewBuildNumber
+    )
+
+    Write-LogInfo "Updating shared/lib/version.dart to $NewVersion"
+
+    if (-not (Test-Path $SharedVersionFile)) {
+        Write-LogWarning "shared/lib/version.dart not found, skipping update"
+        return
+    }
+
+    # Create backup
+    Copy-Item $SharedVersionFile "$SharedVersionFile.backup" -Force
+
+    # Generate build timestamp and ensure build number is in YYYYMMDDHHMM format
+    $buildTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $buildNumberInt = $NewBuildNumber
+
+    # Read current content
+    $content = Get-Content $SharedVersionFile -Raw
+
+    # Update all version constants
+    $content = $content -replace "static const String mainAppVersion = '[^']*';", "static const String mainAppVersion = '$NewVersion';"
+    $content = $content -replace "static const int mainAppBuildNumber = [0-9]*;", "static const int mainAppBuildNumber = $buildNumberInt;"
+    $content = $content -replace "static const String tunnelManagerVersion = '[^']*';", "static const String tunnelManagerVersion = '$NewVersion';"
+    $content = $content -replace "static const int tunnelManagerBuildNumber = [0-9]*;", "static const int tunnelManagerBuildNumber = $buildNumberInt;"
+    $content = $content -replace "static const String sharedLibraryVersion = '[^']*';", "static const String sharedLibraryVersion = '$NewVersion';"
+    $content = $content -replace "static const int sharedLibraryBuildNumber = [0-9]*;", "static const int sharedLibraryBuildNumber = $buildNumberInt;"
+    $content = $content -replace "static const String buildTimestamp = '[^']*';", "static const String buildTimestamp = '$buildTimestamp';"
+
+    Set-Content -Path $SharedVersionFile -Value $content -Encoding UTF8 -NoNewline
+    Write-LogSuccess "Updated shared/lib/version.dart to $NewVersion"
+}
+
+# Update version in shared/pubspec.yaml
+function Update-SharedPubspecVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$NewVersion,
+
+        [Parameter(Mandatory = $true)]
+        [string]$NewBuildNumber
+    )
+
+    $fullVersion = "$NewVersion+$NewBuildNumber"
+    Write-LogInfo "Updating shared/pubspec.yaml version to $fullVersion"
+
+    if (-not (Test-Path $SharedPubspecFile)) {
+        Write-LogWarning "shared/pubspec.yaml not found, skipping update"
+        return
+    }
+
+    # Create backup
+    Copy-Item $SharedPubspecFile "$SharedPubspecFile.backup" -Force
+
+    # Update version line
+    $content = Get-Content $SharedPubspecFile
+    $updatedContent = $content | ForEach-Object {
+        if ($_ -match '^version:') {
+            "version: $fullVersion"
+        }
+        else {
+            $_
+        }
+    }
+
+    Set-Content -Path $SharedPubspecFile -Value $updatedContent -Encoding UTF8
+    Write-LogSuccess "Updated shared/pubspec.yaml version to $fullVersion"
+}
+
+# Update version in assets/version.json
+function Update-AssetsVersionJson {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$NewVersion,
+
+        [Parameter(Mandatory = $true)]
+        [string]$NewBuildNumber
+    )
+
+    Write-LogInfo "Updating assets/version.json to $NewVersion"
+
+    if (-not (Test-Path $AssetsVersionFile)) {
+        Write-LogWarning "assets/version.json not found, skipping update"
+        return
+    }
+
+    # Create backup
+    Copy-Item $AssetsVersionFile "$AssetsVersionFile.backup" -Force
+
+    # Generate build timestamp
+    $buildTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+    # Read current git commit (preserve existing value if available)
+    $gitCommit = "unknown"
+    if (Test-Command "git") {
+        try {
+            $gitCommit = git rev-parse --short HEAD 2>$null
+            if (-not $gitCommit) { $gitCommit = "unknown" }
+        }
+        catch {
+            $gitCommit = "unknown"
+        }
+    }
+
+    # Read and update JSON content
+    $content = Get-Content $AssetsVersionFile -Raw
+    $content = $content -replace '"version": "[^"]*"', "`"version`": `"$NewVersion`""
+    $content = $content -replace '"build_number": "[^"]*"', "`"build_number`": `"$NewBuildNumber`""
+    $content = $content -replace '"build_date": "[^"]*"', "`"build_date`": `"$buildTimestamp`""
+
+    # Only update git_commit if we successfully got one
+    if ($gitCommit -ne "unknown") {
+        $content = $content -replace '"git_commit": "[^"]*"', "`"git_commit`": `"$gitCommit`""
+    }
+
+    Set-Content -Path $AssetsVersionFile -Value $content -Encoding UTF8 -NoNewline
+    Write-LogSuccess "Updated assets/version.json to $NewVersion"
 }
 
 # Validate version format
@@ -295,6 +424,9 @@ switch ($Command) {
             Test-VersionFormat -Version $currentVersion
             Update-PubspecVersion -NewVersion $currentVersion -NewBuildNumber $newBuildNumber
             Update-AppConfigVersion -NewVersion $currentVersion
+            Update-SharedVersionFile -NewVersion $currentVersion -NewBuildNumber $newBuildNumber
+            Update-SharedPubspecVersion -NewVersion $currentVersion -NewBuildNumber $newBuildNumber
+            Update-AssetsVersionJson -NewVersion $currentVersion -NewBuildNumber $newBuildNumber
             Write-LogInfo "Build number incremented (no GitHub release needed)"
         }
         else {
@@ -304,6 +436,9 @@ switch ($Command) {
             Test-VersionFormat -Version $newVersion
             Update-PubspecVersion -NewVersion $newVersion -NewBuildNumber $newBuildNumber
             Update-AppConfigVersion -NewVersion $newVersion
+            Update-SharedVersionFile -NewVersion $newVersion -NewBuildNumber $newBuildNumber
+            Update-SharedPubspecVersion -NewVersion $newVersion -NewBuildNumber $newBuildNumber
+            Update-AssetsVersionJson -NewVersion $newVersion -NewBuildNumber $newBuildNumber
 
             # Check if GitHub release should be created
             if (Test-GitHubReleaseRequired -Version $newVersion) {
@@ -327,6 +462,53 @@ switch ($Command) {
         $newBuildNumber = New-BuildNumber
         Update-PubspecVersion -NewVersion $Parameter -NewBuildNumber $newBuildNumber
         Update-AppConfigVersion -NewVersion $Parameter
+        Update-SharedVersionFile -NewVersion $Parameter -NewBuildNumber $newBuildNumber
+        Update-SharedPubspecVersion -NewVersion $Parameter -NewBuildNumber $newBuildNumber
+        Update-AssetsVersionJson -NewVersion $Parameter -NewBuildNumber $newBuildNumber
+        Show-VersionInfo
+    }
+    'prepare' {
+        if (-not $Parameter) {
+            Write-LogError "Usage: .\version_manager.ps1 prepare <major|minor|patch|build>"
+            exit 1
+        }
+
+        $currentVersion = Get-SemanticVersion
+        $incrementType = $Parameter
+
+        if ($incrementType -eq 'build') {
+            # For build preparation, keep same semantic version with placeholder
+            $placeholderBuild = "BUILD_TIME_PLACEHOLDER"
+            Test-VersionFormat -Version $currentVersion
+            Update-PubspecVersion -NewVersion $currentVersion -NewBuildNumber $placeholderBuild
+            Update-AppConfigVersion -NewVersion $currentVersion
+            Update-SharedVersionFile -NewVersion $currentVersion -NewBuildNumber $placeholderBuild
+            Update-SharedPubspecVersion -NewVersion $currentVersion -NewBuildNumber $placeholderBuild
+            Update-AssetsVersionJson -NewVersion $currentVersion -NewBuildNumber $placeholderBuild
+            Write-LogInfo "Version prepared for build-time timestamp injection"
+        }
+        else {
+            # For semantic version changes, prepare with placeholder
+            $newVersion = Step-Version -IncrementType $incrementType
+            $placeholderBuild = "BUILD_TIME_PLACEHOLDER"
+            Test-VersionFormat -Version $newVersion
+            Update-PubspecVersion -NewVersion $newVersion -NewBuildNumber $placeholderBuild
+            Update-AppConfigVersion -NewVersion $newVersion
+            Update-SharedVersionFile -NewVersion $newVersion -NewBuildNumber $placeholderBuild
+            Update-SharedPubspecVersion -NewVersion $newVersion -NewBuildNumber $placeholderBuild
+            Update-AssetsVersionJson -NewVersion $newVersion -NewBuildNumber $placeholderBuild
+
+            # Check if GitHub release should be created
+            if (Test-GitHubReleaseRequired -Version $newVersion) {
+                Write-LogWarning "This is a MAJOR version update - GitHub release should be created!"
+                Write-LogInfo "Run: git tag v$newVersion && git push origin v$newVersion"
+            }
+            else {
+                Write-LogInfo "Minor/patch update - no GitHub release needed"
+            }
+        }
+
+        Write-LogInfo "Version prepared with placeholder. Use build-time injection during actual build."
         Show-VersionInfo
     }
     'validate' {
@@ -343,7 +525,8 @@ switch ($Command) {
         Write-Host "  get-semantic     Get semantic version (MAJOR.MINOR.PATCH)"
         Write-Host "  get-build        Get build number"
         Write-Host "  info             Show detailed version information"
-        Write-Host "  increment <type> Increment version (major|minor|patch|build)"
+        Write-Host "  increment <type> Increment version (major|minor|patch|build) - immediate timestamp"
+        Write-Host "  prepare <type>   Prepare version (major|minor|patch|build) - build-time timestamp"
         Write-Host "  set <version>    Set specific version (MAJOR.MINOR.PATCH)"
         Write-Host "  validate         Validate current version format"
         Write-Host "  help             Show this help message"
@@ -351,6 +534,7 @@ switch ($Command) {
         Write-Host "Examples:" -ForegroundColor Yellow
         Write-Host "  .\version_manager.ps1 info"
         Write-Host "  .\version_manager.ps1 increment patch"
+        Write-Host "  .\version_manager.ps1 prepare build"
         Write-Host "  .\version_manager.ps1 set 3.1.0"
         Write-Host ""
         Write-Host "CloudToLocalLLM Semantic Versioning Strategy:" -ForegroundColor Yellow
@@ -370,6 +554,13 @@ switch ($Command) {
         Write-Host "    • Significant API changes requiring user adaptation"
         Write-Host "    • Major platform or framework migrations"
         Write-Host "    • Creates GitHub release automatically"
+        Write-Host ""
+        Write-Host "  BUILD (X.Y.Z+YYYYMMDDHHMM) - TIMESTAMP ONLY:"
+        Write-Host "    • No semantic version change, only build timestamp update"
+        Write-Host "    • Used for CI/CD builds and testing iterations"
+        Write-Host ""
+        Write-Host "Build Number Format:"
+        Write-Host "  YYYYMMDDHHMM     Timestamp format representing build creation time"
     }
     default {
         Write-LogError "Unknown command: $Command"

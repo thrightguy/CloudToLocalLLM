@@ -4,7 +4,7 @@
 class AppConfig {
   // App Information
   static const String appName = 'CloudToLocalLLM';
-  static const String appVersion = '3.6.1'; // Updated by build scripts
+  static const String appVersion = '3.6.2'; // Updated by build scripts
   static const String appDescription =
       'Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.';
 
@@ -49,11 +49,6 @@ class AppConfig {
   static const bool enableDarkMode = true;
   static const bool enableAnalytics = false; // Disabled for privacy
   static const bool enableDebugMode = true; // Enabled for v3.5.2 development
-
-  // Debug version display for v3.5.2 development
-  // Set to false to disable version overlay across entire application
-  // Enabled for both web and desktop during development phase
-  static const bool showDebugVersionOverlay = true;
 
   // Enhanced debug features for v3.5.2
   static const bool showTunnelDebugInfo = true;

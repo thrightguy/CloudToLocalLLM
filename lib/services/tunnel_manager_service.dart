@@ -6,8 +6,11 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/ollama_connection_error.dart';
+import '../models/streaming_message.dart';
 import 'streaming_service.dart';
 import 'auth_service.dart';
+import 'desktop_client_detection_service.dart';
+import 'cloud_streaming_service.dart';
 
 /// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
 ///
@@ -18,9 +21,14 @@ class TunnelManagerService extends ChangeNotifier {
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final AuthService? _authService;
+  final DesktopClientDetectionService? _clientDetectionService;
 
   // Constructor
-  TunnelManagerService({AuthService? authService}) : _authService = authService;
+  TunnelManagerService({
+    AuthService? authService,
+    DesktopClientDetectionService? clientDetectionService,
+  }) : _authService = authService,
+       _clientDetectionService = clientDetectionService;
 
   // Connection state
   bool _isConnected = false;
@@ -49,6 +57,10 @@ class TunnelManagerService extends ChangeNotifier {
 
   // Cloud streaming services only
   StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
+  CloudStreamingService? _cloudStreamingService;
+
+  // Desktop client detection listener (web platform only)
+  StreamSubscription<void>? _clientDetectionSubscription;
 
   // Debouncing for notifyListeners to prevent excessive rebuilds
   Timer? _notifyDebounceTimer;
@@ -64,7 +76,7 @@ class TunnelManagerService extends ChangeNotifier {
       Map.unmodifiable(_connectionStatus);
 
   /// Get cloud streaming service (local Ollama is now handled separately)
-  /// TODO: Implement cloud streaming service
+  CloudStreamingService? get cloudStreamingService => _cloudStreamingService;
 
   /// Debounced notifyListeners to prevent excessive UI rebuilds
   void _debouncedNotifyListeners() {
@@ -96,6 +108,9 @@ class TunnelManagerService extends ChangeNotifier {
         '🚇 [TunnelManager] Web platform detected - acting as bridge server',
       );
       await _initializeWebBridgeServer();
+
+      // Listen for desktop client connection changes on web platform
+      _setupDesktopClientListener();
     } else {
       // Desktop platform: Act as tunnel client
       debugPrint(
@@ -132,7 +147,17 @@ class TunnelManagerService extends ChangeNotifier {
     try {
       debugPrint('🚇 [TunnelManager] Initializing cloud streaming services...');
 
-      // TODO: Initialize cloud streaming service when implemented
+      // Initialize cloud streaming service if auth service is available
+      if (_authService != null) {
+        _cloudStreamingService = CloudStreamingService(
+          authService: _authService,
+        );
+        debugPrint('🚇 [TunnelManager] Cloud streaming service initialized');
+      } else {
+        debugPrint(
+          '🚇 [TunnelManager] No auth service available for cloud streaming',
+        );
+      }
 
       debugPrint(
         '🚇 [TunnelManager] Cloud streaming services initialized successfully',
@@ -146,19 +171,13 @@ class TunnelManagerService extends ChangeNotifier {
 
   /// Initialize web platform as bridge server
   /// Web platform doesn't connect as tunnel client - it IS the bridge server
+  /// Connection status depends on whether desktop clients are connected
   Future<void> _initializeWebBridgeServer() async {
     try {
       debugPrint('🚇 [TunnelManager] Initializing web bridge server...');
 
-      // Web platform is the bridge server, so mark as connected
-      _connectionStatus['cloud'] = ConnectionStatus(
-        type: 'cloud',
-        isConnected: true,
-        endpoint: _config.cloudProxyUrl,
-        version: 'Bridge Server',
-        lastCheck: DateTime.now(),
-        latency: 0,
-      );
+      // Check if desktop clients are connected to determine status
+      await _updateWebBridgeStatus();
 
       debugPrint(
         '🚇 [TunnelManager] Web bridge server initialized successfully',
@@ -172,6 +191,68 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
+  /// Update web bridge status based on desktop client connections
+  Future<void> _updateWebBridgeStatus() async {
+    if (!kIsWeb) return;
+
+    bool hasConnectedClients = false;
+    String statusMessage = 'Waiting for desktop client connection';
+
+    // Check if we have the client detection service and clients are connected
+    if (_clientDetectionService != null) {
+      hasConnectedClients = _clientDetectionService.hasConnectedClients;
+      if (hasConnectedClients) {
+        final clientCount = _clientDetectionService.connectedClientCount;
+        statusMessage =
+            'Bridge Server ($clientCount client${clientCount == 1 ? '' : 's'} connected)';
+      }
+    }
+
+    _connectionStatus['cloud'] = ConnectionStatus(
+      type: 'cloud',
+      isConnected: hasConnectedClients,
+      endpoint: _config.cloudProxyUrl,
+      version: statusMessage,
+      lastCheck: DateTime.now(),
+      latency: 0,
+      error: hasConnectedClients ? null : 'No desktop clients connected',
+    );
+
+    debugPrint(
+      '🚇 [TunnelManager] Web bridge status updated: $statusMessage (connected: $hasConnectedClients)',
+    );
+  }
+
+  /// Setup listener for desktop client connection changes (web platform only)
+  void _setupDesktopClientListener() {
+    if (!kIsWeb || _clientDetectionService == null) return;
+
+    debugPrint(
+      '🚇 [TunnelManager] Setting up desktop client detection listener...',
+    );
+
+    // Listen for changes in desktop client connections
+    _clientDetectionSubscription =
+        Stream.periodic(const Duration(seconds: 5), (_) => null).listen((
+          _,
+        ) async {
+          await _updateWebBridgeStatus();
+          _updateOverallStatus();
+          _debouncedNotifyListeners();
+        });
+
+    // Also listen to the client detection service directly
+    _clientDetectionService.addListener(() async {
+      await _updateWebBridgeStatus();
+      _updateOverallStatus();
+      _debouncedNotifyListeners();
+    });
+
+    debugPrint(
+      '🚇 [TunnelManager] Desktop client detection listener setup complete',
+    );
+  }
+
   /// Setup status event listener for cloud services only
   /// Local Ollama events are now handled independently
   void _setupStatusEventListener() {
@@ -183,7 +264,8 @@ class TunnelManagerService extends ChangeNotifier {
         // Only handle cloud proxy events now
         // Local Ollama events are handled by LocalOllamaConnectionService
         if (event.endpoint?.contains(_config.cloudProxyUrl) == true) {
-          // TODO: Handle cloud proxy streaming events when implemented
+          // Handle cloud proxy streaming events
+          _handleCloudProxyStreamingEvent(event);
           debugPrint('🚇 [TunnelManager] Cloud proxy event: ${event.state}');
         }
       },
@@ -191,6 +273,54 @@ class TunnelManagerService extends ChangeNotifier {
         debugPrint('🚇 [TunnelManager] Status event listener error: $error');
       },
     );
+  }
+
+  /// Handle cloud proxy streaming events
+  void _handleCloudProxyStreamingEvent(ConnectionStatusEvent event) {
+    debugPrint(
+      '🚇 [TunnelManager] Handling cloud proxy streaming event: ${event.state}',
+    );
+
+    // Update cloud streaming service connection status based on event
+    if (_cloudStreamingService != null) {
+      switch (event.state) {
+        case StreamingConnectionState.connected:
+          // Cloud proxy is connected, streaming service can be used
+          debugPrint(
+            '🚇 [TunnelManager] Cloud proxy connected - streaming available',
+          );
+          break;
+        case StreamingConnectionState.disconnected:
+          // Cloud proxy disconnected, close streaming service connection
+          debugPrint(
+            '🚇 [TunnelManager] Cloud proxy disconnected - closing streaming',
+          );
+          _cloudStreamingService!.closeConnection().catchError((e) {
+            debugPrint('🚇 [TunnelManager] Error closing cloud streaming: $e');
+          });
+          break;
+        case StreamingConnectionState.error:
+          // Cloud proxy error, handle streaming service error
+          debugPrint('🚇 [TunnelManager] Cloud proxy error: ${event.error}');
+          break;
+        case StreamingConnectionState.connecting:
+          // Cloud proxy connecting
+          debugPrint('🚇 [TunnelManager] Cloud proxy connecting...');
+          break;
+        case StreamingConnectionState.streaming:
+          // Cloud proxy streaming
+          debugPrint('🚇 [TunnelManager] Cloud proxy streaming...');
+          break;
+        case StreamingConnectionState.reconnecting:
+          // Cloud proxy reconnecting
+          debugPrint('🚇 [TunnelManager] Cloud proxy reconnecting...');
+          break;
+      }
+    }
+
+    // Update connection status
+    _updateOverallStatus();
+    _debouncedNotifyListeners();
   }
 
   /// Initialize cloud proxy connections only
@@ -656,6 +786,7 @@ class TunnelManagerService extends ChangeNotifier {
     _notifyDebounceTimer?.cancel();
     _healthCheckTimer?.cancel();
     _statusSubscription?.cancel();
+    _clientDetectionSubscription?.cancel();
     _cloudWebSocket?.close();
 
     // Only close HTTP client if it was initialized
@@ -664,6 +795,9 @@ class TunnelManagerService extends ChangeNotifier {
     } catch (e) {
       // HTTP client was not initialized, ignore
     }
+
+    // Dispose cloud streaming service
+    _cloudStreamingService?.dispose();
 
     // Local Ollama streaming service is now handled separately
     super.dispose();

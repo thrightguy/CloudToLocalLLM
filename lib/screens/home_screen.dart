@@ -4,14 +4,16 @@ import 'package:go_router/go_router.dart';
 import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../models/conversation.dart';
+import '../models/message.dart';
 import '../services/auth_service.dart';
 import '../services/streaming_chat_service.dart';
 import '../services/connection_manager_service.dart';
+import '../services/setup_wizard_service.dart';
 import '../components/conversation_list.dart';
 import '../components/message_bubble.dart';
 import '../components/message_input.dart';
 import '../components/app_logo.dart';
-import '../components/desktop_client_prompt.dart';
+import '../components/setup_wizard.dart';
 
 /// Modern ChatGPT-like chat interface
 class HomeScreen extends StatefulWidget {
@@ -55,54 +57,82 @@ class _HomeScreenState extends State<HomeScreen> {
     // Services are provided by the main app, no need for loading check
     return Scaffold(
       backgroundColor: AppTheme.backgroundMain,
-      body: Column(
+      body: Stack(
         children: [
-          // Header with gradient background
-          Container(
-            decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
-            child: _buildHeader(context),
-          ),
+          // Main content
+          Column(
+            children: [
+              // Header with gradient background
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.headerGradient,
+                ),
+                child: _buildHeader(context),
+              ),
 
-          // Main chat interface
-          Expanded(
-            child: Row(
-              children: [
-                // Conversation sidebar
-                if (!isMobile || !_isSidebarCollapsed)
-                  Consumer<StreamingChatService>(
-                    builder: (context, chatService, child) {
-                      return ConversationList(
-                        conversations: chatService.conversations,
-                        selectedConversation: chatService.currentConversation,
-                        onConversationSelected: (conversationId) {
-                          final conversation = chatService.conversations
-                              .firstWhere((c) => c.id == conversationId);
-                          chatService.selectConversation(conversation);
-                        },
-                        onConversationDeleted: (conversationId) {
-                          final conversation = chatService.conversations
-                              .firstWhere((c) => c.id == conversationId);
-                          chatService.deleteConversation(conversation);
-                        },
-                        onConversationRenamed: (conversationId, newTitle) {
-                          final conversation = chatService.conversations
-                              .firstWhere((c) => c.id == conversationId);
-                          chatService.updateConversationTitle(
-                            conversation,
-                            newTitle,
+              // Main chat interface
+              Expanded(
+                child: Row(
+                  children: [
+                    // Conversation sidebar
+                    if (!isMobile || !_isSidebarCollapsed)
+                      Consumer<StreamingChatService>(
+                        builder: (context, chatService, child) {
+                          return ConversationList(
+                            conversations: chatService.conversations,
+                            selectedConversation:
+                                chatService.currentConversation,
+                            onConversationSelected: (conversationId) {
+                              final conversation = chatService.conversations
+                                  .firstWhere((c) => c.id == conversationId);
+                              chatService.selectConversation(conversation);
+                            },
+                            onConversationDeleted: (conversationId) {
+                              final conversation = chatService.conversations
+                                  .firstWhere((c) => c.id == conversationId);
+                              chatService.deleteConversation(conversation);
+                            },
+                            onConversationRenamed: (conversationId, newTitle) {
+                              final conversation = chatService.conversations
+                                  .firstWhere((c) => c.id == conversationId);
+                              chatService.updateConversationTitle(
+                                conversation,
+                                newTitle,
+                              );
+                            },
+                            onNewConversation: () =>
+                                chatService.createConversation(),
+                            isCollapsed: _isSidebarCollapsed,
                           );
                         },
-                        onNewConversation: () =>
-                            chatService.createConversation(),
-                        isCollapsed: _isSidebarCollapsed,
-                      );
-                    },
-                  ),
+                      ),
 
-                // Main chat area
-                Expanded(child: _buildChatArea(context)),
-              ],
-            ),
+                    // Main chat area
+                    Expanded(child: _buildChatArea(context)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          // Setup wizard overlay (web platform only)
+          Consumer<SetupWizardService>(
+            builder: (context, setupWizard, child) {
+              if (!setupWizard.shouldShowWizard) {
+                return const SizedBox.shrink();
+              }
+
+              return SetupWizard(
+                isFirstTimeUser: setupWizard.isFirstTimeUser,
+                onDismiss: () {
+                  setupWizard.markWizardSeen();
+                  setupWizard.hideWizard();
+                },
+                onComplete: () {
+                  setupWizard.markSetupCompleted();
+                },
+              );
+            },
           ),
         ],
       ),
@@ -212,90 +242,99 @@ class _HomeScreenState extends State<HomeScreen> {
           Consumer<AuthService>(
             builder: (context, authService, child) {
               final user = authService.currentUser;
-              return PopupMenuButton<String>(
-                onSelected: (value) async {
-                  switch (value) {
-                    case 'settings':
-                      context.go('/settings');
-                      break;
-                    case 'logout':
-                      await authService.logout();
-                      if (context.mounted) {
-                        context.go('/login');
-                      }
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'settings',
+              return SizedBox(
+                width: 180, // Fixed width to ensure consistent dropdown width
+                child: PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    switch (value) {
+                      case 'settings':
+                        context.go('/settings');
+                        break;
+                      case 'logout':
+                        await authService.logout();
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'settings',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.settings, size: 18),
+                          SizedBox(width: AppTheme.spacingS),
+                          const Text('Settings'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.logout, size: 18),
+                          SizedBox(width: AppTheme.spacingS),
+                          const Text('Sign Out'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
+                  ),
+                  color: AppTheme.backgroundCard,
+                  shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  // Fix dropdown positioning to appear below the button
+                  position: PopupMenuPosition.under,
+                  // Ensure proper offset from the button
+                  offset: const Offset(0, 8),
+                  child: Container(
+                    padding: EdgeInsets.all(AppTheme.spacingS),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusS,
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.settings, size: 18),
-                        SizedBox(width: AppTheme.spacingS),
-                        const Text('Settings'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.logout, size: 18),
-                        SizedBox(width: AppTheme.spacingS),
-                        const Text('Sign Out'),
-                      ],
-                    ),
-                  ),
-                ],
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusM),
-                ),
-                color: AppTheme.backgroundCard,
-                shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
-                child: Container(
-                  padding: EdgeInsets.all(AppTheme.spacingS),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: AppTheme.primaryColor,
-                        child: Text(
-                          user?.initials ?? '?',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: AppTheme.primaryColor,
+                          child: Text(
+                            user?.initials ?? '?',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(width: AppTheme.spacingS),
-                      Text(
-                        user?.displayName ?? 'User',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        SizedBox(width: AppTheme.spacingS),
+                        Text(
+                          user?.displayName ?? 'User',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: AppTheme.spacingS),
-                      const Icon(
-                        Icons.arrow_drop_down,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ],
+                        SizedBox(width: AppTheme.spacingS),
+                        const Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -319,9 +358,6 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppTheme.backgroundMain,
           child: Column(
             children: [
-              // Desktop client prompt (compact, web only)
-              const DismissibleDesktopClientPrompt(showCompact: true),
-
               // Chat messages
               Expanded(
                 child: Container(
@@ -352,9 +388,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildEmptyState(BuildContext context) {
     return Column(
       children: [
-        // Desktop client prompt (web only)
-        const DismissibleDesktopClientPrompt(),
-
         // Main empty state content
         Expanded(
           child: Center(
@@ -526,8 +559,36 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _retryMessage(StreamingChatService chatService, message) {
-    // TODO: Implement retry functionality
-    // This would involve resending the last user message
+  void _retryMessage(StreamingChatService chatService, Message errorMessage) {
+    final conversation = chatService.currentConversation;
+    if (conversation == null) return;
+
+    // Find the last user message before this error message
+    String? lastUserMessage;
+    final messages = conversation.messages;
+
+    for (int i = messages.length - 1; i >= 0; i--) {
+      final msg = messages[i];
+      if (msg.id == errorMessage.id) {
+        // Found the error message, look for the user message before it
+        for (int j = i - 1; j >= 0; j--) {
+          if (messages[j].role == MessageRole.user) {
+            lastUserMessage = messages[j].content;
+            break;
+          }
+        }
+        break;
+      }
+    }
+
+    if (lastUserMessage != null && lastUserMessage.isNotEmpty) {
+      // Simply resend the last user message
+      // The StreamingChatService will handle adding the new message and managing state
+      _sendMessage(chatService, lastUserMessage);
+
+      debugPrint('🔄 [HomeScreen] Retrying message: $lastUserMessage');
+    } else {
+      debugPrint('⚠️ [HomeScreen] No user message found to retry');
+    }
   }
 }

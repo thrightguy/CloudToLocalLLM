@@ -821,21 +821,90 @@ class _ModelDownloadManagerState extends State<ModelDownloadManager> {
 
   Future<void> _deleteModel(String modelName) async {
     try {
-      // TODO: Implement model deletion via Ollama API
-      // For now, show a placeholder message
+      final ollamaService = Provider.of<OllamaService>(context, listen: false);
+
+      debugPrint('🦙 [ModelManager] Attempting to delete model: $modelName');
+
+      // Show loading state
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Model deletion will be implemented in a future update',
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Deleting model $modelName...'),
+            ],
           ),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppTheme.primaryColor,
+          duration: Duration(seconds: 30), // Longer duration for deletion
         ),
       );
+
+      final success = await ollamaService.deleteModel(modelName);
+
+      // Check if widget is still mounted before using context
+      if (!mounted) return;
+
+      // Clear any existing snackbars
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      if (success) {
+        debugPrint('🦙 [ModelManager] Successfully deleted model: $modelName');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 16),
+                SizedBox(width: 8),
+                Text('Successfully deleted $modelName'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        debugPrint('🦙 [ModelManager] Failed to delete model: $modelName');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white, size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Failed to delete $modelName: ${ollamaService.error ?? "Unknown error"}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     } catch (e) {
+      debugPrint('🦙 [ModelManager] Error during model deletion: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to delete model: $e'),
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white, size: 16),
+              SizedBox(width: 8),
+              Expanded(child: Text('Failed to delete model: $e')),
+            ],
+          ),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
         ),
       );
     }

@@ -5,12 +5,22 @@ import 'package:cloudtolocalllm/services/streaming_chat_service.dart';
 import 'package:cloudtolocalllm/services/local_ollama_streaming_service.dart';
 import 'package:cloudtolocalllm/services/streaming_service.dart';
 import 'package:cloudtolocalllm/models/streaming_message.dart';
+import 'test_config.dart';
 
 /// Mock classes for testing
 class MockConnectionManagerService extends Mock
     implements ConnectionManagerService {}
 
 void main() {
+  // Initialize test configuration with plugin mocks
+  setUpAll(() {
+    TestConfig.initialize();
+  });
+
+  tearDownAll(() {
+    TestConfig.cleanup();
+  });
+
   group('Streaming Integration Tests', () {
     late MockConnectionManagerService mockConnectionManager;
     late StreamingChatService streamingChatService;

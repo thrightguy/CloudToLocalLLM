@@ -64,7 +64,7 @@ class _DaemonSettingsScreenState extends State<DaemonSettingsScreen> {
           'connected': connectionService.isConnected,
           'connection_type': connectionService.connectionType,
           'version': connectionService.version,
-          'models': connectionService.models.map((m) => m.name).toList(),
+          'models': connectionService.models,
           'error': connectionService.error,
         };
         _lastStatusUpdate = DateTime.now();

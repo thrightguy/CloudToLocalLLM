@@ -709,9 +709,9 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: Replace with actual download URL
+                    // Official CloudToLocalLLM GitHub releases - portable executable
                     final url =
-                        'https://cloudtolocalllm.online/dist/windows/cloudtolocalllm.exe';
+                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-windows-portable.exe';
                     _launchUrl(url);
                   },
                   icon: const Icon(Icons.download),
@@ -727,9 +727,9 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: Replace with actual installer URL
+                    // Official CloudToLocalLLM GitHub releases - MSI installer
                     final url =
-                        'https://cloudtolocalllm.online/dist/windows/cloudtolocalllm-installer.msi';
+                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-windows-installer.msi';
                     _launchUrl(url);
                   },
                   icon: const Icon(Icons.install_desktop),
@@ -2330,38 +2330,6 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
   }
 
   // Helper methods for tunnel management
-
-  Color _getOverallStatusColor(
-    ConnectionStatus? ollamaStatus,
-    ConnectionStatus? cloudStatus,
-  ) {
-    if (ollamaStatus?.isConnected == true && cloudStatus?.isConnected == true) {
-      return Colors.green;
-    } else if (ollamaStatus?.isConnected == true ||
-        cloudStatus?.isConnected == true) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
-  }
-
-  String _getOverallStatusText(
-    ConnectionStatus? ollamaStatus,
-    ConnectionStatus? cloudStatus,
-    bool isConnecting,
-  ) {
-    if (isConnecting) {
-      return 'Connecting...';
-    } else if (ollamaStatus?.isConnected == true &&
-        cloudStatus?.isConnected == true) {
-      return 'All Connected';
-    } else if (ollamaStatus?.isConnected == true ||
-        cloudStatus?.isConnected == true) {
-      return 'Partially Connected';
-    } else {
-      return 'Disconnected';
-    }
-  }
 
   Future<void> _refreshConnections(TunnelManagerService tunnelManager) async {
     try {
