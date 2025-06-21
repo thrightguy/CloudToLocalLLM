@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "esbuild": "^0.25.5",
+    "vite": "^6.3.5",
+    "vitepress": "^1.6.3"
+  }
+}

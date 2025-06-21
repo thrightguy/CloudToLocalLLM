@@ -703,19 +703,44 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
           ),
+          SizedBox(height: AppTheme.spacingS),
+          Container(
+            padding: EdgeInsets.all(AppTheme.spacingS),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue, size: 16),
+                SizedBox(width: AppTheme.spacingS),
+                Expanded(
+                  child: Text(
+                    'Windows v3.6.3 packages are being prepared. Current downloads link to the latest available release.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.blue,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           SizedBox(height: AppTheme.spacingM),
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Official CloudToLocalLLM GitHub releases - portable executable
+                    // Official CloudToLocalLLM GitHub releases - portable ZIP package
+                    // Note: v3.6.3 Windows packages are being prepared
                     final url =
-                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-windows-portable.exe';
+                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest';
                     _launchUrl(url);
                   },
                   icon: const Icon(Icons.download),
-                  label: const Text('Download .exe (Portable)'),
+                  label: const Text('Download Portable (.zip)'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -727,9 +752,10 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Official CloudToLocalLLM GitHub releases - MSI installer
+                    // Official CloudToLocalLLM GitHub releases - MSI installer (to be created)
+                    // Note: v3.6.3 Windows packages are being prepared
                     final url =
-                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-windows-installer.msi';
+                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest';
                     _launchUrl(url);
                   },
                   icon: const Icon(Icons.install_desktop),
@@ -745,7 +771,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
           ),
           SizedBox(height: AppTheme.spacingS),
           Text(
-            'Choose portable .exe for no installation required, or .msi installer for system integration.',
+            'Choose portable .zip for no installation required, or .msi installer for system integration.',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
@@ -861,7 +887,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
           SizedBox(height: AppTheme.spacingM),
           _buildInstructionStep(
             '1. Download the Desktop Client',
-            'Choose either the portable .exe or the .msi installer from the download section above.',
+            'Choose either the portable .zip package or the .msi installer from the download section above.',
           ),
           SizedBox(height: AppTheme.spacingM),
           _buildInstructionStep(

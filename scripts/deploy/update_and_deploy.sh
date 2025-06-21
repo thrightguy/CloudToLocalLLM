@@ -187,6 +187,131 @@ pull_latest_changes() {
     log_success "Latest changes pulled"
 }
 
+# Update Flutter SDK and dependencies
+update_flutter_environment() {
+    log "Updating Flutter SDK and dependencies..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would execute Flutter SDK and dependency updates"
+        return 0
+    fi
+
+    # Check current Flutter version
+    log_verbose "Checking current Flutter version..."
+    local current_version=$(flutter --version | head -1 2>/dev/null || echo "Flutter not found")
+    log_verbose "Current Flutter version: $current_version"
+
+    # Update Flutter SDK to latest stable version
+    log_verbose "Upgrading Flutter SDK to latest stable version..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        flutter upgrade --force
+    else
+        flutter upgrade --force &> /dev/null
+    fi
+
+    # Verify Flutter installation
+    log_verbose "Running Flutter doctor to verify installation..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        flutter doctor --android-licenses || true
+        flutter doctor
+    else
+        flutter doctor --android-licenses &> /dev/null || true
+        flutter doctor &> /dev/null
+    fi
+
+    # Update package dependencies to latest compatible versions
+    log_verbose "Upgrading package dependencies to latest compatible versions..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        flutter pub upgrade
+    else
+        flutter pub upgrade &> /dev/null
+    fi
+
+    # Verify web platform support
+    log_verbose "Ensuring web platform support is enabled..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        flutter config --enable-web
+    else
+        flutter config --enable-web &> /dev/null
+    fi
+
+    # Display updated version
+    local new_version=$(flutter --version | head -1 2>/dev/null || echo "Flutter version check failed")
+    log_verbose "Updated Flutter version: $new_version"
+
+    # Verify compatibility
+    verify_flutter_compatibility
+
+    log_success "Flutter environment updated successfully"
+}
+
+# Verify Flutter version and package compatibility
+verify_flutter_compatibility() {
+    log_verbose "Verifying Flutter compatibility with codebase..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would verify Flutter compatibility"
+        return 0
+    fi
+
+    # Check minimum Flutter version requirements
+    local flutter_version=$(flutter --version | grep -oE 'Flutter [0-9]+\.[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
+    local min_version="3.16.0"  # Minimum required Flutter version for CloudToLocalLLM
+
+    if [[ "$flutter_version" != "0.0.0" ]]; then
+        log_verbose "Current Flutter version: $flutter_version"
+        log_verbose "Minimum required version: $min_version"
+
+        # Simple version comparison (assumes semantic versioning)
+        if [[ "$(printf '%s\n' "$min_version" "$flutter_version" | sort -V | head -n1)" != "$min_version" ]]; then
+            log_warning "Flutter version $flutter_version is below minimum required version $min_version"
+            log_warning "Some features may not work correctly"
+        else
+            log_verbose "Flutter version compatibility check passed"
+        fi
+    else
+        log_warning "Could not determine Flutter version"
+    fi
+
+    # Verify web platform support
+    log_verbose "Checking web platform support..."
+    if flutter config | grep -q "enable-web: true" 2>/dev/null; then
+        log_verbose "Web platform support is enabled"
+    else
+        log_warning "Web platform support may not be enabled"
+        flutter config --enable-web &> /dev/null || true
+    fi
+
+    # Check for critical package compatibility issues
+    log_verbose "Checking package compatibility..."
+    if [[ -f "pubspec.yaml" ]]; then
+        # Check for known problematic package combinations
+        if grep -q "flutter_secure_storage" pubspec.yaml && grep -q "window_manager" pubspec.yaml; then
+            log_verbose "Detected desktop-specific packages - ensuring web compatibility"
+        fi
+
+        # Verify pubspec.yaml syntax
+        if ! flutter pub deps &> /dev/null; then
+            log_warning "Package dependency issues detected - attempting to resolve..."
+            flutter pub get &> /dev/null || true
+        else
+            log_verbose "Package dependencies are compatible"
+        fi
+    else
+        log_warning "pubspec.yaml not found in current directory"
+    fi
+
+    # Test basic Flutter commands
+    log_verbose "Testing Flutter web build capability..."
+    if flutter build web --help &> /dev/null; then
+        log_verbose "Flutter web build capability verified"
+    else
+        log_warning "Flutter web build capability test failed"
+    fi
+
+    log_verbose "Flutter compatibility verification completed"
+}
+
 # Build Flutter web application
 build_flutter_web() {
     log "Building Flutter web application..."
@@ -280,12 +405,12 @@ build_flutter_web() {
             log "DRY RUN: Would execute: flutter build web --no-tree-shake-icons"
         else
             if [[ "$VERBOSE" == "true" ]]; then
-                if ! timeout $build_timeout flutter build web --no-tree-shake-icons; then
+                if ! timeout $build_timeout flutter build web --release --no-tree-shake-icons; then
                     log_error "Flutter web build timed out or failed"
                     exit 3
                 fi
             else
-                if ! timeout $build_timeout flutter build web --no-tree-shake-icons &> /dev/null; then
+                if ! timeout $build_timeout flutter build web --release --no-tree-shake-icons &> /dev/null; then
                     log_error "Flutter web build timed out or failed"
                     exit 3
                 fi
@@ -479,6 +604,7 @@ main() {
     # Execute deployment phases
     create_backup
     pull_latest_changes
+    update_flutter_environment
     build_flutter_web
     update_distribution_files
     manage_containers

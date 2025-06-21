@@ -1,0 +1,76 @@
+# Flutter Builder Container - For building Flutter web applications with latest SDK
+# This container provides a consistent Flutter build environment with automatic SDK updates
+
+FROM ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV FLUTTER_HOME=/opt/flutter
+ENV PATH="$FLUTTER_HOME/bin:$PATH"
+ENV PUB_CACHE=/opt/flutter/.pub-cache
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    unzip \
+    xz-utils \
+    zip \
+    libglu1-mesa \
+    wget \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create flutter user
+RUN useradd -m -s /bin/bash flutter && \
+    mkdir -p /opt/flutter && \
+    chown -R flutter:flutter /opt/flutter
+
+# Switch to flutter user
+USER flutter
+WORKDIR /home/flutter
+
+# Install Flutter SDK (latest stable)
+RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME && \
+    $FLUTTER_HOME/bin/flutter doctor && \
+    $FLUTTER_HOME/bin/flutter config --enable-web && \
+    $FLUTTER_HOME/bin/flutter precache --web
+
+# Create workspace directory
+RUN mkdir -p /home/flutter/workspace
+WORKDIR /home/flutter/workspace
+
+# Create Flutter SDK update script
+RUN echo '#!/bin/bash' > /home/flutter/update-flutter.sh && \
+    echo 'set -e' >> /home/flutter/update-flutter.sh && \
+    echo 'echo "Updating Flutter SDK to latest stable version..."' >> /home/flutter/update-flutter.sh && \
+    echo 'cd $FLUTTER_HOME' >> /home/flutter/update-flutter.sh && \
+    echo 'git fetch origin' >> /home/flutter/update-flutter.sh && \
+    echo 'git reset --hard origin/stable' >> /home/flutter/update-flutter.sh && \
+    echo 'flutter doctor' >> /home/flutter/update-flutter.sh && \
+    echo 'flutter config --enable-web' >> /home/flutter/update-flutter.sh && \
+    echo 'flutter precache --web' >> /home/flutter/update-flutter.sh && \
+    echo 'echo "Flutter SDK updated successfully"' >> /home/flutter/update-flutter.sh && \
+    chmod +x /home/flutter/update-flutter.sh
+
+# Create Flutter build script with dependency updates
+RUN echo '#!/bin/bash' > /home/flutter/build-web.sh && \
+    echo 'set -e' >> /home/flutter/build-web.sh && \
+    echo 'cd /home/flutter/workspace' >> /home/flutter/build-web.sh && \
+    echo 'echo "Updating Flutter dependencies..."' >> /home/flutter/build-web.sh && \
+    echo 'flutter pub upgrade' >> /home/flutter/build-web.sh && \
+    echo 'flutter clean' >> /home/flutter/build-web.sh && \
+    echo 'flutter pub get' >> /home/flutter/build-web.sh && \
+    echo 'echo "Building Flutter web application..."' >> /home/flutter/build-web.sh && \
+    echo 'flutter build web --release --no-tree-shake-icons --web-renderer html' >> /home/flutter/build-web.sh && \
+    echo 'echo "Flutter web build completed successfully"' >> /home/flutter/build-web.sh && \
+    chmod +x /home/flutter/build-web.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD flutter doctor || exit 1
+
+# Default command
+CMD ["/bin/bash"]

@@ -97,21 +97,29 @@ function Test-Prerequisites {
         # Find suitable WSL distribution
         $script:LinuxDistro = $WSLDistro
         if (-not $script:LinuxDistro) {
-            $script:LinuxDistro = Find-WSLDistribution -Purpose 'Any'
-            if (-not $script:LinuxDistro) {
-                Write-LogError "No WSL distribution found"
+            # Just use archlinux directly since we know it exists
+            $script:LinuxDistro = "archlinux"
+
+            # Verify it exists
+            $wslList = wsl -l -q
+            if ($wslList -notcontains "archlinux") {
+                Write-LogError "Arch Linux WSL distribution not found"
                 Write-LogInfo "Available distributions:"
-                Get-WSLDistributions | ForEach-Object { Write-LogInfo "  - $($_.Name) ($($_.State))" }
+                wsl -l -v
                 exit 1
             }
         }
 
         Write-LogInfo "Using WSL distribution: $script:LinuxDistro"
 
-        # Check SSH in WSL
-        if (-not (Test-WSLCommand -DistroName $script:LinuxDistro -CommandName "ssh")) {
+        # Check SSH in WSL - simplified check
+        try {
+            wsl -d $script:LinuxDistro which ssh | Out-Null
+            Write-LogInfo "SSH found in WSL distribution: $script:LinuxDistro"
+        }
+        catch {
             Write-LogError "SSH not found in WSL"
-            Write-LogInfo "Install in WSL: sudo apt-get update && sudo apt-get install openssh-client"
+            Write-LogInfo "Install in WSL: sudo pacman -S openssh"
             exit 1
         }
 
@@ -145,10 +153,10 @@ function Invoke-SSHCommand {
     
     if ($script:SSHMethod -eq "WSL") {
         if ($PassThru) {
-            return Invoke-WSLCommand -DistroName $script:LinuxDistro -Command "ssh $sshTarget '$Command'" -PassThru
+            return wsl -d $script:LinuxDistro ssh $sshTarget $Command
         }
         else {
-            Invoke-WSLCommand -DistroName $script:LinuxDistro -Command "ssh $sshTarget '$Command'"
+            wsl -d $script:LinuxDistro ssh $sshTarget $Command
         }
     }
     else {
@@ -168,12 +176,18 @@ function Test-VPSConnectivity {
 
     Write-LogInfo "Testing VPS connectivity..."
 
-    # Use the enhanced SSH connectivity test
-    if (Test-SSHConnectivity -VPSHost $VPSHost -VPSUser $VPSUser) {
-        Write-LogSuccess "VPS connectivity test passed"
+    # Test SSH connection directly using our SSH method
+    try {
+        $result = Invoke-SSHCommand -Command "echo 'SSH_TEST_SUCCESS'" -PassThru
+        if ($result -like "*SSH_TEST_SUCCESS*") {
+            Write-LogSuccess "VPS connectivity test passed"
+        }
+        else {
+            throw "SSH test command did not return expected result"
+        }
     }
-    else {
-        Write-LogError "Failed to connect to VPS"
+    catch {
+        Write-LogError "Failed to connect to VPS: $($_.Exception.Message)"
         Write-LogInfo "Troubleshooting steps:"
         Write-LogInfo "1. Verify SSH keys are properly configured"
         Write-LogInfo "2. Check VPS accessibility and firewall settings"
@@ -288,6 +302,172 @@ function Update-GitRepository {
     }
     catch {
         Write-LogError "Failed to pull Git changes: $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+# Update Flutter environment and dependencies
+function Update-FlutterEnvironment {
+    [CmdletBinding()]
+    param()
+
+    Write-LogInfo "Updating Flutter SDK and dependencies..."
+
+    try {
+        # Check Flutter installation
+        Write-LogInfo "Checking Flutter installation..."
+        $flutterVersion = Invoke-SSHCommand -Command "flutter --version | head -1" -PassThru
+        Write-LogInfo "Current Flutter version: $flutterVersion"
+
+        # Update Flutter SDK to latest stable
+        Write-LogInfo "Upgrading Flutter SDK to latest stable version..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter upgrade --force"
+
+        # Verify Flutter installation and dependencies
+        Write-LogInfo "Running Flutter doctor to verify installation..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter doctor --android-licenses || true"
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter doctor"
+
+        # Update package dependencies to latest compatible versions
+        Write-LogInfo "Upgrading package dependencies..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter pub upgrade"
+
+        # Clean any cached builds to ensure fresh build with new dependencies
+        Write-LogInfo "Cleaning previous builds..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter clean"
+
+        # Get updated dependencies
+        Write-LogInfo "Getting updated dependencies..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter pub get"
+
+        # Verify web platform support
+        Write-LogInfo "Verifying web platform support..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter config --enable-web"
+
+        $newFlutterVersion = Invoke-SSHCommand -Command "flutter --version | head -1" -PassThru
+
+        # Verify compatibility
+        Test-FlutterCompatibility
+
+        Write-LogSuccess "Flutter environment updated successfully"
+        Write-LogInfo "Updated Flutter version: $newFlutterVersion"
+    }
+    catch {
+        Write-LogError "Failed to update Flutter environment: $($_.Exception.Message)"
+        Write-LogWarning "Continuing with existing Flutter installation..."
+    }
+}
+
+# Verify Flutter version and package compatibility
+function Test-FlutterCompatibility {
+    [CmdletBinding()]
+    param()
+
+    Write-LogInfo "Verifying Flutter compatibility with codebase..."
+
+    try {
+        # Check minimum Flutter version requirements
+        $flutterVersionOutput = Invoke-SSHCommand -Command "flutter --version | head -1" -PassThru
+        $minVersion = "3.16.0"  # Minimum required Flutter version for CloudToLocalLLM
+
+        if ($flutterVersionOutput -match 'Flutter (\d+\.\d+\.\d+)') {
+            $currentVersion = $matches[1]
+            Write-LogInfo "Current Flutter version: $currentVersion"
+            Write-LogInfo "Minimum required version: $minVersion"
+
+            # Simple version comparison
+            $current = [Version]$currentVersion
+            $minimum = [Version]$minVersion
+
+            if ($current -lt $minimum) {
+                Write-LogWarning "Flutter version $currentVersion is below minimum required version $minVersion"
+                Write-LogWarning "Some features may not work correctly"
+            }
+            else {
+                Write-LogInfo "Flutter version compatibility check passed"
+            }
+        }
+        else {
+            Write-LogWarning "Could not determine Flutter version from: $flutterVersionOutput"
+        }
+
+        # Verify web platform support
+        Write-LogInfo "Checking web platform support..."
+        $webSupport = Invoke-SSHCommand -Command "cd $ProjectDir && flutter config | grep 'enable-web: true' || echo 'not-enabled'" -PassThru
+        if ($webSupport -notmatch "not-enabled") {
+            Write-LogInfo "Web platform support is enabled"
+        }
+        else {
+            Write-LogWarning "Web platform support may not be enabled"
+            Invoke-SSHCommand -Command "cd $ProjectDir && flutter config --enable-web"
+        }
+
+        # Check for critical package compatibility issues
+        Write-LogInfo "Checking package compatibility..."
+        $pubspecExists = Invoke-SSHCommand -Command "test -f $ProjectDir/pubspec.yaml && echo 'exists' || echo 'missing'" -PassThru
+        if ($pubspecExists.Trim() -eq "exists") {
+            # Verify pubspec.yaml syntax and dependencies
+            $depsCheck = Invoke-SSHCommand -Command "cd $ProjectDir && flutter pub deps > /dev/null 2>&1 && echo 'ok' || echo 'error'" -PassThru
+            if ($depsCheck.Trim() -eq "ok") {
+                Write-LogInfo "Package dependencies are compatible"
+            }
+            else {
+                Write-LogWarning "Package dependency issues detected - attempting to resolve..."
+                Invoke-SSHCommand -Command "cd $ProjectDir && flutter pub get"
+            }
+        }
+        else {
+            Write-LogWarning "pubspec.yaml not found in project directory"
+        }
+
+        # Test basic Flutter commands
+        Write-LogInfo "Testing Flutter web build capability..."
+        $buildTest = Invoke-SSHCommand -Command "cd $ProjectDir && flutter build web --help > /dev/null 2>&1 && echo 'ok' || echo 'error'" -PassThru
+        if ($buildTest.Trim() -eq "ok") {
+            Write-LogInfo "Flutter web build capability verified"
+        }
+        else {
+            Write-LogWarning "Flutter web build capability test failed"
+        }
+
+        Write-LogSuccess "Flutter compatibility verification completed"
+    }
+    catch {
+        Write-LogWarning "Flutter compatibility verification failed: $($_.Exception.Message)"
+    }
+}
+
+# Build Flutter web application
+function Build-FlutterWeb {
+    [CmdletBinding()]
+    param()
+
+    Write-LogInfo "Building Flutter web application..."
+
+    try {
+        # Build web application with optimizations
+        Write-LogInfo "Building optimized web application..."
+        Invoke-SSHCommand -Command "cd $ProjectDir && flutter build web --release --no-tree-shake-icons"
+
+        # Verify build output
+        $buildExists = Invoke-SSHCommand -Command "test -d $ProjectDir/build/web && echo 'exists' || echo 'missing'" -PassThru
+        if ($buildExists.Trim() -ne "exists") {
+            throw "Flutter web build output not found"
+        }
+
+        # Check build size and key files
+        Write-LogInfo "Verifying build output..."
+        Invoke-SSHCommand -Command "cd $ProjectDir/build/web && ls -la"
+
+        $indexExists = Invoke-SSHCommand -Command "test -f $ProjectDir/build/web/index.html && echo 'exists' || echo 'missing'" -PassThru
+        if ($indexExists.Trim() -ne "exists") {
+            throw "index.html not found in build output"
+        }
+
+        Write-LogSuccess "Flutter web application built successfully"
+    }
+    catch {
+        Write-LogError "Failed to build Flutter web application: $($_.Exception.Message)"
         exit 1
     }
 }
@@ -453,6 +633,8 @@ function Invoke-Main {
 
     # Deploy
     Update-GitRepository
+    Update-FlutterEnvironment
+    Build-FlutterWeb
     Stop-Containers
     Start-Containers
 

@@ -14,9 +14,19 @@
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
     "@typescript-eslint/parser": "^8.33.1",
+    "esbuild": "^0.25.5",
     "eslint": "^9.28.0",
     "typescript": "^5.8.3",
-    "vitepress": "^1.0.0-rc.31"
+    "vite": "^6.3.5",
+    "vitepress": "^1.6.3"
+  },
+  "overrides": {
+    "esbuild": "^0.25.5",
+    "vitepress": {
+      "vite": {
+        "esbuild": "^0.25.5"
+      }
+    }
   },
   "dependencies": {
     "vue": "^3.3.8"
