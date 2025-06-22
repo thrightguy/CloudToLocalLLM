@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/app_config.dart';
 
 /// Download screen - web-only marketing page
 /// Comprehensive installation guide for Linux distributions
@@ -227,10 +228,10 @@ sudo snap connect cloudtolocalllm:system-observe''',
       description:
           'Native package for Ubuntu, Debian, and derivatives with proper dependency management.',
       child: _buildInstallationSection('Installation', '''# Download the package
-wget https://cloudtolocalllm.online/dist/debian/cloudtolocalllm_2.1.1_amd64.deb
+wget ${AppConfig.linuxDebUrl}
 
 # Install with dpkg
-sudo dpkg -i cloudtolocalllm_2.1.1_amd64.deb
+sudo dpkg -i cloudtolocalllm_${AppConfig.appVersion}_amd64.deb
 
 # Install dependencies if needed
 sudo apt-get install -f'''),
@@ -246,13 +247,13 @@ sudo apt-get install -f'''),
       child: _buildInstallationSection(
         'Download and Run',
         '''# Download AppImage
-wget https://cloudtolocalllm.online/cloudtolocalllm-2.1.1-x86_64.AppImage
+wget ${AppConfig.linuxAppImageUrl}
 
 # Make executable
-chmod +x cloudtolocalllm-2.1.1-x86_64.AppImage
+chmod +x cloudtolocalllm-${AppConfig.appVersion}-x86_64.AppImage
 
 # Run directly
-./cloudtolocalllm-2.1.1-x86_64.AppImage''',
+./cloudtolocalllm-${AppConfig.appVersion}-x86_64.AppImage''',
       ),
     );
   }
@@ -286,11 +287,11 @@ pamac install cloudtolocalllm''',
       child: _buildInstallationSection(
         'Download and Install',
         '''# Download pre-built binary package
-wget https://cloudtolocalllm.online/cloudtolocalllm-2.1.1-x86_64.tar.gz
+wget ${AppConfig.linuxTarGzUrl}
 
 # Extract to local directory
-tar -xzf cloudtolocalllm-2.1.1-x86_64.tar.gz
-cd cloudtolocalllm-2.1.1-x86_64
+tar -xzf cloudtolocalllm-${AppConfig.appVersion}-x86_64.tar.gz
+cd cloudtolocalllm-${AppConfig.appVersion}-x86_64
 
 # Run directly
 ./cloudtolocalllm''',

@@ -15,9 +15,10 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 - **`build_unified_package.ps1`** - Build Flutter applications for Windows
 - **`create_unified_aur_package.ps1`** - Create AUR packages (requires WSL with Arch Linux)
 - **`build_deb.ps1`** - Create Debian packages (requires WSL with Ubuntu/Debian or Docker)
-- **`deploy_vps.ps1`** - Deploy to VPS with Docker containers and SSH key management
 - **`Test-Environment.ps1`** - Comprehensive environment validation and testing
 - **`launcher.ps1`** - Smart script launcher with auto-detection
+
+**Note**: VPS deployment operations should use the bash scripts in `scripts/deploy/` directory via WSL, not PowerShell scripts.
 
 ### Dependencies
 
@@ -28,7 +29,7 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 #### Automatically Managed Dependencies
 - **Git for Windows** - Version control operations
 - **Flutter SDK** - For building Flutter applications
-- **OpenSSH Client** - For VPS deployment and SSH operations
+- **OpenSSH Client** - For SSH operations and WSL integration
 - **Visual Studio Build Tools** - For Flutter Windows builds
 - **7-Zip** - For archive operations
 - **Docker Desktop** - For containerized builds (optional)
@@ -98,18 +99,13 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 ```
 
 ### VPS Deployment
-```powershell
-# Deploy to VPS with automatic dependency installation
-.\deploy_vps.ps1 -AutoInstall
+**Note**: VPS deployment is handled by bash scripts via WSL, not PowerShell scripts.
 
-# Deploy with SSH key synchronization
-.\deploy_vps.ps1 -SyncSSHKeys
-
-# Deploy to custom VPS
-.\deploy_vps.ps1 -VPSHost myserver.com -VPSUser myuser
-
-# Use WSL for SSH operations
-.\deploy_vps.ps1 -UseWSL -WSLDistro Ubuntu
+```bash
+# From Windows, access WSL for VPS deployment
+wsl -d archlinux
+cd /opt/cloudtolocalllm
+bash scripts/deploy/update_and_deploy.sh --force --verbose
 ```
 
 ### Environment Testing

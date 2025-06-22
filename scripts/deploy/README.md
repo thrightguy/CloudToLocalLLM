@@ -2,6 +2,19 @@
 
 This directory contains the deployment scripts for the CloudToLocalLLM application.
 
+## Architecture Separation
+
+**VPS Deployment (Linux-only):**
+- All VPS deployment operations use bash scripts (.sh files) exclusively
+- Must be executed via WSL (Arch Linux distribution) from Windows
+- SSH operations to cloudtolocalllm.online VPS go through WSL
+- Flutter web builds, Docker container management, and git operations use Linux commands only
+
+**Windows Package Management:**
+- Windows desktop application packaging (MSI, NSIS, Portable ZIP) handled by PowerShell scripts in `scripts/powershell/`
+- Local Windows builds and testing use PowerShell scripts
+- Windows-specific dependency management (Chocolatey, Windows features) stays in PowerShell
+
 ## Main Deployment Script
 
 ### `update_and_deploy.sh`
@@ -15,7 +28,12 @@ The primary deployment script for the VPS. This script handles the complete depl
 
 #### Usage
 ```bash
-# On the VPS
+# From WSL (Windows users)
+wsl -d archlinux
+cd /opt/cloudtolocalllm
+bash scripts/deploy/update_and_deploy.sh
+
+# On the VPS directly
 cd /opt/cloudtolocalllm
 bash scripts/deploy/update_and_deploy.sh
 ```

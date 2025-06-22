@@ -2,59 +2,59 @@
 
 This directory contains production-ready deployment scripts for the CloudToLocalLLM application. All scripts follow security best practices and run without root privileges.
 
+## 🏗️ Architecture Separation
+
+CloudToLocalLLM uses a clear separation between Windows and Linux environments:
+
+- **VPS Deployment (Linux-only)**: Use bash scripts in `scripts/deploy/` via WSL
+- **Windows Package Management**: Use PowerShell scripts in `scripts/powershell/`
+
+📖 **See [Environment Separation Guide](../docs/DEPLOYMENT/ENVIRONMENT_SEPARATION_GUIDE.md) for complete details**
+
 ## 🚀 Quick Start
 
-### Initial Deployment
+### VPS Deployment (from Windows)
 ```bash
-# On VPS server as cloudllm user
+# Access WSL Arch Linux distribution
+wsl -d archlinux
+
+# Navigate to project and deploy
 cd /opt/cloudtolocalllm
-./scripts/deploy_vps.sh
+bash scripts/deploy/update_and_deploy.sh --force
 ```
 
-### Regular Updates
-```bash
-# Pull latest changes and rebuild
-./scripts/update_deployment.sh
-```
-
-### Container Management
-```bash
-# Start/restart containers only
-./scripts/docker_startup_vps.sh
+### Windows Package Creation
+```powershell
+# From Windows PowerShell
+.\scripts\powershell\Create-UnifiedPackages.ps1 -WindowsOnly -AutoInstall
 ```
 
 ## 📁 Directory Structure
 
-### Core Deployment Scripts
-- `deploy_vps.sh` - **Main deployment script** (non-root, production-ready)
-- `docker_startup_vps.sh` - **Container startup script** (uses existing Let's Encrypt certs)
-- `update_deployment.sh` - **Update script** for regular deployments
+### Environment-Specific Script Directories
 
-### Organized Script Directories
-
-#### `/build/` - Build Scripts
-- `build_appimage_manjaro.sh` - AppImage build script for Manjaro Linux
-- `build_webapp_verbose.sh` - Verbose web application build script
-
-#### `/deploy/` - Deployment Scripts
-- `EXECUTE_VPS_DEPLOYMENT.sh` - VPS deployment execution script
+#### `/deploy/` - VPS Deployment Scripts (Linux-only)
+- `update_and_deploy.sh` - **Main VPS deployment script** (bash)
+- `deploy_unified_web_architecture.sh` - Web architecture deployment
 - `VPS_DEPLOYMENT_COMMANDS.sh` - VPS deployment commands
 - `VPS_DEPLOYMENT_VERIFICATION.sh` - VPS deployment verification
+- `push-to-live.sh` - Push code to live VPS
 
-#### `/setup/` - Initial Setup Scripts
-- `initial_server_setup.sh` - Initial server configuration
-- `vps_initial_setup.sh` - VPS initial setup and configuration
-
-#### `/release/` - Release Management
-- `sf_upload.sh` - SourceForge file upload script for binary distribution
+#### `/powershell/` - Windows Package Management (PowerShell-only)
+- `Create-UnifiedPackages.ps1` - **Main package creator** (all formats)
+- `build_unified_package.ps1` - Windows builds
+- `version_manager.ps1` - Version management
+- `BuildEnvironmentUtilities.ps1` - Common utilities
 
 #### Other Directories
 - `auth0/` - Auth0 integration scripts
+- `build/` - Build scripts and utilities
 - `docker/` - Docker-related utilities
 - `install/` - Installation scripts for various components
 - `maintenance/` - System maintenance scripts
 - `packaging/` - Package creation scripts
-- `powershell/` - Windows PowerShell scripts
+- `release/` - Release management scripts
+- `setup/` - Initial setup scripts
 - `ssl/` - SSL certificate management
 - `utils/` - General utility scripts
 - `verification/` - Deployment verification tools
@@ -69,8 +69,8 @@ Scripts previously in the project root have been moved to their appropriate dire
 
 ## 🔧 Script Details
 
-### `deploy_vps.sh` - Main Deployment Script
-**Purpose**: Complete application deployment with Flutter build and Docker containers
+### `update_and_deploy.sh` - Main VPS Deployment Script
+**Purpose**: Complete VPS deployment with Flutter build and Docker containers
 
 **Features**:
 - ✅ Non-root execution (requires Docker group membership)
@@ -82,7 +82,10 @@ Scripts previously in the project root have been moved to their appropriate dire
 
 **Usage**:
 ```bash
-./scripts/deploy_vps.sh
+# From WSL (Windows users)
+wsl -d archlinux
+cd /opt/cloudtolocalllm
+bash scripts/deploy/update_and_deploy.sh --force
 ```
 
 **Requirements**:
@@ -197,8 +200,9 @@ sudo chown -R cloudllm:cloudllm /opt/cloudtolocalllm
 
 ### 2. Deploy Application
 ```bash
-# Run main deployment script
-./scripts/deploy_vps.sh
+# Run main VPS deployment script
+cd /opt/cloudtolocalllm
+bash scripts/deploy/update_and_deploy.sh --force
 ```
 
 ### 3. Regular Updates

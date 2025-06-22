@@ -733,10 +733,8 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Official CloudToLocalLLM GitHub releases - portable ZIP package
-                    // Note: v3.6.3 Windows packages are being prepared
-                    final url =
-                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest';
+                    // CloudToLocalLLM VPS-hosted portable ZIP package
+                    final url = AppConfig.windowsPortableUrl;
                     _launchUrl(url);
                   },
                   icon: const Icon(Icons.download),
@@ -752,10 +750,8 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Official CloudToLocalLLM GitHub releases - MSI installer (to be created)
-                    // Note: v3.6.3 Windows packages are being prepared
-                    final url =
-                        'https://github.com/imrightguy/CloudToLocalLLM/releases/latest';
+                    // CloudToLocalLLM VPS-hosted MSI installer
+                    final url = AppConfig.windowsInstallerUrl;
                     _launchUrl(url);
                   },
                   icon: const Icon(Icons.install_desktop),

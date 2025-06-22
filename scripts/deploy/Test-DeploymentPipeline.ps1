@@ -42,7 +42,7 @@ if ($Help) {
     Write-Host "Test Modes:" -ForegroundColor Yellow
     Write-Host "  Local             Test Flutter updates and build locally"
     Write-Host "  Docker            Test using Docker Flutter builder"
-    Write-Host "  VPS               Test VPS deployment pipeline (requires SSH access)"
+    Write-Host "  VPS               Test VPS deployment pipeline (requires WSL/Linux environment)"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
     Write-Host "  .\Test-DeploymentPipeline.ps1 -TestMode Local -VerboseOutput"
@@ -182,26 +182,26 @@ function Test-VPSDeployment {
     param()
 
     Write-LogInfo "Testing VPS deployment pipeline..."
-    
+
     try {
-        # Check if deployment script exists
-        $deployScript = Join-Path $PSScriptRoot "..\powershell\deploy_vps.ps1"
+        # Check if bash deployment script exists
+        $deployScript = Join-Path $PSScriptRoot "update_and_deploy.sh"
         if (-not (Test-Path $deployScript)) {
             Write-LogError "VPS deployment script not found: $deployScript"
             return $false
         }
-        
+
         # Test deployment script with dry run
         if ($DryRun) {
-            Write-LogInfo "Testing VPS deployment script in dry-run mode..."
-            Write-LogWarning "VPS deployment test requires actual VPS access"
-            Write-LogInfo "To test VPS deployment, run: & '$deployScript' -VerboseOutput"
+            Write-LogInfo "Testing VPS deployment via WSL in dry-run mode..."
+            Write-LogWarning "VPS deployment must use WSL/Linux environment"
+            Write-LogInfo "To test VPS deployment, use WSL: wsl -d archlinux bash scripts/deploy/update_and_deploy.sh --verbose"
         }
         else {
-            Write-LogWarning "VPS deployment test requires actual VPS access and SSH configuration"
-            Write-LogInfo "To test VPS deployment, run: & '$deployScript' -VerboseOutput"
+            Write-LogWarning "VPS deployment requires WSL/Linux environment and SSH configuration"
+            Write-LogInfo "To test VPS deployment, use WSL: wsl -d archlinux bash scripts/deploy/update_and_deploy.sh --verbose"
         }
-        
+
         Write-LogSuccess "VPS deployment pipeline test completed"
         return $true
     }

@@ -134,15 +134,20 @@ The deployment pipeline automatically verifies:
 
 ### Standard VPS Deployment
 
-**Bash (Linux/WSL):**
+**VPS deployment must use WSL/Linux environment:**
 ```bash
+# From WSL or Linux terminal
 cd /opt/cloudtolocalllm
 bash scripts/deploy/update_and_deploy.sh --force --verbose
 ```
 
-**PowerShell (Windows):**
+**Windows users should use WSL:**
 ```powershell
-.\scripts\powershell\deploy_vps.ps1 -VerboseOutput
+# From Windows PowerShell, access WSL
+wsl -d archlinux
+# Then run the bash deployment script
+cd /opt/cloudtolocalllm
+bash scripts/deploy/update_and_deploy.sh --force --verbose
 ```
 
 ### Docker-based Build

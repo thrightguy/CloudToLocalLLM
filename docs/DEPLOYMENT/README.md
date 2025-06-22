@@ -6,6 +6,13 @@ This directory contains the complete deployment documentation for CloudToLocalLL
 
 ## 🎯 Primary Documentation (Start Here)
 
+### **[ENVIRONMENT_SEPARATION_GUIDE.md](./ENVIRONMENT_SEPARATION_GUIDE.md)**
+**Architecture separation guide** - Clear separation between Windows and Linux deployment environments.
+- **Purpose**: Understand the deployment architecture and environment boundaries
+- **Audience**: All developers and deployment operators
+- **Content**: Architecture principles, workflow examples, best practices
+- **When to use**: Before starting any deployment work
+
 ### **[COMPLETE_DEPLOYMENT_WORKFLOW.md](./COMPLETE_DEPLOYMENT_WORKFLOW.md)**
 **The authoritative deployment guide** - Complete step-by-step technical implementation for all deployment phases.
 - **Purpose**: Primary deployment execution reference

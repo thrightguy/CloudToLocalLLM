@@ -143,29 +143,46 @@ find_package_files() {
 
     # Get current version
     local version=$(grep '^version:' "$PROJECT_ROOT/pubspec.yaml" | sed 's/version: *\([0-9.]*\).*/\1/')
-    
-    # Find package files
-    PACKAGE_FILE="$DIST_DIR/cloudtolocalllm-$version-x86_64.tar.gz"
-    CHECKSUM_FILE="$PACKAGE_FILE.sha256"
+
+    # Initialize arrays for multiple package types
+    PACKAGE_FILES=()
+    CHECKSUM_FILES=()
+
+    # Define package patterns to look for
+    local patterns=(
+        "cloudtolocalllm-$version-x86_64.tar.gz"                    # Linux binary
+        "cloudtolocalllm-$version-x86_64.AppImage"                  # Linux AppImage
+        "cloudtolocalllm_${version}_amd64.deb"                      # Debian package
+        "cloudtolocalllm-$version-windows-portable.zip"             # Windows portable
+        "cloudtolocalllm-$version-windows-installer.msi"            # Windows installer
+        "cloudtolocalllm-$version-macos.dmg"                        # macOS package
+    )
+
+    # Find all available packages
+    for pattern in "${patterns[@]}"; do
+        local package_file="$DIST_DIR/$pattern"
+        local checksum_file="$package_file.sha256"
+
+        if [[ -f "$package_file" ]]; then
+            PACKAGE_FILES+=("$package_file")
+            if [[ -f "$checksum_file" ]]; then
+                CHECKSUM_FILES+=("$checksum_file")
+            fi
+            log_verbose "Found package: $pattern"
+        fi
+    done
+
+    # Check for AUR info file
     AUR_INFO_FILE="$DIST_DIR/cloudtolocalllm-$version-x86_64-aur-info.txt"
 
-    log_verbose "Package file: $PACKAGE_FILE"
-    log_verbose "Checksum file: $CHECKSUM_FILE"
-    log_verbose "AUR info file: $AUR_INFO_FILE"
-
-    # Verify files exist
-    if [[ ! -f "$PACKAGE_FILE" ]]; then
-        log_error "Package file not found: $PACKAGE_FILE"
+    # Verify at least one package exists
+    if [[ ${#PACKAGE_FILES[@]} -eq 0 ]]; then
+        log_error "No package files found in $DIST_DIR"
+        log_error "Expected patterns: ${patterns[*]}"
         exit 2
     fi
 
-    if [[ ! -f "$CHECKSUM_FILE" ]]; then
-        log_error "Checksum file not found: $CHECKSUM_FILE"
-        exit 2
-    fi
-
-    local package_size=$(du -h "$PACKAGE_FILE" | cut -f1)
-    log_success "Package files found (Size: $package_size)"
+    log_success "Found ${#PACKAGE_FILES[@]} package file(s)"
 }
 
 # Validate package integrity
@@ -174,13 +191,23 @@ validate_package_integrity() {
 
     cd "$DIST_DIR"
 
-    # Verify checksum
-    if ! sha256sum -c "$(basename "$CHECKSUM_FILE")" &> /dev/null; then
-        log_error "Package integrity validation failed"
+    # Verify checksums for all packages that have checksum files
+    local validation_failed=false
+    for checksum_file in "${CHECKSUM_FILES[@]}"; do
+        local checksum_basename=$(basename "$checksum_file")
+        if ! sha256sum -c "$checksum_basename" &> /dev/null; then
+            log_error "Package integrity validation failed for $checksum_basename"
+            validation_failed=true
+        else
+            log_verbose "Checksum validation passed for $checksum_basename"
+        fi
+    done
+
+    if [[ "$validation_failed" == "true" ]]; then
         exit 2
     fi
 
-    log_success "Package integrity validation passed"
+    log_success "Package integrity validation passed for all packages"
 }
 
 # Create remote directory structure
@@ -205,8 +232,12 @@ upload_files() {
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log "DRY RUN: Would upload files to $VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR"
-        log "DRY RUN: - $(basename "$PACKAGE_FILE")"
-        log "DRY RUN: - $(basename "$CHECKSUM_FILE")"
+        for package_file in "${PACKAGE_FILES[@]}"; do
+            log "DRY RUN: - $(basename "$package_file")"
+        done
+        for checksum_file in "${CHECKSUM_FILES[@]}"; do
+            log "DRY RUN: - $(basename "$checksum_file")"
+        done
         if [[ -f "$AUR_INFO_FILE" ]]; then
             log "DRY RUN: - $(basename "$AUR_INFO_FILE")"
         fi
@@ -214,21 +245,27 @@ upload_files() {
         return 0
     fi
 
-    # Upload package file
-    log_verbose "Uploading package file..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        scp "$PACKAGE_FILE" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/"
-    else
-        scp "$PACKAGE_FILE" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/" &> /dev/null
-    fi
+    # Upload all package files
+    for package_file in "${PACKAGE_FILES[@]}"; do
+        local package_basename=$(basename "$package_file")
+        log_verbose "Uploading package file: $package_basename"
+        if [[ "$VERBOSE" == "true" ]]; then
+            scp "$package_file" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/"
+        else
+            scp "$package_file" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/" &> /dev/null
+        fi
+    done
 
-    # Upload checksum file
-    log_verbose "Uploading checksum file..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        scp "$CHECKSUM_FILE" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/"
-    else
-        scp "$CHECKSUM_FILE" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/" &> /dev/null
-    fi
+    # Upload all checksum files
+    for checksum_file in "${CHECKSUM_FILES[@]}"; do
+        local checksum_basename=$(basename "$checksum_file")
+        log_verbose "Uploading checksum file: $checksum_basename"
+        if [[ "$VERBOSE" == "true" ]]; then
+            scp "$checksum_file" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/"
+        else
+            scp "$checksum_file" "$VPS_USER@$VPS_HOST:$VPS_DOWNLOAD_DIR/" &> /dev/null
+        fi
+    done
 
     # Upload AUR info file if it exists
     if [[ -f "$AUR_INFO_FILE" ]]; then
@@ -240,7 +277,7 @@ upload_files() {
         fi
     fi
 
-    log_success "File upload completed"
+    log_success "File upload completed (${#PACKAGE_FILES[@]} packages, ${#CHECKSUM_FILES[@]} checksums)"
 }
 
 # Verify remote upload
@@ -253,27 +290,41 @@ verify_remote_upload() {
         return 0
     fi
 
-    local package_basename=$(basename "$PACKAGE_FILE")
-    local checksum_basename=$(basename "$CHECKSUM_FILE")
+    local verification_failed=false
 
-    # Check if files exist on remote server
-    if ! ssh "$VPS_USER@$VPS_HOST" "test -f $VPS_DOWNLOAD_DIR/$package_basename"; then
-        log_error "Package file not found on remote server"
+    # Check if all package files exist on remote server
+    for package_file in "${PACKAGE_FILES[@]}"; do
+        local package_basename=$(basename "$package_file")
+        if ! ssh "$VPS_USER@$VPS_HOST" "test -f $VPS_DOWNLOAD_DIR/$package_basename"; then
+            log_error "Package file not found on remote server: $package_basename"
+            verification_failed=true
+        else
+            log_verbose "Package file verified on remote: $package_basename"
+        fi
+    done
+
+    # Check if all checksum files exist and verify them
+    for checksum_file in "${CHECKSUM_FILES[@]}"; do
+        local checksum_basename=$(basename "$checksum_file")
+        if ! ssh "$VPS_USER@$VPS_HOST" "test -f $VPS_DOWNLOAD_DIR/$checksum_basename"; then
+            log_error "Checksum file not found on remote server: $checksum_basename"
+            verification_failed=true
+        else
+            # Verify checksum on remote server
+            if ! ssh "$VPS_USER@$VPS_HOST" "cd $VPS_DOWNLOAD_DIR && sha256sum -c $checksum_basename" &> /dev/null; then
+                log_error "Remote checksum verification failed for: $checksum_basename"
+                verification_failed=true
+            else
+                log_verbose "Checksum verification passed on remote: $checksum_basename"
+            fi
+        fi
+    done
+
+    if [[ "$verification_failed" == "true" ]]; then
         exit 4
     fi
 
-    if ! ssh "$VPS_USER@$VPS_HOST" "test -f $VPS_DOWNLOAD_DIR/$checksum_basename"; then
-        log_error "Checksum file not found on remote server"
-        exit 4
-    fi
-
-    # Verify checksum on remote server
-    if ! ssh "$VPS_USER@$VPS_HOST" "cd $VPS_DOWNLOAD_DIR && sha256sum -c $checksum_basename" &> /dev/null; then
-        log_error "Remote checksum verification failed"
-        exit 4
-    fi
-
-    log_success "Remote upload verification passed"
+    log_success "Remote upload verification passed for all packages"
 }
 
 # Update download page metadata
@@ -287,21 +338,35 @@ update_download_metadata() {
     fi
 
     local version=$(grep '^version:' "$PROJECT_ROOT/pubspec.yaml" | sed 's/version: *\([0-9.]*\).*/\1/')
-    local package_basename=$(basename "$PACKAGE_FILE")
-    local package_size=$(ssh "$VPS_USER@$VPS_HOST" "du -h $VPS_DOWNLOAD_DIR/$package_basename | cut -f1")
+    local upload_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+    # Build JSON for all packages
+    local packages_json="["
+    local first=true
+    for package_file in "${PACKAGE_FILES[@]}"; do
+        local package_basename=$(basename "$package_file")
+        local package_size=$(ssh "$VPS_USER@$VPS_HOST" "du -h $VPS_DOWNLOAD_DIR/$package_basename | cut -f1")
+        local download_url="https://app.cloudtolocalllm.online/downloads/$package_basename"
+
+        if [[ "$first" == "false" ]]; then
+            packages_json+=","
+        fi
+        first=false
+
+        packages_json+="{\"filename\":\"$package_basename\",\"size\":\"$package_size\",\"url\":\"$download_url\"}"
+    done
+    packages_json+="]"
 
     # Create/update download metadata
     ssh "$VPS_USER@$VPS_HOST" "cat > $VPS_DOWNLOAD_DIR/latest.json << EOF
 {
   \"version\": \"$version\",
-  \"package_file\": \"$package_basename\",
-  \"package_size\": \"$package_size\",
-  \"upload_date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
-  \"download_url\": \"https://cloudtolocalllm.online/$package_basename\"
+  \"upload_date\": \"$upload_date\",
+  \"packages\": $packages_json
 }
 EOF"
 
-    log_success "Download metadata updated"
+    log_success "Download metadata updated for ${#PACKAGE_FILES[@]} packages"
 }
 
 # Set proper permissions
@@ -323,24 +388,30 @@ set_remote_permissions() {
 # Display upload summary
 display_summary() {
     local version=$(grep '^version:' "$PROJECT_ROOT/pubspec.yaml" | sed 's/version: *\([0-9.]*\).*/\1/')
-    local package_basename=$(basename "$PACKAGE_FILE")
-    
+
     echo ""
     echo -e "${GREEN}📦 Upload Summary${NC}"
     echo -e "${GREEN}=================${NC}"
     echo "Version: $version"
-    echo "Package: $package_basename"
-    echo "Download URL: https://cloudtolocalllm.online/$package_basename"
+    echo "Packages uploaded: ${#PACKAGE_FILES[@]}"
     echo ""
-    
+
+    # List all uploaded packages
+    for package_file in "${PACKAGE_FILES[@]}"; do
+        local package_basename=$(basename "$package_file")
+        echo "  📄 $package_basename"
+        echo "     https://app.cloudtolocalllm.online/downloads/$package_basename"
+    done
+    echo ""
+
     if [[ "$DRY_RUN" == "true" ]]; then
         echo -e "${YELLOW}📋 DRY RUN completed - no actual upload performed${NC}"
     else
         echo -e "${BLUE}📋 Next steps:${NC}"
-        echo "  1. Update AUR PKGBUILD to use static download URL"
-        echo "  2. Test AUR package build locally"
-        echo "  3. Submit updated PKGBUILD to AUR"
-        echo "  4. Deploy web application to VPS"
+        echo "  1. Test download links from web interface"
+        echo "  2. Update AUR PKGBUILD if Linux packages were uploaded"
+        echo "  3. Deploy web application to VPS if needed"
+        echo "  4. Verify all download links work correctly"
     fi
 }
 

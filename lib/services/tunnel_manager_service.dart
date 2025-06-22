@@ -196,27 +196,31 @@ class TunnelManagerService extends ChangeNotifier {
     if (!kIsWeb) return;
 
     bool hasConnectedClients = false;
-    String statusMessage = 'Waiting for desktop client connection';
+    String? errorMessage;
 
     // Check if we have the client detection service and clients are connected
     if (_clientDetectionService != null) {
       hasConnectedClients = _clientDetectionService.hasConnectedClients;
-      if (hasConnectedClients) {
-        final clientCount = _clientDetectionService.connectedClientCount;
-        statusMessage =
-            'Bridge Server ($clientCount client${clientCount == 1 ? '' : 's'} connected)';
+      if (!hasConnectedClients) {
+        errorMessage = 'Waiting for desktop client connection';
       }
+    } else {
+      errorMessage = 'Desktop client detection service not available';
     }
 
     _connectionStatus['cloud'] = ConnectionStatus(
       type: 'cloud',
       isConnected: hasConnectedClients,
       endpoint: _config.cloudProxyUrl,
-      version: statusMessage,
+      version: 'Bridge Server',
       lastCheck: DateTime.now(),
       latency: 0,
-      error: hasConnectedClients ? null : 'No desktop clients connected',
+      error: errorMessage,
     );
+
+    final statusMessage = hasConnectedClients
+        ? 'Bridge Server (${_clientDetectionService?.connectedClientCount ?? 0} client${(_clientDetectionService?.connectedClientCount ?? 0) == 1 ? '' : 's'} connected)'
+        : errorMessage ?? 'Waiting for desktop client connection';
 
     debugPrint(
       '🚇 [TunnelManager] Web bridge status updated: $statusMessage (connected: $hasConnectedClients)',

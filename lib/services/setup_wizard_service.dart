@@ -166,16 +166,15 @@ class SetupWizardService extends ChangeNotifier {
     final hasConnectedClients =
         _clientDetectionService?.hasConnectedClients ?? false;
 
-    // Show wizard if:
-    // 1. User is first-time AND hasn't completed setup, OR
-    // 2. No desktop clients are connected AND user hasn't completed setup
-    final shouldShow =
-        (!_isSetupCompleted && (_isFirstTimeUser || !hasConnectedClients));
+    // Show wizard only if:
+    // 1. User is first-time AND hasn't seen the wizard yet
+    // Don't show wizard just because no clients are connected - that's handled by DesktopClientPrompt
+    final shouldShow = _isFirstTimeUser && !_hasUserSeenWizard;
 
     if (_shouldShowWizard != shouldShow) {
       _shouldShowWizard = shouldShow;
       debugPrint(
-        '🧙 [SetupWizard] Should show wizard: $_shouldShowWizard (firstTime: $_isFirstTimeUser, hasClients: $hasConnectedClients, completed: $_isSetupCompleted)',
+        '🧙 [SetupWizard] Should show wizard: $_shouldShowWizard (firstTime: $_isFirstTimeUser, hasSeenWizard: $_hasUserSeenWizard, hasClients: $hasConnectedClients, completed: $_isSetupCompleted)',
       );
       notifyListeners();
     }

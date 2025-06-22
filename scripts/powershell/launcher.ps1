@@ -143,7 +143,7 @@ function Show-Help {
     Write-Host "  build      - Build unified package"
     Write-Host "  aur        - Create AUR package (requires WSL Arch Linux)"
     Write-Host "  deb        - Create Debian package (requires WSL Ubuntu/Debian or Docker)"
-    Write-Host "  deploy     - Deploy to VPS"
+    Write-Host "  deploy     - Deploy to VPS (bash only - use WSL)"
     Write-Host "  test       - Test environment and dependencies"
     Write-Host "  help       - Show this help message"
     Write-Host ""
@@ -184,6 +184,18 @@ function Get-ScriptChoice {
     
     # Auto-detection logic
     switch ($ActionType) {
+        "deploy" {
+            # VPS deployment requires bash scripts via WSL
+            if (Test-WSLAvailable) {
+                Write-ColorText "VPS deployment requires bash scripts via WSL" "Yellow"
+                return "bash"
+            }
+            else {
+                Write-ColorText "Error: VPS deployment requires WSL for bash scripts" "Red"
+                Write-Host "Install WSL to use VPS deployment functionality"
+                exit 1
+            }
+        }
         "aur" {
             # AUR requires WSL Arch Linux, prefer bash if available
             if (Test-WSLAvailable) {
@@ -217,7 +229,7 @@ function Invoke-Script {
                 "build"   = "build_unified_package.sh"
                 "aur"     = "create_unified_aur_package.sh"
                 "deb"     = "packaging/build_deb.sh"
-                "deploy"  = "deploy/deploy_to_vps.sh"
+                "deploy"  = "deploy/update_and_deploy.sh"
             }
             
             $scriptPath = Join-Path $scriptDir $scriptMap[$Action]
@@ -249,12 +261,21 @@ function Invoke-Script {
                 "build"   = "build_unified_package.ps1"
                 "aur"     = "create_unified_aur_package.ps1"
                 "deb"     = "build_deb.ps1"
-                "deploy"  = "deploy_vps.ps1"
                 "test"    = "Test-Environment.ps1"
             }
             
+            # Check if action is supported in PowerShell
+            if ($Action -eq "deploy") {
+                Write-ColorText "Error: VPS deployment is not supported via PowerShell scripts" "Red"
+                Write-Host "Use bash scripts via WSL for VPS deployment:"
+                Write-Host "  wsl -d archlinux"
+                Write-Host "  cd /opt/cloudtolocalllm"
+                Write-Host "  bash scripts/deploy/update_and_deploy.sh --force"
+                exit 1
+            }
+
             $scriptPath = Join-Path $PSScriptRoot $scriptMap[$Action]
-            
+
             if (Test-Path $scriptPath) {
                 Write-ColorText "Executing PowerShell script: $scriptPath" "Blue"
 
