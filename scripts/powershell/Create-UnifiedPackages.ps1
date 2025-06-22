@@ -162,7 +162,7 @@ function Test-Prerequisites {
         $requiredPackages += 'flutter'
     }
 
-    if (-not (Install-BuildDependencies -RequiredPackages $requiredPackages -AutoInstall:$AutoInstall -SkipDependencyCheck:$SkipDependencyCheck)) {
+    if (-not (Install-BuildDependencies -AutoInstall:$AutoInstall -SkipDependencyCheck:$SkipDependencyCheck -RequiredPackages $requiredPackages)) {
         Write-LogError "Failed to install required dependencies"
         exit 1
     }
@@ -180,63 +180,7 @@ function Test-Prerequisites {
     Write-LogSuccess "Prerequisites check completed"
 }
 
-# Helper function to install Chocolatey packages
-function Install-ChocolateyPackage {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$PackageName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$DisplayName,
-
-        [Parameter(Mandatory = $true)]
-        [string]$VerifyCommand,
-
-        [switch]$AutoInstall
-    )
-
-    # Check if package is already installed
-    try {
-        Invoke-Expression $VerifyCommand | Out-Null
-        Write-LogSuccess "$DisplayName is already installed"
-        return $true
-    }
-    catch {
-        Write-LogInfo "$DisplayName not found"
-    }
-
-    if ($AutoInstall) {
-        Write-LogInfo "Installing $DisplayName via Chocolatey..."
-        try {
-            # Ensure Chocolatey is installed
-            if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-                Write-LogInfo "Installing Chocolatey..."
-                Set-ExecutionPolicy Bypass -Scope Process -Force
-                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-                Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-            }
-
-            # Install the package
-            choco install $PackageName -y
-
-            # Verify installation
-            Invoke-Expression $VerifyCommand | Out-Null
-            Write-LogSuccess "$DisplayName installed successfully"
-            return $true
-        }
-        catch {
-            Write-LogError "Failed to install $DisplayName via Chocolatey: $($_.Exception.Message)"
-            return $false
-        }
-    }
-    else {
-        Write-LogWarning "$DisplayName is required but not installed"
-        Write-LogInfo "Install manually or use -AutoInstall parameter"
-        Write-LogInfo "Install command: choco install $PackageName"
-        return $false
-    }
-}
+# Note: Using Install-ChocolateyPackage from BuildEnvironmentUtilities.ps1 instead of local implementation
 
 # Helper function to get SHA256 hash
 function Get-SHA256Hash {
@@ -1016,6 +960,14 @@ function New-MSIPackage {
 
     Write-LogInfo "Creating MSI package..."
 
+    # Check for administrator privileges (required for MSI creation)
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    if (-not $isAdmin) {
+        Write-LogError "Administrator privileges required for MSI package creation"
+        Write-LogInfo "Please run PowerShell as Administrator to create MSI packages"
+        throw "MSI package creation requires administrator privileges"
+    }
+
     $packageName = "CloudToLocalLLM-$Version-x64.msi"
     $msiOutputDir = Join-Path $WindowsOutputDir "msi"
     New-DirectoryIfNotExists -Path $msiOutputDir
@@ -1096,6 +1048,14 @@ function New-NSISPackage {
     param()
 
     Write-LogInfo "Creating NSIS package..."
+
+    # Check for administrator privileges (required for NSIS creation)
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+    if (-not $isAdmin) {
+        Write-LogError "Administrator privileges required for NSIS package creation"
+        Write-LogInfo "Please run PowerShell as Administrator to create NSIS packages"
+        throw "NSIS package creation requires administrator privileges"
+    }
 
     $packageName = "CloudToLocalLLM-$Version-Setup.exe"
     $nsisOutputDir = Join-Path $WindowsOutputDir "nsis"

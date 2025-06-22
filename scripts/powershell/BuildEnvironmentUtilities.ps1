@@ -399,6 +399,17 @@ function Install-ChocolateyPackage {
         return $false
     }
 
+    # Check for administrator privileges only if AutoInstall is requested
+    if ($AutoInstall) {
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+        if (-not $isAdmin) {
+            Write-LogWarning "Administrator privileges required for installing $DisplayName via Chocolatey"
+            Write-LogInfo "Please run PowerShell as Administrator or install $DisplayName manually"
+            Write-LogInfo "Skipping automatic installation of $DisplayName"
+            return $false
+        }
+    }
+
     # Ensure Chocolatey is installed
     if (-not (Install-Chocolatey)) {
         Write-LogError "Cannot install $DisplayName without Chocolatey"
@@ -417,8 +428,8 @@ function Install-ChocolateyPackage {
             $retryCount++
             Write-LogInfo "Installation attempt $retryCount of $maxRetries..."
 
-            # Execute Chocolatey installation
-            choco install $PackageName --yes --no-progress
+            # Execute Chocolatey installation with timeout and non-interactive flags
+            choco install $PackageName --yes --no-progress --timeout=300 --force --accept-license --confirm
 
             if ($LASTEXITCODE -eq 0) {
                 Write-LogSuccess "$DisplayName installed successfully"
