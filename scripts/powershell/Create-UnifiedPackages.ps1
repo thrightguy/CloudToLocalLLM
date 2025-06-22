@@ -33,6 +33,12 @@ param(
     [string]$WSLDistro,         # Specific WSL distribution to use
     [switch]$AutoInstall,       # Automatically install missing dependencies
     [switch]$SkipDependencyCheck,  # Skip dependency validation
+
+    # GitHub Release Integration
+    [switch]$CreateGitHubRelease,   # Create GitHub release with assets
+    [switch]$UpdateReleaseDescription,  # Update release description only
+    [switch]$ForceRecreateRelease,  # Force recreate existing release
+
     [switch]$Help               # Show help information
 )
 
@@ -117,6 +123,12 @@ if ($Help) {
     Write-Host "  -WSLDistro            Specify WSL distribution to use"
     Write-Host "  -AutoInstall          Automatically install missing dependencies"
     Write-Host "  -SkipDependencyCheck  Skip dependency validation"
+    Write-Host ""
+    Write-Host "GitHub Release Integration:" -ForegroundColor Yellow
+    Write-Host "  -CreateGitHubRelease         Create GitHub release with assets"
+    Write-Host "  -UpdateReleaseDescription    Update release description only"
+    Write-Host "  -ForceRecreateRelease        Force recreate existing release"
+    Write-Host ""
     Write-Host "  -Help                 Show this help message"
     Write-Host ""
     Write-Host "Requirements:" -ForegroundColor Yellow
@@ -1491,6 +1503,66 @@ function Update-AurPackage {
     }
 }
 
+# GitHub Release Integration
+function Invoke-GitHubReleaseIntegration {
+    [CmdletBinding()]
+    param()
+
+    Write-LogInfo "Starting GitHub Release Integration..."
+
+    # Import the GitHub release asset management script
+    $githubReleaseScript = Join-Path $PSScriptRoot "..\build\Build-GitHubReleaseAssets.ps1"
+    if (-not (Test-Path $githubReleaseScript)) {
+        Write-LogError "GitHub Release Asset script not found: $githubReleaseScript"
+        throw "GitHub Release Asset Management script not available"
+    }
+
+    try {
+        # Prepare parameters for GitHub release script
+        $githubParams = @{
+            'PackageTypes' = 'all'
+            'SkipBuild' = $true  # We already built packages
+            'UploadOnly' = $true
+            'VerboseOutput' = $VerboseOutput
+        }
+
+        if ($CreateGitHubRelease) {
+            $githubParams['CreateGitHubRelease'] = $true
+        }
+
+        if ($UpdateReleaseDescription) {
+            $githubParams['UpdateReleaseDescription'] = $true
+        }
+
+        if ($ForceRecreateRelease) {
+            $githubParams['ForceRecreateRelease'] = $true
+        }
+
+        if ($AutoInstall) {
+            $githubParams['AutoInstall'] = $true
+        }
+
+        if ($SkipDependencyCheck) {
+            $githubParams['SkipDependencyCheck'] = $true
+        }
+
+        # Execute GitHub release asset management
+        Write-LogInfo "Executing GitHub Release Asset Management..."
+        & $githubReleaseScript @githubParams
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-LogSuccess "GitHub Release Integration completed successfully"
+        } else {
+            Write-LogError "GitHub Release Integration failed (exit code: $LASTEXITCODE)"
+            throw "GitHub Release Asset Management failed"
+        }
+    }
+    catch {
+        Write-LogError "GitHub Release Integration failed: $($_.Exception.Message)"
+        throw
+    }
+}
+
 # Main execution
 function Invoke-Main {
     [CmdletBinding()]
@@ -1514,6 +1586,11 @@ function Invoke-Main {
         Build-FlutterApps
         New-UnifiedPackages
         Test-UnifiedPackageIntegrity
+
+        # GitHub Release Integration
+        if ($CreateGitHubRelease -or $UpdateReleaseDescription) {
+            Invoke-GitHubReleaseIntegration
+        }
 
         # Return appropriate exit code
         $exitCode = Show-PackageSummary

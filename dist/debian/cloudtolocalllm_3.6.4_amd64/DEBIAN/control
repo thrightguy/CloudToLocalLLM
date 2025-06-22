@@ -1,0 +1,15 @@
+Package: cloudtolocalllm
+Version: 3.6.4
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6, libgtk-3-0, libblkid1, liblzma5
+Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
+Description: Bridge cloud-hosted web interfaces with local LLM instances
+ CloudToLocalLLM is a Flutter-based application that bridges cloud-hosted
+ web interfaces with local LLM instances (primarily Ollama), featuring a
+ unified Flutter-native system tray, multi-tenant streaming proxy
+ architecture, and comprehensive cross-platform support.
+ .
+ This package provides the desktop application for Linux systems.
+Homepage: https://github.com/imrightguy/CloudToLocalLLM

@@ -17,7 +17,7 @@
 
 # --- Configuration ---
 DEFAULT_CLONE_DIR="/opt/cloudtolocalllm"
-DEFAULT_REPO_SSH_URL="git@github.com:thrightguy/CloudToLocalLLM.git" # Confirm this is your SSH URL
+DEFAULT_REPO_SSH_URL="git@github.com:imrightguy/CloudToLocalLLM.git" # Confirm this is your SSH URL
 
 # --- Helper Functions ---
 print_info() {

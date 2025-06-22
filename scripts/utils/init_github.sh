@@ -21,7 +21,7 @@ git commit -m "Initial commit: Cloud portal setup"
 
 # Add GitHub remote
 echo -e "${YELLOW}Adding GitHub remote...${NC}"
-git remote add origin https://github.com/thrightguy/CloudToLocalLLM.git
+git remote add origin https://github.com/imrightguy/CloudToLocalLLM.git
 
 # Push to GitHub
 echo -e "${YELLOW}Pushing to GitHub...${NC}"

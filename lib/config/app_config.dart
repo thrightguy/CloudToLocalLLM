@@ -87,9 +87,9 @@ class AppConfig {
 
   // Platform-specific download URLs
   static String get windowsPortableUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-windows-portable.zip');
+      getDownloadUrl('cloudtolocalllm-$appVersion-portable.zip');
   static String get windowsInstallerUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-windows-installer.msi');
+      getDownloadUrl('cloudtolocalllm-$appVersion-setup.msi');
   static String get linuxDebUrl =>
       getDownloadUrl('cloudtolocalllm_${appVersion}_amd64.deb');
   static String get linuxAppImageUrl =>

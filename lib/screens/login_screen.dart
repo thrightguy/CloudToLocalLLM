@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
@@ -54,6 +55,41 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not launch $url'),
+              backgroundColor: AppTheme.dangerColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error launching URL: $e'),
+            backgroundColor: AppTheme.dangerColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -64,9 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.headerGradient,
-            ),
+            decoration: const BoxDecoration(gradient: AppTheme.headerGradient),
             child: SafeArea(
               child: Center(
                 child: SingleChildScrollView(
@@ -86,12 +120,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 80,
                             decoration: BoxDecoration(
                               gradient: AppTheme.buttonGradient,
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.borderRadiusM),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.borderRadiusM,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.primaryColor
-                                      .withValues(alpha: 0.4),
+                                  color: AppTheme.primaryColor.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   blurRadius: 16,
                                   offset: const Offset(0, 4),
                                 ),
@@ -109,9 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Welcome text
                           Text(
                             'Welcome to',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
+                            style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(
                                   color: AppTheme.textColorLight,
                                   fontSize: 18,
@@ -123,9 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           Text(
                             AppConfig.appName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .displayMedium
+                            style: Theme.of(context).textTheme.displayMedium
                                 ?.copyWith(
                                   color: Colors.white,
                                   fontSize: 28,
@@ -138,12 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           Text(
                             AppConfig.appDescription,
-                            style:
-                                Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                      color: AppTheme.textColorLight,
-                                      fontSize: 16,
-                                      height: 1.5,
-                                    ),
+                            style: Theme.of(context).textTheme.bodyLarge
+                                ?.copyWith(
+                                  color: AppTheme.textColorLight,
+                                  fontSize: 16,
+                                  height: 1.5,
+                                ),
                             textAlign: TextAlign.center,
                           ),
 
@@ -163,11 +195,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Additional info
                           Text(
                             'Secure authentication powered by Auth0',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.textColorLight,
-                                      fontSize: 12,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppTheme.textColorLight,
+                                  fontSize: 12,
+                                ),
                             textAlign: TextAlign.center,
                           ),
 
@@ -178,9 +210,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               TextButton(
-                                onPressed: () {
-                                  // Open homepage in new tab
-                                },
+                                onPressed: () =>
+                                    _launchUrl(AppConfig.homepageUrl),
                                 child: Text(
                                   'Learn More',
                                   style: TextStyle(
@@ -198,9 +229,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () {
-                                  // Open GitHub in new tab
-                                },
+                                onPressed: () =>
+                                    _launchUrl(AppConfig.githubUrl),
                                 child: Text(
                                   'GitHub',
                                   style: TextStyle(

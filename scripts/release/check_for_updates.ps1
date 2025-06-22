@@ -8,7 +8,7 @@ param (
 )
 
 # GitHub repository information
-$repoOwner = "thrightguy"
+$repoOwner = "imrightguy"
 $repoName = "CloudToLocalLLM"
 $apiUrl = "https://api.github.com/repos/$repoOwner/$repoName/releases/latest"
 
