@@ -209,6 +209,10 @@ build_flutter_web() {
     log_info "Cleaning previous Flutter build..."
     flutter clean 2>/dev/null || true
 
+    # Update packages to latest compatible versions
+    log_info "Updating Flutter packages to latest versions..."
+    retry_command "flutter pub upgrade" "Flutter pub upgrade"
+
     # Get dependencies with retry
     log_info "Getting Flutter dependencies..."
     retry_command "flutter pub get" "Flutter pub get"
