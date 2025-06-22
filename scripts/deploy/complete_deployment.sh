@@ -61,24 +61,21 @@ echo ""
 echo -e "${BLUE}📋 Phase 1: Version Management${NC}"
 echo -e "${BLUE}==============================${NC}"
 
-# Ask for increment type
-echo -e "${YELLOW}Select version increment type:${NC}"
-echo "  1) major - Significant changes (creates GitHub release)"
-echo "  2) minor - Feature additions"
-echo "  3) patch - Bug fixes"
-echo "  4) build - Build increments"
-echo ""
+# Use command line argument or default to patch
+INCREMENT_TYPE="${1:-patch}"
 
-while true; do
-    read -p "Enter choice (1-4): " choice
-    case $choice in
-        1) INCREMENT_TYPE="major"; break;;
-        2) INCREMENT_TYPE="minor"; break;;
-        3) INCREMENT_TYPE="patch"; break;;
-        4) INCREMENT_TYPE="build"; break;;
-        *) echo "Invalid choice. Please enter 1-4.";;
-    esac
-done
+# Validate increment type
+case $INCREMENT_TYPE in
+    major|minor|patch|build)
+        echo -e "${BLUE}Using increment type: $INCREMENT_TYPE${NC}"
+        ;;
+    *)
+        echo -e "${RED}❌ Error: Invalid increment type '$INCREMENT_TYPE'${NC}"
+        echo "Valid types: major, minor, patch, build"
+        echo "Usage: $0 [major|minor|patch|build]"
+        exit 1
+        ;;
+esac
 
 echo -e "${BLUE}🔄 Incrementing version ($INCREMENT_TYPE)...${NC}"
 ./scripts/version_manager.sh increment "$INCREMENT_TYPE"

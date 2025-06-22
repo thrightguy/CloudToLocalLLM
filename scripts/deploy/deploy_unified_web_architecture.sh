@@ -379,19 +379,15 @@ main() {
     # Parse arguments
     parse_arguments "$@"
     
-    # Confirmation prompt (unless force or dry-run)
+    # Automated deployment mode (no interactive prompts)
     if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
         if [[ "$LOCAL_DEPLOY" == "true" ]]; then
             echo -e "${YELLOW}âš ï¸  About to deploy unified architecture locally${NC}"
         else
             echo -e "${YELLOW}âš ï¸  About to deploy unified architecture to production VPS${NC}"
         fi
-        read -p "Continue? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Deployment cancelled by user"
-            exit 0
-        fi
+        log_info "Proceeding automatically (use --force to skip this message or --dry-run to preview)"
+        sleep 2
     fi
     
     # Execute deployment

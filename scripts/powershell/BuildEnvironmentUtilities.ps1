@@ -393,16 +393,10 @@ function Install-ChocolateyPackage {
         }
         Write-Host ""
 
-        do {
-            $response = Read-Host "$DisplayName is required but not installed. Install automatically? (Y/N)"
-            $response = $response.ToUpper()
-        } while ($response -notin @('Y', 'YES', 'N', 'NO'))
-
-        if ($response -in @('N', 'NO')) {
-            Write-LogWarning "User declined automatic installation of $DisplayName"
-            Write-LogInfo "Manual installation required. Please install $DisplayName and run the script again."
-            return $false
-        }
+        Write-LogWarning "Automated mode: Use -AutoInstall parameter to install dependencies automatically"
+        Write-LogWarning "Skipping installation of $DisplayName"
+        Write-LogInfo "Manual installation required. Please install $DisplayName and run the script again."
+        return $false
     }
 
     # Ensure Chocolatey is installed
@@ -507,15 +501,9 @@ function Install-OpenSSHClient {
         Write-Host "This will install the Windows built-in OpenSSH client feature."
         Write-Host ""
 
-        do {
-            $response = Read-Host "Install OpenSSH Client? (Y/N)"
-            $response = $response.ToUpper()
-        } while ($response -notin @('Y', 'YES', 'N', 'NO'))
-
-        if ($response -in @('N', 'NO')) {
-            Write-LogWarning "User declined OpenSSH Client installation"
-            return $false
-        }
+        Write-LogWarning "Automated mode: Use -AutoInstall parameter to install OpenSSH Client automatically"
+        Write-LogWarning "Skipping OpenSSH Client installation"
+        return $false
     }
 
     Write-LogInfo "Installing OpenSSH Client..."
@@ -632,15 +620,9 @@ function Sync-SSHKeys {
             Write-Host "A backup will be created before synchronization."
             Write-Host ""
 
-            do {
-                $response = Read-Host "Synchronize SSH keys from WSL? This will overwrite existing keys. (Y/N)"
-                $response = $response.ToUpper()
-            } while ($response -notin @('Y', 'YES', 'N', 'NO'))
-
-            if ($response -in @('N', 'NO')) {
-                Write-LogWarning "User declined SSH key synchronization"
-                return $false
-            }
+            Write-LogWarning "Automated mode: Use -AutoSync parameter to synchronize SSH keys automatically"
+            Write-LogWarning "Skipping SSH key synchronization"
+            return $false
         }
 
         # Create backup
@@ -903,7 +885,17 @@ function Install-BuildDependencies {
         }
         elseif ($packageConfigs.ContainsKey($package)) {
             $config = $packageConfigs[$package]
-            $result = Install-ChocolateyPackage @config -AutoInstall:$AutoInstall
+            $installParams = @{
+                PackageName = $config.PackageName
+                DisplayName = $config.DisplayName
+                VerifyCommand = $config.VerifyCommand
+                AutoInstall = $AutoInstall
+            }
+            if ($config.EstimatedTime) { $installParams.EstimatedTime = $config.EstimatedTime }
+            if ($config.DiskSpace) { $installParams.DiskSpace = $config.DiskSpace }
+            if ($config.RequiresRestart) { $installParams.RequiresRestart = $config.RequiresRestart }
+
+            $result = Install-ChocolateyPackage @installParams
             $installationResults += @{ Package = $config.DisplayName; Success = $result }
             if (-not $result) { $allSuccessful = $false }
         }

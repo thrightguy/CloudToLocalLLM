@@ -27,16 +27,22 @@ esac
 echo -e "${CYAN}🔍 Detected OS: ${OS}${NC}"
 echo ""
 
-echo -e "${BLUE}📋 Select your AI tool:${NC}"
-echo -e "${YELLOW}1. Cursor${NC}"
-echo -e "${YELLOW}2. Claude Desktop${NC}"
-echo -e "${YELLOW}3. Cline AI (VSCode)${NC}"
-echo -e "${YELLOW}4. Augment (VSCode)${NC}"
-echo -e "${YELLOW}5. Custom setup${NC}"
-echo ""
+# Check for command line argument for automated mode
+if [[ $# -gt 0 ]]; then
+    REPLY="$1"
+    echo -e "${BLUE}📋 Automated mode: Using AI tool option $REPLY${NC}"
+else
+    echo -e "${BLUE}📋 Select your AI tool:${NC}"
+    echo -e "${YELLOW}1. Cursor${NC}"
+    echo -e "${YELLOW}2. Claude Desktop${NC}"
+    echo -e "${YELLOW}3. Cline AI (VSCode)${NC}"
+    echo -e "${YELLOW}4. Augment (VSCode)${NC}"
+    echo -e "${YELLOW}5. Custom setup${NC}"
+    echo ""
 
-read -p "Choose an option (1-5): " -n 1 -r
-echo ""
+    read -p "Choose an option (1-5): " -n 1 -r
+    echo ""
+fi
 
 # Set configuration paths based on OS and tool
 case $REPLY in
@@ -99,8 +105,13 @@ case $REPLY in
     5)
         echo -e "${CYAN}🎯 Custom setup...${NC}"
         CLIENT="custom"
-        echo -e "${YELLOW}Please specify the configuration file path:${NC}"
-        read -p "Config Path: " CONFIG_PATH
+        if [[ $# -gt 1 ]]; then
+            CONFIG_PATH="$2"
+            echo -e "${BLUE}Automated mode: Using config path $CONFIG_PATH${NC}"
+        else
+            echo -e "${YELLOW}Please specify the configuration file path:${NC}"
+            read -p "Config Path: " CONFIG_PATH
+        fi
         SOURCE_CONFIG="config/mcp_servers.json"
         ;;
     *)

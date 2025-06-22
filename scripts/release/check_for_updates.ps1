@@ -199,27 +199,18 @@ function Main {
                 return @{ Status = "UPDATE_AVAILABLE"; Version = $updateInfo.LatestVersion }
             }
         } else {
-            # Interactive mode
+            # Automated mode (no interactive prompts)
             Write-Host "`nRelease Notes:`n$($updateInfo.ReleaseNotes)`n"
 
-            # Ask user if they want to install the update
-            $confirmation = Read-Host "Do you want to install the update? (Y/N)"
-            if ($confirmation -eq 'Y' -or $confirmation -eq 'y') {
-                $result = Install-Update -downloadUrl $updateInfo.DownloadUrl
-                if ($result) {
-                    Write-Host "Update installed successfully. Please restart the application."
-                }
-                else {
-                    Write-Host "Failed to install update."
-                }
+            # Automatically install the update in automated mode
+            Write-Host "Automated mode: Installing update automatically..."
+            $result = Install-Update -downloadUrl $updateInfo.DownloadUrl
+            if ($result) {
+                Write-Host "Update installed successfully. Please restart the application."
             }
             else {
-                Write-Host "Update cancelled by user."
+                Write-Host "Failed to install update."
             }
-
-            # Pause to show results
-            Write-Host "`nPress any key to exit..."
-            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         }
     } else {
         if ($Silent) {
