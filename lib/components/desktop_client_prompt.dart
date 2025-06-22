@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/app_config.dart';
 import '../config/theme.dart';
 import '../services/desktop_client_detection_service.dart';
 
@@ -155,7 +157,7 @@ class DesktopClientPrompt extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      context.go('/settings/downloads');
+                      _launchGitHubReleases();
                     },
                     icon: const Icon(Icons.download),
                     label: const Text('Download Desktop Client'),
@@ -243,7 +245,7 @@ class DesktopClientPrompt extends StatelessWidget {
             SizedBox(width: AppTheme.spacingM),
             ElevatedButton(
               onPressed: () {
-                context.go('/settings/downloads');
+                _launchGitHubReleases();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
@@ -272,6 +274,20 @@ class DesktopClientPrompt extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper method to launch GitHub releases page
+  Future<void> _launchGitHubReleases() async {
+    try {
+      final uri = Uri.parse(AppConfig.githubReleasesUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      // Fallback to settings page if GitHub URL fails
+      // Note: This requires a BuildContext, so we'll handle it in the UI
+      debugPrint('Failed to launch GitHub releases: $e');
+    }
   }
 }
 

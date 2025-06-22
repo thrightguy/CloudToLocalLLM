@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 
 /// Application configuration constants
 class AppConfig {
@@ -13,8 +13,8 @@ class AppConfig {
   static const String appUrl = 'https://app.cloudtolocalllm.online';
   static const String githubUrl =
       'https://github.com/imrightguy/CloudToLocalLLM';
-  static const String downloadsBaseUrl =
-      'https://app.cloudtolocalllm.online/downloads';
+  static const String githubReleasesUrl =
+      'https://github.com/imrightguy/CloudToLocalLLM/releases/latest';
 
   // Auth0 Configuration
   static const String auth0Domain = 'dev-xafu7oedkd5wlrbo.us.auth0.com';
@@ -79,23 +79,4 @@ class AppConfig {
       'https://app.cloudtolocalllm.online/api/ollama/bridge/status';
   static const String bridgeRegisterUrl =
       'https://app.cloudtolocalllm.online/api/ollama/bridge/register';
-
-  // Download URLs for different platforms and file types
-  static String getDownloadUrl(String filename) {
-    return '$downloadsBaseUrl/$filename';
-  }
-
-  // Platform-specific download URLs
-  static String get windowsPortableUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-portable.zip');
-  static String get windowsInstallerUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-setup.msi');
-  static String get linuxDebUrl =>
-      getDownloadUrl('cloudtolocalllm_${appVersion}_amd64.deb');
-  static String get linuxAppImageUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-x86_64.AppImage');
-  static String get linuxTarGzUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-x86_64.tar.gz');
-  static String get macosUrl =>
-      getDownloadUrl('cloudtolocalllm-$appVersion-macos.dmg');
 }

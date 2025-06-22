@@ -681,14 +681,10 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.desktop_windows,
-                color: AppTheme.secondaryColor,
-                size: 20,
-              ),
+              Icon(Icons.download, color: AppTheme.secondaryColor, size: 20),
               SizedBox(width: AppTheme.spacingS),
               Text(
-                'Windows Desktop Client',
+                'Desktop Client Downloads',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppTheme.secondaryColor,
                   fontWeight: FontWeight.bold,
@@ -698,7 +694,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
           ),
           SizedBox(height: AppTheme.spacingM),
           Text(
-            'Download the Windows desktop application to connect your local Ollama instance.',
+            'Download the desktop application for your platform to connect your local Ollama instance.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
@@ -728,46 +724,26 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
             ),
           ),
           SizedBox(height: AppTheme.spacingM),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // CloudToLocalLLM VPS-hosted portable ZIP package
-                    final url = AppConfig.windowsPortableUrl;
-                    _launchUrl(url);
-                  },
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download Portable (.zip)'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.all(AppTheme.spacingM),
-                  ),
-                ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // GitHub releases page with all platform downloads
+                final url = AppConfig.githubReleasesUrl;
+                _launchUrl(url);
+              },
+              icon: const Icon(Icons.download),
+              label: const Text('Download from GitHub Releases'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.all(AppTheme.spacingM),
               ),
-              SizedBox(width: AppTheme.spacingM),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // CloudToLocalLLM VPS-hosted MSI installer
-                    final url = AppConfig.windowsInstallerUrl;
-                    _launchUrl(url);
-                  },
-                  icon: const Icon(Icons.install_desktop),
-                  label: const Text('Download Installer (.msi)'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.secondaryColor,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.all(AppTheme.spacingM),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           SizedBox(height: AppTheme.spacingS),
           Text(
-            'Choose portable .zip for no installation required, or .msi installer for system integration.',
+            'Download installers for Windows, Linux, and macOS from our GitHub releases page. Choose the appropriate package for your platform.',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),

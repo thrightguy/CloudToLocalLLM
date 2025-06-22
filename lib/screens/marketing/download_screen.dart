@@ -227,14 +227,17 @@ sudo snap connect cloudtolocalllm:system-observe''',
       title: '🐧 Debian Package (.deb)',
       description:
           'Native package for Ubuntu, Debian, and derivatives with proper dependency management.',
-      child: _buildInstallationSection('Installation', '''# Download the package
-wget ${AppConfig.linuxDebUrl}
+      child: _buildInstallationSection(
+        'Installation',
+        '''# Download from GitHub releases
+wget https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm_${AppConfig.appVersion}_amd64.deb
 
 # Install with dpkg
 sudo dpkg -i cloudtolocalllm_${AppConfig.appVersion}_amd64.deb
 
 # Install dependencies if needed
-sudo apt-get install -f'''),
+sudo apt-get install -f''',
+      ),
     );
   }
 
@@ -246,8 +249,8 @@ sudo apt-get install -f'''),
           'Portable application that runs on any Linux distribution without installation. No root access required.',
       child: _buildInstallationSection(
         'Download and Run',
-        '''# Download AppImage
-wget ${AppConfig.linuxAppImageUrl}
+        '''# Download AppImage from GitHub releases
+wget https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-${AppConfig.appVersion}-x86_64.AppImage
 
 # Make executable
 chmod +x cloudtolocalllm-${AppConfig.appVersion}-x86_64.AppImage
@@ -286,8 +289,8 @@ pamac install cloudtolocalllm''',
           'Direct download of the compiled application for manual installation on any Linux distribution.',
       child: _buildInstallationSection(
         'Download and Install',
-        '''# Download pre-built binary package
-wget ${AppConfig.linuxTarGzUrl}
+        '''# Download pre-built binary from GitHub releases
+wget https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-${AppConfig.appVersion}-x86_64.tar.gz
 
 # Extract to local directory
 tar -xzf cloudtolocalllm-${AppConfig.appVersion}-x86_64.tar.gz

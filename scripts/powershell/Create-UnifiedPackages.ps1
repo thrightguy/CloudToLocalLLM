@@ -11,13 +11,12 @@
 [CmdletBinding()]
 param(
     # Package Type Selection
-    [string[]]$PackageTypes = @('AUR', 'Debian', 'AppImage', 'Flatpak', 'MSI', 'NSIS', 'PortableZip'),
+    [string[]]$PackageTypes = @('AUR', 'AppImage', 'Flatpak', 'MSI', 'NSIS', 'PortableZip'),
 
     # Platform-Specific Switches
-    [switch]$LinuxOnly,         # Create only Linux packages (AUR, Debian, AppImage, Flatpak)
+    [switch]$LinuxOnly,         # Create only Linux packages (AUR, AppImage, Flatpak)
     [switch]$WindowsOnly,       # Create only Windows packages (MSI, NSIS, PortableZip)
     [switch]$AUROnly,           # Create only AUR packages
-    [switch]$DebianOnly,        # Create only Debian packages
     [switch]$AppImageOnly,      # Create only AppImage packages
     [switch]$FlatpakOnly,       # Create only Flatpak packages
     [switch]$MSIOnly,           # Create only MSI installer
@@ -76,18 +75,17 @@ $Version = & $versionManagerPath get-semantic
 # Resolve package types based on switches
 $script:ResolvedPackageTypes = @()
 if ($AUROnly) { $script:ResolvedPackageTypes = @('AUR') }
-elseif ($DebianOnly) { $script:ResolvedPackageTypes = @('Debian') }
 elseif ($AppImageOnly) { $script:ResolvedPackageTypes = @('AppImage') }
 elseif ($FlatpakOnly) { $script:ResolvedPackageTypes = @('Flatpak') }
 elseif ($MSIOnly) { $script:ResolvedPackageTypes = @('MSI') }
 elseif ($NSISOnly) { $script:ResolvedPackageTypes = @('NSIS') }
 elseif ($PortableOnly) { $script:ResolvedPackageTypes = @('PortableZip') }
-elseif ($LinuxOnly) { $script:ResolvedPackageTypes = @('AUR', 'Debian', 'AppImage', 'Flatpak') }
+elseif ($LinuxOnly) { $script:ResolvedPackageTypes = @('AUR', 'AppImage', 'Flatpak') }
 elseif ($WindowsOnly) { $script:ResolvedPackageTypes = @('MSI', 'NSIS', 'PortableZip') }
 else { $script:ResolvedPackageTypes = $PackageTypes }
 
 # Package type categorization
-$script:LinuxPackageTypes = @('AUR', 'Debian', 'AppImage', 'Flatpak')
+$script:LinuxPackageTypes = @('AUR', 'AppImage', 'Flatpak')
 $script:WindowsPackageTypes = @('MSI', 'NSIS', 'PortableZip')
 $script:RequiresLinuxBuild = $script:ResolvedPackageTypes | Where-Object { $_ -in $script:LinuxPackageTypes }
 $script:RequiresWindowsBuild = $script:ResolvedPackageTypes | Where-Object { $_ -in $script:WindowsPackageTypes }
@@ -103,11 +101,10 @@ if ($Help) {
     Write-Host ""
     Write-Host "Package Type Selection:" -ForegroundColor Yellow
     Write-Host "  -PackageTypes         Array of package types to create (default: all)"
-    Write-Host "                        Options: AUR, Debian, AppImage, Flatpak, MSI, NSIS, PortableZip"
-    Write-Host "  -LinuxOnly            Create only Linux packages (AUR, Debian, AppImage, Flatpak)"
+    Write-Host "                        Options: AUR, AppImage, Flatpak, MSI, NSIS, PortableZip"
+    Write-Host "  -LinuxOnly            Create only Linux packages (AUR, AppImage, Flatpak)"
     Write-Host "  -WindowsOnly          Create only Windows packages (MSI, NSIS, PortableZip)"
     Write-Host "  -AUROnly              Create only AUR packages"
-    Write-Host "  -DebianOnly           Create only Debian packages"
     Write-Host "  -AppImageOnly         Create only AppImage packages"
     Write-Host "  -FlatpakOnly          Create only Flatpak packages"
     Write-Host "  -MSIOnly              Create only MSI installer"
@@ -361,18 +358,14 @@ function Test-LinuxPrerequisites {
         }
     }
 
-    # Check for Ubuntu WSL (required for Debian, AppImage, Flatpak packages)
-    $ubuntuPackages = @('Debian', 'AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
-    if ($ubuntuPackages) {
-        $script:UbuntuDistro = Find-WSLDistribution -Purpose 'Ubuntu'
-
-        if (-not $script:UbuntuDistro) {
-            Write-LogWarning "No Ubuntu WSL distribution found - Debian/AppImage/Flatpak packages will be skipped"
-            $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('Debian', 'AppImage', 'Flatpak') }
-        } else {
-            Write-LogInfo "Using Ubuntu WSL distribution: $script:UbuntuDistro"
-            Test-UbuntuTools
-        }
+    # Use Arch Linux WSL for AppImage and Flatpak packages (unified Linux build environment)
+    $archPackages = @('AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
+    if ($archPackages -and $script:ArchDistro) {
+        Write-LogInfo "Using Arch Linux WSL distribution for AppImage/Flatpak: $script:ArchDistro"
+        Test-ArchLinuxPackageTools
+    } elseif ($archPackages) {
+        Write-LogWarning "No Arch Linux WSL distribution found - AppImage/Flatpak packages will be skipped"
+        $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AppImage', 'Flatpak') }
     }
 
     Write-LogSuccess "Linux prerequisites check completed"
@@ -410,25 +403,25 @@ function Test-ArchLinuxTools {
     Write-LogSuccess "Arch Linux tools verified"
 }
 
-# Test Ubuntu tools and dependencies
-function Test-UbuntuTools {
+# Test Arch Linux package tools and dependencies
+function Test-ArchLinuxPackageTools {
     [CmdletBinding()]
     param()
 
-    Write-LogInfo "Checking Ubuntu tools for Debian/AppImage/Flatpak package creation..."
+    Write-LogInfo "Checking Arch Linux tools for AppImage/Flatpak package creation..."
 
-    # Check required tools in Ubuntu WSL
-    $requiredTools = @('dpkg-deb', 'tar', 'gzip', 'sha256sum')
+    # Check required tools in Arch WSL
+    $requiredTools = @('tar', 'gzip', 'sha256sum')
     foreach ($tool in $requiredTools) {
-        if (-not (Test-WSLCommand -DistroName $script:UbuntuDistro -CommandName $tool)) {
-            Write-LogError "Required tool not found in Ubuntu WSL: $tool"
+        if (-not (Test-WSLCommand -DistroName $script:ArchDistro -CommandName $tool)) {
+            Write-LogError "Required tool not found in Arch WSL: $tool"
             if ($AutoInstall) {
-                Write-LogInfo "Installing build-essential in Ubuntu WSL..."
-                Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "sudo apt update && sudo apt install -y build-essential dpkg-dev"
+                Write-LogInfo "Installing core tools in Arch WSL..."
+                Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm tar gzip coreutils"
             } else {
-                Write-LogInfo "Install in Ubuntu WSL: sudo apt install -y build-essential dpkg-dev"
-                Write-LogWarning "Ubuntu-based packages will be skipped"
-                $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('Debian', 'AppImage', 'Flatpak') }
+                Write-LogInfo "Install in Arch WSL: sudo pacman -S tar gzip coreutils"
+                Write-LogWarning "AppImage/Flatpak packages will be skipped"
+                $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AppImage', 'Flatpak') }
                 return
             }
         }
@@ -436,21 +429,16 @@ function Test-UbuntuTools {
 
     # Install package-specific tools
     if ('AppImage' -in $script:ResolvedPackageTypes -and $AutoInstall) {
-        Write-LogInfo "Installing AppImage tools in Ubuntu WSL..."
-        Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "sudo apt install -y wget fuse libfuse2 desktop-file-utils"
+        Write-LogInfo "Installing AppImage tools in Arch WSL..."
+        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm wget fuse2 desktop-file-utils"
     }
 
     if ('Flatpak' -in $script:ResolvedPackageTypes -and $AutoInstall) {
-        Write-LogInfo "Installing Flatpak tools in Ubuntu WSL..."
-        Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "sudo apt install -y flatpak flatpak-builder"
+        Write-LogInfo "Installing Flatpak tools in Arch WSL..."
+        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm flatpak flatpak-builder"
     }
 
-    # Check Flutter SDK in Ubuntu WSL
-    if (-not $SkipBuild) {
-        Test-WSLFlutterEnvironment -DistroName $script:UbuntuDistro -PackageManager 'apt'
-    }
-
-    Write-LogSuccess "Ubuntu tools verified"
+    Write-LogSuccess "Arch Linux package tools verified"
 }
 
 # Test WSL Flutter environment
@@ -722,15 +710,7 @@ function New-LinuxPackages {
                         $script:FailedPackages += @{ Package = 'AUR'; Reason = 'No Arch Linux WSL distribution' }
                     }
                 }
-                'Debian' {
-                    if ($script:UbuntuDistro) {
-                        New-DebianPackage
-                        $script:SuccessfulPackages += 'Debian'
-                    } else {
-                        Write-LogWarning "Skipping Debian package - no Ubuntu WSL distribution available"
-                        $script:FailedPackages += @{ Package = 'Debian'; Reason = 'No Ubuntu WSL distribution' }
-                    }
-                }
+
                 'AppImage' {
                     if ($script:UbuntuDistro) {
                         New-AppImagePackage
@@ -878,76 +858,7 @@ https://github.com/imrightguy/CloudToLocalLLM
     Write-LogSuccess "AUR package created: $packageName.tar.gz"
 }
 
-# Create Debian package
-function New-DebianPackage {
-    [CmdletBinding()]
-    param()
 
-    Write-LogInfo "Creating Debian package..."
-
-    $packageName = "cloudtolocalllm_${Version}_amd64.deb"
-    $debOutputDir = Join-Path $LinuxOutputDir "debian"
-    New-DirectoryIfNotExists -Path $debOutputDir
-
-    # Create Debian package structure in WSL
-    $wslDebOutputDir = "/mnt/c/Users/chris/Dev/CloudToLocalLLM/dist/linux/debian"
-    $buildScript = @"
-#!/bin/bash
-set -e
-
-# Create package structure
-mkdir -p /tmp/deb-build/DEBIAN
-mkdir -p /tmp/deb-build/usr/lib/cloudtolocalllm
-mkdir -p /tmp/deb-build/usr/bin
-mkdir -p /tmp/deb-build/usr/share/applications
-mkdir -p /tmp/deb-build/usr/share/pixmaps
-
-# Copy application files
-cp -r $WSLLinuxBuildDir/* /tmp/deb-build/usr/lib/cloudtolocalllm/
-
-# Create launcher script
-cat > /tmp/deb-build/usr/bin/cloudtolocalllm << 'EOF'
-#!/bin/bash
-exec /usr/lib/cloudtolocalllm/cloudtolocalllm "\$@"
-EOF
-chmod +x /tmp/deb-build/usr/bin/cloudtolocalllm
-
-# Create control file
-cat > /tmp/deb-build/DEBIAN/control << EOF
-Package: cloudtolocalllm
-Version: $Version
-Section: utils
-Priority: optional
-Architecture: amd64
-Depends: libgtk-3-0, libwebkit2gtk-4.0-37
-Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
-Description: Bridge cloud-hosted web interfaces with local LLM instances
- CloudToLocalLLM is a Flutter-based application that bridges cloud-hosted
- web interfaces with local LLM instances, featuring a unified system tray,
- multi-tenant streaming proxy architecture, and cross-platform support.
-EOF
-
-# Build package
-dpkg-deb --build /tmp/deb-build $wslDebOutputDir/$packageName
-
-# Generate checksum
-cd $wslDebOutputDir
-sha256sum $packageName > $packageName.sha256
-
-# Cleanup
-rm -rf /tmp/deb-build
-"@
-
-    # Execute build script in WSL
-    $tempScript = Join-Path $env:TEMP "build-deb.sh"
-    $buildScript | Set-Content -Path $tempScript -Encoding UTF8
-    $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
-
-    Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "bash $wslTempScript"
-    Remove-Item $tempScript
-
-    Write-LogSuccess "Debian package created: $packageName"
-}
 
 # Create AppImage package
 function New-AppImagePackage {
@@ -960,14 +871,80 @@ function New-AppImagePackage {
     $appImageOutputDir = Join-Path $LinuxOutputDir "appimage"
     New-DirectoryIfNotExists -Path $appImageOutputDir
 
-    # Create AppImage in WSL (placeholder implementation)
-    Write-LogWarning "AppImage creation is not yet fully implemented"
-    Write-LogInfo "AppImage package would be created: $packageName"
+    # Create AppImage using Arch Linux WSL
+    $wslAppImageDir = Convert-WindowsPathToWSL -WindowsPath $appImageOutputDir
 
-    # TODO: Implement full AppImage creation with linuxdeploy and appimagetool
-    # This would involve creating AppDir structure, desktop file, icon, and using appimagetool
+    # Create desktop file content
+    $desktopFile = @"
+[Desktop Entry]
+Type=Application
+Name=CloudToLocalLLM
+Comment=Bridge cloud-hosted web interfaces with local LLM instances
+Exec=cloudtolocalllm
+Icon=cloudtolocalllm
+Categories=Network;Development;
+Terminal=false
+StartupWMClass=CloudToLocalLLM
+"@
 
-    Write-LogSuccess "AppImage package placeholder created: $packageName"
+    # Create AppImage build script
+    $buildScript = @"
+#!/bin/bash
+set -e
+
+cd "$wslAppImageDir"
+
+# Download linuxdeploy if not exists
+if [ ! -f linuxdeploy ]; then
+    wget -O linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+    chmod +x linuxdeploy
+fi
+
+# Create AppDir structure
+rm -rf AppDir
+mkdir -p AppDir/usr/bin
+mkdir -p AppDir/usr/share/applications
+mkdir -p AppDir/usr/share/pixmaps
+
+# Copy application binary
+cp "$WSLLinuxBuildDir/cloudtolocalllm" AppDir/usr/bin/
+
+# Create desktop file
+cat > AppDir/usr/share/applications/cloudtolocalllm.desktop << 'EOF'
+$desktopFile
+EOF
+
+# Create simple icon (placeholder)
+convert -size 256x256 xc:blue -fill white -gravity center -pointsize 24 -annotate +0+0 'CTLLM' AppDir/usr/share/pixmaps/cloudtolocalllm.png || echo "Warning: ImageMagick not available, using placeholder icon"
+
+# Build AppImage
+./linuxdeploy --appdir AppDir --desktop-file AppDir/usr/share/applications/cloudtolocalllm.desktop --icon-file AppDir/usr/share/pixmaps/cloudtolocalllm.png --output appimage
+
+# Rename to expected filename
+if [ -f CloudToLocalLLM-*.AppImage ]; then
+    mv CloudToLocalLLM-*.AppImage "$packageName"
+fi
+
+# Generate checksum
+sha256sum "$packageName" > "$packageName.sha256"
+
+echo "AppImage created: $packageName"
+"@
+
+    # Execute build script in Arch Linux WSL
+    $tempScript = Join-Path $env:TEMP "build-appimage.sh"
+    $buildScript | Set-Content -Path $tempScript -Encoding UTF8
+    $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
+
+    try {
+        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "bash $wslTempScript"
+        Write-LogSuccess "AppImage package created: $packageName"
+    } catch {
+        Write-LogError "AppImage creation failed: $($_.Exception.Message)"
+        throw
+    } finally {
+        Remove-Item $tempScript -ErrorAction SilentlyContinue
+    }
 }
 
 # Create Flatpak package
@@ -981,14 +958,55 @@ function New-FlatpakPackage {
     $flatpakOutputDir = Join-Path $LinuxOutputDir "flatpak"
     New-DirectoryIfNotExists -Path $flatpakOutputDir
 
-    # Create Flatpak in WSL (placeholder implementation)
-    Write-LogWarning "Flatpak creation is not yet fully implemented"
-    Write-LogInfo "Flatpak package would be created: $packageName"
+    # Create Flatpak manifest and build using WSL
+    $manifestFile = Join-Path $flatpakOutputDir "online.cloudtolocalllm.CloudToLocalLLM.yml"
+    $flatpakManifest = @"
+app-id: online.cloudtolocalllm.CloudToLocalLLM
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: cloudtolocalllm
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.ayatana.indicator.application
+modules:
+  - name: cloudtolocalllm
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 cloudtolocalllm /app/bin/cloudtolocalllm
+      - install -Dm644 cloudtolocalllm.desktop /app/share/applications/online.cloudtolocalllm.CloudToLocalLLM.desktop
+      - install -Dm644 cloudtolocalllm.png /app/share/icons/hicolor/256x256/apps/online.cloudtolocalllm.CloudToLocalLLM.png
+    sources:
+      - type: archive
+        url: https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-$Version-x86_64.tar.gz
+        sha256: PLACEHOLDER_SHA256
+"@
 
-    # TODO: Implement full Flatpak creation with flatpak-builder
-    # This would involve creating manifest file, building with org.freedesktop.Platform runtime
+    Set-Content -Path $manifestFile -Value $flatpakManifest -Encoding UTF8
 
-    Write-LogSuccess "Flatpak package placeholder created: $packageName"
+    # Build Flatpak using WSL (requires flatpak-builder)
+    $wslFlatpakDir = Convert-WindowsPathToWSL -WindowsPath $flatpakOutputDir
+    $buildCommand = "cd `"$wslFlatpakDir`" && flatpak-builder --repo=repo --force-clean build-dir online.cloudtolocalllm.CloudToLocalLLM.yml"
+
+    try {
+        if (Test-WSLCommand -DistroName $script:ArchDistro -CommandName "flatpak-builder") {
+            Invoke-WSLCommand -DistroName $script:ArchDistro -Command $buildCommand
+            Write-LogSuccess "Flatpak package created: $packageName"
+        } else {
+            Write-LogWarning "flatpak-builder not available in WSL. Install with: sudo pacman -S flatpak-builder"
+            Write-LogInfo "Flatpak manifest created at: $manifestFile"
+        }
+    } catch {
+        Write-LogWarning "Flatpak build failed: $($_.Exception.Message)"
+        Write-LogInfo "Flatpak manifest created at: $manifestFile"
+    }
 }
 
 # Create MSI package
