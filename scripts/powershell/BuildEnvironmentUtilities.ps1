@@ -53,26 +53,37 @@ function Test-WSLAvailable {
 function Get-WSLDistributions {
     [CmdletBinding()]
     param()
-    
+
     if (-not (Test-WSLAvailable)) {
         return @()
     }
-    
+
     try {
-        $output = wsl --list --verbose 2>$null
+        # Use cmd to get proper encoding from WSL
+        $output = cmd /c "wsl --list --verbose" 2>$null
         $distributions = @()
-        
+
         foreach ($line in $output) {
-            if ($line -match '^\s*\*?\s*([^\s]+)\s+(\w+)\s+(\d+)') {
+            # Convert from UTF-16 if needed and clean up the line
+            $cleanLine = $line -replace '\0', '' # Remove null bytes
+            $cleanLine = $cleanLine.Trim()
+
+            # Skip header line and empty lines
+            if ($cleanLine -match '^\s*NAME\s+STATE\s+VERSION' -or $cleanLine -eq '') {
+                continue
+            }
+
+            # Match lines with optional asterisk, distribution name, state, and version
+            if ($cleanLine -match '^\s*(\*)?\s*([^\s]+)\s+(\w+)\s+(\d+)') {
                 $distributions += @{
-                    Name = $matches[1]
-                    State = $matches[2]
-                    Version = $matches[3]
-                    IsDefault = $line.StartsWith('*')
+                    Name = $matches[2].Trim()
+                    State = $matches[3].Trim()
+                    Version = $matches[4].Trim()
+                    IsDefault = ($matches[1] -eq '*')
                 }
             }
         }
-        
+
         return $distributions
     }
     catch {
@@ -103,12 +114,26 @@ function Find-WSLDistribution {
         [ValidateSet('Arch', 'Ubuntu', 'Debian', 'Any')]
         [string]$Purpose
     )
-    
+
     $distributions = Get-WSLDistributions
-    
+
+    # Always prioritize archlinux as the default distribution
+    $archCandidates = @('archlinux', 'Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
+
+    # First, check for archlinux regardless of purpose
+    foreach ($candidate in $archCandidates) {
+        $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" -and $_.State -eq 'Running' }
+        if ($distro) {
+            Write-LogInfo "Using default Arch Linux WSL distribution: $($distro.Name)"
+            return $distro.Name
+        }
+    }
+
+    # Fallback to purpose-specific search only if archlinux is not available
     switch ($Purpose) {
         'Arch' {
-            $candidates = @('Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
+            # Already checked above, return null if not found
+            return $null
         }
         'Ubuntu' {
             $candidates = @('Ubuntu', 'Ubuntu-20.04', 'Ubuntu-22.04', 'Ubuntu-24.04')
@@ -120,14 +145,15 @@ function Find-WSLDistribution {
             $candidates = $distributions | ForEach-Object { $_.Name }
         }
     }
-    
+
     foreach ($candidate in $candidates) {
-        $distro = $distributions | Where-Object { $_.Name -like "*$candidate*" -and $_.State -eq 'Running' }
+        # Use case-insensitive matching for distribution names
+        $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" -and $_.State -eq 'Running' }
         if ($distro) {
             return $distro.Name
         }
     }
-    
+
     return $null
 }
 
@@ -165,39 +191,59 @@ function Convert-WSLPathToWindows {
     return $WSLPath
 }
 
-# Execute a command in WSL
+# Execute a command in WSL with standardized format
 function Invoke-WSLCommand {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$DistroName,
-        
+        [Parameter(Mandatory = $false)]
+        [string]$DistroName = 'archlinux',
+
         [Parameter(Mandatory = $true)]
         [string]$Command,
-        
+
         [string]$WorkingDirectory = $null,
-        
-        [switch]$PassThru
+
+        [switch]$PassThru,
+
+        [switch]$AsRoot
     )
-    
-    if (-not (Test-WSLDistribution -DistroName $DistroName)) {
-        throw "WSL distribution '$DistroName' is not available or not running"
+
+    # Default to archlinux if no distribution specified
+    if (-not $DistroName) {
+        $DistroName = 'archlinux'
     }
-    
-    $wslCommand = "wsl -d $DistroName"
-    
+
+    # Build arguments array for proper command execution
+    $wslArgs = @('-d', $DistroName)
+
+    # Add root user flag if requested
+    if ($AsRoot) {
+        $wslArgs += @('-u', 'root')
+    }
+
     if ($WorkingDirectory) {
         $wslPath = Convert-WindowsPathToWSL -WindowsPath $WorkingDirectory
-        $wslCommand += " --cd `"$wslPath`""
+        $wslArgs += @('--cd', $wslPath)
     }
-    
-    $wslCommand += " -- $Command"
-    
-    if ($PassThru) {
-        return Invoke-Expression $wslCommand
+
+    $wslArgs += @('--', 'bash', '-c', $Command)
+
+    try {
+        if ($PassThru) {
+            return & wsl @wslArgs
+        }
+        else {
+            & wsl @wslArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "WSL command failed with exit code $LASTEXITCODE"
+            }
+        }
     }
-    else {
-        Invoke-Expression $wslCommand
+    catch {
+        Write-LogError "WSL command execution failed: $($_.Exception.Message)"
+        Write-LogError "Command: $Command"
+        Write-LogError "Distribution: $DistroName"
+        throw
     }
 }
 
@@ -216,19 +262,78 @@ function Test-Command {
 function Test-WSLCommand {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$DistroName,
+        [Parameter(Mandatory = $false)]
+        [string]$DistroName = 'archlinux',
 
         [Parameter(Mandatory = $true)]
         [string]$CommandName
     )
 
     try {
-        # Use a more reliable approach to test command availability
-        $result = wsl -d $DistroName -- bash -c "command -v $CommandName >/dev/null 2>&1; echo `$?"
-        return $result.Trim() -eq "0"
+        # Use standardized WSL command format
+        $result = & wsl -d $DistroName -- bash -c "command -v $CommandName >/dev/null 2>&1 && echo 'found' || echo 'missing'"
+        return $result.Trim() -eq "found"
     }
     catch {
+        return $false
+    }
+}
+
+# Configure WSL distribution for automated builds
+function Initialize-WSLDistribution {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$DistroName = 'archlinux'
+    )
+
+    Write-LogInfo "Configuring WSL distribution '$DistroName' for automated builds..."
+
+    try {
+        # Check if distribution exists and is running
+        $distributions = Get-WSLDistributions
+        $targetDistro = $distributions | Where-Object { $_.Name -eq $DistroName }
+
+        if (-not $targetDistro) {
+            Write-LogWarning "WSL distribution '$DistroName' not found"
+            return $false
+        }
+
+        if ($targetDistro.State -ne 'Running') {
+            Write-LogInfo "Starting WSL distribution '$DistroName'..."
+            & wsl -d $DistroName -- echo "WSL distribution started"
+        }
+
+        # Get current user in WSL
+        $currentUser = Invoke-WSLCommand -DistroName $DistroName -Command "whoami" -PassThru
+        $currentUser = $currentUser.Trim()
+
+        Write-LogInfo "Current WSL user: $currentUser"
+
+        # Configure passwordless sudo for the current user (if not already configured)
+        $sudoersCheck = Invoke-WSLCommand -DistroName $DistroName -Command "sudo grep -q '$currentUser.*NOPASSWD' /etc/sudoers || echo 'NOT_CONFIGURED'" -PassThru -AsRoot
+
+        if ($sudoersCheck.Trim() -eq 'NOT_CONFIGURED') {
+            Write-LogInfo "Configuring passwordless sudo for user '$currentUser'..."
+            $sudoersEntry = "$currentUser ALL=(ALL) NOPASSWD: ALL"
+            Invoke-WSLCommand -DistroName $DistroName -Command "echo '$sudoersEntry' >> /etc/sudoers" -AsRoot
+            Write-LogSuccess "Passwordless sudo configured for '$currentUser'"
+        } else {
+            Write-LogInfo "Passwordless sudo already configured for '$currentUser'"
+        }
+
+        # Verify sudo configuration
+        $sudoTest = Invoke-WSLCommand -DistroName $DistroName -Command "sudo -n echo 'sudo_test_passed' 2>/dev/null || echo 'sudo_test_failed'" -PassThru
+        if ($sudoTest.Trim() -eq 'sudo_test_passed') {
+            Write-LogSuccess "WSL distribution '$DistroName' configured successfully for automated builds"
+            return $true
+        } else {
+            Write-LogWarning "Sudo configuration verification failed for '$DistroName'"
+            return $false
+        }
+    }
+    catch {
+        Write-LogError "Failed to configure WSL distribution '$DistroName': $($_.Exception.Message)"
         return $false
     }
 }
@@ -237,7 +342,7 @@ function Test-WSLCommand {
 function Get-ProjectRoot {
     [CmdletBinding()]
     param()
-    
+
     $scriptDir = Split-Path -Parent $PSScriptRoot
     return Split-Path -Parent $scriptDir
 }

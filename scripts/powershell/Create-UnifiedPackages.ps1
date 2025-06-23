@@ -3,7 +3,7 @@
 #
 # Unified Package Creation System:
 # - Windows Packages: MSI, NSIS, Portable ZIP (native Windows tools)
-# - Linux Packages: AUR, Debian, AppImage, Flatpak (WSL-based builds)
+# - Linux Packages: AUR, AppImage, Flatpak (Arch Linux WSL-based builds)
 # - Multi-Platform Build Architecture with graceful degradation
 # - Eliminates redundant build scripts and consolidates package creation
 # - Maintains PowerShell orchestration with platform-specific execution environments
@@ -26,7 +26,7 @@ param(
     # Build Control
     [switch]$SkipBuild,         # Skip Flutter build steps
     [switch]$TestOnly,          # Only test existing packages
-    [string]$TargetPlatform = 'all',  # 'windows', 'linux', 'arch', 'ubuntu', 'all'
+    [string]$TargetPlatform = 'all',  # 'windows', 'linux', 'arch', 'all'
 
     # Environment Configuration
     [string]$WSLDistro,         # Specific WSL distribution to use
@@ -59,10 +59,8 @@ $OutputDir = Join-Path $ProjectRoot "dist"
 $LinuxBuildDir = Join-Path $ProjectRoot "build\linux\x64\release\bundle"
 $WindowsBuildDir = Join-Path $ProjectRoot "build\windows\x64\runner\Release"
 
-# WSL mount paths for Linux builds (consistent across all WSL distributions)
-$WSLProjectRoot = "/mnt/c/Users/chris/Dev/CloudToLocalLLM"
+# WSL mount paths for Linux builds (using Convert-WindowsPathToWSL function)
 $WSLLinuxBuildDir = "/mnt/c/Users/chris/Dev/CloudToLocalLLM/build/linux/x64/release/bundle"
-$WSLWindowsBuildDir = "/mnt/c/Users/chris/Dev/CloudToLocalLLM/build/windows/x64/runner/Release"
 
 # Package output directory structure
 $LinuxOutputDir = Join-Path $OutputDir "linux"
@@ -114,7 +112,7 @@ if ($Help) {
     Write-Host "Build Control:" -ForegroundColor Yellow
     Write-Host "  -SkipBuild            Skip Flutter build steps"
     Write-Host "  -TestOnly             Only test existing packages"
-    Write-Host "  -TargetPlatform       Target platform: 'windows', 'linux', 'arch', 'ubuntu', 'all'"
+    Write-Host "  -TargetPlatform       Target platform: 'windows', 'linux', 'arch', 'all'"
     Write-Host ""
     Write-Host "Environment Configuration:" -ForegroundColor Yellow
     Write-Host "  -WSLDistro            Specify WSL distribution to use"
@@ -134,8 +132,7 @@ if ($Help) {
     Write-Host "    - NSIS (for NSIS installer) - auto-installed with -AutoInstall"
     Write-Host "    - Flutter SDK for Windows builds"
     Write-Host "  Linux Packages:" -ForegroundColor Cyan
-    Write-Host "    - WSL with Arch Linux (for AUR packages)"
-    Write-Host "    - WSL with Ubuntu 24.04 LTS (for Debian/AppImage/Flatpak)"
+    Write-Host "    - WSL with Arch Linux (for AUR/AppImage/Flatpak packages)"
     Write-Host "    - Flutter SDK in WSL - auto-installed with -AutoInstall"
     Write-Host "    - Linux build dependencies - auto-installed with -AutoInstall"
     Write-Host ""
@@ -198,37 +195,48 @@ function Get-SHA256Hash {
     return $hash.Hash.ToLower()
 }
 
-# Helper function to find WSL distributions
-function Find-WSLDistribution {
+# Get the default Arch Linux WSL distribution
+function Get-DefaultArchDistribution {
     [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Purpose  # 'Arch' or 'Ubuntu'
-    )
+    param()
 
-    try {
-        $wslDistros = wsl --list --quiet | Where-Object { $_ -and $_.Trim() }
+    # Always use 'archlinux' as the default distribution name
+    $defaultDistro = 'archlinux'
 
-        foreach ($distro in $wslDistros) {
-            $distroName = $distro.Trim()
-            if ($Purpose -eq 'Arch' -and ($distroName -match 'arch|manjaro' -or $distroName -eq 'ArchLinux')) {
-                Write-LogInfo "Found Arch Linux WSL distribution: $distroName"
-                return $distroName
+    # Verify the distribution exists and is available
+    $distributions = Get-WSLDistributions
+    $archDistro = $distributions | Where-Object { $_.Name -eq $defaultDistro }
+
+    if ($archDistro) {
+        if ($archDistro.State -ne 'Running') {
+            Write-LogInfo "Starting WSL distribution '$defaultDistro'..."
+            try {
+                & wsl -d $defaultDistro -- echo "WSL distribution started"
+                Write-LogSuccess "WSL distribution '$defaultDistro' started successfully"
             }
-            elseif ($Purpose -eq 'Ubuntu' -and ($distroName -match 'ubuntu|debian' -or $distroName -eq 'Ubuntu')) {
-                Write-LogInfo "Found Ubuntu WSL distribution: $distroName"
-                return $distroName
+            catch {
+                Write-LogError "Failed to start WSL distribution '$defaultDistro'"
+                return $null
             }
         }
 
-        Write-LogWarning "No suitable $Purpose WSL distribution found"
-        Write-LogInfo "Available distributions: $($wslDistros -join ', ')"
-        return $null
+        Write-LogInfo "Using default Arch Linux WSL distribution: $defaultDistro"
+        return $defaultDistro
     }
-    catch {
-        Write-LogError "Failed to query WSL distributions: $($_.Exception.Message)"
-        return $null
+
+    # Fallback: try to find any Arch-based distribution
+    $archCandidates = @('archlinux', 'Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
+    foreach ($candidate in $archCandidates) {
+        $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" }
+        if ($distro) {
+            Write-LogInfo "Found alternative Arch Linux WSL distribution: $($distro.Name)"
+            return $distro.Name
+        }
     }
+
+    Write-LogError "No Arch Linux WSL distribution found. Please install archlinux WSL distribution."
+    Write-LogInfo "Install with: wsl --install -d archlinux"
+    return $null
 }
 
 # Check Windows-specific prerequisites
@@ -286,30 +294,29 @@ function Test-LinuxPrerequisites {
         return
     }
 
-    # Check for Arch Linux WSL (required for AUR packages)
-    if ('AUR' -in $script:ResolvedPackageTypes) {
+    # Check for Arch Linux WSL (required for all Linux packages)
+    $linuxPackages = @('AUR', 'AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
+    if ($linuxPackages) {
+        # Use specified WSL distribution or get default Arch distribution
         $script:ArchDistro = $WSLDistro
         if (-not $script:ArchDistro) {
-            $script:ArchDistro = Find-WSLDistribution -Purpose 'Arch'
+            $script:ArchDistro = Get-DefaultArchDistribution
         }
 
         if (-not $script:ArchDistro) {
-            Write-LogWarning "No Arch Linux WSL distribution found - AUR packages will be skipped"
-            $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -ne 'AUR' }
+            Write-LogWarning "No Arch Linux WSL distribution found - all Linux packages will be skipped"
+            $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AUR', 'AppImage', 'Flatpak') }
         } else {
-            Write-LogInfo "Using Arch Linux WSL distribution: $script:ArchDistro"
-            Test-ArchLinuxTools
-        }
-    }
+            Write-LogInfo "Using Arch Linux WSL distribution for all Linux packages: $script:ArchDistro"
 
-    # Use Arch Linux WSL for AppImage and Flatpak packages (unified Linux build environment)
-    $archPackages = @('AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
-    if ($archPackages -and $script:ArchDistro) {
-        Write-LogInfo "Using Arch Linux WSL distribution for AppImage/Flatpak: $script:ArchDistro"
-        Test-ArchLinuxPackageTools
-    } elseif ($archPackages) {
-        Write-LogWarning "No Arch Linux WSL distribution found - AppImage/Flatpak packages will be skipped"
-        $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AppImage', 'Flatpak') }
+            # Initialize WSL distribution for automated builds
+            if (Initialize-WSLDistribution -DistroName $script:ArchDistro) {
+                Test-ArchLinuxTools
+                Test-ArchLinuxPackageTools
+            } else {
+                Write-LogWarning "Failed to initialize WSL distribution - some operations may require manual intervention"
+            }
+        }
     }
 
     Write-LogSuccess "Linux prerequisites check completed"
@@ -399,7 +406,8 @@ function Test-WSLFlutterEnvironment {
     Write-LogInfo "Checking Flutter SDK in WSL distribution: $DistroName"
 
     try {
-        $flutterCheck = Invoke-WSLCommand -DistroName $DistroName -Command "which flutter || echo 'MISSING'" -PassThru
+        # Check for native Linux Flutter first, then fallback to PATH
+        $flutterCheck = Invoke-WSLCommand -DistroName $DistroName -Command "test -f /opt/flutter-linux/bin/flutter && echo '/opt/flutter-linux/bin/flutter' || which flutter || echo 'MISSING'" -PassThru
         if ($flutterCheck -eq "MISSING" -or -not $flutterCheck) {
             Write-LogWarning "Flutter SDK not found in WSL distribution: $DistroName"
 
@@ -429,17 +437,13 @@ function Test-WSLFlutterEnvironment {
             Write-LogSuccess "Flutter SDK found in WSL: $flutterCheck"
         }
 
-        # Verify Linux build dependencies
-        Write-LogInfo "Checking Linux build dependencies in WSL..."
-        $buildDeps = @('build-essential', 'cmake', 'ninja-build', 'pkg-config', 'libgtk-3-dev')
+        # Verify Linux build dependencies (Arch Linux only)
+        Write-LogInfo "Checking Linux build dependencies in Arch WSL..."
+        $buildDeps = @('base-devel', 'cmake', 'ninja', 'pkg-config', 'gtk3')
         $missingDeps = @()
 
         foreach ($dep in $buildDeps) {
-            if ($PackageManager -eq 'apt') {
-                $depCheck = Invoke-WSLCommand -DistroName $DistroName -Command "dpkg -l | grep -E '^ii.*$dep' || echo 'MISSING'" -PassThru
-            } else {
-                $depCheck = Invoke-WSLCommand -DistroName $DistroName -Command "pacman -Q $dep || echo 'MISSING'" -PassThru
-            }
+            $depCheck = Invoke-WSLCommand -DistroName $DistroName -Command "pacman -Q $dep || echo 'MISSING'" -PassThru
 
             if ($depCheck -eq "MISSING" -or -not $depCheck) {
                 $missingDeps += $dep
@@ -450,22 +454,14 @@ function Test-WSLFlutterEnvironment {
             Write-LogWarning "Missing Linux build dependencies: $($missingDeps -join ', ')"
 
             if ($AutoInstall) {
-                Write-LogInfo "Installing missing dependencies in WSL..."
-                if ($PackageManager -eq 'apt') {
-                    $installCmd = "sudo apt update && sudo apt install -y $($missingDeps -join ' ')"
-                } else {
-                    $installCmd = "sudo pacman -S --noconfirm $($missingDeps -join ' ')"
-                }
+                Write-LogInfo "Installing missing dependencies in Arch WSL..."
+                $installCmd = "sudo pacman -S --noconfirm $($missingDeps -join ' ')"
                 Invoke-WSLCommand -DistroName $DistroName -Command $installCmd
                 Write-LogSuccess "Linux build dependencies installed"
             }
             else {
                 Write-LogError "Linux build dependencies are required"
-                if ($PackageManager -eq 'apt') {
-                    Write-LogInfo "Install in WSL: sudo apt install -y $($missingDeps -join ' ')"
-                } else {
-                    Write-LogInfo "Install in WSL: sudo pacman -S $($missingDeps -join ' ')"
-                }
+                Write-LogInfo "Install in Arch WSL: sudo pacman -S $($missingDeps -join ' ')"
                 Write-LogInfo "Or use -AutoInstall parameter"
                 throw "Build dependencies not available"
             }
@@ -553,30 +549,29 @@ function Build-LinuxFlutterApp {
 
     Write-LogInfo "Building Flutter application for Linux using WSL..."
 
-    # Use the first available WSL distribution that supports Linux builds
+    # Use Arch Linux WSL distribution for Linux builds
     $linuxDistro = $script:ArchDistro
-    if (-not $linuxDistro) {
-        $linuxDistro = $script:UbuntuDistro
-    }
 
     if (-not $linuxDistro) {
-        throw "No suitable WSL distribution available for Linux builds"
+        throw "No Arch Linux WSL distribution available for Linux builds"
     }
 
     try {
-        # Get dependencies using WSL Flutter
-        Write-LogInfo "Running flutter pub get in WSL ($linuxDistro)..."
-        Invoke-WSLCommand -DistroName $linuxDistro -WorkingDirectory $WSLProjectRoot -Command "flutter pub get"
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to get dependencies for Flutter app in WSL"
+        # Determine Flutter path (prefer native Linux installation)
+        $flutterPath = Invoke-WSLCommand -DistroName $linuxDistro -Command "test -f /opt/flutter-linux/bin/flutter && echo '/opt/flutter-linux/bin/flutter' || which flutter" -PassThru
+        if (-not $flutterPath) {
+            throw "Flutter SDK not found in WSL distribution"
         }
 
-        # Build for Linux using WSL Flutter
+        Write-LogInfo "Using Flutter at: $flutterPath"
+
+        # Get dependencies using WSL Flutter
+        Write-LogInfo "Running flutter pub get in WSL ($linuxDistro)..."
+        Invoke-WSLCommand -DistroName $linuxDistro -WorkingDirectory $ProjectRoot -Command "$flutterPath pub get"
+
+        # Build for Linux using WSL Flutter with proper environment
         Write-LogInfo "Running flutter build linux --release in WSL ($linuxDistro)..."
-        Invoke-WSLCommand -DistroName $linuxDistro -WorkingDirectory $WSLProjectRoot -Command "flutter build linux --release"
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to build Flutter app in WSL"
-        }
+        Invoke-WSLCommand -DistroName $linuxDistro -WorkingDirectory $ProjectRoot -Command "PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig $flutterPath build linux --release"
 
         # Verify build output (using Windows path since files are accessible via mount)
         $mainExecutable = Join-Path $LinuxBuildDir "cloudtolocalllm"
@@ -656,21 +651,21 @@ function New-LinuxPackages {
                 }
 
                 'AppImage' {
-                    if ($script:UbuntuDistro) {
+                    if ($script:ArchDistro) {
                         New-AppImagePackage
                         $script:SuccessfulPackages += 'AppImage'
                     } else {
-                        Write-LogWarning "Skipping AppImage package - no Ubuntu WSL distribution available"
-                        $script:FailedPackages += @{ Package = 'AppImage'; Reason = 'No Ubuntu WSL distribution' }
+                        Write-LogWarning "Skipping AppImage package - no Arch Linux WSL distribution available"
+                        $script:FailedPackages += @{ Package = 'AppImage'; Reason = 'No Arch Linux WSL distribution' }
                     }
                 }
                 'Flatpak' {
-                    if ($script:UbuntuDistro) {
+                    if ($script:ArchDistro) {
                         New-FlatpakPackage
                         $script:SuccessfulPackages += 'Flatpak'
                     } else {
-                        Write-LogWarning "Skipping Flatpak package - no Ubuntu WSL distribution available"
-                        $script:FailedPackages += @{ Package = 'Flatpak'; Reason = 'No Ubuntu WSL distribution' }
+                        Write-LogWarning "Skipping Flatpak package - no Arch Linux WSL distribution available"
+                        $script:FailedPackages += @{ Package = 'Flatpak'; Reason = 'No Arch Linux WSL distribution' }
                     }
                 }
                 default {
@@ -778,12 +773,11 @@ For more information, visit:
 https://github.com/imrightguy/CloudToLocalLLM
 "@ | Set-Content -Path $packageInfo -Encoding UTF8
 
-    # Create archive using WSL
-    $wslAurOutputDir = "/mnt/c/Users/chris/Dev/CloudToLocalLLM/dist/linux/aur"
-    Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $wslAurOutputDir -Command "tar -czf `"$packageName.tar.gz`" `"$packageName/`""
+    # Create archive using WSL with standardized path conversion
+    Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $aurOutputDir -Command "tar -czf `"$packageName.tar.gz`" `"$packageName/`""
 
     # Generate checksum
-    $checksumOutput = Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $wslAurOutputDir -Command "sha256sum `"$packageName.tar.gz`"" -PassThru
+    $checksumOutput = Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $aurOutputDir -Command "sha256sum `"$packageName.tar.gz`"" -PassThru
     $checksum = ($checksumOutput -split '\s+')[0]
 
     # Save checksum file
@@ -936,12 +930,11 @@ modules:
     Set-Content -Path $manifestFile -Value $flatpakManifest -Encoding UTF8
 
     # Build Flatpak using WSL (requires flatpak-builder)
-    $wslFlatpakDir = Convert-WindowsPathToWSL -WindowsPath $flatpakOutputDir
-    $buildCommand = "cd `"$wslFlatpakDir`" && flatpak-builder --repo=repo --force-clean build-dir online.cloudtolocalllm.CloudToLocalLLM.yml"
+    $buildCommand = "flatpak-builder --repo=repo --force-clean build-dir online.cloudtolocalllm.CloudToLocalLLM.yml"
 
     try {
         if (Test-WSLCommand -DistroName $script:ArchDistro -CommandName "flatpak-builder") {
-            Invoke-WSLCommand -DistroName $script:ArchDistro -Command $buildCommand
+            Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $flatpakOutputDir -Command $buildCommand
             Write-LogSuccess "Flatpak package created: $packageName"
         } else {
             Write-LogWarning "flatpak-builder not available in WSL. Install with: sudo pacman -S flatpak-builder"
@@ -960,13 +953,8 @@ function New-MSIPackage {
 
     Write-LogInfo "Creating MSI package..."
 
-    # Check for administrator privileges (required for MSI creation)
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-    if (-not $isAdmin) {
-        Write-LogError "Administrator privileges required for MSI package creation"
-        Write-LogInfo "Please run PowerShell as Administrator to create MSI packages"
-        throw "MSI package creation requires administrator privileges"
-    }
+    # Note: MSI creation typically doesn't require admin privileges for compilation
+    # Only installation of the MSI requires admin privileges
 
     $packageName = "CloudToLocalLLM-$Version-x64.msi"
     $msiOutputDir = Join-Path $WindowsOutputDir "msi"
@@ -1015,16 +1003,28 @@ function New-MSIPackage {
 "@ | Set-Content -Path $wixSource -Encoding UTF8
 
     try {
+        # Find WiX tools
+        $wixPath = "C:\Program Files (x86)\WiX Toolset v3.14\bin"
+        $candleExe = Join-Path $wixPath "candle.exe"
+        $lightExe = Join-Path $wixPath "light.exe"
+
+        if (-not (Test-Path $candleExe)) {
+            throw "WiX candle.exe not found at $candleExe. Please install WiX Toolset."
+        }
+        if (-not (Test-Path $lightExe)) {
+            throw "WiX light.exe not found at $lightExe. Please install WiX Toolset."
+        }
+
         # Compile with candle
         $wixObj = Join-Path $env:TEMP "CloudToLocalLLM.wixobj"
-        & candle.exe -out $wixObj $wixSource
+        & $candleExe -out $wixObj $wixSource
         if ($LASTEXITCODE -ne 0) {
             throw "WiX candle compilation failed"
         }
 
         # Link with light
         $msiPath = Join-Path $msiOutputDir $packageName
-        & light.exe -out $msiPath $wixObj
+        & $lightExe -out $msiPath $wixObj
         if ($LASTEXITCODE -ne 0) {
             throw "WiX light linking failed"
         }
@@ -1049,13 +1049,8 @@ function New-NSISPackage {
 
     Write-LogInfo "Creating NSIS package..."
 
-    # Check for administrator privileges (required for NSIS creation)
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-    if (-not $isAdmin) {
-        Write-LogError "Administrator privileges required for NSIS package creation"
-        Write-LogInfo "Please run PowerShell as Administrator to create NSIS packages"
-        throw "NSIS package creation requires administrator privileges"
-    }
+    # Note: NSIS creation typically doesn't require admin privileges for compilation
+    # Only installation of the NSIS installer requires admin privileges
 
     $packageName = "CloudToLocalLLM-$Version-Setup.exe"
     $nsisOutputDir = Join-Path $WindowsOutputDir "nsis"
@@ -1123,8 +1118,16 @@ sectionEnd
 "@ | Set-Content -Path $nsisScript -Encoding UTF8
 
     try {
+        # Find NSIS tools
+        $nsisPath = "C:\Program Files (x86)\NSIS"
+        $makensisExe = Join-Path $nsisPath "makensis.exe"
+
+        if (-not (Test-Path $makensisExe)) {
+            throw "NSIS makensis.exe not found at $makensisExe. Please install NSIS."
+        }
+
         # Compile with makensis
-        & makensis.exe $nsisScript
+        & $makensisExe $nsisScript
         if ($LASTEXITCODE -ne 0) {
             throw "NSIS compilation failed"
         }
@@ -1335,18 +1338,7 @@ function Test-UnifiedPackageIntegrity {
                         }
                     }
                 }
-                'Debian' {
-                    $debDir = Join-Path $LinuxOutputDir "debian"
-                    $debPackage = Get-ChildItem $debDir -Filter "*.deb" | Select-Object -First 1
-                    if ($debPackage) {
-                        Write-LogInfo "Testing Debian package: $($debPackage.Name)"
-                        if ($debPackage.Length -gt 0) {
-                            Write-LogSuccess "Debian package integrity test passed"
-                        } else {
-                            Write-LogError "Debian package is empty"
-                        }
-                    }
-                }
+
                 'MSI' {
                     $msiDir = Join-Path $WindowsOutputDir "msi"
                     $msiPackage = Get-ChildItem $msiDir -Filter "*.msi" | Select-Object -First 1
@@ -1431,7 +1423,10 @@ function Update-AurPackage {
                 $_
             }
         }
-        Set-Content -Path $pkgbuildFile -Value $updatedContent -Encoding UTF8
+        # Write updated content back to file with Unix line endings
+        $updatedContent = $updatedContent -replace "`r`n", "`n" -replace "`r", "`n"
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($pkgbuildFile, $updatedContent, $utf8NoBom)
 
         Write-LogInfo "Updating PKGBUILD SHA256 checksum..."
         # Update SHA256 checksum in PKGBUILD
@@ -1453,12 +1448,15 @@ function Update-AurPackage {
                 $_
             }
         }
-        Set-Content -Path $pkgbuildFile -Value $updatedContent -Encoding UTF8
+        # Write updated content back to file with Unix line endings
+        $updatedContent = $updatedContent -replace "`r`n", "`n" -replace "`r", "`n"
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($pkgbuildFile, $updatedContent, $utf8NoBom)
 
         Write-LogInfo "Regenerating .SRCINFO using WSL..."
         # Change to AUR directory and regenerate .SRCINFO using WSL
-        $wslAurDir = "/mnt/c/Users/chris/Dev/CloudToLocalLLM/aur-package"
-        Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $wslAurDir -Command "makepkg --printsrcinfo > .SRCINFO"
+        $aurDir = Join-Path $ProjectRoot "aur-package"
+        Invoke-WSLCommand -DistroName $script:ArchDistro -WorkingDirectory $aurDir -Command "makepkg --printsrcinfo > .SRCINFO"
 
         Write-LogInfo "Validating updated checksums..."
         # Verify the checksum was updated correctly

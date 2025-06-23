@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 echo "Setting up Ollama container..."
 
 # Start the Ollama server in the background

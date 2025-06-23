@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # CloudToLocalLLM Version Management Utility
 # Provides unified version management across all platforms and build systems

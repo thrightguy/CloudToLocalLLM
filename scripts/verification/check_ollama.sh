@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 echo "Checking Ollama container..."
 
 # Check if Ollama server is running

@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # CloudToLocalLLM Unified Flutter Web Architecture Deployment Script
 # Version: 3.4.0+ - Complete unified architecture deployment

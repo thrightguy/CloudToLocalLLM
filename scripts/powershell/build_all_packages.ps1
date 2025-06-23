@@ -67,7 +67,7 @@ Write-Host ""
 function Get-SemanticVersion {
     $versionScript = Join-Path $PSScriptRoot "version_manager.ps1"
     if (Test-Path $versionScript) {
-        return & powershell -ExecutionPolicy Bypass -File $versionScript -GetSemantic
+        return & powershell -ExecutionPolicy Bypass -File $versionScript get-semantic
     }
     else {
         return Get-ProjectVersion
@@ -77,7 +77,7 @@ function Get-SemanticVersion {
 function Get-FullVersion {
     $versionScript = Join-Path $PSScriptRoot "version_manager.ps1"
     if (Test-Path $versionScript) {
-        return & powershell -ExecutionPolicy Bypass -File $versionScript -Get
+        return & powershell -ExecutionPolicy Bypass -File $versionScript get
     }
     else {
         return Get-ProjectVersion
@@ -87,7 +87,7 @@ function Get-FullVersion {
 function Get-BuildNumber {
     $versionScript = Join-Path $PSScriptRoot "version_manager.ps1"
     if (Test-Path $versionScript) {
-        return & powershell -ExecutionPolicy Bypass -File $versionScript -GetBuild
+        return & powershell -ExecutionPolicy Bypass -File $versionScript get-build
     }
     else {
         return (Get-Date -Format "yyyyMMddHHmm")
@@ -102,7 +102,7 @@ function Invoke-VersionIncrement {
     
     $versionScript = Join-Path $PSScriptRoot "version_manager.ps1"
     if (Test-Path $versionScript) {
-        & powershell -ExecutionPolicy Bypass -File $versionScript -Increment $IncrementType
+        & powershell -ExecutionPolicy Bypass -File $versionScript increment $IncrementType
     }
     else {
         Write-LogWarning "Version manager script not found, skipping version increment"
@@ -124,7 +124,7 @@ function Test-VersionConsistency {
     # Validate version format
     $versionScript = Join-Path $PSScriptRoot "version_manager.ps1"
     if (Test-Path $versionScript) {
-        $result = & powershell -ExecutionPolicy Bypass -File $versionScript -Validate
+        $result = & powershell -ExecutionPolicy Bypass -File $versionScript validate
         if ($LASTEXITCODE -ne 0) {
             Write-LogError "Version validation failed"
             exit 1

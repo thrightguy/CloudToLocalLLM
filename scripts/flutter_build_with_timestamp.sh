@@ -29,15 +29,15 @@ log_info() {
 }
 
 log_success() {
-    echo -e "${GREEN}[FLUTTER-BUILD] ✅${NC} $1"
+    echo -e "${GREEN}[FLUTTER-BUILD] âœ…${NC} $1"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[FLUTTER-BUILD] ⚠️${NC} $1"
+    echo -e "${YELLOW}[FLUTTER-BUILD] âš ï¸${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}[FLUTTER-BUILD] ❌${NC} $1"
+    echo -e "${RED}[FLUTTER-BUILD] âŒ${NC} $1"
 }
 
 # Usage information
@@ -139,7 +139,7 @@ inject_build_timestamp() {
         return 0
     fi
     
-    log_info "🕒 Injecting build timestamp..."
+    log_info "ðŸ•’ Injecting build timestamp..."
     
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "DRY RUN: Would inject build timestamp"
@@ -157,7 +157,7 @@ inject_build_timestamp() {
 
 # Execute Flutter build command
 execute_flutter_build() {
-    log_info "🔨 Executing Flutter build: flutter build $FLUTTER_BUILD_COMMAND"
+    log_info "ðŸ”¨ Executing Flutter build: flutter build $FLUTTER_BUILD_COMMAND"
     
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "DRY RUN: Would execute: flutter build $FLUTTER_BUILD_COMMAND"
@@ -205,7 +205,7 @@ restore_version_files() {
         return 0
     fi
     
-    log_info "🔄 Restoring version files..."
+    log_info "ðŸ”„ Restoring version files..."
     
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "DRY RUN: Would restore version files"
@@ -227,7 +227,7 @@ cleanup_backups() {
         return 0
     fi
     
-    log_info "🧹 Cleaning up backup files..."
+    log_info "ðŸ§¹ Cleaning up backup files..."
     
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "DRY RUN: Would clean up backup files"
@@ -261,9 +261,9 @@ display_build_summary() {
     fi
     
     echo ""
-    log_success "🎉 Flutter build completed successfully!"
+    log_success "ðŸŽ‰ Flutter build completed successfully!"
     echo ""
-    echo -e "${BLUE}📋 Build Summary${NC}"
+    echo -e "${BLUE}ðŸ“‹ Build Summary${NC}"
     echo -e "${BLUE}===============${NC}"
     echo "  Command: flutter build $FLUTTER_BUILD_COMMAND"
     echo "  Version: $current_version"
@@ -272,7 +272,7 @@ display_build_summary() {
     echo ""
     
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo -e "${YELLOW}📋 DRY RUN completed - no actual build performed${NC}"
+        echo -e "${YELLOW}ðŸ“‹ DRY RUN completed - no actual build performed${NC}"
     fi
 }
 

@@ -34,15 +34,15 @@ log_info() {
 }
 
 log_success() {
-    echo -e "${GREEN}[TIMESTAMP-INJECTOR] ✅${NC} $1"
+    echo -e "${GREEN}[TIMESTAMP-INJECTOR] âœ…${NC} $1"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[TIMESTAMP-INJECTOR] ⚠️${NC} $1"
+    echo -e "${YELLOW}[TIMESTAMP-INJECTOR] âš ï¸${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}[TIMESTAMP-INJECTOR] ❌${NC} $1"
+    echo -e "${RED}[TIMESTAMP-INJECTOR] âŒ${NC} $1"
 }
 
 log_verbose() {
@@ -271,7 +271,7 @@ update_app_config_version() {
 
 # Main injection function
 inject_timestamp() {
-    log_info "🕒 Starting simple timestamp injection..."
+    log_info "ðŸ•’ Starting simple timestamp injection..."
     
     # Generate timestamps
     local build_timestamp=$(generate_timestamp)
@@ -296,7 +296,7 @@ inject_timestamp() {
     if [[ "$DRY_RUN" == "true" ]]; then
         log_success "DRY RUN: Simple timestamp injection simulation completed"
     else
-        log_success "✅ Simple timestamp injection completed: $semantic_version+$build_timestamp"
+        log_success "âœ… Simple timestamp injection completed: $semantic_version+$build_timestamp"
         log_info "All version files updated with real timestamp - no more BUILD_TIME_PLACEHOLDER!"
     fi
 }
@@ -344,7 +344,7 @@ main() {
     
     # Success
     if [[ "$DRY_RUN" != "true" ]]; then
-        log_success "🎉 Timestamp injection completed successfully!"
+        log_success "ðŸŽ‰ Timestamp injection completed successfully!"
         log_info "You can now run 'flutter pub get' and 'flutter build' without errors"
     fi
 }

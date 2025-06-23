@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # scripts/deploy/sync_versions.sh
 # Ensures all version references match pubspec.yaml
 

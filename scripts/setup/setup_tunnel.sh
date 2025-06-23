@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 echo "Setting up tunnel container..."
 
 # Compile the Dart code

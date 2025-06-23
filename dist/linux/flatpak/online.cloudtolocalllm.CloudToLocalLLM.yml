@@ -1,0 +1,26 @@
+app-id: online.cloudtolocalllm.CloudToLocalLLM
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: cloudtolocalllm
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.ayatana.indicator.application
+modules:
+  - name: cloudtolocalllm
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 cloudtolocalllm /app/bin/cloudtolocalllm
+      - install -Dm644 cloudtolocalllm.desktop /app/share/applications/online.cloudtolocalllm.CloudToLocalLLM.desktop
+      - install -Dm644 cloudtolocalllm.png /app/share/icons/hicolor/256x256/apps/online.cloudtolocalllm.CloudToLocalLLM.png
+    sources:
+      - type: archive
+        url: https://github.com/imrightguy/CloudToLocalLLM/releases/latest/download/cloudtolocalllm-3.6.9-x86_64.tar.gz
+        sha256: PLACEHOLDER_SHA256

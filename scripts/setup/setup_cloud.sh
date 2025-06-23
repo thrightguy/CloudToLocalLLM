@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 echo "Setting up cloud container..."
 
 # Install dependencies (curl for connectivity checks)
