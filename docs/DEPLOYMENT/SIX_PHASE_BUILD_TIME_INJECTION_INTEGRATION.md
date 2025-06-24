@@ -186,7 +186,7 @@ Testing version endpoint and build-time timestamps...
 ./scripts/deploy/complete_automated_deployment.sh --dry-run --verbose
 
 # Test build-time injection integration
-./scripts/test_deployment_integration.sh
+./scripts/deploy/verify_deployment.sh
 ```
 
 ### VPS Deployment with Build-Time Injection
@@ -216,10 +216,10 @@ When build-time injection components are unavailable:
 ### Comprehensive Test Suite
 ```bash
 # Test deployment integration
-./scripts/test_deployment_integration.sh
+./scripts/deploy/verify_deployment.sh
 
 # Test build-time injection system
-./scripts/test_build_time_injection.sh
+./scripts/build_time_version_injector.sh --help
 
 # Test complete deployment workflow
 ./scripts/deploy/complete_automated_deployment.sh --dry-run

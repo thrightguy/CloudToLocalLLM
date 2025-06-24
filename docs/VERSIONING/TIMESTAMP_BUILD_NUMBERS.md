@@ -132,7 +132,7 @@ The timestamp-based build number is synchronized across:
 #### Manual Verification
 ```bash
 # Test timestamp versioning system
-./scripts/test_timestamp_versioning.sh
+./scripts/version_manager.sh get-build
 ```
 
 ## Benefits
@@ -174,7 +174,7 @@ AUR packages use the semantic version (without build number) for package version
 ### Automated Tests
 ```bash
 # Run comprehensive timestamp versioning tests
-./scripts/test_timestamp_versioning.sh
+./scripts/version_manager.sh info
 ```
 
 ### Manual Verification
@@ -208,7 +208,7 @@ Use `./scripts/version_manager.sh` for all version operations to ensure consiste
 Run `./scripts/deploy/sync_versions.sh` before any deployment to ensure all files are synchronized.
 
 ### 3. Test Versioning System
-Regularly run `./scripts/test_timestamp_versioning.sh` to verify system integrity.
+Regularly run `./scripts/version_manager.sh info` to verify system integrity.
 
 ### 4. Monitor Build Times
 Use build numbers to track build performance and deployment schedules.

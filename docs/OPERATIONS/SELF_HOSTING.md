@@ -41,7 +41,7 @@ It's highly recommended to run the application under a dedicated non-root user.
 - This script will:
     - Create the `cloudllm` user.
     - Add your public SSH key for passwordless login.
-    - Grant necessary sudo privileges for Docker management if it also installs Docker (though `deploy_vps.sh` typically handles Docker installation).
+    - Grant necessary sudo privileges for Docker management if it also installs Docker (though `scripts/deploy/deploy_to_vps.sh` typically handles Docker installation).
     - Set up the `docker` group and add `cloudllm` to it.
 
 **After running the script, log out and log back in as the `cloudllm` user.**
@@ -57,10 +57,10 @@ The rest of the setup will assume you are in the `/opt/cloudtolocalllm` director
 
 ### 3. Run the Deployment Script
 
-The `scripts/deploy_vps.sh` script automates many of the subsequent setup tasks. Execute it as the `cloudllm` user (it will use `sudo` internally for privileged operations where necessary, assuming `cloudllm` has appropriate sudo rights, or you might need to run specific parts as root if `cloudllm` sudo is restricted).
+The `scripts/deploy/deploy_to_vps.sh` script automates many of the subsequent setup tasks. Execute it as the `cloudllm` user (it will use `sudo` internally for privileged operations where necessary, assuming `cloudllm` has appropriate sudo rights, or you might need to run specific parts as root if `cloudllm` sudo is restricted).
 ```bash
 cd /opt/cloudtolocalllm
-./scripts/deploy_vps.sh
+./scripts/deploy/deploy_to_vps.sh
 ```
 This script typically handles:
 - System requirement checks (disk space, memory).
@@ -81,25 +81,25 @@ This project uses Let's Encrypt for SSL certificates, managed via Certbot with a
 
 The `docker-compose.yml` file maps `./certbot/conf:/etc/letsencrypt` and `./certbot/www:/var/www/certbot` into the `webapp` (Nginx) container. This means Certbot data will be stored in `/opt/cloudtolocalllm/certbot/` on the host.
 
-### Using `manual_staging_wildcard.sh`
+### Using SSL Certificate Setup Script
 
-The script `scripts/manual_staging_wildcard.sh` is used to obtain and renew certificates.
+The script `scripts/ssl/setup_letsencrypt.sh` is used to obtain and renew certificates.
 
 1.  **Switch to Production (Important!)**:
     The script initially might be configured for Let's Encrypt's *staging* server. For a live, browser-trusted certificate, ensure the script is set to use the *production* server. This usually means removing or commenting out a line like `server: https://acme-staging-v02.api.letsencrypt.org/directory` or a `--staging` flag within the `certbot` command in the script.
-    *   **Verify `scripts/manual_staging_wildcard.sh`**:
-        *   Open `scripts/manual_staging_wildcard.sh`.
+    *   **Verify `scripts/ssl/setup_letsencrypt.sh`**:
+        *   Open `scripts/ssl/setup_letsencrypt.sh`.
         *   Look for `CERTBOT_SERVER_FLAG`. If it's `"--staging"`, remove or comment it out for production, or set it to an empty string.
         *   The script should call `certbot certonly --manual ...` without `--staging`.
 
 2.  **Ensure Script is Executable**:
     ```bash
-    chmod +x scripts/manual_staging_wildcard.sh
+    chmod +x scripts/ssl/setup_letsencrypt.sh
     ```
 
 3.  **Run the Script**:
     ```bash
-    ./scripts/manual_staging_wildcard.sh yourdomain.online youremail@example.com
+    ./scripts/ssl/setup_letsencrypt.sh yourdomain.online youremail@example.com
     ```
     Replace `yourdomain.online` with your actual domain (e.g., `cloudtolocalllm.online`) and `youremail@example.com` with your email for Let's Encrypt notifications.
 
@@ -138,7 +138,7 @@ The script `scripts/manual_staging_wildcard.sh` is used to obtain and renew cert
         *   Also ensure that files like `fullchain.pem` and `privkey.pem` inside `/opt/cloudtolocalllm/certbot/conf/live/yourdomain.online/` are symlinks to the actual certificate files in the `../../archive/yourdomain.online/` directory. If they are plain files (not symlinks), it indicates a broken Certbot state. You might need to rename the `live/yourdomain.online` directory and re-run the script. Example fix if `live/yourdomain.online` is problematic:
             ```bash
             mv /opt/cloudtolocalllm/certbot/conf/live/yourdomain.online /opt/cloudtolocalllm/certbot/conf/live/yourdomain.online.bak
-            # Then re-run ./scripts/manual_staging_wildcard.sh ...
+            # Then re-run ./scripts/ssl/setup_letsencrypt.sh ...
             ```
 
 6.  **Permissions for `privkey.pem`**:
@@ -149,7 +149,7 @@ The script `scripts/manual_staging_wildcard.sh` is used to obtain and renew cert
     ```
 
 ### Renewing Certificates
-Let's Encrypt certificates are valid for 90 days. You'll need to re-run the `manual_staging_wildcard.sh` script and repeat the DNS challenge process before they expire. Set a calendar reminder.
+Let's Encrypt certificates are valid for 90 days. You'll need to re-run the `scripts/ssl/setup_letsencrypt.sh` script and repeat the DNS challenge process before they expire. Set a calendar reminder.
 
 ## 🚀 Running the Application Stack
 
@@ -225,7 +225,7 @@ To update the application to the latest version from Git:
 - **Flutter Web App UI Not Updating**:
     - After `git pull`, you **must** rebuild the `webapp` Docker image with `--no-cache` and then recreate the container, as detailed in the "Updating the Application" section.
 - **`docker-compose: command not found`**:
-    - Use `docker compose` (with a space). The `deploy_vps.sh` script aims to install the Docker Compose v2 plugin.
+    - Use `docker compose` (with a space). The `scripts/deploy/deploy_to_vps.sh` script aims to install the Docker Compose v2 plugin.
 - **General Service Issues**:
     - `docker compose ps` to see container status.
     - `docker compose logs <service_name>` to view logs (e.g., `docker compose logs webapp`, `docker compose logs fusionauth`).

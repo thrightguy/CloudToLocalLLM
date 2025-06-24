@@ -17,9 +17,9 @@ Modified the CloudToLocalLLM deployment workflow to automatically submit the AUR
 - **Updated Summary**: Changed "AUR Package: Ready for submission" to "AUR Package: Submitted and available"
 - **Revised Next Steps**: Removed manual AUR submission step, updated to focus on testing and verification
 
-### 2. Enhanced `scripts/deploy/submit_aur_package.sh`
+### 2. Enhanced AUR Submission Integration
 
-#### New Command-Line Interface
+#### Integrated into Complete Automated Deployment
 - **--force**: Skip confirmation prompts (CI/CD compatible)
 - **--verbose**: Enable detailed logging
 - **--dry-run**: Simulate submission without actual changes
@@ -100,7 +100,8 @@ Phase 6: Operational Readiness
 
 ### Manual AUR Submission (if needed)
 ```bash
-./scripts/deploy/submit_aur_package.sh --force --verbose
+# AUR submission is integrated into the complete deployment script
+./scripts/deploy/complete_automated_deployment.sh --force --verbose
 ```
 
 ### MANDATORY AUR Installation Verification (v3.5.14+)
@@ -150,8 +151,8 @@ yay -R cloudtolocalllm --noconfirm
 # Test complete deployment workflow
 ./scripts/deploy/complete_automated_deployment.sh --dry-run --verbose
 
-# Test AUR submission independently
-./scripts/deploy/submit_aur_package.sh --dry-run --verbose
+# Test AUR submission independently (integrated in complete deployment)
+./scripts/deploy/complete_automated_deployment.sh --dry-run --verbose
 ```
 
 ### Integration Testing
@@ -183,7 +184,7 @@ yay -R cloudtolocalllm --noconfirm
 ### Failure Indicators
 - ⚠️ "AUR package submission failed - continuing with deployment"
 - ⚠️ "Manual AUR submission may be required"
-- ❌ Exit codes 1-3 from submit_aur_package.sh
+- ❌ Exit codes 1-3 from AUR submission process
 
 ## Lessons Learned from v3.5.14 Deployment
 
@@ -202,7 +203,7 @@ yay -R cloudtolocalllm --noconfirm
 #### 3. Manual AUR Submission Errors
 **Problem**: Manual git commands for AUR submission were error-prone and inconsistent with script-first resolution principle.
 
-**Solution**: Enforced use of `./scripts/deploy/submit_aur_package.sh --force --verbose` for all AUR submissions.
+**Solution**: Integrated AUR submission into the complete automated deployment script for consistency and reliability.
 
 #### 4. Archive Structure Incompatibility
 **Problem**: Distribution package created flat archive structure, but AUR PKGBUILD expected `cloudtolocalllm-${pkgver}-x86_64/` subdirectory.

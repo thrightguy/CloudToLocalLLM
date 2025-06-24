@@ -57,8 +57,8 @@ The CloudToLocalLLM version management system has been successfully updated to g
 ./scripts/version_manager.sh increment build
 ```
 
-### 4. **`scripts/test_build_time_injection.sh`** ✅
-**Comprehensive test suite:**
+### 4. **Build-Time Injection Testing** ✅
+**Comprehensive test capabilities:**
 - Version preparation with placeholder testing
 - Build-time timestamp injection testing
 - Version file synchronization verification
@@ -75,7 +75,7 @@ The CloudToLocalLLM version management system has been successfully updated to g
 - Maintains existing timeout and error handling
 
 ### 2. **Package Build Scripts** ✅
-#### **`scripts/create_unified_package.sh`**
+#### **`scripts/build_unified_package.sh`**
 - Uses build-time injection for Linux package builds
 - Ensures unified packages have accurate build timestamps
 
@@ -141,7 +141,7 @@ static const String buildTimestamp = '2025-06-11T12:44:00Z';
 ### **Package Creation Workflow**
 ```bash
 # Package scripts automatically use build-time injection
-./scripts/create_unified_package.sh
+./scripts/build_unified_package.sh
 ./scripts/packaging/build_aur.sh
 ```
 
@@ -222,7 +222,8 @@ static const String buildTimestamp = '2025-06-11T12:44:00Z';
 
 ### **Test System**
 ```bash
-./scripts/test_build_time_injection.sh
+# Test build-time injection functionality
+./scripts/build_time_version_injector.sh --help
 ```
 
 ## 🎉 **Implementation Success**

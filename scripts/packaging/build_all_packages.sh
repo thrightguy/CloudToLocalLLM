@@ -123,17 +123,12 @@ build_snap() {
     fi
 }
 
-# Build Debian package
+# Build Debian package (deprecated - no longer supported)
 build_debian() {
-    log_info "Building Debian package..."
-
-    cd "$SCRIPT_DIR"
-    if ./build_deb.sh; then
-        log_success "Debian package build completed"
-    else
-        log_error "Debian package build failed"
-        return 1
-    fi
+    log_warning "Debian package building is no longer supported"
+    log_info "CloudToLocalLLM now supports: AUR, AppImage, Flatpak, and Snap packages"
+    log_info "Use PowerShell Create-UnifiedPackages.ps1 for comprehensive package creation"
+    return 0
 }
 
 # Build AUR package
@@ -180,19 +175,8 @@ validate_packages() {
         log_warning "Snap package not found (may have been skipped)"
     fi
     
-    # Check Debian package
-    if [[ -f "$dist_dir/debian/cloudtolocalllm_${version}_amd64.deb" ]]; then
-        log_success "Debian package found: cloudtolocalllm_${version}_amd64.deb"
-        if [[ -f "$dist_dir/debian/cloudtolocalllm_${version}_amd64.deb.sha256" ]]; then
-            log_success "Debian package checksum found"
-        else
-            log_error "Debian package checksum missing"
-            ((validation_errors++))
-        fi
-    else
-        log_error "Debian package not found"
-        ((validation_errors++))
-    fi
+    # Debian packages no longer supported
+    log_info "Debian package building is deprecated - skipping validation"
 
     # Check AUR package
     if [[ -f "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz" ]]; then
@@ -240,10 +224,7 @@ generate_summary() {
         echo "  Snap: cloudtolocalllm_${version}_amd64.snap ($size)"
     fi
     
-    if [[ -f "$dist_dir/debian/cloudtolocalllm_${version}_amd64.deb" ]]; then
-        local size=$(du -h "$dist_dir/debian/cloudtolocalllm_${version}_amd64.deb" | cut -f1)
-        echo "  Debian: cloudtolocalllm_${version}_amd64.deb ($size)"
-    fi
+    # Debian packages no longer supported
 
     if [[ -f "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz" ]]; then
         local size=$(du -h "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz" | cut -f1)
@@ -284,7 +265,7 @@ main() {
                 echo "Options:"
                 echo "  --increment <type>    Increment version (major|minor|patch)"
                 echo "  --skip-increment      Skip version increment"
-                echo "  --packages <list>     Build specific packages (all|snap|debian|aur)"
+                echo "  --packages <list>     Build specific packages (all|snap|aur)"
                 echo "  --help, -h           Show this help message"
                 echo
                 exit 0
@@ -315,20 +296,21 @@ main() {
     case "$packages_to_build" in
         "all")
             build_snap || ((build_errors++))
-            build_debian || ((build_errors++))
             build_aur || ((build_errors++))
             ;;
         "snap")
             build_snap || ((build_errors++))
             ;;
         "debian")
-            build_debian || ((build_errors++))
+            log_warning "Debian package building is deprecated. Use 'snap' or 'aur' instead."
+            build_debian  # Will show deprecation message
             ;;
         "aur")
             build_aur || ((build_errors++))
             ;;
         *)
             log_error "Invalid package selection: $packages_to_build"
+            log_error "Supported options: all, snap, aur"
             exit 1
             ;;
     esac

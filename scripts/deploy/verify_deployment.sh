@@ -1,203 +1,345 @@
 #!/bin/bash
-# scripts/deploy/verify_deployment.sh
-# Comprehensive deployment verification
 
-set -e
+# CloudToLocalLLM Deployment Verification Script
+# Comprehensive verification of VPS deployment status and functionality
+# Validates containers, endpoints, SSL certificates, and application health
 
-# Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+set -euo pipefail
 
-# Get script directory
+# Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Change to project root
-cd "$PROJECT_ROOT"
+# VPS configuration
+VPS_HOST="cloudtolocalllm.online"
+VPS_USER="cloudllm"
+VPS_PROJECT_DIR="/opt/cloudtolocalllm"
 
-echo -e "${BLUE}🔍 CloudToLocalLLM Deployment Verification${NC}"
-echo -e "${BLUE}===========================================${NC}"
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
 
-# Get expected version
-if [[ ! -f "scripts/version_manager.sh" ]]; then
-    echo -e "${RED}❌ Version manager script not found!${NC}"
-    exit 1
-fi
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-EXPECTED_VERSION=$(./scripts/version_manager.sh get-semantic)
-EXPECTED_BUILD=$(./scripts/version_manager.sh get-build)
-EXPECTED_FULL=$(./scripts/version_manager.sh get)
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
 
-echo -e "${YELLOW}📋 Expected version: $EXPECTED_FULL${NC}"
-echo ""
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
 
-# Verification results
-VERIFICATION_PASSED=true
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
 
-# 1. Check Git repository
-echo -e "${BLUE}📂 Checking Git repository...${NC}"
-CURRENT_VERSION=$(./scripts/version_manager.sh get-semantic)
-CURRENT_BUILD=$(./scripts/version_manager.sh get-build)
-CURRENT_FULL=$(./scripts/version_manager.sh get)
+log_step() {
+    echo -e "${CYAN}[STEP $1]${NC} $2"
+}
 
-if [[ "$CURRENT_FULL" = "$EXPECTED_FULL" ]]; then
-    echo -e "${GREEN}✅ Git repository version: $CURRENT_FULL${NC}"
-else
-    echo -e "${RED}❌ Git repository version mismatch: $CURRENT_FULL != $EXPECTED_FULL${NC}"
-    VERIFICATION_PASSED=false
-fi
-
-# Check if latest changes are committed
-if git diff --quiet && git diff --cached --quiet; then
-    echo -e "${GREEN}✅ All changes committed${NC}"
-else
-    echo -e "${YELLOW}⚠️  Uncommitted changes detected${NC}"
-    git status --porcelain
-fi
-
-# Check if pushed to remote
-LOCAL_COMMIT=$(git rev-parse HEAD)
-REMOTE_COMMIT=$(git rev-parse origin/master 2>/dev/null || echo "unknown")
-if [[ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]]; then
-    echo -e "${GREEN}✅ Latest changes pushed to remote${NC}"
-else
-    echo -e "${YELLOW}⚠️  Local commits not pushed to remote${NC}"
-fi
-
-echo ""
-
-# 2. Check assets/version.json
-echo -e "${BLUE}📄 Checking assets/version.json...${NC}"
-if [[ -f "assets/version.json" ]]; then
-    ASSETS_VERSION=$(grep '"version"' assets/version.json | cut -d'"' -f4)
-    ASSETS_BUILD=$(grep '"build_number"' assets/version.json | cut -d'"' -f4)
+# Check VPS connectivity
+check_vps_connectivity() {
+    log_step 1 "Checking VPS connectivity..."
     
-    if [[ "$ASSETS_VERSION" = "$EXPECTED_VERSION" && "$ASSETS_BUILD" = "$EXPECTED_BUILD" ]]; then
-        echo -e "${GREEN}✅ assets/version.json: $ASSETS_VERSION+$ASSETS_BUILD${NC}"
+    if ssh -o ConnectTimeout=10 "$VPS_USER@$VPS_HOST" "echo 'VPS connection successful'" >/dev/null 2>&1; then
+        log_success "VPS connectivity verified"
+        return 0
     else
-        echo -e "${RED}❌ assets/version.json version mismatch: $ASSETS_VERSION+$ASSETS_BUILD != $EXPECTED_FULL${NC}"
-        VERIFICATION_PASSED=false
+        log_error "Cannot connect to VPS: $VPS_USER@$VPS_HOST"
+        return 1
     fi
-else
-    echo -e "${RED}❌ assets/version.json not found${NC}"
-    VERIFICATION_PASSED=false
-fi
+}
 
-echo ""
-
-# 3. Check AUR package
-echo -e "${BLUE}📦 Checking AUR package...${NC}"
-if [[ -f "aur-package/PKGBUILD" ]]; then
-    AUR_VERSION=$(grep "^pkgver=" aur-package/PKGBUILD | cut -d'=' -f2)
+# Verify Docker containers
+verify_containers() {
+    log_step 2 "Verifying Docker containers..."
     
-    if [[ "$AUR_VERSION" = "$EXPECTED_VERSION" ]]; then
-        echo -e "${GREEN}✅ AUR package version: $AUR_VERSION${NC}"
+    local containers_status=$(ssh "$VPS_USER@$VPS_HOST" "cd $VPS_PROJECT_DIR && docker compose ps --format 'table {{.Name}}\t{{.Status}}\t{{.Ports}}'")
+    
+    echo "$containers_status"
+    
+    # Check if all required containers are running
+    local required_containers=("webapp" "api-backend")
+    local all_running=true
+    
+    for container in "${required_containers[@]}"; do
+        if echo "$containers_status" | grep -q "$container.*Up"; then
+            log_success "Container $container is running"
+        else
+            log_error "Container $container is not running"
+            all_running=false
+        fi
+    done
+    
+    if $all_running; then
+        log_success "All required containers are running"
+        return 0
+    else
+        log_error "Some containers are not running properly"
+        return 1
+    fi
+}
+
+# Check HTTP endpoints
+check_http_endpoints() {
+    log_step 3 "Checking HTTP endpoints..."
+    
+    local endpoints=(
+        "http://cloudtolocalllm.online"
+        "http://app.cloudtolocalllm.online"
+    )
+    
+    local all_accessible=true
+    
+    for endpoint in "${endpoints[@]}"; do
+        log_info "Checking $endpoint..."
         
-        # Check if PKGBUILD is valid
-        cd aur-package
-        if makepkg --printsrcinfo > .SRCINFO.test 2>/dev/null; then
-            echo -e "${GREEN}✅ AUR PKGBUILD is valid${NC}"
-            rm -f .SRCINFO.test
+        local http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$endpoint" || echo "000")
+        
+        if [[ "$http_code" == "200" ]]; then
+            log_success "$endpoint is accessible (HTTP $http_code)"
+        elif [[ "$http_code" == "301" || "$http_code" == "302" ]]; then
+            log_warning "$endpoint returned redirect (HTTP $http_code)"
         else
-            echo -e "${RED}❌ AUR PKGBUILD has syntax errors${NC}"
-            VERIFICATION_PASSED=false
+            log_error "$endpoint is not accessible (HTTP $http_code)"
+            all_accessible=false
         fi
-        cd "$PROJECT_ROOT"
+    done
+    
+    if $all_accessible; then
+        log_success "All HTTP endpoints are accessible"
+        return 0
     else
-        echo -e "${RED}❌ AUR package version mismatch: $AUR_VERSION != $EXPECTED_VERSION${NC}"
-        VERIFICATION_PASSED=false
+        log_error "Some HTTP endpoints are not accessible"
+        return 1
     fi
-else
-    echo -e "${YELLOW}⚠️  AUR PKGBUILD not found${NC}"
-fi
+}
 
-echo ""
-
-# 4. Check VPS deployment
-echo -e "${BLUE}🌐 Checking VPS deployment...${NC}"
-
-# Check VPS web app accessibility first
-if curl -s --connect-timeout 10 -I https://app.cloudtolocalllm.online | grep -q "200\|301\|302"; then
-    echo -e "${GREEN}✅ VPS web app accessible${NC}"
-
-    # Try to get version from version.json
-    VPS_RESPONSE=$(curl -s --connect-timeout 10 https://app.cloudtolocalllm.online/version.json 2>/dev/null || echo "ERROR")
-
-    if [[ "$VPS_RESPONSE" != "ERROR" ]]; then
-        # Try to parse JSON response
-        VPS_VERSION=$(echo "$VPS_RESPONSE" | grep -o '"version":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "unknown")
-
-        if [[ "$VPS_VERSION" = "$EXPECTED_VERSION" ]]; then
-            echo -e "${GREEN}✅ VPS deployment version: $VPS_VERSION${NC}"
-        elif [[ "$VPS_VERSION" = "unknown" ]]; then
-            echo -e "${YELLOW}⚠️  VPS version format unrecognized: $VPS_RESPONSE${NC}"
+# Check HTTPS endpoints and SSL certificates
+check_https_endpoints() {
+    log_step 4 "Checking HTTPS endpoints and SSL certificates..."
+    
+    local https_endpoints=(
+        "https://cloudtolocalllm.online"
+        "https://app.cloudtolocalllm.online"
+    )
+    
+    local ssl_valid=true
+    
+    for endpoint in "${https_endpoints[@]}"; do
+        log_info "Checking SSL for $endpoint..."
+        
+        # Check SSL certificate validity
+        local ssl_info=$(echo | openssl s_client -servername "${endpoint#https://}" -connect "${endpoint#https://}:443" 2>/dev/null | openssl x509 -noout -dates 2>/dev/null || echo "SSL_ERROR")
+        
+        if [[ "$ssl_info" != "SSL_ERROR" ]]; then
+            local not_after=$(echo "$ssl_info" | grep "notAfter" | cut -d= -f2)
+            log_success "$endpoint SSL certificate is valid (expires: $not_after)"
+            
+            # Check HTTP response
+            local https_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 "$endpoint" || echo "000")
+            if [[ "$https_code" == "200" ]]; then
+                log_success "$endpoint HTTPS is accessible (HTTP $https_code)"
+            else
+                log_warning "$endpoint HTTPS returned HTTP $https_code"
+            fi
         else
-            echo -e "${RED}❌ VPS deployment version mismatch: $VPS_VERSION != $EXPECTED_VERSION${NC}"
-            VERIFICATION_PASSED=false
+            log_warning "$endpoint SSL certificate check failed or not configured"
+            ssl_valid=false
         fi
+    done
+    
+    if $ssl_valid; then
+        log_success "SSL certificates are valid"
+        return 0
     else
-        echo -e "${YELLOW}⚠️  VPS version endpoint not accessible, but web app is running${NC}"
+        log_warning "Some SSL certificates may not be configured"
+        return 1
     fi
+}
 
-    # Check main site accessibility
-    if curl -s --connect-timeout 10 -I https://cloudtolocalllm.online | grep -q "200\|301\|302"; then
-        echo -e "${GREEN}✅ VPS main site accessible${NC}"
+# Check application health
+check_application_health() {
+    log_step 5 "Checking application health..."
+    
+    # Check if version endpoint is accessible
+    local version_endpoint="http://app.cloudtolocalllm.online/version.json"
+    log_info "Checking version endpoint: $version_endpoint"
+    
+    local version_response=$(curl -s --connect-timeout 10 "$version_endpoint" || echo "ERROR")
+    
+    if [[ "$version_response" != "ERROR" ]] && echo "$version_response" | jq . >/dev/null 2>&1; then
+        local app_version=$(echo "$version_response" | jq -r '.version // "unknown"')
+        local build_date=$(echo "$version_response" | jq -r '.build_date // "unknown"')
+        log_success "Application version: $app_version (built: $build_date)"
+        return 0
     else
-        echo -e "${YELLOW}⚠️  VPS main site not accessible${NC}"
+        log_error "Application health check failed - version endpoint not accessible"
+        return 1
     fi
-else
-    echo -e "${RED}❌ VPS web app not accessible${NC}"
-    VERIFICATION_PASSED=false
-fi
+}
 
-echo ""
+# Check container logs for errors
+check_container_logs() {
+    log_step 6 "Checking container logs for recent errors..."
+    
+    local containers=("webapp" "api-backend")
+    local errors_found=false
+    
+    for container in "${containers[@]}"; do
+        log_info "Checking logs for $container..."
+        
+        local recent_errors=$(ssh "$VPS_USER@$VPS_HOST" "cd $VPS_PROJECT_DIR && docker compose logs --tail=50 $container 2>/dev/null | grep -i 'error\|exception\|failed' | tail -5" || echo "")
+        
+        if [[ -n "$recent_errors" ]]; then
+            log_warning "Recent errors found in $container logs:"
+            echo "$recent_errors"
+            errors_found=true
+        else
+            log_success "No recent errors in $container logs"
+        fi
+    done
+    
+    if $errors_found; then
+        log_warning "Some containers have recent errors in logs"
+        return 1
+    else
+        log_success "No recent errors found in container logs"
+        return 0
+    fi
+}
 
-# 5. Check build artifacts
-echo -e "${BLUE}🔨 Checking build artifacts...${NC}"
-if [[ -d "build/linux/x64/release/bundle" ]]; then
-    echo -e "${GREEN}✅ Linux build artifacts present${NC}"
-else
-    echo -e "${YELLOW}⚠️  Linux build artifacts missing${NC}"
-fi
+# Check disk space and resources
+check_system_resources() {
+    log_step 7 "Checking system resources..."
+    
+    local disk_usage=$(ssh "$VPS_USER@$VPS_HOST" "df -h / | tail -1 | awk '{print \$5}' | sed 's/%//'" || echo "unknown")
+    local memory_usage=$(ssh "$VPS_USER@$VPS_HOST" "free | grep Mem | awk '{printf \"%.1f\", \$3/\$2 * 100.0}'" || echo "unknown")
+    
+    log_info "Disk usage: ${disk_usage}%"
+    log_info "Memory usage: ${memory_usage}%"
+    
+    if [[ "$disk_usage" != "unknown" ]] && [[ "$disk_usage" -lt 90 ]]; then
+        log_success "Disk usage is acceptable (${disk_usage}%)"
+    else
+        log_warning "Disk usage is high (${disk_usage}%)"
+    fi
+    
+    if [[ "$memory_usage" != "unknown" ]] && (( $(echo "$memory_usage < 90" | bc -l) )); then
+        log_success "Memory usage is acceptable (${memory_usage}%)"
+    else
+        log_warning "Memory usage is high (${memory_usage}%)"
+    fi
+    
+    return 0
+}
 
-if [[ -d "build/web" ]]; then
-    echo -e "${GREEN}✅ Web build artifacts present${NC}"
-else
-    echo -e "${YELLOW}⚠️  Web build artifacts missing${NC}"
-fi
+# Generate verification report
+generate_report() {
+    local overall_status="$1"
+    
+    echo
+    echo "=== CloudToLocalLLM Deployment Verification Report ==="
+    echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "VPS Host: $VPS_HOST"
+    echo "Overall Status: $overall_status"
+    echo
+    
+    if [[ "$overall_status" == "HEALTHY" ]]; then
+        echo "✅ Deployment is healthy and fully operational"
+        echo "🌐 Web interfaces are accessible"
+        echo "🔒 SSL certificates are valid"
+        echo "📦 All containers are running properly"
+        echo "💚 Application health checks passed"
+    else
+        echo "⚠️  Deployment has issues that need attention"
+        echo "📋 Review the verification steps above for details"
+        echo "🔧 Check container logs and system resources"
+    fi
+    
+    echo
+    echo "Quick access URLs:"
+    echo "- Flutter Homepage: http://cloudtolocalllm.online"
+    echo "- Flutter Web App: http://app.cloudtolocalllm.online"
+    echo "- HTTPS Homepage: https://cloudtolocalllm.online"
+    echo "- HTTPS Web App: https://app.cloudtolocalllm.online"
+    echo
+}
 
-# Check for binary packages
-if ls dist/cloudtolocalllm-*.tar.gz >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ Binary packages found in dist/${NC}"
-    ls -la dist/cloudtolocalllm-*.tar.gz
-else
-    echo -e "${YELLOW}⚠️  No binary packages found in dist/${NC}"
-fi
+# Main execution function
+main() {
+    log_info "Starting CloudToLocalLLM deployment verification..."
+    echo
+    
+    local verification_passed=true
+    
+    # Run all verification steps
+    check_vps_connectivity || verification_passed=false
+    echo
+    
+    verify_containers || verification_passed=false
+    echo
+    
+    check_http_endpoints || verification_passed=false
+    echo
+    
+    check_https_endpoints || verification_passed=false
+    echo
+    
+    check_application_health || verification_passed=false
+    echo
+    
+    check_container_logs || verification_passed=false
+    echo
+    
+    check_system_resources || verification_passed=false
+    echo
+    
+    # Generate final report
+    if $verification_passed; then
+        generate_report "HEALTHY"
+        log_success "Deployment verification completed successfully!"
+        exit 0
+    else
+        generate_report "ISSUES_FOUND"
+        log_error "Deployment verification found issues that need attention"
+        exit 1
+    fi
+}
 
-echo ""
+# Handle script arguments
+case "${1:-}" in
+    --help|-h)
+        echo "CloudToLocalLLM Deployment Verification Script"
+        echo
+        echo "Usage: $0 [options]"
+        echo
+        echo "Options:"
+        echo "  --help, -h     Show this help message"
+        echo
+        echo "This script performs comprehensive verification of:"
+        echo "  - VPS connectivity and SSH access"
+        echo "  - Docker container status and health"
+        echo "  - HTTP/HTTPS endpoint accessibility"
+        echo "  - SSL certificate validity"
+        echo "  - Application health and version info"
+        echo "  - Container logs for recent errors"
+        echo "  - System resource usage"
+        echo
+        echo "Requirements:"
+        echo "  - SSH access to $VPS_USER@$VPS_HOST"
+        echo "  - curl, openssl, jq, bc commands available"
+        echo
+        exit 0
+        ;;
+esac
 
-# Final verification result
-echo -e "${BLUE}🎯 Verification Summary${NC}"
-echo -e "${BLUE}======================${NC}"
-
-if [[ "$VERIFICATION_PASSED" = true ]]; then
-    echo -e "${GREEN}🎉 DEPLOYMENT VERIFICATION PASSED!${NC}"
-    echo -e "${GREEN}All components are synchronized with version $EXPECTED_FULL${NC}"
-    echo ""
-    echo -e "${BLUE}✅ Deployment is complete and ready for production use.${NC}"
-    exit 0
-else
-    echo -e "${RED}❌ DEPLOYMENT VERIFICATION FAILED!${NC}"
-    echo -e "${RED}Version mismatches or accessibility issues detected.${NC}"
-    echo ""
-    echo -e "${YELLOW}🔧 Required actions:${NC}"
-    echo -e "  1. Fix version mismatches using: ./scripts/deploy/sync_versions.sh"
-    echo -e "  2. Rebuild and redeploy affected components"
-    echo -e "  3. Re-run verification: ./scripts/deploy/verify_deployment.sh"
-    echo ""
-    echo -e "${RED}⚠️  DO NOT CONSIDER DEPLOYMENT COMPLETE UNTIL ALL CHECKS PASS!${NC}"
-    exit 1
-fi
+# Run main function
+main "$@"

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_secure_storage_x/flutter_secure_storage_x.dart';
 import 'auth_service.dart';
 import 'desktop_client_detection_service.dart';
 

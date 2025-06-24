@@ -21,9 +21,9 @@ CloudToLocalLLM uses a clear separation between Windows and Linux environments t
 
 **Main Scripts:**
 - `scripts/deploy/update_and_deploy.sh` - Primary VPS deployment script
-- `scripts/deploy/deploy_unified_web_architecture.sh` - Web architecture deployment
-- `scripts/deploy/VPS_DEPLOYMENT_COMMANDS.sh` - VPS deployment commands
-- `scripts/deploy/push-to-live.sh` - Push code to live VPS
+- `scripts/deploy/deploy_to_vps.sh` - VPS deployment script
+- `scripts/deploy/complete_automated_deployment.sh` - Complete deployment workflow
+- `scripts/deploy/sync_versions.sh` - Version synchronization
 
 ### Windows Package Management (PowerShell-only)
 

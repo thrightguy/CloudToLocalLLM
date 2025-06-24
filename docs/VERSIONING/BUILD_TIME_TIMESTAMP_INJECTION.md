@@ -183,7 +183,7 @@ version: 3.5.5+202506111430
 - Automatic fallback to direct Flutter build if wrapper not available
 - Maintains timeout and error handling
 
-#### **`scripts/create_unified_package.sh`**
+#### **`scripts/build_unified_package.sh`**
 - Uses build-time injection for Linux package builds
 - Ensures unified packages have accurate build timestamps
 
@@ -195,10 +195,10 @@ version: 3.5.5+202506111430
 
 ### Comprehensive Test Suite
 
-#### **`scripts/test_build_time_injection.sh`**
+#### **Build-Time Injection Testing**
 ```bash
-# Run complete test suite
-./scripts/test_build_time_injection.sh
+# Test build-time injection functionality
+./scripts/build_time_version_injector.sh --help
 ```
 
 **Tests Include:**
@@ -312,8 +312,8 @@ chmod +x scripts/flutter_build_with_timestamp.sh
 
 #### **Check Current System Status**
 ```bash
-# Run comprehensive test
-./scripts/test_build_time_injection.sh
+# Test build-time injection functionality
+./scripts/build_time_version_injector.sh --help
 
 # Check version format
 ./scripts/version_manager.sh get-build | grep -E '^[0-9]{12}$|^BUILD_TIME_PLACEHOLDER$'

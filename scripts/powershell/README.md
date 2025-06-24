@@ -86,16 +86,16 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 .\create_unified_aur_package.ps1 -SkipBuild
 ```
 
-### Creating Debian Packages
+### Package Creation
 ```powershell
-# Create Debian package using WSL
-.\build_deb.ps1
+# Create comprehensive packages (AUR, AppImage, Flatpak, Windows, Portable ZIP)
+.\Create-UnifiedPackages.ps1
 
-# Use Docker instead of WSL
-.\build_deb.ps1 -UseDocker
+# Create specific package types
+.\Create-UnifiedPackages.ps1 -PackageTypes AUR,AppImage
 
-# Use specific WSL distribution
-.\build_deb.ps1 -WSLDistro Ubuntu-22.04
+# Note: Debian package support has been deprecated in favor of
+# AUR, AppImage, Flatpak, and Snap packages
 ```
 
 ### VPS Deployment

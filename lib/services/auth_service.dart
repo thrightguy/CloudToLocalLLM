@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_secure_storage_x/flutter_secure_storage_x.dart';
 import '../models/user_model.dart';
 import 'auth_service_platform.dart';
 

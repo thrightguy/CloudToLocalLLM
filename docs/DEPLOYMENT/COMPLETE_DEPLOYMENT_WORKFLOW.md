@@ -223,7 +223,7 @@ These dependencies are automatically included in the unified Flutter application
 **Unified Single-App Build Process:**
 ```bash
 # Use the unified package creation script (REQUIRED for AUR packages)
-./scripts/create_unified_aur_package.sh
+./scripts/create_aur_binary_package.sh
 
 # This script automatically:
 # 1. Builds the unified Flutter application (main directory)
@@ -269,7 +269,7 @@ ls -la build/web/
 
 **⚠️ IMPORTANT: Use Unified Package Creation Script**
 
-The unified package creation script (./scripts/create_unified_aur_package.sh) automatically handles the unified Flutter application building and packaging. DO NOT use manual build/package commands.
+The unified package creation script (./scripts/create_aur_binary_package.sh) automatically handles the unified Flutter application building and packaging. DO NOT use manual build/package commands.
 
 ```bash
 # The unified script already created the package in Step 2.2
@@ -935,8 +935,8 @@ flutter build web --release --no-tree-shake-icons
 # Test package (local testing only - does NOT validate real AUR experience)
 cd aur-package && makepkg -si --noconfirm
 
-# Submit to AUR (USE AUTOMATION SCRIPT - NOT MANUAL GIT COMMANDS)
-./scripts/deploy/submit_aur_package.sh --force --verbose
+# Submit to AUR (INTEGRATED INTO COMPLETE DEPLOYMENT - NOT MANUAL GIT COMMANDS)
+./scripts/deploy/complete_automated_deployment.sh --force --verbose
 
 # MANDATORY: Test real AUR installation (deployment gate)
 yay -Sc --noconfirm  # Clear cache if needed
@@ -1027,7 +1027,7 @@ tar -tzf dist/cloudtolocalllm-X.X.X-x86_64.tar.gz | head -10
 ### **Script Failures**
 
 #### Problem: `create_aur_binary_package.sh` fails with "File not found"
-**Solution**: Binary file management is permanently disabled in v3.5.14+. If you see this error, ensure you're using the updated script.
+**Solution**: Ensure the script exists and is executable. Check that all required dependencies are available.
 
 #### Problem: Manual operations temptation
 **Solution**: Always fix the automation script instead of bypassing it. Follow script-first resolution principle.
@@ -1084,7 +1084,7 @@ Resolution: [steps taken]
 - `scripts/deploy/sync_versions.sh` - Synchronize version references
 - `scripts/deploy/verify_deployment.sh` - Comprehensive verification
 - `scripts/deploy/complete_deployment.sh` - Guided deployment workflow
-- `scripts/deploy/cleanup_docs.sh` - Documentation cleanup
+- `scripts/update_documentation.sh` - Documentation maintenance and cleanup
 
 ### **🔧 Script Usage Examples**
 
@@ -1147,8 +1147,8 @@ echo "✅ Quick update completed!"
 set -e
 
 echo "📦 AUR Package Update"
-# USE AUTOMATION SCRIPT - NOT MANUAL GIT COMMANDS
-./scripts/deploy/submit_aur_package.sh --force --verbose
+# USE COMPLETE DEPLOYMENT SCRIPT - NOT MANUAL GIT COMMANDS
+./scripts/deploy/complete_automated_deployment.sh --force --verbose
 
 # MANDATORY: Test real AUR installation
 echo "🧪 Testing real AUR installation..."

@@ -1,257 +1,191 @@
-# CloudToLocalLLM Deployment Scripts
+# CloudToLocalLLM Scripts Documentation
 
-This directory contains production-ready deployment scripts for the CloudToLocalLLM application. All scripts follow security best practices and run without root privileges.
+**Version**: 3.6.9  
+**Last Updated**: 2025-06-24
 
-## 🏗️ Architecture Separation
-
-CloudToLocalLLM uses a clear separation between Windows and Linux environments:
-
-- **VPS Deployment (Linux-only)**: Use bash scripts in `scripts/deploy/` via WSL
-- **Windows Package Management**: Use PowerShell scripts in `scripts/powershell/`
-
-📖 **See [Environment Separation Guide](../docs/DEPLOYMENT/ENVIRONMENT_SEPARATION_GUIDE.md) for complete details**
-
-## 🚀 Quick Start
-
-### VPS Deployment (from Windows)
-```bash
-# Access WSL Arch Linux distribution
-wsl -d archlinux
-
-# Navigate to project and deploy
-cd /opt/cloudtolocalllm
-bash scripts/deploy/update_and_deploy.sh --force
-```
-
-### Windows Package Creation
-```powershell
-# From Windows PowerShell
-.\scripts\powershell\Create-UnifiedPackages.ps1 -WindowsOnly -AutoInstall
-```
+This directory contains all automation scripts for CloudToLocalLLM development, deployment, and maintenance.
 
 ## 📁 Directory Structure
 
-### Environment-Specific Script Directories
+### Core Scripts
+- **build_time_version_injector.sh** - Injects build timestamps into application
+- **build_unified_package.sh** - Creates unified packages for distribution
+- **create_aur_binary_package.sh** - Creates AUR binary packages
+- **flutter_build_with_timestamp.sh** - Builds Flutter apps with timestamp injection
+- **version_manager.sh** - Manages version numbers and build metadata
 
-#### `/deploy/` - VPS Deployment Scripts (Linux-only)
-- `update_and_deploy.sh` - **Main VPS deployment script** (bash)
-- `deploy_unified_web_architecture.sh` - Web architecture deployment
-- `VPS_DEPLOYMENT_COMMANDS.sh` - VPS deployment commands
-- `VPS_DEPLOYMENT_VERIFICATION.sh` - VPS deployment verification
-- `push-to-live.sh` - Push code to live VPS
+### Deployment Scripts (`deploy/`)
+- **complete_automated_deployment.sh** - Complete deployment automation
+- **complete_deployment.sh** - Guided deployment workflow with rollback
+- **deploy_to_vps.sh** - VPS deployment automation
+- **deployment_utils.sh** - Deployment utility functions
+- **fix_container_permissions.sh** - Fixes Docker container permissions
+- **sync_versions.sh** - Synchronizes version information
+- **update_and_deploy.sh** - Update and deploy workflow
+- **verify_deployment.sh** - Comprehensive deployment verification
 
-#### `/powershell/` - Windows Package Management (PowerShell-only)
-- `Create-UnifiedPackages.ps1` - **Main package creator** (all formats)
-- `build_unified_package.ps1` - Windows builds
-- `version_manager.ps1` - Version management
-- `BuildEnvironmentUtilities.ps1` - Common utilities
+### Packaging Scripts (`packaging/`)
+- **build_all_packages.sh** - Builds all Linux packages
+- **build_aur.sh** - Builds AUR packages
+- **build_snap.sh** - Builds Snap packages
 
-#### Other Directories
-- `auth0/` - Auth0 integration scripts
-- `build/` - Build scripts and utilities
-- `docker/` - Docker-related utilities
-- `install/` - Installation scripts for various components
-- `maintenance/` - System maintenance scripts
-- `packaging/` - Package creation scripts
-- `release/` - Release management scripts
-- `setup/` - Initial setup scripts
-- `ssl/` - SSL certificate management
-- `utils/` - General utility scripts
-- `verification/` - Deployment verification tools
+### PowerShell Scripts (`powershell/`)
+- **BuildEnvironmentUtilities.ps1** - Build environment utilities
+- **Create-UnifiedPackages.ps1** - Unified package creation
+- **Fix-CloudToLocalLLMEnvironment.ps1** - Environment fixes
+- **build_time_version_injector.ps1** - PowerShell version injector
+- **fix_line_endings.ps1** - Fixes line endings for bash scripts
+- **flutter-setup.ps1** - Flutter development setup
+- **version_manager.ps1** - PowerShell version management
 
-### Root Scripts (Moved to Organized Folders)
-Scripts previously in the project root have been moved to their appropriate directories:
-- Debug scripts → `/scripts/`
-- Deployment scripts → `/scripts/deploy/`
-- Build scripts → `/scripts/build/`
-- Setup scripts → `/scripts/setup/`
-- Release scripts → `/scripts/release/`
+### Release Scripts (`release/`)
+- **clean_releases.ps1** - Release cleanup
+- **check_for_updates.ps1** - Update checking
+- **create_github_release.sh** - GitHub release creation
+- **sf_upload.sh** - SourceForge upload
+- **upload_release_assets.ps1** - GitHub release asset upload
 
-## 🔧 Script Details
+### SSL Scripts (`ssl/`)
+- **check_certificates.sh** - Certificate checking
+- **manage_ssl.sh** - SSL management
+- **setup_letsencrypt.sh** - Let's Encrypt setup
 
-### `update_and_deploy.sh` - Main VPS Deployment Script
-**Purpose**: Complete VPS deployment with Flutter build and Docker containers
+### Setup Scripts (`setup/`)
+- **setup_almalinux9_server.sh** - AlmaLinux 9 server setup
 
-**Features**:
-- ✅ Non-root execution (requires Docker group membership)
-- ✅ Comprehensive logging and error handling
-- ✅ Flutter web application build
-- ✅ Docker container management
-- ✅ Deployment verification
-- ✅ Uses existing Let's Encrypt certificates
+### Docker Scripts (`docker/`)
+- **docker_startup_vps.sh** - Docker startup for VPS
+- **validate_dev_environment.sh** - Docker development environment validation
 
-**Usage**:
+### Maintenance Scripts (`maintenance/`)
+- **daily_maintenance.sh** - Daily maintenance tasks
+- **weekly_maintenance.sh** - Weekly maintenance tasks
+- **monthly_maintenance.sh** - Monthly maintenance tasks
+
+### Backup Scripts (`backup/`)
+- **full_backup.sh** - Comprehensive backup creation
+
+### Utility Scripts
+- **check_ssl_expiry.sh** - SSL certificate expiry monitoring
+- **health_check.sh** - System health monitoring
+- **optimize_performance.sh** - Performance optimization
+- **performance_report.sh** - Performance analysis and reporting
+- **security_scan.sh** - Security scanning and assessment
+- **update_documentation.sh** - Documentation maintenance
+- **verify_backups.sh** - Backup integrity verification
+
+## 🚀 Quick Start
+
+### Development Setup
 ```bash
-# From WSL (Windows users)
-wsl -d archlinux
-cd /opt/cloudtolocalllm
-bash scripts/deploy/update_and_deploy.sh --force
+# Set up Flutter development environment (Windows)
+./scripts/powershell/flutter-setup.ps1
+
+# Validate Docker development environment
+./scripts/docker/validate_dev_environment.sh
+
+# Build with timestamp injection
+./scripts/flutter_build_with_timestamp.sh web
 ```
 
-**Requirements**:
-- User in Docker group: `sudo usermod -aG docker $USER`
-- Flutter installed and in PATH
-- Existing Let's Encrypt certificates (optional but recommended)
-
-### `docker_startup_vps.sh` - Container Startup
-**Purpose**: Start Docker containers using existing configuration
-
-**Features**:
-- ✅ Non-root execution
-- ✅ Uses existing Let's Encrypt certificates (no self-signed generation)
-- ✅ Container health verification
-- ✅ Proper error handling
-
-**Usage**:
+### Deployment
 ```bash
-./scripts/docker_startup_vps.sh
+# Complete deployment workflow
+./scripts/deploy/complete_deployment.sh
+
+# Verify deployment
+./scripts/deploy/verify_deployment.sh
+
+# Quick VPS deployment
+./scripts/deploy/deploy_to_vps.sh
 ```
 
-### `update_deployment.sh` - Regular Updates
-**Purpose**: Update application with latest code changes
-
-**Features**:
-- ✅ Git pull latest changes
-- ✅ Rebuild Flutter application
-- ✅ Restart containers with zero-downtime approach
-- ✅ Verify deployment success
-
-**Usage**:
+### Maintenance
 ```bash
-./scripts/update_deployment.sh
+# Daily maintenance
+./scripts/maintenance/daily_maintenance.sh
+
+# System health check
+./scripts/health_check.sh
+
+# Performance optimization
+./scripts/optimize_performance.sh
+
+# Security scan
+./scripts/security_scan.sh
 ```
 
-### `release/sf_upload.sh` - SourceForge Upload
-**Purpose**: Upload binary distribution files to SourceForge for AUR packaging
-
-**Features**:
-- ✅ Creates versioned binary archives
-- ✅ Generates SHA256 checksums
-- ✅ Uploads to SourceForge file hosting
-- ✅ Provides AUR PKGBUILD integration URLs
-- ✅ Automatic cleanup of local files
-
-**Usage**:
+### Package Building
 ```bash
-# Upload with default version (v3.0.1)
-./scripts/release/sf_upload.sh
+# Build all Linux packages
+./scripts/packaging/build_all_packages.sh
 
-# Upload with specific version
-./scripts/release/sf_upload.sh v3.1.0
+# Create AUR binary package
+./scripts/create_aur_binary_package.sh
+
+# Build unified packages (PowerShell)
+./scripts/powershell/Create-UnifiedPackages.ps1
 ```
 
-**Output**:
-- Binary archive: `cloudtolocalllm-v3.0.1-binaries.tar.gz`
-- Checksum file: `cloudtolocalllm-v3.0.1-binaries.tar.gz.sha256`
-- SourceForge download URLs for AUR PKGBUILD integration
+## 🔧 Platform Separation
 
-## 🔒 Security Features
+### Bash Scripts (Linux/WSL/VPS Operations)
+- All deployment scripts
+- Linux package building
+- SSL/certificate management
+- Server setup and maintenance
+- Docker operations
+- System monitoring and health checks
 
-### Non-Root Execution
-- All scripts run as `cloudllm` user
-- No `sudo` commands required during deployment
-- Docker group membership provides necessary container access
+### PowerShell Scripts (Windows Operations)
+- Windows build environment setup
+- Windows package creation
+- Release asset management
+- Development utilities
 
-### Certificate Management
-- Uses existing Let's Encrypt certificates
-- No self-signed certificate generation
-- Proper certificate permissions (nginx user 101:101)
+## 📋 Script Conventions
 
-### Error Handling
-- `set -e` and `set -u` for strict error handling
-- Comprehensive logging to deployment.log
-- Graceful failure recovery
+### Naming
+- **Bash scripts**: kebab-case (e.g., `build-package.sh`)
+- **PowerShell scripts**: PascalCase (e.g., `Build-Package.ps1`)
 
-## 📋 Prerequisites
+### Structure
+- All scripts include help documentation (`--help` flag)
+- Proper error handling with `set -euo pipefail`
+- Colored output for better readability
+- Logging functions for consistent output
 
-### System Requirements
-- Ubuntu/Debian VPS with Docker installed
-- User added to Docker group: `sudo usermod -aG docker cloudllm`
-- Flutter SDK installed and in PATH
-- Git repository access
+### Documentation
+- Each script includes a header comment describing its purpose
+- Usage examples in help text
+- Clear parameter documentation
 
-### Let's Encrypt Certificates (Recommended)
+## 🔍 Finding Scripts
+
+Use the following commands to find scripts by purpose:
+
 ```bash
-# Certificates should exist at:
-/opt/cloudtolocalllm/certbot/live/cloudtolocalllm.online/
+# Find all deployment scripts
+find scripts -name "*deploy*" -type f
+
+# Find all maintenance scripts
+find scripts -name "*maintenance*" -type f
+
+# Find all PowerShell scripts
+find scripts -name "*.ps1" -type f
+
+# Find scripts with specific functionality
+grep -r "SSL" scripts/ --include="*.sh"
 ```
 
-### Directory Permissions
-```bash
-# Project directory owned by cloudllm user
-sudo chown -R cloudllm:cloudllm /opt/cloudtolocalllm
-```
+## 📚 Related Documentation
 
-## 🚦 Deployment Workflow
+- [Main README](../README.md) - Project overview and setup
+- [Deployment Guide](../docs/DEPLOYMENT/) - Detailed deployment instructions
+- [Development Guide](../docs/DEVELOPMENT/) - Development workflow
+- [Operations Guide](../docs/OPERATIONS/) - System operations and maintenance
 
-### 1. Initial Setup (One-time)
-```bash
-# Ensure user is in docker group
-sudo usermod -aG docker cloudllm
-newgrp docker
+---
 
-# Clone repository
-git clone https://github.com/imrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
-cd /opt/cloudtolocalllm
-
-# Set permissions
-sudo chown -R cloudllm:cloudllm /opt/cloudtolocalllm
-```
-
-### 2. Deploy Application
-```bash
-# Run main VPS deployment script
-cd /opt/cloudtolocalllm
-bash scripts/deploy/update_and_deploy.sh --force
-```
-
-### 3. Regular Updates
-```bash
-# For code updates
-./scripts/update_deployment.sh
-
-# For container restarts only
-./scripts/docker_startup_vps.sh
-```
-
-## 🌐 Application URLs
-
-After successful deployment:
-- **Flutter Homepage**: http://cloudtolocalllm.online
-- **Flutter Web App**: http://app.cloudtolocalllm.online
-- **HTTPS** (if certificates configured): https://cloudtolocalllm.online
-
-Note: CloudToLocalLLM v3.4.0+ uses unified Flutter-native architecture where the homepage is served by Flutter, eliminating the need for separate static site containers.
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**Docker Permission Denied**
-```bash
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-**Flutter Not Found**
-```bash
-# Add Flutter to PATH in ~/.bashrc
-export PATH="$PATH:/opt/flutter/bin"
-source ~/.bashrc
-```
-
-**Container Startup Fails**
-```bash
-# Check logs
-docker logs cloudtolocalllm-webapp
-# Verify docker-compose.yml syntax
-docker compose config
-```
-
-## 📝 Notes
-
-- All scripts maintain backward compatibility with existing Docker setup
-- Let's Encrypt certificates are preserved and reused
-- No root privileges required for normal operations
-- Comprehensive logging for troubleshooting
-- Zero-downtime updates when possible
+**Note**: This documentation is automatically updated by `scripts/update_documentation.sh`. 
+Last update: 2025-06-24

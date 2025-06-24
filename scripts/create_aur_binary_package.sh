@@ -1,8 +1,16 @@
 #!/bin/bash
-# Create binary package for AUR distribution
-# This script packages the Flutter app and tray daemon for AUR
 
-set -e
+# CloudToLocalLLM AUR Binary Package Creator
+# Creates AUR-compatible binary packages for distribution
+# Uses pre-built binaries to avoid Flutter dependency for end users
+
+set -euo pipefail
+
+# Script configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DIST_DIR="$PROJECT_ROOT/dist"
+AUR_DIR="$PROJECT_ROOT/aur-package"
 
 # Colors for output
 RED='\033[0;31m'
@@ -11,294 +19,265 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Get version from version manager
-VERSION=$("$PROJECT_ROOT/scripts/version_manager.sh" get-semantic)
-
-BUILD_DIR="$PROJECT_ROOT/build/linux/x64/release/bundle"
-DAEMON_EXECUTABLE="$PROJECT_ROOT/dist/tray_daemon/linux-x64/cloudtolocalllm-tray"
-OUTPUT_DIR="$PROJECT_ROOT/dist"
-PACKAGE_NAME="cloudtolocalllm-$VERSION-x86_64"
-
-echo -e "${BLUE}CloudToLocalLLM AUR Binary Package Creator${NC}"
-echo -e "${BLUE}===========================================${NC}"
-echo "Version: $VERSION"
-echo "Output: $OUTPUT_DIR/$PACKAGE_NAME.tar.gz"
-echo ""
-
-# Function to print status messages
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-print_error() {
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Get version using unified version manager
+get_version() {
+    "$PROJECT_ROOT/scripts/version_manager.sh" get-semantic
+}
+
+# Get full version with build number
+get_full_version() {
+    "$PROJECT_ROOT/scripts/version_manager.sh" get
 }
 
 # Check prerequisites
 check_prerequisites() {
-    print_status "Checking prerequisites..."
-
-    # Check if Flutter app is built
-    if [ ! -f "$BUILD_DIR/cloudtolocalllm" ]; then
-        print_error "Flutter app not found: $BUILD_DIR/cloudtolocalllm"
-        print_error "Please run: flutter build linux --release"
-        exit 1
-    fi
-
-    # Check if daemon is built (optional for unified architecture)
-    # CloudToLocalLLM v3.5.14+ uses unified architecture with integrated system tray
-    # Separate tray daemon is optional and not required for package functionality
-    if [ ! -f "$DAEMON_EXECUTABLE" ]; then
-        print_warning "Tray daemon not found: $DAEMON_EXECUTABLE"
-        print_warning "Creating package without separate tray daemon (unified architecture)"
-        print_status "Unified architecture: System tray integrated into main application"
-        DAEMON_EXECUTABLE=""
-    fi
-
-    print_status "Prerequisites check passed"
-}
-
-# Create package directory structure
-create_package_structure() {
-    print_status "Creating package structure..."
+    log_info "Checking prerequisites..."
     
-    # Create temporary package directory
-    PACKAGE_DIR="$OUTPUT_DIR/$PACKAGE_NAME"
-    rm -rf "$PACKAGE_DIR"
-    mkdir -p "$PACKAGE_DIR"
-    
-    print_status "Package directory created: $PACKAGE_DIR"
-}
-
-# Copy Flutter application files
-copy_flutter_app() {
-    print_status "Copying Flutter application files..."
-    
-    # Copy all Flutter app files
-    cp -r "$BUILD_DIR"/* "$PACKAGE_DIR/"
-    
-    # Verify main executable
-    if [ ! -f "$PACKAGE_DIR/cloudtolocalllm" ]; then
-        print_error "Failed to copy Flutter app executable"
+    # Check if Flutter build exists
+    local flutter_bundle="$PROJECT_ROOT/build/linux/x64/release/bundle"
+    if [[ ! -d "$flutter_bundle" ]]; then
+        log_error "Flutter Linux build not found. Run 'flutter build linux --release' first."
         exit 1
     fi
     
-    # Make executable
-    chmod +x "$PACKAGE_DIR/cloudtolocalllm"
-    
-    print_status "Flutter app files copied successfully"
-}
-
-# Copy tray daemon
-copy_tray_daemon() {
-    if [ -n "$DAEMON_EXECUTABLE" ] && [ -f "$DAEMON_EXECUTABLE" ]; then
-        print_status "Copying tray daemon..."
-
-        # Copy daemon executable
-        cp "$DAEMON_EXECUTABLE" "$PACKAGE_DIR/cloudtolocalllm-tray"
-
-        # Make executable
-        chmod +x "$PACKAGE_DIR/cloudtolocalllm-tray"
-
-        # Verify daemon
-        if [ ! -f "$PACKAGE_DIR/cloudtolocalllm-tray" ]; then
-            print_error "Failed to copy tray daemon"
-            exit 1
-        fi
-
-        print_status "Tray daemon copied successfully"
-    else
-        print_status "Skipping tray daemon copy (unified architecture)"
+    # Check if main executable exists
+    if [[ ! -f "$flutter_bundle/cloudtolocalllm" ]]; then
+        log_error "Main executable not found in Flutter build"
+        exit 1
     fi
+    
+    # Check if AUR directory exists
+    if [[ ! -d "$AUR_DIR" ]]; then
+        log_error "AUR package directory not found: $AUR_DIR"
+        exit 1
+    fi
+    
+    # Check if PKGBUILD exists
+    if [[ ! -f "$AUR_DIR/PKGBUILD" ]]; then
+        log_error "PKGBUILD not found in AUR directory"
+        exit 1
+    fi
+    
+    log_success "Prerequisites check passed"
 }
 
-# Create package archive
+# Create binary package structure
+create_binary_package() {
+    local version="$1"
+    local package_name="cloudtolocalllm-${version}-x86_64"
+    local package_dir="$DIST_DIR/$package_name"
+    
+    log_info "Creating binary package structure for version $version..."
+    
+    # Clean and create package directory
+    rm -rf "$package_dir"
+    mkdir -p "$package_dir"
+    
+    # Copy Flutter bundle
+    local flutter_bundle="$PROJECT_ROOT/build/linux/x64/release/bundle"
+    cp -r "$flutter_bundle"/* "$package_dir/"
+    
+    # Ensure main executable is executable
+    chmod +x "$package_dir/cloudtolocalllm"
+    
+    # Copy documentation
+    if [[ -f "$PROJECT_ROOT/README.md" ]]; then
+        cp "$PROJECT_ROOT/README.md" "$package_dir/"
+    fi
+    
+    if [[ -f "$PROJECT_ROOT/LICENSE" ]]; then
+        cp "$PROJECT_ROOT/LICENSE" "$package_dir/"
+    fi
+    
+    # Create package info file
+    cat > "$package_dir/PACKAGE_INFO.txt" << EOF
+CloudToLocalLLM Binary Package
+Version: $version
+Build Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Architecture: x86_64
+Package Type: AUR Binary Distribution
+
+This package contains pre-built binaries for CloudToLocalLLM,
+eliminating the need for Flutter SDK installation on end-user systems.
+
+Installation:
+1. Extract package to /usr/share/cloudtolocalllm/
+2. Create symlink: ln -sf /usr/share/cloudtolocalllm/cloudtolocalllm /usr/bin/
+3. Run: cloudtolocalllm
+
+For more information, visit: https://cloudtolocalllm.online
+EOF
+    
+    log_success "Binary package structure created"
+}
+
+# Create compressed archive
 create_archive() {
-    print_status "Creating package archive..."
+    local version="$1"
+    local package_name="cloudtolocalllm-${version}-x86_64"
+    local package_dir="$DIST_DIR/$package_name"
+    local archive_name="${package_name}.tar.gz"
     
-    cd "$OUTPUT_DIR"
+    log_info "Creating compressed archive..."
+    
+    cd "$DIST_DIR"
     
     # Create tar.gz archive
-    tar -czf "$PACKAGE_NAME.tar.gz" "$PACKAGE_NAME"
+    tar -czf "$archive_name" "$package_name"
     
-    # Verify archive was created
-    if [ ! -f "$PACKAGE_NAME.tar.gz" ]; then
-        print_error "Failed to create package archive"
+    if [[ ! -f "$archive_name" ]]; then
+        log_error "Failed to create archive: $archive_name"
         exit 1
     fi
     
-    # Get archive size
-    local size=$(du -h "$PACKAGE_NAME.tar.gz" | cut -f1)
-    print_status "Package archive created: $PACKAGE_NAME.tar.gz ($size)"
-    
-    # Clean up temporary directory
-    rm -rf "$PACKAGE_NAME"
-    
-    cd "$PROJECT_ROOT"
+    log_success "Archive created: $archive_name"
 }
 
 # Generate checksums
 generate_checksums() {
-    print_status "Generating checksums..."
+    local version="$1"
+    local archive_name="cloudtolocalllm-${version}-x86_64.tar.gz"
     
-    cd "$OUTPUT_DIR"
+    log_info "Generating checksums..."
     
-    # Generate SHA256 checksum
-    sha256sum "$PACKAGE_NAME.tar.gz" > "$PACKAGE_NAME.tar.gz.sha256"
+    cd "$DIST_DIR"
     
-    # Generate MD5 checksum
-    md5sum "$PACKAGE_NAME.tar.gz" > "$PACKAGE_NAME.tar.gz.md5"
-    
-    print_status "Checksums generated:"
-    print_status "  SHA256: $PACKAGE_NAME.tar.gz.sha256"
-    print_status "  MD5: $PACKAGE_NAME.tar.gz.md5"
-    
-    cd "$PROJECT_ROOT"
+    if [[ -f "$archive_name" ]]; then
+        sha256sum "$archive_name" > "${archive_name}.sha256"
+        local checksum=$(sha256sum "$archive_name" | cut -d' ' -f1)
+        log_success "SHA256 checksum generated: $checksum"
+        echo "$checksum"
+    else
+        log_error "Archive not found for checksum generation"
+        exit 1
+    fi
 }
 
-# Test package contents
-test_package() {
-    print_status "Testing package contents..."
+# Update PKGBUILD with new checksum
+update_pkgbuild() {
+    local version="$1"
+    local checksum="$2"
     
-    cd "$OUTPUT_DIR"
+    log_info "Updating PKGBUILD with new version and checksum..."
     
-    # Extract to temporary directory for testing
-    local test_dir="test_$PACKAGE_NAME"
-    rm -rf "$test_dir"
-    mkdir "$test_dir"
+    # Create backup
+    cp "$AUR_DIR/PKGBUILD" "$AUR_DIR/PKGBUILD.backup"
     
-    tar -xzf "$PACKAGE_NAME.tar.gz" -C "$test_dir"
+    # Update version
+    sed -i "s/^pkgver=.*/pkgver=$version/" "$AUR_DIR/PKGBUILD"
     
-    # Check required files
-    local required_files=(
-        "cloudtolocalllm"
-        "data/flutter_assets/AssetManifest.json"
-        "lib/libapp.so"
-    )
+    # Update checksum
+    sed -i "s/sha256sums=.*/sha256sums=(\n    '$checksum'\n)/" "$AUR_DIR/PKGBUILD"
+    
+    log_success "PKGBUILD updated with version $version and checksum"
+}
 
-    # Add tray daemon to required files if it exists
-    if [ -n "$DAEMON_EXECUTABLE" ] && [ -f "$DAEMON_EXECUTABLE" ]; then
-        required_files+=("cloudtolocalllm-tray")
-    fi
+# Validate package
+validate_package() {
+    local version="$1"
+    local archive_name="cloudtolocalllm-${version}-x86_64.tar.gz"
     
-    local missing_files=0
-    for file in "${required_files[@]}"; do
-        if [ ! -f "$test_dir/$PACKAGE_NAME/$file" ]; then
-            print_error "Missing required file: $file"
-            missing_files=$((missing_files + 1))
-        fi
-    done
+    log_info "Validating package..."
     
-    if [ $missing_files -eq 0 ]; then
-        print_status "All required files present in package"
+    cd "$DIST_DIR"
+    
+    # Check archive integrity
+    if tar -tzf "$archive_name" >/dev/null 2>&1; then
+        log_success "Archive integrity check passed"
     else
-        print_error "$missing_files required files missing"
+        log_error "Archive integrity check failed"
         exit 1
     fi
     
-    # Test executables
-    if [ -x "$test_dir/$PACKAGE_NAME/cloudtolocalllm" ]; then
-        print_status "Flutter app executable is valid"
+    # Check if main executable exists in archive
+    if tar -tzf "$archive_name" | grep -q "cloudtolocalllm-${version}-x86_64/cloudtolocalllm"; then
+        log_success "Main executable found in archive"
     else
-        print_error "Flutter app is not executable"
+        log_error "Main executable not found in archive"
         exit 1
     fi
     
-    if [ -f "$test_dir/$PACKAGE_NAME/cloudtolocalllm-tray" ]; then
-        if [ -x "$test_dir/$PACKAGE_NAME/cloudtolocalllm-tray" ]; then
-            print_status "Tray daemon executable is valid"
-        else
-            print_error "Tray daemon is not executable"
-            exit 1
-        fi
-    else
-        print_status "Tray daemon not included (unified architecture)"
-    fi
-    
-    # Clean up test directory
-    rm -rf "$test_dir"
-    
-    cd "$PROJECT_ROOT"
+    log_success "Package validation completed"
 }
 
-# Display package information
-display_package_info() {
-    print_status "Package information:"
-    echo ""
-    echo -e "${GREEN}Package Details:${NC}"
-    echo "  Name: $PACKAGE_NAME"
-    echo "  Version: $VERSION"
-    echo "  Architecture: x86_64"
-    echo "  Location: $OUTPUT_DIR/$PACKAGE_NAME.tar.gz"
-    echo ""
-    
-    cd "$OUTPUT_DIR"
-    local size=$(du -h "$PACKAGE_NAME.tar.gz" | cut -f1)
-    echo -e "${GREEN}File Information:${NC}"
-    echo "  Size: $size"
-    echo "  SHA256: $(cat "$PACKAGE_NAME.tar.gz.sha256" | cut -d' ' -f1)"
-    echo "  MD5: $(cat "$PACKAGE_NAME.tar.gz.md5" | cut -d' ' -f1)"
-    echo ""
-    
-    echo -e "${GREEN}Contents:${NC}"
-    echo "  ✅ Flutter application (cloudtolocalllm)"
-    if [ -n "$DAEMON_EXECUTABLE" ] && [ -f "$DAEMON_EXECUTABLE" ]; then
-        echo "  ✅ System tray daemon (cloudtolocalllm-tray)"
-    else
-        echo "  ✅ Unified architecture (integrated system tray)"
-    fi
-    echo "  ✅ Application data and libraries"
-    echo "  ✅ Flutter assets and fonts"
-    echo ""
-    
-    echo -e "${GREEN}Usage:${NC}"
-    echo "  1. Upload $PACKAGE_NAME.tar.gz to cloudtolocalllm.online"
-    echo "  2. Update AUR PKGBUILD with new version and checksum"
-    echo "  3. Test AUR package installation"
-    echo ""
-    
-    cd "$PROJECT_ROOT"
-}
-
-# Manage binary files for GitHub compatibility
-manage_binary_files() {
-    print_status "Managing binary files for GitHub compatibility..."
-
-    # PERMANENTLY DISABLED: Binary file management causes "File not found" errors
-    # during package creation and is not needed for AUR distribution packages.
-    # AUR packages use GitHub raw URLs, not local binary file splitting.
-    print_status "Binary file management disabled for AUR package creation"
-    print_status "AUR packages use GitHub raw URL distribution - no file splitting needed"
-}
-
-# Main execution
+# Main execution function
 main() {
-    manage_binary_files
+    log_info "Starting CloudToLocalLLM AUR binary package creation..."
+    
+    # Get version
+    local version=$(get_version)
+    log_info "Building AUR binary package for version: $version"
+    
+    # Create dist directory
+    mkdir -p "$DIST_DIR"
+    
+    # Execute build steps
     check_prerequisites
-    create_package_structure
-    copy_flutter_app
-    copy_tray_daemon
-    create_archive
-    generate_checksums
-    test_package
-    display_package_info
-
-    echo -e "${GREEN}✅ AUR binary package created successfully!${NC}"
-    echo -e "${GREEN}📦 Ready for distribution: $OUTPUT_DIR/$PACKAGE_NAME.tar.gz${NC}"
-
-    # Final binary file management after package creation
-    print_status "Final binary file management..."
-    print_status "Binary file management permanently disabled for AUR packages"
-    print_status "AUR distribution uses GitHub raw URLs - no post-processing needed"
+    create_binary_package "$version"
+    create_archive "$version"
+    local checksum=$(generate_checksums "$version")
+    update_pkgbuild "$version" "$checksum"
+    validate_package "$version"
+    
+    log_success "AUR binary package creation completed successfully!"
+    log_info "Package location: $DIST_DIR/cloudtolocalllm-${version}-x86_64.tar.gz"
+    log_info "SHA256 checksum: $checksum"
+    log_info "PKGBUILD updated: $AUR_DIR/PKGBUILD"
+    
+    # Display final information
+    echo
+    echo "=== AUR Binary Package Summary ==="
+    echo "Version: $version"
+    echo "Package: cloudtolocalllm-${version}-x86_64.tar.gz"
+    echo "Size: $(du -h "$DIST_DIR/cloudtolocalllm-${version}-x86_64.tar.gz" | cut -f1)"
+    echo "SHA256: $checksum"
+    echo
+    echo "Next steps:"
+    echo "1. Test package: cd aur-package && makepkg -si"
+    echo "2. Submit to AUR: git add . && git commit -m 'Update to v$version'"
+    echo
 }
+
+# Handle script arguments
+case "${1:-}" in
+    --help|-h)
+        echo "CloudToLocalLLM AUR Binary Package Creator"
+        echo
+        echo "Usage: $0 [options]"
+        echo
+        echo "Options:"
+        echo "  --help, -h     Show this help message"
+        echo
+        echo "This script creates AUR-compatible binary packages by:"
+        echo "  - Packaging pre-built Flutter Linux binaries"
+        echo "  - Creating compressed archives for distribution"
+        echo "  - Generating SHA256 checksums"
+        echo "  - Updating PKGBUILD with new version and checksums"
+        echo
+        echo "Requirements:"
+        echo "  - Completed Flutter Linux build (flutter build linux --release)"
+        echo "  - Existing AUR package structure in aur-package/"
+        echo
+        exit 0
+        ;;
+esac
 
 # Run main function
-main
+main "$@"

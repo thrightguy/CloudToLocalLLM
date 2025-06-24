@@ -14,7 +14,7 @@ The "Script-First Resolution" principle is a core deployment philosophy for Clou
 ./scripts/version_manager.sh increment patch
 ./scripts/deploy/sync_versions.sh
 ./scripts/create_aur_binary_package.sh
-./scripts/deploy/submit_aur_package.sh --force --verbose
+./scripts/deploy/complete_automated_deployment.sh --force --verbose
 ```
 
 ### ❌ Incorrect Approach
@@ -29,9 +29,9 @@ cd aur-package && git push origin master
 
 ### Mandatory AUR Submission Process
 
-**ALWAYS use the automation script:**
+**ALWAYS use the complete deployment script:**
 ```bash
-./scripts/deploy/submit_aur_package.sh --force --verbose
+./scripts/deploy/complete_automated_deployment.sh --force --verbose
 ```
 
 **NEVER use manual git commands:**
@@ -118,8 +118,8 @@ yay -S cloudtolocalllm --noconfirm
 cd aur-package
 git add . && git commit && git push
 
-# ✅ CORRECT - Automation script
-./scripts/deploy/submit_aur_package.sh --force --verbose
+# ✅ CORRECT - Complete deployment script
+./scripts/deploy/complete_automated_deployment.sh --force --verbose
 ```
 
 ## Deployment Verification Chain
@@ -146,7 +146,7 @@ git add . && git commit && git push
 
 ### Build and Distribution
 - `./scripts/create_aur_binary_package.sh` - Create AUR distribution package
-- `./scripts/deploy/submit_aur_package.sh` - Submit to AUR repository
+- `./scripts/deploy/complete_automated_deployment.sh` - Complete deployment including AUR submission
 
 ### Deployment
 - `./scripts/deploy/update_and_deploy.sh` - VPS deployment

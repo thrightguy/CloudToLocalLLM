@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_secure_storage_x/flutter_secure_storage_x.dart';
 import '../models/ollama_connection_error.dart';
 import '../models/streaming_message.dart';
 import 'streaming_service.dart';

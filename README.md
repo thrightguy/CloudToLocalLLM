@@ -101,13 +101,13 @@ For detailed information, see [Versioning Strategy](docs/DEPLOYMENT/VERSIONING_S
 ## 🚀 Deployment
 
 ### Multi-Container Deployment (Recommended for Self-Hosting)
-<!-- The script `scripts/deploy/deploy-multi-container.sh` is used for deploying the multi-container setup to a VPS. Higher-level scripts like `scripts/deploy/push-to-live.sh` may orchestrate this. -->
+<!-- The script `scripts/deploy/update_and_deploy.sh` is used for deploying the multi-container setup to a VPS. Higher-level scripts like `scripts/deploy/complete_automated_deployment.sh` may orchestrate this. -->
 Deploy the full CloudToLocalLLM stack to your own Virtual Private Server (VPS) using Docker Compose.
 ```bash
 # Example: Navigate to project root and run deployment script
 cd /path/to/CloudToLocalLLM
-./scripts/deploy/deploy-multi-container.sh --build --ssl-setup
-# For a more automated deployment, consider scripts like ./scripts/deploy/push-to-live.sh
+./scripts/deploy/update_and_deploy.sh --force
+# For a more automated deployment, consider scripts like ./scripts/deploy/complete_automated_deployment.sh
 ```
 This setup provides a scalable and secure environment for multiple users. See `docs/OPERATIONS/SELF_HOSTING.md` for detailed instructions.
 
@@ -171,11 +171,11 @@ For detailed information about any component, see the respective README files in
 
 ## 🔧 Key Scripts Overview
 This project includes a variety of scripts to automate common tasks. Here are some of the key ones:
-*   `scripts/deploy/deploy-multi-container.sh`: Deploys the multi-container architecture to a VPS.
-*   `scripts/deploy/push-to-live.sh`: A higher-level script for automated deployment to a live VPS environment.
-*   `scripts/create_unified_aur_package.sh`: Builds and packages the unified Flutter application for the Arch User Repository (AUR). This is a key script for creating AUR distributables.
-*   `scripts/create_unified_package.sh`: Builds and packages the unified Flutter application for static download distribution (e.g., a `.tar.gz` archive).
-*   `scripts/packaging/build_deb.sh`: Builds a Debian (`.deb`) package.
+*   `scripts/deploy/update_and_deploy.sh`: Deploys the multi-container architecture to a VPS.
+*   `scripts/deploy/complete_automated_deployment.sh`: A higher-level script for automated deployment to a live VPS environment.
+*   `scripts/create_aur_binary_package.sh`: Builds and packages the unified Flutter application for the Arch User Repository (AUR). This is a key script for creating AUR distributables.
+*   `scripts/build_unified_package.sh`: Builds and packages the unified Flutter application for static download distribution (e.g., a `.tar.gz` archive).
+*   `scripts/packaging/build_aur.sh`: Builds AUR packages for distribution.
 *   `scripts/build_unified_package.sh`: A comprehensive script that builds various components (Flutter app, potentially others) and assembles them into a unified structure, often used as a precursor to packaging scripts.
 *   `scripts/version_manager.sh`: Manages project version numbers across different files.
 *   `scripts/deploy/complete_automated_deployment.sh`: Orchestrates a full deployment workflow including versioning, building, and distributing.
@@ -187,31 +187,24 @@ Refer to `scripts/README.md` for a more exhaustive list and detailed explanation
 Instructions for building and packaging client applications for different platforms:
 
 ### Linux (General Static Package)
-Uses `scripts/create_unified_package.sh`. This script typically:
+Uses `scripts/build_unified_package.sh`. This script typically:
 1.  Builds the Flutter application in release mode.
 2.  Copies necessary assets and libraries.
 3.  Creates a distributable archive (e.g., `.tar.gz`).
 ```bash
-./scripts/create_unified_package.sh
+./scripts/build_unified_package.sh
 ```
 The output will be in the `dist/` directory.
 
 ### Linux (AUR Package)
-Uses `scripts/create_unified_aur_package.sh`. This script:
+Uses `scripts/create_aur_binary_package.sh`. This script:
 1.  Builds the Flutter application.
 2.  Prepares the package structure and metadata for AUR.
 3.  Generates files needed for the AUR submission.
 ```bash
-./scripts/create_unified_aur_package.sh
+./scripts/create_aur_binary_package.sh
 ```
 The output will be in the `dist/` directory, and files in `aur-package/` will be updated.
-
-### Linux (Debian Package)
-Uses `scripts/packaging/build_deb.sh`.
-```bash
-./scripts/packaging/build_deb.sh
-```
-The output `.deb` file will be in the `dist/` directory.
 
 ### Windows
 **Status**: Available (v3.6.0+)

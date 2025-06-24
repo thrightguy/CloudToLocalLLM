@@ -258,13 +258,13 @@ git clone https://github.com/imrightguy/CloudToLocalLLM.git /opt/cloudtolocalllm
 cd /opt/cloudtolocalllm
 
 # Run deployment script
-./scripts/deploy_vps.sh
+./scripts/deploy/deploy_to_vps.sh
 ```
 
 ### **SSL Certificate Setup**
 ```bash
 # Configure wildcard SSL certificate
-./scripts/manual_staging_wildcard.sh yourdomain.com youremail@example.com
+./scripts/ssl/setup_letsencrypt.sh yourdomain.com youremail@example.com
 
 # Follow DNS challenge instructions
 # Deploy TXT records as prompted
