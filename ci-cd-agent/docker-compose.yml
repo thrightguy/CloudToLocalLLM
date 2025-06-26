@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  cicd-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudtolocalllm-cicd-agent
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PROJECT_ROOT=/opt/cloudtolocalllm
+      - CICD_PORT=3001
+    env_file:
+      - .env
+    volumes:
+      # Mount project directory for builds
+      - /opt/cloudtolocalllm:/opt/cloudtolocalllm
+      # Mount Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount SSH keys for Git operations
+      - ~/.ssh:/home/cicd/.ssh:ro
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount Git configuration
+      - ~/.gitconfig:/home/cicd/.gitconfig:ro
+    networks:
+      - cloudllm-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: cloudtolocalllm-cicd-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cloudllm-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Nginx reverse proxy for the CI/CD dashboard
+  nginx:
+    image: nginx:alpine
+    container_name: cloudtolocalllm-cicd-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - cloudllm-network
+    depends_on:
+      - cicd-agent
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  cloudllm-network:
+    external: true
