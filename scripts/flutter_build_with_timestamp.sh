@@ -123,7 +123,7 @@ parse_arguments() {
                 FLUTTER_BUILD_ARGS="$FLUTTER_BUILD_ARGS $1"
                 shift
                 # Handle options that take values
-                if [[ "$1" != --* && "$1" != "" && "$1" != "web" && "$1" != "linux" && "$1" != "windows" && "$1" != "android" && "$1" != "ios" && "$1" != "all" ]]; then
+                if [[ $# -gt 0 && "$1" != --* && "$1" != "" && "$1" != "web" && "$1" != "linux" && "$1" != "windows" && "$1" != "android" && "$1" != "ios" && "$1" != "all" ]]; then
                     FLUTTER_BUILD_ARGS="$FLUTTER_BUILD_ARGS $1"
                     shift
                 fi
