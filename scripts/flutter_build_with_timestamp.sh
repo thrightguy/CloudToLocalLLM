@@ -46,6 +46,7 @@ INJECT_TIMESTAMP=true
 UPDATE_VERSION=true
 CLEAN_BUILD=false
 VERBOSE=false
+FLUTTER_BUILD_ARGS=""
 
 # Show usage information
 show_usage() {
@@ -69,10 +70,18 @@ show_usage() {
     echo "  --verbose          Enable verbose output"
     echo "  --help, -h         Show this help message"
     echo
+    echo "Flutter Build Options (passed through):"
+    echo "  --no-tree-shake-icons    Disable tree shaking of icons"
+    echo "  --web-renderer <value>   Web renderer (html, canvaskit, auto)"
+    echo "  --dart-define <key=val>  Define Dart constants"
+    echo "  --obfuscate             Obfuscate Dart code"
+    echo "  --split-debug-info      Split debug info"
+    echo
     echo "Examples:"
     echo "  $0                 # Build web in release mode with timestamp"
     echo "  $0 linux --debug  # Build Linux in debug mode"
     echo "  $0 --clean web    # Clean build for web"
+    echo "  $0 web --no-tree-shake-icons  # Web build without icon tree shaking"
     echo "  $0 all             # Build for all platforms"
     echo
 }
@@ -108,6 +117,16 @@ parse_arguments() {
             web|linux|windows|android|ios|all)
                 BUILD_TARGET="$1"
                 shift
+                ;;
+            --no-tree-shake-icons|--tree-shake-icons|--web-renderer|--dart-define|--dart-define-from-file|--obfuscate|--split-debug-info|--source-maps|--pwa-strategy)
+                # Pass through Flutter-specific build options
+                FLUTTER_BUILD_ARGS="$FLUTTER_BUILD_ARGS $1"
+                shift
+                # Handle options that take values
+                if [[ "$1" != --* && "$1" != "" && "$1" != "web" && "$1" != "linux" && "$1" != "windows" && "$1" != "android" && "$1" != "ios" && "$1" != "all" ]]; then
+                    FLUTTER_BUILD_ARGS="$FLUTTER_BUILD_ARGS $1"
+                    shift
+                fi
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -224,7 +243,12 @@ build_platform() {
     if [[ "$VERBOSE" == "true" ]]; then
         build_args="--verbose"
     fi
-    
+
+    # Add Flutter-specific build arguments
+    if [[ -n "$FLUTTER_BUILD_ARGS" ]]; then
+        build_args="$build_args $FLUTTER_BUILD_ARGS"
+    fi
+
     case $platform in
         web)
             flutter build web --$mode --web-renderer html $build_args
