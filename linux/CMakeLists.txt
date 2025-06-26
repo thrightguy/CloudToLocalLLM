@@ -9,6 +9,10 @@ set(BINARY_NAME "cloudtolocalllm")
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
 set(APPLICATION_ID "com.example.cloudtolocalllm")
 
+# Add preprocessor definitions for the application ID globally
+# This ensures all targets, including plugins, have access to APPLICATION_ID
+add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
+
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(SET CMP0063 NEW)

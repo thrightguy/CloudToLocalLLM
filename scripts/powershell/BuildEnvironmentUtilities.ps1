@@ -209,8 +209,13 @@ function Invoke-WSLCommand {
     )
 
     # Default to archlinux if no distribution specified
-    if (-not $DistroName) {
+    if (-not $DistroName -or [string]::IsNullOrWhiteSpace($DistroName)) {
         $DistroName = 'archlinux'
+    }
+
+    # Validate distribution name
+    if ($DistroName -isnot [string]) {
+        throw "DistroName must be a string, got: $($DistroName.GetType().Name)"
     }
 
     # Build arguments array for proper command execution
@@ -284,8 +289,15 @@ function Initialize-WSLDistribution {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
         [string]$DistroName = 'archlinux'
     )
+
+    # Additional validation
+    if ([string]::IsNullOrWhiteSpace($DistroName)) {
+        Write-LogError "DistroName cannot be null or empty"
+        return $false
+    }
 
     Write-LogInfo "Configuring WSL distribution '$DistroName' for automated builds..."
 
@@ -301,12 +313,27 @@ function Initialize-WSLDistribution {
 
         if ($targetDistro.State -ne 'Running') {
             Write-LogInfo "Starting WSL distribution '$DistroName'..."
-            & wsl -d $DistroName -- echo "WSL distribution started"
+            try {
+                & wsl -d $DistroName -- echo "WSL distribution started"
+                if ($LASTEXITCODE -ne 0) {
+                    Write-LogError "Failed to start WSL distribution '$DistroName'"
+                    return $false
+                }
+            }
+            catch {
+                Write-LogError "Failed to start WSL distribution '$DistroName': $($_.Exception.Message)"
+                return $false
+            }
         }
 
         # Get current user in WSL
         $currentUser = Invoke-WSLCommand -DistroName $DistroName -Command "whoami" -PassThru
-        $currentUser = $currentUser.Trim()
+        if ($currentUser) {
+            $currentUser = $currentUser.Trim()
+        } else {
+            Write-LogError "Failed to get current user from WSL distribution '$DistroName'"
+            return $false
+        }
 
         Write-LogInfo "Current WSL user: $currentUser"
 

@@ -16,8 +16,8 @@ add_executable(${BINARY_NAME}
 # that need different build settings.
 apply_standard_settings(${BINARY_NAME})
 
-# Add preprocessor definitions for the application ID.
-add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
+# APPLICATION_ID is now defined globally in the main CMakeLists.txt
+# No need to redefine it here
 
 # Add dependency libraries. Add any application-specific dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)

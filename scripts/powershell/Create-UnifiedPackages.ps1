@@ -203,40 +203,56 @@ function Get-DefaultArchDistribution {
     # Always use 'archlinux' as the default distribution name
     $defaultDistro = 'archlinux'
 
-    # Verify the distribution exists and is available
-    $distributions = Get-WSLDistributions
-    $archDistro = $distributions | Where-Object { $_.Name -eq $defaultDistro }
+    try {
+        # Verify the distribution exists and is available
+        $distributions = Get-WSLDistributions
+        if (-not $distributions -or $distributions.Count -eq 0) {
+            Write-LogWarning "No WSL distributions found"
+            return $null
+        }
 
-    if ($archDistro) {
-        if ($archDistro.State -ne 'Running') {
-            Write-LogInfo "Starting WSL distribution '$defaultDistro'..."
-            try {
-                & wsl -d $defaultDistro -- echo "WSL distribution started"
-                Write-LogSuccess "WSL distribution '$defaultDistro' started successfully"
+        $archDistro = $distributions | Where-Object { $_.Name -eq $defaultDistro }
+
+        if ($archDistro) {
+            if ($archDistro.State -ne 'Running') {
+                Write-LogInfo "Starting WSL distribution '$defaultDistro'..."
+                try {
+                    $null = & wsl -d $defaultDistro -- echo "WSL distribution started"
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-LogSuccess "WSL distribution '$defaultDistro' started successfully"
+                    } else {
+                        Write-LogError "Failed to start WSL distribution '$defaultDistro'"
+                        return $null
+                    }
+                }
+                catch {
+                    Write-LogError "Failed to start WSL distribution '$defaultDistro'"
+                    return $null
+                }
             }
-            catch {
-                Write-LogError "Failed to start WSL distribution '$defaultDistro'"
-                return $null
+
+            Write-LogInfo "Using default Arch Linux WSL distribution: $defaultDistro"
+            return [string]$defaultDistro
+        }
+
+        # Fallback: try to find any Arch-based distribution
+        $archCandidates = @('archlinux', 'Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
+        foreach ($candidate in $archCandidates) {
+            $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" }
+            if ($distro) {
+                Write-LogInfo "Found alternative Arch Linux WSL distribution: $($distro.Name)"
+                return [string]$distro.Name
             }
         }
 
-        Write-LogInfo "Using default Arch Linux WSL distribution: $defaultDistro"
-        return $defaultDistro
+        Write-LogError "No Arch Linux WSL distribution found. Please install archlinux WSL distribution."
+        Write-LogInfo "Install with: wsl --install -d archlinux"
+        return $null
     }
-
-    # Fallback: try to find any Arch-based distribution
-    $archCandidates = @('archlinux', 'Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
-    foreach ($candidate in $archCandidates) {
-        $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" }
-        if ($distro) {
-            Write-LogInfo "Found alternative Arch Linux WSL distribution: $($distro.Name)"
-            return $distro.Name
-        }
+    catch {
+        Write-LogError "Error getting WSL distributions: $($_.Exception.Message)"
+        return $null
     }
-
-    Write-LogError "No Arch Linux WSL distribution found. Please install archlinux WSL distribution."
-    Write-LogInfo "Install with: wsl --install -d archlinux"
-    return $null
 }
 
 # Check Windows-specific prerequisites
@@ -298,23 +314,33 @@ function Test-LinuxPrerequisites {
     $linuxPackages = @('AUR', 'AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
     if ($linuxPackages) {
         # Use specified WSL distribution or get default Arch distribution
-        $script:ArchDistro = $WSLDistro
-        if (-not $script:ArchDistro) {
+        if ($WSLDistro -and -not [string]::IsNullOrWhiteSpace($WSLDistro)) {
+            $script:ArchDistro = [string]$WSLDistro.Trim()
+            Write-LogInfo "Using specified WSL distribution: $script:ArchDistro"
+        } else {
+            Write-LogInfo "No WSL distribution specified, detecting default Arch distribution..."
             $script:ArchDistro = Get-DefaultArchDistribution
         }
 
-        if (-not $script:ArchDistro) {
+        # Ensure ArchDistro is a string and not null
+        if (-not $script:ArchDistro -or $script:ArchDistro -isnot [string] -or [string]::IsNullOrWhiteSpace($script:ArchDistro)) {
             Write-LogWarning "No Arch Linux WSL distribution found - all Linux packages will be skipped"
             $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AUR', 'AppImage', 'Flatpak') }
         } else {
             Write-LogInfo "Using Arch Linux WSL distribution for all Linux packages: $script:ArchDistro"
 
             # Initialize WSL distribution for automated builds
-            if (Initialize-WSLDistribution -DistroName $script:ArchDistro) {
-                Test-ArchLinuxTools
-                Test-ArchLinuxPackageTools
-            } else {
-                Write-LogWarning "Failed to initialize WSL distribution - some operations may require manual intervention"
+            try {
+                if (Initialize-WSLDistribution -DistroName ([string]$script:ArchDistro)) {
+                    Test-ArchLinuxTools
+                    Test-ArchLinuxPackageTools
+                } else {
+                    Write-LogWarning "Failed to initialize WSL distribution - some operations may require manual intervention"
+                }
+            }
+            catch {
+                Write-LogError "Failed to configure WSL distribution '$script:ArchDistro': $($_.Exception.Message)"
+                Write-LogWarning "Some operations may require manual intervention"
             }
         }
     }
@@ -946,6 +972,8 @@ modules:
     }
 }
 
+
+
 # Create MSI package
 function New-MSIPackage {
     [CmdletBinding()]
@@ -965,29 +993,83 @@ function New-MSIPackage {
         throw "Windows build output not found at $WindowsBuildDir"
     }
 
+    # Verify all required files exist
+    $requiredFiles = @(
+        @{ Path = "cloudtolocalllm.exe"; Critical = $true },
+        @{ Path = "flutter_windows.dll"; Critical = $true },
+        @{ Path = "icudtl.dat"; Critical = $true },
+        @{ Path = "data\app.so"; Critical = $true }
+    )
+
+    $missingFiles = @()
+    foreach ($file in $requiredFiles) {
+        $filePath = Join-Path $WindowsBuildDir $file.Path
+        if (-not (Test-Path $filePath)) {
+            if ($file.Critical) {
+                $missingFiles += $file.Path
+            } else {
+                Write-LogWarning "Optional file missing: $($file.Path)"
+            }
+        } else {
+            Write-LogInfo "Found required file: $($file.Path)"
+        }
+    }
+
+    if ($missingFiles.Count -gt 0) {
+        throw "Critical files missing from Windows build: $($missingFiles -join ', '). Run 'flutter build windows --release' first."
+    }
+
+    # Check for data directory
+    $dataDir = Join-Path $WindowsBuildDir "data"
+    if (-not (Test-Path $dataDir)) {
+        throw "Required data directory missing: $dataDir"
+    }
+
+    # Check if flutter_assets directory exists and prepare heat harvesting
+    $flutterAssetsDir = Join-Path $WindowsBuildDir "data\flutter_assets"
+    $includeFlutterAssetsGroup = Test-Path $flutterAssetsDir
+
     # Create WiX source file
     $wixSource = Join-Path $env:TEMP "CloudToLocalLLM.wxs"
     $productId = [System.Guid]::NewGuid().ToString()
     $upgradeCode = "12345678-1234-1234-1234-123456789012" # Fixed upgrade code for upgrades
 
+    # Build feature component references
+    $featureRefs = @(
+        "      <ComponentGroupRef Id=`"ProductComponents`" />",
+        "      <ComponentGroupRef Id=`"FlutterRuntime`" />"
+    )
+
+    if ($includeFlutterAssetsGroup) {
+        $featureRefs += "      <ComponentGroupRef Id=`"FlutterAssets`" />"
+        $featureRefs += "      <ComponentGroupRef Id=`"FlutterAssetsGroup`" />"
+    }
+
     @"
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="$productId" Name="CloudToLocalLLM" Language="1033" Version="$Version" Manufacturer="CloudToLocalLLM Team" UpgradeCode="$upgradeCode">
-    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" />
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <Feature Id="ProductFeature" Title="CloudToLocalLLM" Level="1">
-      <ComponentGroupRef Id="ProductComponents" />
+$($featureRefs -join "`n")
     </Feature>
   </Product>
 
   <Fragment>
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLFOLDER" Name="CloudToLocalLLM" />
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="INSTALLFOLDER" Name="CloudToLocalLLM">
+          <Directory Id="DATAFOLDER" Name="data">
+            <Directory Id="FLUTTERASSETSFOLDER" Name="flutter_assets" />
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="CloudToLocalLLM"/>
       </Directory>
     </Directory>
   </Fragment>
@@ -996,6 +1078,34 @@ function New-MSIPackage {
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="MainExecutable" Guid="*">
         <File Id="CloudToLocalLLMExe" Source="$WindowsBuildDir\cloudtolocalllm.exe" KeyPath="yes" />
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="CloudToLocalLLM"
+                  Description="Bridge cloud-hosted web interfaces with local LLM instances"
+                  Target="[#CloudToLocalLLMExe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Directory="ApplicationProgramsFolder" />
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\CloudToLocalLLM" Name="installed" Type="integer" Value="1" KeyPath="no"/>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="FlutterRuntime" Directory="INSTALLFOLDER">
+      <Component Id="FlutterDLL" Guid="*">
+        <File Id="FlutterWindowsDLL" Source="$WindowsBuildDir\flutter_windows.dll" />
+      </Component>
+      <Component Id="ICUData" Guid="*">
+        <File Id="ICUDataFile" Source="$WindowsBuildDir\icudtl.dat" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="FlutterAssets" Directory="DATAFOLDER">
+      <Component Id="FlutterAssetsComponent" Guid="*">
+        <File Id="AppSO" Source="$WindowsBuildDir\data\app.so" />
+        <CreateFolder />
       </Component>
     </ComponentGroup>
   </Fragment>
@@ -1003,42 +1113,110 @@ function New-MSIPackage {
 "@ | Set-Content -Path $wixSource -Encoding UTF8
 
     try {
-        # Find WiX tools
-        $wixPath = "C:\Program Files (x86)\WiX Toolset v3.14\bin"
-        $candleExe = Join-Path $wixPath "candle.exe"
-        $lightExe = Join-Path $wixPath "light.exe"
+        # Find WiX tools - check multiple possible locations
+        $wixPaths = @(
+            "C:\Program Files (x86)\WiX Toolset v3.14\bin",
+            "C:\Program Files (x86)\WiX Toolset v3.11\bin",
+            "C:\Program Files\WiX Toolset v3.14\bin",
+            "C:\Program Files\WiX Toolset v3.11\bin"
+        )
 
-        if (-not (Test-Path $candleExe)) {
-            throw "WiX candle.exe not found at $candleExe. Please install WiX Toolset."
-        }
-        if (-not (Test-Path $lightExe)) {
-            throw "WiX light.exe not found at $lightExe. Please install WiX Toolset."
+        $candleExe = $null
+        $lightExe = $null
+
+        foreach ($wixPath in $wixPaths) {
+            $testCandle = Join-Path $wixPath "candle.exe"
+            $testLight = Join-Path $wixPath "light.exe"
+            if ((Test-Path $testCandle) -and (Test-Path $testLight)) {
+                $candleExe = $testCandle
+                $lightExe = $testLight
+                Write-LogInfo "Found WiX tools at: $wixPath"
+                break
+            }
         }
 
+        if (-not $candleExe) {
+            throw "WiX Toolset not found. Please install WiX Toolset v3.11 or v3.14."
+        }
+
+        # Generate heat file for flutter_assets if directory exists
+        $heatWxs = Join-Path $env:TEMP "FlutterAssets.wxs"
+        $heatObj = Join-Path $env:TEMP "FlutterAssets.wixobj"
+
+        if ($includeFlutterAssetsGroup) {
+            Write-LogInfo "Harvesting flutter_assets directory with heat.exe..."
+            $heatExe = Join-Path (Split-Path $candleExe) "heat.exe"
+
+            if (Test-Path $heatExe) {
+                & $heatExe dir $flutterAssetsDir -cg FlutterAssetsGroup -gg -scom -sreg -sfrag -srd -dr FLUTTERASSETSFOLDER -out $heatWxs
+                if ($LASTEXITCODE -eq 0) {
+                    Write-LogInfo "Compiling heat-generated WiX source..."
+                    & $candleExe -out $heatObj $heatWxs
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-LogWarning "Heat compilation failed, continuing without flutter_assets"
+                        $heatObj = $null
+                    }
+                } else {
+                    Write-LogWarning "Heat harvesting failed, continuing without flutter_assets"
+                    $heatObj = $null
+                }
+            } else {
+                Write-LogWarning "Heat.exe not found, flutter_assets will not be included"
+                $heatObj = $null
+            }
+        } else {
+            Write-LogWarning "Flutter assets directory not found: $flutterAssetsDir"
+            $heatObj = $null
+        }
+
+        Write-LogInfo "Compiling WiX source with candle.exe..."
         # Compile with candle
         $wixObj = Join-Path $env:TEMP "CloudToLocalLLM.wixobj"
         & $candleExe -out $wixObj $wixSource
         if ($LASTEXITCODE -ne 0) {
-            throw "WiX candle compilation failed"
+            throw "WiX candle compilation failed with exit code $LASTEXITCODE"
         }
 
-        # Link with light
+        Write-LogInfo "Linking MSI with light.exe..."
+        # Link with light - include heat object if available
         $msiPath = Join-Path $msiOutputDir $packageName
-        & $lightExe -out $msiPath $wixObj
-        if ($LASTEXITCODE -ne 0) {
-            throw "WiX light linking failed"
+        $lightArgs = @("-out", $msiPath, $wixObj, "-sice:ICE64", "-sice:ICE91")
+
+        if ($heatObj -and (Test-Path $heatObj)) {
+            Write-LogInfo "Including flutter_assets in MSI..."
+            $lightArgs += $heatObj
         }
+
+        & $lightExe $lightArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "WiX light linking failed with exit code $LASTEXITCODE"
+        }
+
+        # Validate MSI was created successfully
+        if (-not (Test-Path $msiPath)) {
+            throw "MSI file was not created: $msiPath"
+        }
+
+        $msiInfo = Get-Item $msiPath
+        if ($msiInfo.Length -lt 1MB) {
+            Write-LogWarning "MSI file seems unusually small: $($msiInfo.Length) bytes"
+        }
+
+        Write-LogInfo "MSI package size: $([math]::Round($msiInfo.Length / 1MB, 2)) MB"
 
         # Generate checksum
         $checksum = Get-SHA256Hash -FilePath $msiPath
         "$checksum  $packageName" | Set-Content -Path "$msiPath.sha256" -Encoding UTF8
 
-        Write-LogSuccess "MSI package created: $packageName"
+        Write-LogSuccess "MSI package created successfully: $packageName"
+        Write-LogInfo "MSI location: $msiPath"
     }
     finally {
         # Cleanup temporary files
-        if (Test-Path $wixSource) { Remove-Item $wixSource }
-        if (Test-Path $wixObj) { Remove-Item $wixObj }
+        if (Test-Path $wixSource) { Remove-Item $wixSource -ErrorAction SilentlyContinue }
+        if (Test-Path $wixObj) { Remove-Item $wixObj -ErrorAction SilentlyContinue }
+        if ($heatWxs -and (Test-Path $heatWxs)) { Remove-Item $heatWxs -ErrorAction SilentlyContinue }
+        if ($heatObj -and (Test-Path $heatObj)) { Remove-Item $heatObj -ErrorAction SilentlyContinue }
     }
 }
 
