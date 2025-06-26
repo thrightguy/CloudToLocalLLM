@@ -193,7 +193,7 @@ update_version_info() {
         log_step "Updating version information..."
         
         if [[ -f "$PROJECT_ROOT/scripts/version_manager.sh" ]]; then
-            "$PROJECT_ROOT/scripts/version_manager.sh" update-build-number
+            "$PROJECT_ROOT/scripts/version_manager.sh" increment build
             log_success "Version updated with new build number"
         else
             log_warning "Version manager script not found, skipping version update"
