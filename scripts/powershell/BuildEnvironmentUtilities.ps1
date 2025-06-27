@@ -235,7 +235,9 @@ function Invoke-WSLCommand {
 
     try {
         if ($PassThru) {
-            return & wsl @wslArgs
+            $result = & wsl @wslArgs
+            # Return result even if exit code is non-zero for PassThru mode
+            return $result
         }
         else {
             & wsl @wslArgs
@@ -248,6 +250,7 @@ function Invoke-WSLCommand {
         Write-LogError "WSL command execution failed: $($_.Exception.Message)"
         Write-LogError "Command: $Command"
         Write-LogError "Distribution: $DistroName"
+        Write-LogError "WSL Args: $($wslArgs -join ' ')"
         throw
     }
 }
@@ -340,7 +343,7 @@ function Initialize-WSLDistribution {
         # Configure passwordless sudo for the current user (if not already configured)
         $sudoersCheck = Invoke-WSLCommand -DistroName $DistroName -Command "sudo grep -q '$currentUser.*NOPASSWD' /etc/sudoers || echo 'NOT_CONFIGURED'" -PassThru -AsRoot
 
-        if ($sudoersCheck.Trim() -eq 'NOT_CONFIGURED') {
+        if ($sudoersCheck -and $sudoersCheck.Trim() -eq 'NOT_CONFIGURED') {
             Write-LogInfo "Configuring passwordless sudo for user '$currentUser'..."
             $sudoersEntry = "$currentUser ALL=(ALL) NOPASSWD: ALL"
             Invoke-WSLCommand -DistroName $DistroName -Command "echo '$sudoersEntry' >> /etc/sudoers" -AsRoot
@@ -351,7 +354,7 @@ function Initialize-WSLDistribution {
 
         # Verify sudo configuration
         $sudoTest = Invoke-WSLCommand -DistroName $DistroName -Command "sudo -n echo 'sudo_test_passed' 2>/dev/null || echo 'sudo_test_failed'" -PassThru
-        if ($sudoTest.Trim() -eq 'sudo_test_passed') {
+        if ($sudoTest -and $sudoTest.Trim() -eq 'sudo_test_passed') {
             Write-LogSuccess "WSL distribution '$DistroName' configured successfully for automated builds"
             return $true
         } else {

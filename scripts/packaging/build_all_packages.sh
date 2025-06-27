@@ -123,11 +123,12 @@ build_snap() {
     fi
 }
 
-# Build Debian package (deprecated - no longer supported)
+# Build Debian package (use PowerShell script for full functionality)
 build_debian() {
-    log_warning "Debian package building is no longer supported"
-    log_info "CloudToLocalLLM now supports: AUR, AppImage, Flatpak, and Snap packages"
-    log_info "Use PowerShell Create-UnifiedPackages.ps1 for comprehensive package creation"
+    log_info "Debian package building is available via PowerShell script"
+    log_info "For full DEB package creation, use: scripts/powershell/Create-UnifiedPackages.ps1 -DEBOnly"
+    log_info "This bash script supports: AUR, AppImage, Flatpak, and Snap packages"
+    log_warning "DEB package creation requires WSL Ubuntu and is handled by PowerShell script"
     return 0
 }
 
@@ -302,8 +303,8 @@ main() {
             build_snap || ((build_errors++))
             ;;
         "debian")
-            log_warning "Debian package building is deprecated. Use 'snap' or 'aur' instead."
-            build_debian  # Will show deprecation message
+            log_info "Debian package building available via PowerShell script."
+            build_debian  # Will show information message
             ;;
         "aur")
             build_aur || ((build_errors++))

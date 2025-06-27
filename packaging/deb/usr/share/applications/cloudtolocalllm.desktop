@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=CloudToLocalLLM
+Comment=Manage and run powerful Large Language Models locally
+Exec=cloudtolocalllm
+Icon=cloudtolocalllm
+Terminal=false
+Categories=Development;Utility;
+Keywords=LLM;AI;Machine Learning;Ollama;Docker;
+StartupNotify=true
+StartupWMClass=CloudToLocalLLM

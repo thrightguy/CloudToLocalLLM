@@ -1,2 +1,28 @@
-Installed-Size: 51340
-Installed-Size: 66376
+Package: cloudtolocalllm
+Version: 3.6.11
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.31), libgtk-3-0 (>= 3.24), libglib2.0-0 (>= 2.66), libgdk-pixbuf-2.0-0 (>= 2.40), libcairo2 (>= 1.16), libpango-1.0-0 (>= 1.44), libharfbuzz0b (>= 2.6), libatk1.0-0 (>= 2.36), libepoxy0 (>= 1.5), libx11-6, libxcomposite1, libxdamage1, libxext6, libxfixes3, libxrandr2, libxrender1, libxss1, libxtst6
+Recommends: docker.io | docker-ce, curl, wget
+Suggests: ollama
+Installed-Size: 50000
+Maintainer: CloudToLocalLLM Team <support@cloudtolocalllm.online>
+Homepage: https://cloudtolocalllm.online
+Description: Manage and run powerful Large Language Models locally
+ CloudToLocalLLM is a Flutter-based application that bridges cloud-hosted web
+ interfaces with local LLM instances (primarily Ollama), featuring a unified
+ Flutter-native system tray, multi-tenant streaming proxy architecture, and
+ comprehensive cross-platform support.
+ .
+ Key features:
+  * Multi-tenant isolation with per-user Docker networks
+  * Ephemeral streaming-proxy containers with resource limits
+  * JWT validation per session with automatic cleanup
+  * Cross-platform support for web, Windows desktop, and mobile
+  * Auth0 integration with platform-specific authentication flows
+  * Connection management with fallback hierarchy and automatic failover
+  * WebSocket architecture with bidirectional communication
+ .
+ This package provides the Linux desktop application for managing local
+ Large Language Model instances through a cloud-orchestrated interface.

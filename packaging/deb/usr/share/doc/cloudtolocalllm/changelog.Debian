@@ -1,0 +1,17 @@
+cloudtolocalllm (3.6.11) stable; urgency=medium
+
+  * Re-added Debian package (.deb) building support
+  * Updated build system to include .deb package generation
+  * Configured WSL Ubuntu environment with Debian packaging tools
+  * Created proper debian/ directory structure with control files
+  * Integrated .deb packages into GitHub release workflow
+  * Added support for Ubuntu 20.04+ and Debian 11+ distributions
+
+ -- CloudToLocalLLM Team <support@cloudtolocalllm.online>  Thu, 26 Jun 2025 16:00:00 +0000
+
+cloudtolocalllm (3.6.10) stable; urgency=medium
+
+  * Previous release without Debian package support
+  * Supported AUR, AppImage, and Flatpak packages only
+
+ -- CloudToLocalLLM Team <support@cloudtolocalllm.online>  Wed, 25 Jun 2025 23:00:00 +0000

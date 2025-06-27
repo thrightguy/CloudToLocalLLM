@@ -11,14 +11,15 @@
 [CmdletBinding()]
 param(
     # Package Type Selection
-    [string[]]$PackageTypes = @('AUR', 'AppImage', 'Flatpak', 'MSI', 'NSIS', 'PortableZip'),
+    [string[]]$PackageTypes = @('AUR', 'AppImage', 'Flatpak', 'DEB', 'MSI', 'NSIS', 'PortableZip'),
 
     # Platform-Specific Switches
-    [switch]$LinuxOnly,         # Create only Linux packages (AUR, AppImage, Flatpak)
+    [switch]$LinuxOnly,         # Create only Linux packages (AUR, AppImage, Flatpak, DEB)
     [switch]$WindowsOnly,       # Create only Windows packages (MSI, NSIS, PortableZip)
     [switch]$AUROnly,           # Create only AUR packages
     [switch]$AppImageOnly,      # Create only AppImage packages
     [switch]$FlatpakOnly,       # Create only Flatpak packages
+    [switch]$DEBOnly,           # Create only DEB packages
     [switch]$MSIOnly,           # Create only MSI installer
     [switch]$NSISOnly,          # Create only NSIS installer
     [switch]$PortableOnly,      # Create only portable ZIP package
@@ -75,15 +76,16 @@ $script:ResolvedPackageTypes = @()
 if ($AUROnly) { $script:ResolvedPackageTypes = @('AUR') }
 elseif ($AppImageOnly) { $script:ResolvedPackageTypes = @('AppImage') }
 elseif ($FlatpakOnly) { $script:ResolvedPackageTypes = @('Flatpak') }
+elseif ($DEBOnly) { $script:ResolvedPackageTypes = @('DEB') }
 elseif ($MSIOnly) { $script:ResolvedPackageTypes = @('MSI') }
 elseif ($NSISOnly) { $script:ResolvedPackageTypes = @('NSIS') }
 elseif ($PortableOnly) { $script:ResolvedPackageTypes = @('PortableZip') }
-elseif ($LinuxOnly) { $script:ResolvedPackageTypes = @('AUR', 'AppImage', 'Flatpak') }
+elseif ($LinuxOnly) { $script:ResolvedPackageTypes = @('AUR', 'AppImage', 'Flatpak', 'DEB') }
 elseif ($WindowsOnly) { $script:ResolvedPackageTypes = @('MSI', 'NSIS', 'PortableZip') }
 else { $script:ResolvedPackageTypes = $PackageTypes }
 
 # Package type categorization
-$script:LinuxPackageTypes = @('AUR', 'AppImage', 'Flatpak')
+$script:LinuxPackageTypes = @('AUR', 'AppImage', 'Flatpak', 'DEB')
 $script:WindowsPackageTypes = @('MSI', 'NSIS', 'PortableZip')
 $script:RequiresLinuxBuild = $script:ResolvedPackageTypes | Where-Object { $_ -in $script:LinuxPackageTypes }
 $script:RequiresWindowsBuild = $script:ResolvedPackageTypes | Where-Object { $_ -in $script:WindowsPackageTypes }
@@ -99,12 +101,13 @@ if ($Help) {
     Write-Host ""
     Write-Host "Package Type Selection:" -ForegroundColor Yellow
     Write-Host "  -PackageTypes         Array of package types to create (default: all)"
-    Write-Host "                        Options: AUR, AppImage, Flatpak, MSI, NSIS, PortableZip"
-    Write-Host "  -LinuxOnly            Create only Linux packages (AUR, AppImage, Flatpak)"
+    Write-Host "                        Options: AUR, AppImage, Flatpak, DEB, MSI, NSIS, PortableZip"
+    Write-Host "  -LinuxOnly            Create only Linux packages (AUR, AppImage, Flatpak, DEB)"
     Write-Host "  -WindowsOnly          Create only Windows packages (MSI, NSIS, PortableZip)"
     Write-Host "  -AUROnly              Create only AUR packages"
     Write-Host "  -AppImageOnly         Create only AppImage packages"
     Write-Host "  -FlatpakOnly          Create only Flatpak packages"
+    Write-Host "  -DEBOnly              Create only DEB packages"
     Write-Host "  -MSIOnly              Create only MSI installer"
     Write-Host "  -NSISOnly             Create only NSIS installer"
     Write-Host "  -PortableOnly         Create only portable ZIP package"
@@ -310,9 +313,9 @@ function Test-LinuxPrerequisites {
         return
     }
 
-    # Check for Arch Linux WSL (required for all Linux packages)
-    $linuxPackages = @('AUR', 'AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
-    if ($linuxPackages) {
+    # Check for Arch Linux WSL (required for AUR, AppImage, Flatpak packages)
+    $archLinuxPackages = @('AUR', 'AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
+    if ($archLinuxPackages) {
         # Use specified WSL distribution or get default Arch distribution
         if ($WSLDistro -and -not [string]::IsNullOrWhiteSpace($WSLDistro)) {
             $script:ArchDistro = [string]$WSLDistro.Trim()
@@ -345,77 +348,157 @@ function Test-LinuxPrerequisites {
         }
     }
 
+    # Check for Ubuntu WSL (required for DEB packages)
+    $debPackages = @('DEB') | Where-Object { $_ -in $script:ResolvedPackageTypes }
+    if ($debPackages) {
+        # Use specified WSL distribution or get default Ubuntu distribution
+        if ($WSLDistro -and -not [string]::IsNullOrWhiteSpace($WSLDistro)) {
+            $script:UbuntuDistro = [string]$WSLDistro.Trim()
+            Write-LogInfo "Using specified WSL distribution for DEB packages: $script:UbuntuDistro"
+        } else {
+            Write-LogInfo "No WSL distribution specified, detecting default Ubuntu distribution..."
+            $script:UbuntuDistro = Get-DefaultUbuntuDistribution
+        }
+
+        # Ensure UbuntuDistro is a string and not null
+        if (-not $script:UbuntuDistro -or $script:UbuntuDistro -isnot [string] -or [string]::IsNullOrWhiteSpace($script:UbuntuDistro)) {
+            Write-LogWarning "No Ubuntu WSL distribution found - DEB packages will be skipped"
+            $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -ne 'DEB' }
+        } else {
+            Write-LogInfo "Using Ubuntu WSL distribution for DEB packages: $script:UbuntuDistro"
+
+            # Initialize WSL distribution for automated builds
+            try {
+                if (Initialize-WSLDistribution -DistroName ([string]$script:UbuntuDistro)) {
+                    Test-UbuntuDebianTools
+                } else {
+                    Write-LogWarning "Failed to initialize Ubuntu WSL distribution - some operations may require manual intervention"
+                }
+            }
+            catch {
+                Write-LogError "Failed to configure Ubuntu WSL distribution '$script:UbuntuDistro': $($_.Exception.Message)"
+                Write-LogWarning "Some operations may require manual intervention"
+            }
+        }
+    }
+
     Write-LogSuccess "Linux prerequisites check completed"
 }
 
 # Test Arch Linux tools and dependencies
-function Test-ArchLinuxTools {
+function Test-UbuntuDebianTools {
     [CmdletBinding()]
     param()
 
-    Write-LogInfo "Checking Arch Linux tools for AUR package creation..."
+    Write-LogInfo "Checking Ubuntu tools for DEB package creation..."
 
-    # Check required tools in Arch WSL
-    $requiredTools = @('makepkg', 'tar', 'gzip', 'sha256sum')
+    # Check required tools in Ubuntu WSL
+    $requiredTools = @('dpkg-deb', 'fakeroot', 'lintian')
     foreach ($tool in $requiredTools) {
-        if (-not (Test-WSLCommand -DistroName $script:ArchDistro -CommandName $tool)) {
-            Write-LogError "Required tool not found in Arch WSL: $tool"
+        if (-not (Test-WSLCommand -DistroName $script:UbuntuDistro -CommandName $tool)) {
+            Write-LogError "Required tool not found in Ubuntu WSL: $tool"
             if ($AutoInstall) {
-                Write-LogInfo "Installing base-devel in Arch WSL..."
-                Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm base-devel"
+                Write-LogInfo "Installing Debian packaging tools in Ubuntu WSL..."
+                Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "sudo apt-get update && sudo apt-get install -y debhelper dpkg-dev fakeroot devscripts dh-make lintian build-essential"
             } else {
-                Write-LogInfo "Install in Arch WSL: sudo pacman -S base-devel"
-                Write-LogWarning "AUR packages will be skipped"
-                $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -ne 'AUR' }
+                Write-LogInfo "Install in Ubuntu WSL: sudo apt-get install debhelper dpkg-dev fakeroot devscripts dh-make lintian"
+                Write-LogWarning "DEB packages will be skipped"
+                $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -ne 'DEB' }
                 return
             }
         }
     }
 
-    # Check Flutter SDK in Arch WSL
+    # Check Flutter SDK in Ubuntu WSL
     if (-not $SkipBuild) {
-        Test-WSLFlutterEnvironment -DistroName $script:ArchDistro -PackageManager 'pacman'
+        Test-WSLFlutterEnvironment -DistroName $script:UbuntuDistro -PackageManager 'apt'
     }
 
-    Write-LogSuccess "Arch Linux tools verified"
+    Write-LogSuccess "Ubuntu Debian packaging tools verified"
 }
 
-# Test Arch Linux package tools and dependencies
-function Test-ArchLinuxPackageTools {
+# Get the default Ubuntu WSL distribution
+function Get-DefaultUbuntuDistribution {
     [CmdletBinding()]
     param()
 
-    Write-LogInfo "Checking Arch Linux tools for AppImage/Flatpak package creation..."
+    # Try common Ubuntu distribution names
+    $ubuntuCandidates = @('Ubuntu-24.04', 'Ubuntu-22.04', 'Ubuntu-20.04', 'Ubuntu', 'ubuntu')
 
-    # Check required tools in Arch WSL
-    $requiredTools = @('tar', 'gzip', 'sha256sum')
+    try {
+        # Verify distributions exist and are available
+        $distributions = Get-WSLDistributions
+        if (-not $distributions -or $distributions.Count -eq 0) {
+            Write-LogWarning "No WSL distributions found"
+            return $null
+        }
+
+        foreach ($candidate in $ubuntuCandidates) {
+            $ubuntuDistro = $distributions | Where-Object { $_.Name -eq $candidate }
+
+            if ($ubuntuDistro) {
+                if ($ubuntuDistro.State -ne 'Running') {
+                    Write-LogInfo "Starting WSL distribution '$candidate'..."
+                    try {
+                        $null = & wsl -d $candidate -- echo "WSL distribution started"
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-LogSuccess "WSL distribution '$candidate' started successfully"
+                        } else {
+                            Write-LogError "Failed to start WSL distribution '$candidate'"
+                            continue
+                        }
+                    }
+                    catch {
+                        Write-LogError "Failed to start WSL distribution '$candidate'"
+                        continue
+                    }
+                }
+
+                Write-LogInfo "Using Ubuntu WSL distribution: $candidate"
+                return [string]$candidate
+            }
+        }
+
+        Write-LogError "No Ubuntu WSL distribution found. Please install Ubuntu WSL distribution."
+        Write-LogInfo "Install with: wsl --install -d Ubuntu"
+        return $null
+    }
+    catch {
+        Write-LogError "Failed to detect Ubuntu WSL distribution: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+# Test Ubuntu Debian packaging tools
+function Test-UbuntuDebianTools {
+    [CmdletBinding()]
+    param()
+
+    Write-LogInfo "Checking Ubuntu tools for DEB package creation..."
+
+    # Check required tools in Ubuntu WSL
+    $requiredTools = @('dpkg-deb', 'fakeroot', 'lintian')
     foreach ($tool in $requiredTools) {
-        if (-not (Test-WSLCommand -DistroName $script:ArchDistro -CommandName $tool)) {
-            Write-LogError "Required tool not found in Arch WSL: $tool"
+        if (-not (Test-WSLCommand -DistroName $script:UbuntuDistro -CommandName $tool)) {
+            Write-LogError "Required tool not found in Ubuntu WSL: $tool"
             if ($AutoInstall) {
-                Write-LogInfo "Installing core tools in Arch WSL..."
-                Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm tar gzip coreutils"
+                Write-LogInfo "Installing Debian packaging tools in Ubuntu WSL..."
+                Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "sudo apt update && sudo apt install -y debhelper dpkg-dev fakeroot devscripts dh-make lintian build-essential"
             } else {
-                Write-LogInfo "Install in Arch WSL: sudo pacman -S tar gzip coreutils"
-                Write-LogWarning "AppImage/Flatpak packages will be skipped"
-                $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AppImage', 'Flatpak') }
+                Write-LogInfo "Install in Ubuntu WSL: sudo apt install debhelper dpkg-dev fakeroot devscripts dh-make lintian"
+                Write-LogWarning "DEB packages will be skipped"
+                $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -ne 'DEB' }
                 return
             }
         }
     }
 
-    # Install package-specific tools
-    if ('AppImage' -in $script:ResolvedPackageTypes -and $AutoInstall) {
-        Write-LogInfo "Installing AppImage tools in Arch WSL..."
-        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm wget fuse2 desktop-file-utils"
+    # Check Flutter SDK in Ubuntu WSL
+    if (-not $SkipBuild) {
+        Test-WSLFlutterEnvironment -DistroName $script:UbuntuDistro -PackageManager 'apt'
     }
 
-    if ('Flatpak' -in $script:ResolvedPackageTypes -and $AutoInstall) {
-        Write-LogInfo "Installing Flatpak tools in Arch WSL..."
-        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "sudo pacman -S --noconfirm flatpak flatpak-builder"
-    }
-
-    Write-LogSuccess "Arch Linux package tools verified"
+    Write-LogSuccess "Ubuntu Debian packaging tools verified"
 }
 
 # Test WSL Flutter environment
@@ -463,13 +546,25 @@ function Test-WSLFlutterEnvironment {
             Write-LogSuccess "Flutter SDK found in WSL: $flutterCheck"
         }
 
-        # Verify Linux build dependencies (Arch Linux only)
-        Write-LogInfo "Checking Linux build dependencies in Arch WSL..."
-        $buildDeps = @('base-devel', 'cmake', 'ninja', 'pkg-config', 'gtk3')
-        $missingDeps = @()
+        # Verify Linux build dependencies
+        Write-LogInfo "Checking Linux build dependencies in $DistroName..."
+        $buildDeps = @()
+        if ($PackageManager -eq 'pacman') {
+            $buildDeps = @('base-devel', 'cmake', 'ninja', 'pkg-config', 'gtk3')
+        } elseif ($PackageManager -eq 'apt') {
+            $buildDeps = @('build-essential', 'cmake', 'ninja-build', 'pkg-config', 'libgtk-3-dev')
+        }
 
+        $missingDeps = @()
         foreach ($dep in $buildDeps) {
-            $depCheck = Invoke-WSLCommand -DistroName $DistroName -Command "pacman -Q $dep || echo 'MISSING'" -PassThru
+            $depCheckCommand = ""
+            if ($PackageManager -eq 'pacman') {
+                $depCheckCommand = "pacman -Q $dep"
+            } elseif ($PackageManager -eq 'apt') {
+                $depCheckCommand = "dpkg -s $dep"
+            }
+
+            $depCheck = Invoke-WSLCommand -DistroName $DistroName -Command "$depCheckCommand || echo 'MISSING'" -PassThru
 
             if ($depCheck -eq "MISSING" -or -not $depCheck) {
                 $missingDeps += $dep
@@ -480,14 +575,19 @@ function Test-WSLFlutterEnvironment {
             Write-LogWarning "Missing Linux build dependencies: $($missingDeps -join ', ')"
 
             if ($AutoInstall) {
-                Write-LogInfo "Installing missing dependencies in Arch WSL..."
-                $installCmd = "sudo pacman -S --noconfirm $($missingDeps -join ' ')"
+                Write-LogInfo "Installing missing dependencies in $DistroName..."
+                $installCmd = ""
+                if ($PackageManager -eq 'pacman') {
+                    $installCmd = "sudo pacman -S --noconfirm $($missingDeps -join ' ')"
+                } elseif ($PackageManager -eq 'apt') {
+                    $installCmd = "sudo apt-get update && sudo apt-get install -y $($missingDeps -join ' ')"
+                }
                 Invoke-WSLCommand -DistroName $DistroName -Command $installCmd
                 Write-LogSuccess "Linux build dependencies installed"
             }
             else {
                 Write-LogError "Linux build dependencies are required"
-                Write-LogInfo "Install in Arch WSL: sudo pacman -S $($missingDeps -join ' ')"
+                Write-LogInfo "Install in ${DistroName}: sudo $($PackageManager) install $($missingDeps -join ' ')"
                 Write-LogInfo "Or use -AutoInstall parameter"
                 throw "Build dependencies not available"
             }
@@ -575,11 +675,19 @@ function Build-LinuxFlutterApp {
 
     Write-LogInfo "Building Flutter application for Linux using WSL..."
 
-    # Use Arch Linux WSL distribution for Linux builds
-    $linuxDistro = $script:ArchDistro
+    # Determine which WSL distribution to use for Linux builds
+    # Prefer Ubuntu for DEB packages, fallback to Arch for other packages
+    $linuxDistro = $null
+    if ('DEB' -in $script:ResolvedPackageTypes -and $script:UbuntuDistro) {
+        $linuxDistro = $script:UbuntuDistro
+        Write-LogInfo "Using Ubuntu WSL distribution for Linux build (DEB package required)"
+    } elseif ($script:ArchDistro) {
+        $linuxDistro = $script:ArchDistro
+        Write-LogInfo "Using Arch Linux WSL distribution for Linux build"
+    }
 
     if (-not $linuxDistro) {
-        throw "No Arch Linux WSL distribution available for Linux builds"
+        throw "No suitable WSL distribution available for Linux builds"
     }
 
     try {
@@ -588,6 +696,9 @@ function Build-LinuxFlutterApp {
         if (-not $flutterPath) {
             throw "Flutter SDK not found in WSL distribution"
         }
+
+        # Clean up path to remove any double slashes or trailing slashes
+        $flutterPath = $flutterPath.Trim() -replace '/+', '/'
 
         Write-LogInfo "Using Flutter at: $flutterPath"
 
@@ -692,6 +803,15 @@ function New-LinuxPackages {
                     } else {
                         Write-LogWarning "Skipping Flatpak package - no Arch Linux WSL distribution available"
                         $script:FailedPackages += @{ Package = 'Flatpak'; Reason = 'No Arch Linux WSL distribution' }
+                    }
+                }
+                'DEB' {
+                    if ($script:UbuntuDistro) {
+                        New-DEBPackage
+                        $script:SuccessfulPackages += 'DEB'
+                    } else {
+                        Write-LogWarning "Skipping DEB package - no Ubuntu WSL distribution available"
+                        $script:FailedPackages += @{ Package = 'DEB'; Reason = 'No Ubuntu WSL distribution' }
                     }
                 }
                 default {
@@ -897,7 +1017,12 @@ echo "AppImage created: $packageName"
 
     # Execute build script in Arch Linux WSL
     $tempScript = Join-Path $env:TEMP "build-appimage.sh"
-    $buildScript | Set-Content -Path $tempScript -Encoding UTF8
+
+    # Ensure Unix line endings for the script
+    $buildScriptUnix = $buildScript -replace "`r`n", "`n" -replace "`r", "`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tempScript, $buildScriptUnix, $utf8NoBom)
+
     $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
 
     try {
@@ -972,7 +1097,97 @@ modules:
     }
 }
 
+# Create DEB package
+function New-DEBPackage {
+    [CmdletBinding()]
+    param()
 
+    Write-LogInfo "Creating DEB package..."
+
+    $packageName = "cloudtolocalllm_$Version-1_amd64.deb"
+    $debOutputDir = Join-Path $LinuxOutputDir "deb"
+    New-DirectoryIfNotExists -Path $debOutputDir
+
+    # Create DEB package using Ubuntu WSL
+    $wslDebOutputDir = Convert-WindowsPathToWSL -WindowsPath $debOutputDir
+    $wslProjectRoot = Convert-WindowsPathToWSL -WindowsPath $ProjectRoot
+
+    # Create DEB build script
+    $buildScript = @"
+#!/bin/bash
+set -e
+
+cd "$wslProjectRoot"
+
+# Create temporary build directory
+BUILD_DIR="/tmp/cloudtolocalllm-deb-build"
+rm -rf "\$BUILD_DIR"
+mkdir -p "\$BUILD_DIR"
+
+# Copy debian package structure
+cp -r packaging/deb/* "\$BUILD_DIR/"
+
+# Copy Flutter Linux build to package structure
+mkdir -p "\$BUILD_DIR/usr/bin"
+cp -r build/linux/x64/release/bundle/* "\$BUILD_DIR/usr/bin/"
+
+# Rename the main executable
+mv "\$BUILD_DIR/usr/bin/cloudtolocalllm" "\$BUILD_DIR/usr/bin/cloudtolocalllm" 2>/dev/null || true
+
+# Copy icon if it exists
+if [ -f "assets/icons/app_icon.png" ]; then
+    cp "assets/icons/app_icon.png" "\$BUILD_DIR/usr/share/pixmaps/cloudtolocalllm.png"
+elif [ -f "linux/cloudtolocalllm.png" ]; then
+    cp "linux/cloudtolocalllm.png" "\$BUILD_DIR/usr/share/pixmaps/cloudtolocalllm.png"
+fi
+
+# Update control file with correct version and installed size
+INSTALLED_SIZE=\$(du -sk "\$BUILD_DIR" | cut -f1)
+sed -i "s/Version: .*/Version: $Version/" "\$BUILD_DIR/DEBIAN/control"
+sed -i "s/Installed-Size: .*/Installed-Size: \$INSTALLED_SIZE/" "\$BUILD_DIR/DEBIAN/control"
+
+# Set correct permissions
+chmod 755 "\$BUILD_DIR/DEBIAN/postinst"
+chmod 755 "\$BUILD_DIR/DEBIAN/postrm"
+chmod 755 "\$BUILD_DIR/usr/bin/cloudtolocalllm"
+
+# Build the DEB package
+cd "\$BUILD_DIR/.."
+dpkg-deb --build cloudtolocalllm-deb-build "$wslDebOutputDir/$packageName"
+
+# Verify the package
+if [ -f "$wslDebOutputDir/$packageName" ]; then
+    echo "DEB package created successfully: $packageName"
+    lintian "$wslDebOutputDir/$packageName" || echo "Lintian warnings (non-critical)"
+else
+    echo "Failed to create DEB package"
+    exit 1
+fi
+
+# Cleanup
+rm -rf "\$BUILD_DIR"
+"@
+
+    # Write build script to temporary file with Unix line endings
+    $tempScript = Join-Path $env:TEMP "build-deb.sh"
+
+    # Ensure Unix line endings for the script
+    $buildScriptUnix = $buildScript -replace "`r`n", "`n" -replace "`r", "`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tempScript, $buildScriptUnix, $utf8NoBom)
+
+    $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
+
+    try {
+        Invoke-WSLCommand -DistroName $script:UbuntuDistro -Command "bash $wslTempScript"
+        Write-LogSuccess "DEB package created: $packageName"
+    } catch {
+        Write-LogError "DEB package creation failed: $($_.Exception.Message)"
+        throw
+    } finally {
+        Remove-Item $tempScript -ErrorAction SilentlyContinue
+    }
+}
 
 # Create MSI package
 function New-MSIPackage {
