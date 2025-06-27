@@ -3,7 +3,7 @@
 #
 # Unified Package Creation System:
 # - Windows Packages: MSI, NSIS, Portable ZIP (native Windows tools)
-# - Linux Packages: AUR, AppImage, Flatpak (Arch Linux WSL-based builds)
+# - Linux Packages: DEB (Ubuntu WSL-based builds)
 # - Multi-Platform Build Architecture with graceful degradation
 # - Eliminates redundant build scripts and consolidates package creation
 # - Maintains PowerShell orchestration with platform-specific execution environments
@@ -11,14 +11,11 @@
 [CmdletBinding()]
 param(
     # Package Type Selection
-    [string[]]$PackageTypes = @('AUR', 'AppImage', 'Flatpak', 'DEB', 'MSI', 'NSIS', 'PortableZip'),
+    [string[]]$PackageTypes = @('DEB', 'MSI', 'NSIS', 'PortableZip'),
 
     # Platform-Specific Switches
-    [switch]$LinuxOnly,         # Create only Linux packages (AUR, AppImage, Flatpak, DEB)
+    [switch]$LinuxOnly,         # Create only Linux packages (DEB)
     [switch]$WindowsOnly,       # Create only Windows packages (MSI, NSIS, PortableZip)
-    [switch]$AUROnly,           # Create only AUR packages
-    [switch]$AppImageOnly,      # Create only AppImage packages
-    [switch]$FlatpakOnly,       # Create only Flatpak packages
     [switch]$DEBOnly,           # Create only DEB packages
     [switch]$MSIOnly,           # Create only MSI installer
     [switch]$NSISOnly,          # Create only NSIS installer
@@ -27,7 +24,7 @@ param(
     # Build Control
     [switch]$SkipBuild,         # Skip Flutter build steps
     [switch]$TestOnly,          # Only test existing packages
-    [string]$TargetPlatform = 'all',  # 'windows', 'linux', 'arch', 'all'
+    [string]$TargetPlatform = 'all',  # 'windows', 'linux', 'all'
 
     # Environment Configuration
     [string]$WSLDistro,         # Specific WSL distribution to use
@@ -73,19 +70,16 @@ $Version = & $versionManagerPath get-semantic
 
 # Resolve package types based on switches
 $script:ResolvedPackageTypes = @()
-if ($AUROnly) { $script:ResolvedPackageTypes = @('AUR') }
-elseif ($AppImageOnly) { $script:ResolvedPackageTypes = @('AppImage') }
-elseif ($FlatpakOnly) { $script:ResolvedPackageTypes = @('Flatpak') }
-elseif ($DEBOnly) { $script:ResolvedPackageTypes = @('DEB') }
+if ($DEBOnly) { $script:ResolvedPackageTypes = @('DEB') }
 elseif ($MSIOnly) { $script:ResolvedPackageTypes = @('MSI') }
 elseif ($NSISOnly) { $script:ResolvedPackageTypes = @('NSIS') }
 elseif ($PortableOnly) { $script:ResolvedPackageTypes = @('PortableZip') }
-elseif ($LinuxOnly) { $script:ResolvedPackageTypes = @('AUR', 'AppImage', 'Flatpak', 'DEB') }
+elseif ($LinuxOnly) { $script:ResolvedPackageTypes = @('DEB') }
 elseif ($WindowsOnly) { $script:ResolvedPackageTypes = @('MSI', 'NSIS', 'PortableZip') }
 else { $script:ResolvedPackageTypes = $PackageTypes }
 
 # Package type categorization
-$script:LinuxPackageTypes = @('AUR', 'AppImage', 'Flatpak', 'DEB')
+$script:LinuxPackageTypes = @('DEB')
 $script:WindowsPackageTypes = @('MSI', 'NSIS', 'PortableZip')
 $script:RequiresLinuxBuild = $script:ResolvedPackageTypes | Where-Object { $_ -in $script:LinuxPackageTypes }
 $script:RequiresWindowsBuild = $script:ResolvedPackageTypes | Where-Object { $_ -in $script:WindowsPackageTypes }
@@ -101,12 +95,9 @@ if ($Help) {
     Write-Host ""
     Write-Host "Package Type Selection:" -ForegroundColor Yellow
     Write-Host "  -PackageTypes         Array of package types to create (default: all)"
-    Write-Host "                        Options: AUR, AppImage, Flatpak, DEB, MSI, NSIS, PortableZip"
-    Write-Host "  -LinuxOnly            Create only Linux packages (AUR, AppImage, Flatpak, DEB)"
+    Write-Host "                        Options: DEB, MSI, NSIS, PortableZip"
+    Write-Host "  -LinuxOnly            Create only Linux packages (DEB)"
     Write-Host "  -WindowsOnly          Create only Windows packages (MSI, NSIS, PortableZip)"
-    Write-Host "  -AUROnly              Create only AUR packages"
-    Write-Host "  -AppImageOnly         Create only AppImage packages"
-    Write-Host "  -FlatpakOnly          Create only Flatpak packages"
     Write-Host "  -DEBOnly              Create only DEB packages"
     Write-Host "  -MSIOnly              Create only MSI installer"
     Write-Host "  -NSISOnly             Create only NSIS installer"
@@ -115,7 +106,7 @@ if ($Help) {
     Write-Host "Build Control:" -ForegroundColor Yellow
     Write-Host "  -SkipBuild            Skip Flutter build steps"
     Write-Host "  -TestOnly             Only test existing packages"
-    Write-Host "  -TargetPlatform       Target platform: 'windows', 'linux', 'arch', 'all'"
+    Write-Host "  -TargetPlatform       Target platform: 'windows', 'linux', 'all'"
     Write-Host ""
     Write-Host "Environment Configuration:" -ForegroundColor Yellow
     Write-Host "  -WSLDistro            Specify WSL distribution to use"
@@ -135,15 +126,15 @@ if ($Help) {
     Write-Host "    - NSIS (for NSIS installer) - auto-installed with -AutoInstall"
     Write-Host "    - Flutter SDK for Windows builds"
     Write-Host "  Linux Packages:" -ForegroundColor Cyan
-    Write-Host "    - WSL with Arch Linux (for AUR/AppImage/Flatpak packages)"
+    Write-Host "    - WSL with Ubuntu (for DEB packages)"
     Write-Host "    - Flutter SDK in WSL - auto-installed with -AutoInstall"
     Write-Host "    - Linux build dependencies - auto-installed with -AutoInstall"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
     Write-Host "  .\Create-UnifiedPackages.ps1                                    # Create all package types"
     Write-Host "  .\Create-UnifiedPackages.ps1 -WindowsOnly -AutoInstall         # Windows packages only"
-    Write-Host "  .\Create-UnifiedPackages.ps1 -LinuxOnly -WSLDistro ArchLinux   # Linux packages only"
-    Write-Host "  .\Create-UnifiedPackages.ps1 -PackageTypes @('MSI','AUR')      # Specific package types"
+    Write-Host "  .\Create-UnifiedPackages.ps1 -LinuxOnly -WSLDistro Ubuntu   # Linux packages only"
+    Write-Host "  .\Create-UnifiedPackages.ps1 -PackageTypes @('MSI','DEB')      # Specific package types"
     Write-Host "  .\Create-UnifiedPackages.ps1 -MSIOnly -SkipBuild               # MSI only, skip build"
     Write-Host "  .\Create-UnifiedPackages.ps1 -TestOnly                         # Test existing packages"
     exit 0
@@ -196,66 +187,6 @@ function Get-SHA256Hash {
 
     $hash = Get-FileHash -Path $FilePath -Algorithm SHA256
     return $hash.Hash.ToLower()
-}
-
-# Get the default Arch Linux WSL distribution
-function Get-DefaultArchDistribution {
-    [CmdletBinding()]
-    param()
-
-    # Always use 'archlinux' as the default distribution name
-    $defaultDistro = 'archlinux'
-
-    try {
-        # Verify the distribution exists and is available
-        $distributions = Get-WSLDistributions
-        if (-not $distributions -or $distributions.Count -eq 0) {
-            Write-LogWarning "No WSL distributions found"
-            return $null
-        }
-
-        $archDistro = $distributions | Where-Object { $_.Name -eq $defaultDistro }
-
-        if ($archDistro) {
-            if ($archDistro.State -ne 'Running') {
-                Write-LogInfo "Starting WSL distribution '$defaultDistro'..."
-                try {
-                    $null = & wsl -d $defaultDistro -- echo "WSL distribution started"
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-LogSuccess "WSL distribution '$defaultDistro' started successfully"
-                    } else {
-                        Write-LogError "Failed to start WSL distribution '$defaultDistro'"
-                        return $null
-                    }
-                }
-                catch {
-                    Write-LogError "Failed to start WSL distribution '$defaultDistro'"
-                    return $null
-                }
-            }
-
-            Write-LogInfo "Using default Arch Linux WSL distribution: $defaultDistro"
-            return [string]$defaultDistro
-        }
-
-        # Fallback: try to find any Arch-based distribution
-        $archCandidates = @('archlinux', 'Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
-        foreach ($candidate in $archCandidates) {
-            $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" }
-            if ($distro) {
-                Write-LogInfo "Found alternative Arch Linux WSL distribution: $($distro.Name)"
-                return [string]$distro.Name
-            }
-        }
-
-        Write-LogError "No Arch Linux WSL distribution found. Please install archlinux WSL distribution."
-        Write-LogInfo "Install with: wsl --install -d archlinux"
-        return $null
-    }
-    catch {
-        Write-LogError "Error getting WSL distributions: $($_.Exception.Message)"
-        return $null
-    }
 }
 
 # Check Windows-specific prerequisites
@@ -311,41 +242,6 @@ function Test-LinuxPrerequisites {
         Write-LogWarning "All Linux packages will be skipped"
         $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin $script:LinuxPackageTypes }
         return
-    }
-
-    # Check for Arch Linux WSL (required for AUR, AppImage, Flatpak packages)
-    $archLinuxPackages = @('AUR', 'AppImage', 'Flatpak') | Where-Object { $_ -in $script:ResolvedPackageTypes }
-    if ($archLinuxPackages) {
-        # Use specified WSL distribution or get default Arch distribution
-        if ($WSLDistro -and -not [string]::IsNullOrWhiteSpace($WSLDistro)) {
-            $script:ArchDistro = [string]$WSLDistro.Trim()
-            Write-LogInfo "Using specified WSL distribution: $script:ArchDistro"
-        } else {
-            Write-LogInfo "No WSL distribution specified, detecting default Arch distribution..."
-            $script:ArchDistro = Get-DefaultArchDistribution
-        }
-
-        # Ensure ArchDistro is a string and not null
-        if (-not $script:ArchDistro -or $script:ArchDistro -isnot [string] -or [string]::IsNullOrWhiteSpace($script:ArchDistro)) {
-            Write-LogWarning "No Arch Linux WSL distribution found - all Linux packages will be skipped"
-            $script:ResolvedPackageTypes = $script:ResolvedPackageTypes | Where-Object { $_ -notin @('AUR', 'AppImage', 'Flatpak') }
-        } else {
-            Write-LogInfo "Using Arch Linux WSL distribution for all Linux packages: $script:ArchDistro"
-
-            # Initialize WSL distribution for automated builds
-            try {
-                if (Initialize-WSLDistribution -DistroName ([string]$script:ArchDistro)) {
-                    Test-ArchLinuxTools
-                    Test-ArchLinuxPackageTools
-                } else {
-                    Write-LogWarning "Failed to initialize WSL distribution - some operations may require manual intervention"
-                }
-            }
-            catch {
-                Write-LogError "Failed to configure WSL distribution '$script:ArchDistro': $($_.Exception.Message)"
-                Write-LogWarning "Some operations may require manual intervention"
-            }
-        }
     }
 
     # Check for Ubuntu WSL (required for DEB packages)
@@ -676,14 +572,10 @@ function Build-LinuxFlutterApp {
     Write-LogInfo "Building Flutter application for Linux using WSL..."
 
     # Determine which WSL distribution to use for Linux builds
-    # Prefer Ubuntu for DEB packages, fallback to Arch for other packages
     $linuxDistro = $null
     if ('DEB' -in $script:ResolvedPackageTypes -and $script:UbuntuDistro) {
         $linuxDistro = $script:UbuntuDistro
         Write-LogInfo "Using Ubuntu WSL distribution for Linux build (DEB package required)"
-    } elseif ($script:ArchDistro) {
-        $linuxDistro = $script:ArchDistro
-        Write-LogInfo "Using Arch Linux WSL distribution for Linux build"
     }
 
     if (-not $linuxDistro) {
@@ -777,34 +669,6 @@ function New-LinuxPackages {
     foreach ($packageType in $PackageTypes) {
         try {
             switch ($packageType) {
-                'AUR' {
-                    if ($script:ArchDistro) {
-                        New-AURPackage
-                        $script:SuccessfulPackages += 'AUR'
-                    } else {
-                        Write-LogWarning "Skipping AUR package - no Arch Linux WSL distribution available"
-                        $script:FailedPackages += @{ Package = 'AUR'; Reason = 'No Arch Linux WSL distribution' }
-                    }
-                }
-
-                'AppImage' {
-                    if ($script:ArchDistro) {
-                        New-AppImagePackage
-                        $script:SuccessfulPackages += 'AppImage'
-                    } else {
-                        Write-LogWarning "Skipping AppImage package - no Arch Linux WSL distribution available"
-                        $script:FailedPackages += @{ Package = 'AppImage'; Reason = 'No Arch Linux WSL distribution' }
-                    }
-                }
-                'Flatpak' {
-                    if ($script:ArchDistro) {
-                        New-FlatpakPackage
-                        $script:SuccessfulPackages += 'Flatpak'
-                    } else {
-                        Write-LogWarning "Skipping Flatpak package - no Arch Linux WSL distribution available"
-                        $script:FailedPackages += @{ Package = 'Flatpak'; Reason = 'No Arch Linux WSL distribution' }
-                    }
-                }
                 'DEB' {
                     if ($script:UbuntuDistro) {
                         New-DEBPackage
@@ -865,42 +729,6 @@ function New-WindowsPackages {
     }
 }
 
-# Create AUR package
-function New-AURPackage {
-    [CmdletBinding()]
-    param()
-
-    Write-LogInfo "Creating AUR package..."
-
-    $packageName = "cloudtolocalllm-$Version-x86_64"
-    $packageDir = Join-Path $LinuxOutputDir "aur\$packageName"
-    $aurOutputDir = Join-Path $LinuxOutputDir "aur"
-
-    # Create package structure
-    New-DirectoryIfNotExists -Path $aurOutputDir
-    if (Test-Path $packageDir) {
-        Remove-Item $packageDir -Recurse -Force
-    }
-    New-DirectoryIfNotExists -Path $packageDir
-
-    # Copy Linux build output
-    if (Test-Path $LinuxBuildDir) {
-        Copy-Item "$LinuxBuildDir\*" $packageDir -Recurse -Force
-
-        # Verify essential files
-        $mainExecutable = Join-Path $packageDir "cloudtolocalllm"
-        if (-not (Test-Path $mainExecutable)) {
-            throw "Failed to copy main executable for AUR package"
-        }
-    } else {
-        throw "Linux build output not found at $LinuxBuildDir"
-    }
-
-    # Add AUR-specific metadata
-    $packageInfo = Join-Path $packageDir "PACKAGE_INFO.txt"
-    @"
-CloudToLocalLLM v$Version
-========================
 
 Package Type: AUR Binary Package
 Architecture: x86_64
@@ -1981,3 +1809,254 @@ trap {
 
 # Execute main function
 Invoke-Main
+
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+
+
+
+New problems detected after saving the file:
+scripts/powershell/Create-UnifiedPackages.ps1
+- [PowerShell Error] Line 740: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 740: Unexpected token 'Flutter' in expression or statement.
+- [PowerShell Error] Line 741: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 741: Unexpected token 'Integrated' in expression or statement.
+- [PowerShell Error] Line 742: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 742: Unexpected token 'All' in expression or statement.
+- [PowerShell Error] Line 748: Missing opening '(' after keyword 'for'.
+- [PowerShell Error] Line 753: Unexpected token 'tar' in expression or statement.
+- [PowerShell Error] Line 793: Missing ] at end of attribute or type literal.
+- [PowerShell Error] Line 793: Unexpected token 'Entry]' in expression or statement.
+- [PowerShell Error] Line 812: Missing '(' after 'if' in if statement.
+- [PowerShell Error] Line 812: Missing type name after '['.
+- [PowerShell Error] Line 827: Missing file specification after redirection operator.
+- [PowerShell Error] Line 827: The '<' operator is reserved for future use.
+- [PowerShell Error] Line 827: The '<' operator is reserved for future use.
+- [PowerShell Error] Line 838: Missing '(' after 'if' in if statement.
+- [PowerShell Error] Line 838: Missing type name after '['.
+- [PowerShell Error] Line 849: Unexpected token 'build-appimage.sh"
+
+    # Ensure Unix line endings for the script
+    $buildScriptUnix = $buildScript -replace "`r`n", "`n" -replace "`r", "`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tempScript, $buildScriptUnix, $utf8NoBom)
+
+    $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
+
+    try {
+        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "bash' in expression or statement.
+- [PowerShell Error] Line 889: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 889: Unexpected token 'share=network' in expression or statement.
+- [PowerShell Error] Line 890: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 890: Unexpected token 'share=ipc' in expression or statement.
+- [PowerShell Error] Line 891: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 891: Unexpected token 'socket=x11' in expression or statement.
+- [PowerShell Error] Line 892: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 892: Unexpected token 'socket=wayland' in expression or statement.
+- [PowerShell Error] Line 893: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 893: Unexpected token 'device=dri' in expression or statement.
+- [PowerShell Error] Line 894: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 894: Unexpected token 'filesystem=home' in expression or statement.
+- [PowerShell Error] Line 895: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 895: Unexpected token 'talk-name=org.freedesktop.Notifications' in expression or statement.
+- [PowerShell Error] Line 896: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 896: Unexpected token 'talk-name=org.kde.StatusNotifierWatcher' in expression or statement.
+- [PowerShell Error] Line 897: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 897: Unexpected token 'talk-name=org.ayatana.indicator.application' in expression or statement.
+- [PowerShell Error] Line 899: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 899: Unexpected token 'name:' in expression or statement.
+- [PowerShell Error] Line 902: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 902: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 903: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 903: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 904: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 904: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 906: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 906: Unexpected token 'type:' in expression or statement.
+- [PowerShell Error] Line 914: Unexpected token 'flatpak-builder' in expression or statement.
+- [PowerShell Error] Line 969: Unexpected token '}' in expression or statement.
+- [PowerShell Error] Line 1132: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1132: Unexpected token 'Flutter' in expression or statement.
+- [PowerShell Error] Line 1133: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1133: Unexpected token 'Integrated' in expression or statement.
+- [PowerShell Error] Line 1134: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1134: Unexpected token 'All' in expression or statement.
+- [PowerShell Error] Line 1140: Missing opening '(' after keyword 'for'.
+- [PowerShell Error] Line 1145: Unexpected token 'tar' in expression or statement.
+- [PowerShell Error] Line 1185: Missing ] at end of attribute or type literal.
+- [PowerShell Error] Line 1185: Unexpected token 'Entry]' in expression or statement.
+- [PowerShell Error] Line 1204: Missing '(' after 'if' in if statement.
+- [PowerShell Error] Line 1204: Missing type name after '['.
+- [PowerShell Error] Line 1219: Missing file specification after redirection operator.
+- [PowerShell Error] Line 1219: The '<' operator is reserved for future use.
+- [PowerShell Error] Line 1219: The '<' operator is reserved for future use.
+- [PowerShell Error] Line 1230: Missing '(' after 'if' in if statement.
+- [PowerShell Error] Line 1230: Missing type name after '['.
+- [PowerShell Error] Line 1241: Unexpected token 'build-appimage.sh"
+
+    # Ensure Unix line endings for the script
+    $buildScriptUnix = $buildScript -replace "`r`n", "`n" -replace "`r", "`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tempScript, $buildScriptUnix, $utf8NoBom)
+
+    $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
+
+    try {
+        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "bash' in expression or statement.
+- [PowerShell Error] Line 1281: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1281: Unexpected token 'share=network' in expression or statement.
+- [PowerShell Error] Line 1282: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1282: Unexpected token 'share=ipc' in expression or statement.
+- [PowerShell Error] Line 1283: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1283: Unexpected token 'socket=x11' in expression or statement.
+- [PowerShell Error] Line 1284: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1284: Unexpected token 'socket=wayland' in expression or statement.
+- [PowerShell Error] Line 1285: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1285: Unexpected token 'device=dri' in expression or statement.
+- [PowerShell Error] Line 1286: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1286: Unexpected token 'filesystem=home' in expression or statement.
+- [PowerShell Error] Line 1287: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1287: Unexpected token 'talk-name=org.freedesktop.Notifications' in expression or statement.
+- [PowerShell Error] Line 1288: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1288: Unexpected token 'talk-name=org.kde.StatusNotifierWatcher' in expression or statement.
+- [PowerShell Error] Line 1289: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1289: Unexpected token 'talk-name=org.ayatana.indicator.application' in expression or statement.
+- [PowerShell Error] Line 1291: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1291: Unexpected token 'name:' in expression or statement.
+- [PowerShell Error] Line 1294: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1294: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 1295: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1295: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 1296: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1296: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 1298: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1298: Unexpected token 'type:' in expression or statement.
+- [PowerShell Error] Line 1306: Unexpected token 'flatpak-builder' in expression or statement.
+- [PowerShell Error] Line 1360: Unexpected token '}' in expression or statement.
+- [PowerShell Error] Line 1523: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1523: Unexpected token 'Flutter' in expression or statement.
+- [PowerShell Error] Line 1524: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1524: Unexpected token 'Integrated' in expression or statement.
+- [PowerShell Error] Line 1525: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1525: Unexpected token 'All' in expression or statement.
+- [PowerShell Error] Line 1531: Missing opening '(' after keyword 'for'.
+- [PowerShell Error] Line 1536: Unexpected token 'tar' in expression or statement.
+- [PowerShell Error] Line 1576: Missing ] at end of attribute or type literal.
+- [PowerShell Error] Line 1576: Unexpected token 'Entry]' in expression or statement.
+- [PowerShell Error] Line 1595: Missing '(' after 'if' in if statement.
+- [PowerShell Error] Line 1595: Missing type name after '['.
+- [PowerShell Error] Line 1610: Missing file specification after redirection operator.
+- [PowerShell Error] Line 1610: The '<' operator is reserved for future use.
+- [PowerShell Error] Line 1610: The '<' operator is reserved for future use.
+- [PowerShell Error] Line 1621: Missing '(' after 'if' in if statement.
+- [PowerShell Error] Line 1621: Missing type name after '['.
+- [PowerShell Error] Line 1632: Unexpected token 'build-appimage.sh"
+
+    # Ensure Unix line endings for the script
+    $buildScriptUnix = $buildScript -replace "`r`n", "`n" -replace "`r", "`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($tempScript, $buildScriptUnix, $utf8NoBom)
+
+    $wslTempScript = Convert-WindowsPathToWSL -WindowsPath $tempScript
+
+    try {
+        Invoke-WSLCommand -DistroName $script:ArchDistro -Command "bash' in expression or statement.
+- [PowerShell Error] Line 1672: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1672: Unexpected token 'share=network' in expression or statement.
+- [PowerShell Error] Line 1673: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1673: Unexpected token 'share=ipc' in expression or statement.
+- [PowerShell Error] Line 1674: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1674: Unexpected token 'socket=x11' in expression or statement.
+- [PowerShell Error] Line 1675: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1675: Unexpected token 'socket=wayland' in expression or statement.
+- [PowerShell Error] Line 1676: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1676: Unexpected token 'device=dri' in expression or statement.
+- [PowerShell Error] Line 1677: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1677: Unexpected token 'filesystem=home' in expression or statement.
+- [PowerShell Error] Line 1678: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1678: Unexpected token 'talk-name=org.freedesktop.Notifications' in expression or statement.
+- [PowerShell Error] Line 1679: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1679: Unexpected token 'talk-name=org.kde.StatusNotifierWatcher' in expression or statement.
+- [PowerShell Error] Line 1680: Missing expression after unary operator '--'.
+- [PowerShell Error] Line 1680: Unexpected token 'talk-name=org.ayatana.indicator.application' in expression or statement.
+- [PowerShell Error] Line 1682: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1682: Unexpected token 'name:' in expression or statement.
+- [PowerShell Error] Line 1685: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1685: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 1686: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1686: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 1687: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1687: Unexpected token 'install' in expression or statement.
+- [PowerShell Error] Line 1689: Missing expression after unary operator '-'.
+- [PowerShell Error] Line 1689: Unexpected token 'type:' in expression or statement.
+- [PowerShell Error] Line 1697: Unexpected token 'flatpak-builder' in expression or statement.
+- [PowerShell Error] Line 1751: Unexpected token '}' in expression or statement.<environment_details>
+# VSCode Visible Files
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/0
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/1
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/2
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/3
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/4
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/5
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-9
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-8
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-7
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-6
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-5
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-4
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-3
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-2
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-1
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-0
+scripts/powershell/Create-UnifiedPackages.ps1
+
+# VSCode Open Tabs
+scripts/powershell/Create-UnifiedPackages.ps1
+
+# Current Time
+6/26/2025, 9:31:27 PM (America/Toronto, UTC-4:00)
+
+# Context Window Usage
+351,762 / 1,048.576K tokens used (34%)
+
+# Current Mode
+ACT MODE
+</environment_details>
+
+</file_content>
+
+Now that you have the latest state of the file, try the operation again with fewer, more precise SEARCH blocks. For large files especially, it may be prudent to try to limit yourself to <5 SEARCH/REPLACE blocks at a time, then wait for the user to respond with the result of the operation before following up with another replace_in_file call to make additional edits.
+(If you run into this error 3 times in a row, you may use the write_to_file tool as a fallback.)
+</error><environment_details>
+# VSCode Visible Files
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/0
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/1
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/2
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/3
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/4
+../../../../response_488e47ff-13b7-4ba1-9f1f-94160bf97091/5
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-9
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-8
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-7
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-6
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-5
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-4
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-3
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-2
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-1
+../../../../response_f0178f4b-db27-4aba-b857-e377f750d92d/tools-0
+scripts/powershell/Create-UnifiedPackages.ps1
+
+# VSCode Open Tabs
+scripts/powershell/Create-UnifiedPackages.ps1
+
+# Current Time
+6/26/2025, 9:31:38 PM (America/Toronto, UTC-4:00)
+
+# Context Window Usage
+351,762 / 1,048.576K tokens used (34%)
+
+# Current Mode
+ACT MODE
+</environment_details>
