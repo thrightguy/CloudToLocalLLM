@@ -72,7 +72,6 @@ show_usage() {
     echo
     echo "Flutter Build Options (passed through):"
     echo "  --no-tree-shake-icons    Disable tree shaking of icons"
-    echo "  --web-renderer <value>   Web renderer (html, canvaskit, auto)"
     echo "  --dart-define <key=val>  Define Dart constants"
     echo "  --obfuscate             Obfuscate Dart code"
     echo "  --split-debug-info      Split debug info"
@@ -118,7 +117,7 @@ parse_arguments() {
                 BUILD_TARGET="$1"
                 shift
                 ;;
-            --no-tree-shake-icons|--tree-shake-icons|--web-renderer|--dart-define|--dart-define-from-file|--obfuscate|--split-debug-info|--source-maps|--pwa-strategy)
+            --no-tree-shake-icons|--tree-shake-icons|--dart-define|--dart-define-from-file|--obfuscate|--split-debug-info|--source-maps|--pwa-strategy)
                 # Pass through Flutter-specific build options
                 FLUTTER_BUILD_ARGS="$FLUTTER_BUILD_ARGS $1"
                 shift
@@ -261,7 +260,7 @@ build_platform() {
 
     case $platform in
         web)
-            flutter build web --$mode --web-renderer html $build_args
+            flutter build web --$mode $build_args
             if [[ -d "$PROJECT_ROOT/build/web" ]]; then
                 log_success "Web build completed: build/web/"
             else
