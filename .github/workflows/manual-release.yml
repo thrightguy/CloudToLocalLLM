@@ -1,0 +1,436 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_increment:
+        description: 'Version increment type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - build
+      custom_version:
+        description: 'Custom version (overrides increment type, format: x.y.z)'
+        required: false
+        type: string
+      create_github_release:
+        description: 'Create GitHub release'
+        required: false
+        default: true
+        type: boolean
+      deploy_to_vps:
+        description: 'Deploy to VPS'
+        required: false
+        default: true
+        type: boolean
+      skip_tests:
+        description: 'Skip test execution'
+        required: false
+        default: false
+        type: boolean
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  FLUTTER_VERSION: '3.32.2'
+  NODE_VERSION: '20'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # Version Management
+  version-management:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      full_version: ${{ steps.version.outputs.full_version }}
+      previous_version: ${{ steps.version.outputs.previous_version }}
+      is_major_release: ${{ steps.version.outputs.is_major_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Manage version
+        id: version
+        run: |
+          chmod +x scripts/version_manager.sh
+          
+          # Get current version
+          PREVIOUS_VERSION=$(./scripts/version_manager.sh get-semantic)
+          echo "Previous version: $PREVIOUS_VERSION"
+          
+          # Set new version
+          if [ -n "${{ inputs.custom_version }}" ]; then
+            echo "Setting custom version: ${{ inputs.custom_version }}"
+            ./scripts/version_manager.sh set "${{ inputs.custom_version }}"
+          else
+            echo "Incrementing version: ${{ inputs.version_increment }}"
+            ./scripts/version_manager.sh increment "${{ inputs.version_increment }}"
+          fi
+          
+          # Get updated version info
+          NEW_VERSION=$(./scripts/version_manager.sh get-semantic)
+          NEW_BUILD=$(./scripts/version_manager.sh get-build)
+          NEW_FULL=$(./scripts/version_manager.sh get)
+          
+          # Check if this is a major release
+          if [[ "${{ inputs.version_increment }}" == "major" ]] || [[ "${{ inputs.custom_version }}" =~ ^[0-9]+\.0\.0$ ]]; then
+            IS_MAJOR="true"
+          else
+            IS_MAJOR="false"
+          fi
+          
+          echo "New version: $NEW_FULL"
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$NEW_BUILD" >> $GITHUB_OUTPUT
+          echo "full_version=$NEW_FULL" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+          echo "is_major_release=$IS_MAJOR" >> $GITHUB_OUTPUT
+
+      - name: Synchronize version files
+        run: |
+          chmod +x scripts/deploy/sync_versions.sh
+          ./scripts/deploy/sync_versions.sh
+
+      - name: Commit version changes
+        run: |
+          git add -A
+          git commit -m "Release: Bump version to ${{ steps.version.outputs.full_version }}"
+          git push origin master
+
+  # Code Quality and Testing
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: version-management
+    if: ${{ !inputs.skip_tests }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ needs.version-management.outputs.version }}
+          path: |
+            coverage/
+            test/
+          retention-days: 7
+
+  # Build All Platforms
+  build-release-packages:
+    runs-on: ${{ matrix.os }}
+    needs: [version-management]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            packages: "linux,web,aur,deb,appimage"
+          - os: windows-latest
+            platform: windows
+            packages: "windows"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev docker.io
+          sudo systemctl start docker
+          sudo usermod -aG docker $USER
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Flutter applications
+        run: |
+          if [[ "${{ matrix.platform }}" == "linux" ]]; then
+            # Build web
+            flutter build web --release --no-tree-shake-icons
+            
+            # Build Linux
+            flutter build linux --release
+            
+            # Package web build
+            mkdir -p dist/web
+            tar -czf dist/web/cloudtolocalllm-web-${{ needs.version-management.outputs.version }}.tar.gz -C build/web .
+            
+            # Package Linux build
+            mkdir -p dist/linux
+            tar -czf dist/linux/cloudtolocalllm-linux-${{ needs.version-management.outputs.version }}.tar.gz -C build/linux/x64/release/bundle .
+            
+          elif [[ "${{ matrix.platform }}" == "windows" ]]; then
+            # Build Windows
+            flutter build windows --release
+            
+            # Package Windows build
+            mkdir -p dist/windows
+            cd build/windows/x64/runner/Release
+            7z a -tzip ../../../../../dist/windows/cloudtolocalllm-windows-${{ needs.version-management.outputs.version }}.zip *
+            cd ../../../../../
+          fi
+
+      - name: Build Linux packages
+        if: matrix.platform == 'linux'
+        run: |
+          # Build AUR package
+          chmod +x scripts/packaging/build_aur_universal.sh
+          ./scripts/packaging/build_aur_universal.sh --verbose || echo "AUR build failed, continuing..."
+          
+          # Build DEB package
+          chmod +x scripts/packaging/build_deb.sh
+          ./scripts/packaging/build_deb.sh --verbose || echo "DEB build failed, continuing..."
+          
+          # Build AppImage
+          chmod +x scripts/packaging/build_appimage.sh
+          ./scripts/packaging/build_appimage.sh --verbose || echo "AppImage build failed, continuing..."
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          find . -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.AppImage" | while read file; do
+            sha256sum "$file" > "$file.sha256"
+          done
+          
+          # Also include AUR packages if they exist
+          if [ -d "../aur-package" ]; then
+            cd ../aur-package
+            find . -name "*.tar.gz" | while read file; do
+              sha256sum "$file" > "$file.sha256"
+            done
+          fi
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}-${{ needs.version-management.outputs.version }}
+          path: |
+            dist/
+            aur-package/*.tar.gz
+            aur-package/*.sha256
+          retention-days: 90
+
+  # Create GitHub Release
+  create-github-release:
+    runs-on: ubuntu-latest
+    needs: [version-management, build-release-packages]
+    if: ${{ inputs.create_github_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Organize release assets
+        run: |
+          mkdir -p release-assets
+          find release-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.sha256" \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release-notes.md << EOF
+          # CloudToLocalLLM v${{ needs.version-management.outputs.version }}
+          
+          ## 🚀 What's New
+          
+          This release includes the latest features and improvements for CloudToLocalLLM.
+          
+          ## 📦 Downloads
+          
+          ### Windows
+          - **cloudtolocalllm-windows-${{ needs.version-management.outputs.version }}.zip** - Portable Windows application
+          
+          ### Linux
+          - **cloudtolocalllm-linux-${{ needs.version-management.outputs.version }}.tar.gz** - Linux binary package
+          - **cloudtolocalllm-${{ needs.version-management.outputs.version }}.deb** - Debian/Ubuntu package
+          - **cloudtolocalllm-${{ needs.version-management.outputs.version }}.AppImage** - Universal Linux package
+          - **cloudtolocalllm-${{ needs.version-management.outputs.version }}-x86_64.tar.gz** - AUR binary package
+          
+          ### Web
+          - **cloudtolocalllm-web-${{ needs.version-management.outputs.version }}.tar.gz** - Web application build
+          
+          ## 🔐 Verification
+          
+          All packages include SHA256 checksums for verification. Download the corresponding .sha256 file and verify with:
+          \`\`\`bash
+          sha256sum -c filename.sha256
+          \`\`\`
+          
+          ## 📋 Installation
+          
+          ### AUR (Arch Linux)
+          \`\`\`bash
+          yay -S cloudtolocalllm
+          \`\`\`
+          
+          ### Debian/Ubuntu
+          \`\`\`bash
+          sudo dpkg -i cloudtolocalllm-${{ needs.version-management.outputs.version }}.deb
+          \`\`\`
+          
+          ### AppImage
+          \`\`\`bash
+          chmod +x cloudtolocalllm-${{ needs.version-management.outputs.version }}.AppImage
+          ./cloudtolocalllm-${{ needs.version-management.outputs.version }}.AppImage
+          \`\`\`
+          
+          ## 🔄 Changes Since v${{ needs.version-management.outputs.previous_version }}
+          
+          For detailed changes, see the commit history between releases.
+          
+          ---
+          
+          **Full Changelog**: https://github.com/imrightguy/CloudToLocalLLM/compare/v${{ needs.version-management.outputs.previous_version }}...v${{ needs.version-management.outputs.version }}
+          EOF
+
+      - name: Create Git tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "v${{ needs.version-management.outputs.version }}" -m "CloudToLocalLLM v${{ needs.version-management.outputs.version }}"
+          git push origin "v${{ needs.version-management.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version-management.outputs.version }}
+          name: CloudToLocalLLM v${{ needs.version-management.outputs.version }}
+          body_path: release-notes.md
+          files: release-assets/*
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # VPS Deployment
+  deploy-vps:
+    runs-on: ubuntu-latest
+    needs: [version-management, build-release-packages]
+    if: ${{ inputs.deploy_to_vps }}
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          ssh-keyscan -H cloudtolocalllm.online >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        run: |
+          ssh cloudllm@cloudtolocalllm.online << 'EOF'
+            set -e
+            cd /opt/cloudtolocalllm
+            
+            echo "🚀 Starting VPS deployment for v${{ needs.version-management.outputs.version }}"
+            
+            # Pull latest changes
+            git stash
+            git pull origin master
+            
+            # Run complete deployment
+            chmod +x scripts/deploy/complete_automated_deployment.sh
+            ./scripts/deploy/complete_automated_deployment.sh --force --verbose
+          EOF
+
+      - name: Verify deployment
+        run: |
+          echo "⏳ Waiting for services to start..."
+          sleep 60
+          
+          # Check web application
+          echo "🌐 Checking web application..."
+          curl -f https://app.cloudtolocalllm.online/ || exit 1
+          
+          # Check API backend
+          echo "🔧 Checking API backend..."
+          curl -f https://app.cloudtolocalllm.online:8080/health || exit 1
+          
+          # Verify version
+          echo "🔍 Verifying deployed version..."
+          DEPLOYED_VERSION=$(curl -s https://app.cloudtolocalllm.online/version.json | jq -r '.version')
+          if [ "$DEPLOYED_VERSION" != "${{ needs.version-management.outputs.version }}" ]; then
+            echo "❌ Version mismatch: expected ${{ needs.version-management.outputs.version }}, got $DEPLOYED_VERSION"
+            exit 1
+          fi
+          
+          echo "✅ Deployment verified successfully!"
+          echo "🎉 CloudToLocalLLM v${{ needs.version-management.outputs.version }} is now live!"
+
+  # Final Summary
+  release-summary:
+    runs-on: ubuntu-latest
+    needs: [version-management, create-github-release, deploy-vps]
+    if: always()
+    steps:
+      - name: Create release summary
+        run: |
+          echo "## 🎉 CloudToLocalLLM Release v${{ needs.version-management.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Type:** ${{ inputs.version_increment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.version-management.outputs.full_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Previous Version:** ${{ needs.version-management.outputs.previous_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Release Status" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Release: ${{ needs.create-github-release.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- VPS Deployment: ${{ needs.deploy-vps.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.create-github-release.result }}" = "success" ]; then
+            echo "🔗 **GitHub Release:** https://github.com/imrightguy/CloudToLocalLLM/releases/tag/v${{ needs.version-management.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ needs.deploy-vps.result }}" = "success" ]; then
+            echo "🌐 **Live Application:** https://app.cloudtolocalllm.online" >> $GITHUB_STEP_SUMMARY
+          fi

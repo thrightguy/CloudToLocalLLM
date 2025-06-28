@@ -1,0 +1,268 @@
+---
+# CloudToLocalLLM VPS Deployment Playbook
+# Handles deployment to cloudllm@app.cloudtolocalllm.online with Docker management
+
+- name: VPS Deployment
+  hosts: cloudtolocalllm_vps
+  gather_facts: true
+  vars:
+    deployment_strategy: "{{ strategy | default('rolling') }}"
+    skip_backup: "{{ skip_backup | default(false) }}"
+    force_rebuild: "{{ force | default(false) }}"
+    
+  tasks:
+    - name: Check VPS connectivity
+      ping:
+      register: vps_ping
+
+    - name: Display deployment information
+      debug:
+        msg:
+          - "Starting VPS deployment to {{ ansible_host }}"
+          - "User: {{ ansible_user }}"
+          - "Project directory: {{ project_dir }}"
+          - "Strategy: {{ deployment_strategy }}"
+          - "Force rebuild: {{ force_rebuild }}"
+
+    - name: Check project directory exists
+      stat:
+        path: "{{ project_dir }}"
+      register: project_dir_check
+
+    - name: Fail if project directory doesn't exist
+      fail:
+        msg: "Project directory {{ project_dir }} does not exist on VPS"
+      when: not project_dir_check.stat.exists
+
+    - name: Create backup directory
+      file:
+        path: "{{ vps.backup_dir }}"
+        state: directory
+        mode: '0755'
+      when: not skip_backup
+
+    - name: Create deployment backup
+      shell: |
+        cd "{{ project_dir }}"
+        backup_name="backup-$(date +%Y%m%d-%H%M%S)"
+        mkdir -p "{{ vps.backup_dir }}/$backup_name"
+        
+        # Backup critical files
+        if [ -f docker-compose.yml ]; then
+          cp docker-compose.yml "{{ vps.backup_dir }}/$backup_name/"
+        fi
+        if [ -f docker-compose.multi.yml ]; then
+          cp docker-compose.multi.yml "{{ vps.backup_dir }}/$backup_name/"
+        fi
+        if [ -d webapp ]; then
+          tar -czf "{{ vps.backup_dir }}/$backup_name/webapp-backup.tar.gz" webapp/
+        fi
+        if [ -d api-backend ]; then
+          tar -czf "{{ vps.backup_dir }}/$backup_name/api-backend-backup.tar.gz" api-backend/
+        fi
+        
+        echo "Backup created: $backup_name"
+        echo "$backup_name" > "{{ vps.backup_dir }}/latest-backup.txt"
+      register: backup_created
+      when: not skip_backup
+
+    - name: Display backup information
+      debug:
+        msg: "Backup created: {{ backup_created.stdout_lines[-2] if backup_created.stdout_lines else 'No backup created' }}"
+      when: not skip_backup
+
+    - name: Stop existing containers
+      shell: |
+        cd "{{ project_dir }}"
+        if [ -f "{{ vps.docker_compose_file }}" ]; then
+          docker compose -f "{{ vps.docker_compose_file }}" down --timeout 30 --remove-orphans || true
+        fi
+        
+        # Stop any CloudToLocalLLM containers
+        containers=$(docker ps -a --format "{{.Names}}" | grep -E "(cloudtolocalllm|cloudllm)" || true)
+        if [ -n "$containers" ]; then
+          echo "$containers" | while read container; do
+            if [ -n "$container" ]; then
+              echo "Stopping container: $container"
+              docker stop "$container" 2>/dev/null || true
+              docker rm "$container" 2>/dev/null || true
+            fi
+          done
+        fi
+        
+        # Clean up orphaned resources
+        docker container prune -f 2>/dev/null || true
+        docker network prune -f 2>/dev/null || true
+      register: containers_stopped
+
+    - name: Pull latest changes from Git
+      git:
+        repo: "{{ project.repository }}"
+        dest: "{{ project_dir }}"
+        version: master
+        force: true
+      register: git_pulled
+
+    - name: Build Flutter web application
+      shell: |
+        cd "{{ project_dir }}"
+        flutter clean
+        flutter pub get
+        flutter build web --release --no-tree-shake-icons
+      register: flutter_web_built
+
+    - name: Verify web build output
+      stat:
+        path: "{{ project_dir }}/build/web/index.html"
+      register: web_build_check
+
+    - name: Fail if web build failed
+      fail:
+        msg: "Flutter web build failed - index.html not found"
+      when: not web_build_check.stat.exists
+
+    - name: Build Docker images
+      shell: |
+        cd "{{ project_dir }}"
+        
+        # Build webapp image
+        docker build -f config/docker/Dockerfile.web -t cloudtolocalllm-webapp:latest .
+        
+        # Build API backend image
+        docker build -f config/docker/Dockerfile.api-backend -t cloudtolocalllm-api-backend:latest .
+        
+        # Build streaming proxy image
+        docker build -f streaming-proxy/Dockerfile -t cloudtolocalllm-streaming-proxy:latest streaming-proxy/
+      register: docker_images_built
+      when: force_rebuild
+
+    - name: Start containers with health checks
+      shell: |
+        cd "{{ project_dir }}"
+        
+        # Start containers
+        docker compose -f "{{ vps.docker_compose_file }}" up -d --build
+        
+        # Wait for containers to initialize
+        sleep 20
+        
+        # Check container status
+        running_containers=$(docker compose -f "{{ vps.docker_compose_file }}" ps --services --filter "status=running" | wc -l)
+        total_containers=$(docker compose -f "{{ vps.docker_compose_file }}" ps --services | wc -l)
+        
+        echo "Container status: $running_containers/$total_containers running"
+        
+        if [ "$running_containers" -eq "$total_containers" ] && [ "$total_containers" -gt 0 ]; then
+          echo "All containers started successfully"
+          exit 0
+        else
+          echo "Some containers failed to start"
+          docker compose -f "{{ vps.docker_compose_file }}" ps
+          docker compose -f "{{ vps.docker_compose_file }}" logs --tail=20
+          exit 1
+        fi
+      register: containers_started
+
+    - name: Wait for services to be healthy
+      uri:
+        url: "{{ item }}"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: health_checks
+      retries: 6
+      delay: 10
+      loop:
+        - "https://{{ ansible_host }}/health"
+        - "https://{{ ansible_host }}/version.json"
+      ignore_errors: true
+
+    - name: Verify deployment health
+      shell: |
+        cd "{{ project_dir }}"
+        
+        # Check container health
+        unhealthy_containers=$(docker compose -f "{{ vps.docker_compose_file }}" ps --format "table {{.Name}}\t{{.Status}}" | grep -v "Up" | grep -v "NAME" || true)
+        
+        if [ -n "$unhealthy_containers" ]; then
+          echo "Unhealthy containers found:"
+          echo "$unhealthy_containers"
+          exit 1
+        fi
+        
+        # Check service endpoints
+        if curl -s -f "https://{{ ansible_host }}/health" >/dev/null; then
+          echo "Health endpoint: OK"
+        else
+          echo "Health endpoint: FAILED"
+          exit 1
+        fi
+        
+        if curl -s -f "https://{{ ansible_host }}/version.json" >/dev/null; then
+          echo "Version endpoint: OK"
+        else
+          echo "Version endpoint: FAILED"
+          exit 1
+        fi
+        
+        echo "All health checks passed"
+      register: deployment_health_check
+
+    - name: Get deployment status
+      shell: |
+        cd "{{ project_dir }}"
+        echo "=== Container Status ==="
+        docker compose -f "{{ vps.docker_compose_file }}" ps
+        echo ""
+        echo "=== Service Endpoints ==="
+        echo "Health: $(curl -s -w "%{http_code}" "https://{{ ansible_host }}/health" -o /dev/null)"
+        echo "Version: $(curl -s "https://{{ ansible_host }}/version.json" | jq -r '.version // "unknown"')"
+        echo ""
+        echo "=== Resource Usage ==="
+        docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+      register: deployment_status
+
+    - name: Set deployment facts
+      set_fact:
+        vps_deployment_success: true
+        vps_deployment_timestamp: "{{ ansible_date_time.iso8601 }}"
+        vps_containers_running: "{{ containers_started.stdout_lines | select('match', '.*running.*') | list | length }}"
+
+    - name: Display deployment results
+      debug:
+        msg:
+          - "VPS deployment completed successfully"
+          - "Host: {{ ansible_host }}"
+          - "Timestamp: {{ vps_deployment_timestamp }}"
+          - "Containers: {{ vps_containers_running }}"
+          - "Health checks: {{ 'PASSED' if deployment_health_check.rc == 0 else 'FAILED' }}"
+
+    - name: Create deployment log
+      copy:
+        content: |
+          CloudToLocalLLM VPS Deployment Log
+          =================================
+          
+          Deployment Information:
+          - Timestamp: {{ ansible_date_time.iso8601 }}
+          - Host: {{ ansible_host }}
+          - User: {{ ansible_user }}
+          - Project Directory: {{ project_dir }}
+          - Strategy: {{ deployment_strategy }}
+          - Force Rebuild: {{ force_rebuild }}
+          
+          Git Information:
+          - Repository: {{ project.repository }}
+          - Branch: master
+          - Commit: {{ git_pulled.after if git_pulled.after else 'unknown' }}
+          
+          Container Status:
+          {{ deployment_status.stdout }}
+          
+          Health Checks:
+          {% for check in health_checks.results %}
+          - {{ check.item }}: {{ 'PASSED' if check.status == 200 else 'FAILED' }}
+          {% endfor %}
+          
+          Deployment Result: {{ 'SUCCESS' if vps_deployment_success else 'FAILED' }}
+        dest: "{{ project_dir }}/ansible-deployment-{{ ansible_date_time.epoch }}.log"

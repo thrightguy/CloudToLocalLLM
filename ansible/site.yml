@@ -1,0 +1,71 @@
+---
+# CloudToLocalLLM Main Deployment Playbook
+# This is the entry point for all CloudToLocalLLM deployment operations
+
+- name: CloudToLocalLLM Complete Deployment Pipeline
+  hosts: localhost
+  gather_facts: true
+  vars:
+    deployment_phase: "{{ phase | default('all') }}"
+    force_rebuild: "{{ force | default(false) }}"
+    skip_tests: "{{ skip_tests | default(false) }}"
+    
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "CloudToLocalLLM Ansible Deployment Pipeline"
+          - "=========================================="
+          - "Phase: {{ deployment_phase }}"
+          - "Force rebuild: {{ force_rebuild }}"
+          - "Skip tests: {{ skip_tests }}"
+          - "Timestamp: {{ ansible_date_time.iso8601 }}"
+
+    - name: Include version management
+      include_tasks: playbooks/version-management.yml
+      when: deployment_phase in ['all', 'version', 'build']
+      tags: [version, build]
+
+    - name: Include cross-platform builds
+      include_tasks: playbooks/build-packages.yml
+      when: deployment_phase in ['all', 'build']
+      tags: [build, packages]
+
+    - name: Include Docker builds
+      include_tasks: playbooks/build-docker.yml
+      when: deployment_phase in ['all', 'build', 'docker']
+      tags: [build, docker]
+
+    - name: Include GitHub release
+      include_tasks: playbooks/github-release.yml
+      when: deployment_phase in ['all', 'release']
+      tags: [release, github]
+
+    - name: Include VPS deployment
+      include_tasks: playbooks/deploy-vps.yml
+      when: deployment_phase in ['all', 'deploy']
+      tags: [deploy, vps]
+
+    - name: Include post-deployment verification
+      include_tasks: playbooks/verify-deployment.yml
+      when: deployment_phase in ['all', 'deploy', 'verify']
+      tags: [deploy, verify]
+
+# Individual playbook imports for targeted execution
+- import_playbook: playbooks/version-management.yml
+  tags: [never, version-only]
+
+- import_playbook: playbooks/build-packages.yml
+  tags: [never, build-only]
+
+- import_playbook: playbooks/build-docker.yml
+  tags: [never, docker-only]
+
+- import_playbook: playbooks/github-release.yml
+  tags: [never, release-only]
+
+- import_playbook: playbooks/deploy-vps.yml
+  tags: [never, deploy-only]
+
+- import_playbook: playbooks/verify-deployment.yml
+  tags: [never, verify-only]

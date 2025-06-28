@@ -1,0 +1,228 @@
+name: Reusable Package Build
+
+on:
+  workflow_call:
+    inputs:
+      flutter_version:
+        description: 'Flutter version to use'
+        required: false
+        type: string
+        default: '3.32.2'
+      package_types:
+        description: 'Package types to build (comma-separated: aur,deb,appimage,snap)'
+        required: false
+        type: string
+        default: 'aur,deb'
+      version:
+        description: 'Version string for package naming'
+        required: true
+        type: string
+      artifact_name_prefix:
+        description: 'Prefix for artifact names'
+        required: false
+        type: string
+        default: 'package'
+      retention_days:
+        description: 'Artifact retention days'
+        required: false
+        type: number
+        default: 30
+      fail_fast:
+        description: 'Fail fast on first package build failure'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  # Linux package building
+  build-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: ${{ inputs.fail_fast }}
+      matrix:
+        package_type: 
+          - ${{ contains(inputs.package_types, 'aur') && 'aur' || '' }}
+          - ${{ contains(inputs.package_types, 'deb') && 'deb' || '' }}
+          - ${{ contains(inputs.package_types, 'appimage') && 'appimage' || '' }}
+          - ${{ contains(inputs.package_types, 'snap') && 'snap' || '' }}
+        exclude:
+          - package_type: ''
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ inputs.flutter_version }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Setup Docker for AUR builds
+        if: matrix.package_type == 'aur'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo usermod -aG docker $USER
+
+      - name: Setup DEB build dependencies
+        if: matrix.package_type == 'deb'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential debhelper devscripts \
+            clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev
+
+      - name: Setup AppImage build dependencies
+        if: matrix.package_type == 'appimage'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev wget
+          
+          # Download AppImage tools
+          wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          sudo mv appimagetool /usr/local/bin/
+
+      - name: Setup Snap build dependencies
+        if: matrix.package_type == 'snap'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapd
+          sudo snap install snapcraft --classic
+
+      - name: Build package
+        run: |
+          echo "🔨 Building ${{ matrix.package_type }} package..."
+          
+          # Make build script executable
+          if [ -f "scripts/packaging/build_${{ matrix.package_type }}.sh" ]; then
+            chmod +x scripts/packaging/build_${{ matrix.package_type }}.sh
+            
+            # Use universal builder for AUR if available
+            if [ "${{ matrix.package_type }}" = "aur" ] && [ -f "scripts/packaging/build_aur_universal.sh" ]; then
+              chmod +x scripts/packaging/build_aur_universal.sh
+              ./scripts/packaging/build_aur_universal.sh --verbose
+            else
+              ./scripts/packaging/build_${{ matrix.package_type }}.sh --verbose
+            fi
+          else
+            echo "❌ Build script not found: scripts/packaging/build_${{ matrix.package_type }}.sh"
+            exit 1
+          fi
+
+      - name: Verify package creation
+        run: |
+          echo "🔍 Verifying ${{ matrix.package_type }} package creation..."
+          
+          case "${{ matrix.package_type }}" in
+            "aur")
+              if [ -d "aur-package" ] && ls aur-package/*.tar.gz 1> /dev/null 2>&1; then
+                echo "✅ AUR package created successfully"
+                ls -la aur-package/*.tar.gz
+              else
+                echo "❌ AUR package not found"
+                exit 1
+              fi
+              ;;
+            "deb")
+              if ls dist/linux/*.deb 1> /dev/null 2>&1; then
+                echo "✅ DEB package created successfully"
+                ls -la dist/linux/*.deb
+              else
+                echo "❌ DEB package not found"
+                exit 1
+              fi
+              ;;
+            "appimage")
+              if ls dist/linux/*.AppImage 1> /dev/null 2>&1; then
+                echo "✅ AppImage created successfully"
+                ls -la dist/linux/*.AppImage
+              else
+                echo "❌ AppImage not found"
+                exit 1
+              fi
+              ;;
+            "snap")
+              if ls *.snap 1> /dev/null 2>&1; then
+                echo "✅ Snap package created successfully"
+                ls -la *.snap
+                mkdir -p dist/linux
+                mv *.snap dist/linux/
+              else
+                echo "❌ Snap package not found"
+                exit 1
+              fi
+              ;;
+          esac
+
+      - name: Generate checksums
+        run: |
+          echo "🔐 Generating checksums for ${{ matrix.package_type }} package..."
+          
+          case "${{ matrix.package_type }}" in
+            "aur")
+              if [ -d "aur-package" ]; then
+                cd aur-package
+                for file in *.tar.gz; do
+                  if [ -f "$file" ]; then
+                    sha256sum "$file" > "$file.sha256"
+                  fi
+                done
+                cd ..
+              fi
+              ;;
+            *)
+              if [ -d "dist/linux" ]; then
+                cd dist/linux
+                for file in *.deb *.AppImage *.snap; do
+                  if [ -f "$file" ]; then
+                    sha256sum "$file" > "$file.sha256"
+                  fi
+                done
+                cd ../..
+              fi
+              ;;
+          esac
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name_prefix }}-${{ matrix.package_type }}-${{ inputs.version }}
+          path: |
+            dist/linux/
+            aur-package/*.tar.gz
+            aur-package/*.sha256
+          retention-days: ${{ inputs.retention_days }}
+
+  # Package build summary
+  package-summary:
+    runs-on: ubuntu-latest
+    needs: [build-packages]
+    if: always()
+    steps:
+      - name: Create package summary
+        run: |
+          echo "## 📦 Package Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Package Types:** ${{ inputs.package_types }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Flutter Version:** ${{ inputs.flutter_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Package Builds: ${{ needs.build-packages.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.build-packages.result }}" = "success" ]; then
+            echo "✅ All packages built successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some package builds failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check individual job logs for details." >> $GITHUB_STEP_SUMMARY
+          fi

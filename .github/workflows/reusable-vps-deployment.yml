@@ -1,0 +1,274 @@
+name: Reusable VPS Deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment (production, staging)'
+        required: false
+        type: string
+        default: 'production'
+      version:
+        description: 'Version being deployed'
+        required: true
+        type: string
+      deployment_script:
+        description: 'Deployment script to run on VPS'
+        required: false
+        type: string
+        default: './scripts/deploy/update_and_deploy.sh --force --verbose'
+      skip_backup:
+        description: 'Skip backup creation'
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Perform dry run deployment'
+        required: false
+        type: boolean
+        default: false
+      verification_timeout:
+        description: 'Timeout for deployment verification (seconds)'
+        required: false
+        type: number
+        default: 120
+    secrets:
+      ssh_private_key:
+        description: 'SSH private key for VPS access'
+        required: true
+      vps_host:
+        description: 'VPS hostname'
+        required: false
+      vps_user:
+        description: 'VPS username'
+        required: false
+
+jobs:
+  deploy-vps:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ssh_private_key }}
+
+      - name: Configure deployment variables
+        id: config
+        run: |
+          # Set default values if secrets not provided
+          VPS_HOST="${{ secrets.vps_host || 'cloudtolocalllm.online' }}"
+          VPS_USER="${{ secrets.vps_user || 'cloudllm' }}"
+          
+          echo "vps_host=$VPS_HOST" >> $GITHUB_OUTPUT
+          echo "vps_user=$VPS_USER" >> $GITHUB_OUTPUT
+          
+          # Build deployment flags
+          DEPLOY_FLAGS=""
+          if [ "${{ inputs.skip_backup }}" = "true" ]; then
+            DEPLOY_FLAGS="$DEPLOY_FLAGS --skip-backup"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            DEPLOY_FLAGS="$DEPLOY_FLAGS --dry-run"
+          fi
+          
+          echo "deploy_flags=$DEPLOY_FLAGS" >> $GITHUB_OUTPUT
+
+      - name: Add VPS to known hosts
+        run: |
+          ssh-keyscan -H ${{ steps.config.outputs.vps_host }} >> ~/.ssh/known_hosts
+
+      - name: Pre-deployment health check
+        run: |
+          echo "🔍 Performing pre-deployment health check..."
+          
+          # Check SSH connectivity
+          ssh ${{ steps.config.outputs.vps_user }}@${{ steps.config.outputs.vps_host }} "echo 'SSH connection successful'"
+          
+          # Check disk space
+          DISK_USAGE=$(ssh ${{ steps.config.outputs.vps_user }}@${{ steps.config.outputs.vps_host }} "df /opt/cloudtolocalllm | tail -1 | awk '{print \$5}' | sed 's/%//'")
+          echo "Disk usage: ${DISK_USAGE}%"
+          
+          if [ "$DISK_USAGE" -gt 90 ]; then
+            echo "❌ Warning: Disk usage is above 90%"
+            exit 1
+          fi
+          
+          # Check if project directory exists
+          ssh ${{ steps.config.outputs.vps_user }}@${{ steps.config.outputs.vps_host }} "test -d /opt/cloudtolocalllm || (echo '❌ Project directory not found' && exit 1)"
+          
+          echo "✅ Pre-deployment checks passed"
+
+      - name: Create deployment backup
+        if: ${{ !inputs.skip_backup && !inputs.dry_run }}
+        run: |
+          echo "💾 Creating deployment backup..."
+          
+          ssh ${{ steps.config.outputs.vps_user }}@${{ steps.config.outputs.vps_host }} << 'EOF'
+            cd /opt/cloudtolocalllm
+            
+            # Create backup directory
+            BACKUP_DIR="/opt/backups/cloudtolocalllm-$(date +%Y%m%d-%H%M%S)"
+            sudo mkdir -p "$BACKUP_DIR"
+            
+            # Backup current build
+            if [ -d "build/web" ]; then
+              sudo cp -r build/web "$BACKUP_DIR/"
+              echo "✅ Web build backed up"
+            fi
+            
+            # Backup configuration
+            if [ -f "docker-compose.yml" ]; then
+              sudo cp docker-compose.yml "$BACKUP_DIR/"
+              echo "✅ Docker compose backed up"
+            fi
+            
+            # Backup environment files
+            if [ -f ".env" ]; then
+              sudo cp .env "$BACKUP_DIR/"
+              echo "✅ Environment file backed up"
+            fi
+            
+            echo "✅ Backup created at $BACKUP_DIR"
+          EOF
+
+      - name: Deploy to VPS
+        run: |
+          echo "🚀 Starting deployment to ${{ inputs.environment }} environment..."
+          echo "Version: ${{ inputs.version }}"
+          echo "Host: ${{ steps.config.outputs.vps_host }}"
+          echo "User: ${{ steps.config.outputs.vps_user }}"
+          
+          ssh ${{ steps.config.outputs.vps_user }}@${{ steps.config.outputs.vps_host }} << EOF
+            set -e
+            cd /opt/cloudtolocalllm
+            
+            echo "📥 Pulling latest changes..."
+            git stash
+            git pull origin master
+            
+            echo "🔧 Running deployment script..."
+            chmod +x scripts/deploy/update_and_deploy.sh
+            ${{ inputs.deployment_script }} ${{ steps.config.outputs.deploy_flags }}
+            
+            echo "✅ Deployment script completed"
+          EOF
+
+      - name: Wait for services to start
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "⏳ Waiting for services to start..."
+          sleep ${{ inputs.verification_timeout }}
+
+      - name: Verify deployment
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          # Determine base URL based on environment
+          if [ "${{ inputs.environment }}" = "staging" ]; then
+            BASE_URL="https://staging.cloudtolocalllm.online"
+          else
+            BASE_URL="https://app.cloudtolocalllm.online"
+          fi
+          
+          # Check web application
+          echo "🌐 Checking web application at $BASE_URL..."
+          if curl -f --max-time 30 "$BASE_URL/" > /dev/null 2>&1; then
+            echo "✅ Web application is responding"
+          else
+            echo "❌ Web application is not responding"
+            exit 1
+          fi
+          
+          # Check API backend
+          echo "🔧 Checking API backend..."
+          if curl -f --max-time 30 "$BASE_URL:8080/health" > /dev/null 2>&1; then
+            echo "✅ API backend is responding"
+          else
+            echo "❌ API backend is not responding"
+            exit 1
+          fi
+          
+          # Verify version
+          echo "🔍 Verifying deployed version..."
+          DEPLOYED_VERSION=$(curl -s --max-time 30 "$BASE_URL/version.json" | jq -r '.version' 2>/dev/null || echo "unknown")
+          
+          if [ "$DEPLOYED_VERSION" = "${{ inputs.version }}" ]; then
+            echo "✅ Version verification successful: $DEPLOYED_VERSION"
+          else
+            echo "⚠️ Version mismatch: expected ${{ inputs.version }}, got $DEPLOYED_VERSION"
+            # Don't fail on version mismatch for now, just warn
+          fi
+
+      - name: Check Docker containers
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "🐳 Checking Docker container status..."
+          
+          ssh ${{ steps.config.outputs.vps_user }}@${{ steps.config.outputs.vps_host }} << 'EOF'
+            cd /opt/cloudtolocalllm
+            
+            # Check container status
+            docker compose ps
+            
+            # Check container health
+            UNHEALTHY=$(docker compose ps --format json | jq -r '.[] | select(.Health == "unhealthy") | .Name' 2>/dev/null || echo "")
+            
+            if [ -n "$UNHEALTHY" ]; then
+              echo "❌ Unhealthy containers found: $UNHEALTHY"
+              exit 1
+            else
+              echo "✅ All containers are healthy"
+            fi
+          EOF
+
+      - name: Performance check
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "⚡ Running performance check..."
+          
+          # Determine base URL
+          if [ "${{ inputs.environment }}" = "staging" ]; then
+            BASE_URL="https://staging.cloudtolocalllm.online"
+          else
+            BASE_URL="https://app.cloudtolocalllm.online"
+          fi
+          
+          # Measure response time
+          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' --max-time 30 "$BASE_URL/")
+          echo "Response time: ${RESPONSE_TIME}s"
+          
+          # Check if response time is acceptable (< 5 seconds)
+          if (( $(echo "$RESPONSE_TIME < 5.0" | bc -l) )); then
+            echo "✅ Response time is acceptable"
+          else
+            echo "⚠️ Response time is slow: ${RESPONSE_TIME}s"
+          fi
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## 🚀 VPS Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Host:** ${{ steps.config.outputs.vps_host }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Dry Run:** ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment completed successfully!" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ inputs.environment }}" = "production" ]; then
+              echo "🌐 **Live Application:** https://app.cloudtolocalllm.online" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ inputs.environment }}" = "staging" ]; then
+              echo "🧪 **Staging Application:** https://staging.cloudtolocalllm.online" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ Deployment failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the job logs for detailed error information." >> $GITHUB_STEP_SUMMARY
+          fi

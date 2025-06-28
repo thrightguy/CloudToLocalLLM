@@ -1,0 +1,93 @@
+---
+# Windows Package Building Tasks
+# Handles Flutter Windows builds and ZIP package creation
+
+- name: Check Windows build environment
+  win_shell: |
+    # Check if we're on Windows or WSL
+    if ($env:OS -eq "Windows_NT") {
+      Write-Output "native_windows"
+    } else {
+      Write-Output "wsl_or_linux"
+    }
+  register: windows_env_check
+  when: ansible_os_family == "Windows"
+  ignore_errors: true
+
+- name: Set Windows build method
+  set_fact:
+    windows_build_method: >-
+      {%- if ansible_os_family == "Windows" -%}
+      native
+      {%- else -%}
+      wsl
+      {%- endif -%}
+
+- name: Build Flutter Windows application (Native)
+  win_shell: |
+    cd "{{ project_root }}"
+    flutter build windows --release
+  register: flutter_windows_build_native
+  when: windows_build_method == "native"
+
+- name: Build Flutter Windows application (WSL)
+  shell: |
+    cd "{{ project_root }}"
+    # Use PowerShell through WSL to build Windows app
+    powershell.exe -Command "cd '{{ project_root }}'; flutter build windows --release"
+  register: flutter_windows_build_wsl
+  when: windows_build_method == "wsl"
+
+- name: Set Windows build result
+  set_fact:
+    windows_build_result: >-
+      {%- if windows_build_method == "native" -%}
+      {{ flutter_windows_build_native }}
+      {%- else -%}
+      {{ flutter_windows_build_wsl }}
+      {%- endif -%}
+
+- name: Verify Windows build output
+  stat:
+    path: "{{ project_root }}/build/windows/x64/release/runner/cloudtolocalllm.exe"
+  register: windows_exe_check
+
+- name: Fail if Windows executable not found
+  fail:
+    msg: "Windows executable not found after build"
+  when: not windows_exe_check.stat.exists
+
+- name: Create Windows portable ZIP package
+  archive:
+    path: "{{ project_root }}/build/windows/x64/release/runner/*"
+    dest: "{{ project_root }}/dist/windows/cloudtolocalllm-{{ project_version }}-portable.zip"
+    format: zip
+    mode: '0644'
+  register: windows_zip_created
+
+- name: Generate Windows package checksum
+  shell: |
+    cd "{{ project_root }}/dist/windows"
+    sha256sum "cloudtolocalllm-{{ project_version }}-portable.zip" > "cloudtolocalllm-{{ project_version }}-portable.zip.sha256"
+  register: windows_checksum_generated
+
+- name: Verify Windows package integrity
+  shell: |
+    cd "{{ project_root }}/dist/windows"
+    sha256sum -c "cloudtolocalllm-{{ project_version }}-portable.zip.sha256"
+  register: windows_integrity_check
+  changed_when: false
+
+- name: Set Windows build facts
+  set_fact:
+    windows_package_path: "{{ project_root }}/dist/windows/cloudtolocalllm-{{ project_version }}-portable.zip"
+    windows_checksum_path: "{{ project_root }}/dist/windows/cloudtolocalllm-{{ project_version }}-portable.zip.sha256"
+    windows_build_success: true
+
+- name: Display Windows build results
+  debug:
+    msg:
+      - "Windows build completed successfully"
+      - "Package: {{ windows_package_path }}"
+      - "Checksum: {{ windows_checksum_path }}"
+      - "Build method: {{ windows_build_method }}"

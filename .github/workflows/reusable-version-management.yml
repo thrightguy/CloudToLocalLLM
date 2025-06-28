@@ -1,0 +1,149 @@
+name: Reusable Version Management
+
+on:
+  workflow_call:
+    inputs:
+      increment_type:
+        description: 'Version increment type (patch, minor, major, build)'
+        required: false
+        type: string
+        default: 'build'
+      custom_version:
+        description: 'Custom version to set (overrides increment_type)'
+        required: false
+        type: string
+      commit_changes:
+        description: 'Whether to commit version changes'
+        required: false
+        type: boolean
+        default: false
+      use_timestamp_build:
+        description: 'Use timestamp for build number'
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      version:
+        description: 'Semantic version (x.y.z)'
+        value: ${{ jobs.version-management.outputs.version }}
+      build_number:
+        description: 'Build number'
+        value: ${{ jobs.version-management.outputs.build_number }}
+      full_version:
+        description: 'Full version (x.y.z+build)'
+        value: ${{ jobs.version-management.outputs.full_version }}
+      previous_version:
+        description: 'Previous semantic version'
+        value: ${{ jobs.version-management.outputs.previous_version }}
+      is_major_release:
+        description: 'Whether this is a major release'
+        value: ${{ jobs.version-management.outputs.is_major_release }}
+
+jobs:
+  version-management:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      full_version: ${{ steps.version.outputs.full_version }}
+      previous_version: ${{ steps.version.outputs.previous_version }}
+      is_major_release: ${{ steps.version.outputs.is_major_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        if: ${{ inputs.commit_changes }}
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Manage version
+        id: version
+        run: |
+          chmod +x scripts/version_manager.sh
+          
+          # Get current version
+          PREVIOUS_VERSION=$(./scripts/version_manager.sh get-semantic)
+          echo "Previous version: $PREVIOUS_VERSION"
+          
+          # Handle version update
+          if [ -n "${{ inputs.custom_version }}" ]; then
+            echo "Setting custom version: ${{ inputs.custom_version }}"
+            ./scripts/version_manager.sh set "${{ inputs.custom_version }}"
+          elif [ "${{ inputs.increment_type }}" != "none" ]; then
+            if [ "${{ inputs.use_timestamp_build }}" = "true" ] && [ "${{ inputs.increment_type }}" = "build" ]; then
+              echo "Preparing build increment with timestamp"
+              ./scripts/version_manager.sh prepare build
+            else
+              echo "Incrementing version: ${{ inputs.increment_type }}"
+              ./scripts/version_manager.sh increment "${{ inputs.increment_type }}"
+            fi
+          fi
+          
+          # Get updated version info
+          NEW_VERSION=$(./scripts/version_manager.sh get-semantic)
+          NEW_BUILD=$(./scripts/version_manager.sh get-build)
+          NEW_FULL=$(./scripts/version_manager.sh get)
+          
+          # Check if this is a major release
+          if [[ "${{ inputs.increment_type }}" == "major" ]] || [[ "${{ inputs.custom_version }}" =~ ^[0-9]+\.0\.0$ ]]; then
+            IS_MAJOR="true"
+          else
+            IS_MAJOR="false"
+          fi
+          
+          echo "New version: $NEW_FULL"
+          
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$NEW_BUILD" >> $GITHUB_OUTPUT
+          echo "full_version=$NEW_FULL" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+          echo "is_major_release=$IS_MAJOR" >> $GITHUB_OUTPUT
+
+      - name: Synchronize version files
+        run: |
+          chmod +x scripts/deploy/sync_versions.sh
+          ./scripts/deploy/sync_versions.sh
+
+      - name: Validate version consistency
+        run: |
+          echo "🔍 Validating version consistency across files..."
+          
+          # Check pubspec.yaml
+          PUBSPEC_VERSION=$(./scripts/version_manager.sh get)
+          echo "pubspec.yaml version: $PUBSPEC_VERSION"
+          
+          # Check assets/version.json
+          if [ -f "assets/version.json" ]; then
+            ASSETS_VERSION=$(jq -r '.version' assets/version.json)
+            ASSETS_BUILD=$(jq -r '.build_number' assets/version.json)
+            echo "assets/version.json: $ASSETS_VERSION+$ASSETS_BUILD"
+          fi
+          
+          # Check lib/shared/lib/version.dart
+          if [ -f "lib/shared/lib/version.dart" ]; then
+            VERSION_DART=$(grep "mainAppVersion" lib/shared/lib/version.dart | cut -d"'" -f2)
+            BUILD_DART=$(grep "mainAppBuildNumber" lib/shared/lib/version.dart | cut -d" " -f6 | tr -d ';')
+            echo "version.dart: $VERSION_DART+$BUILD_DART"
+          fi
+          
+          echo "✅ Version validation completed"
+
+      - name: Commit version changes
+        if: ${{ inputs.commit_changes }}
+        run: |
+          if git diff --quiet; then
+            echo "No version changes to commit"
+          else
+            git add -A
+            if [ -n "${{ inputs.custom_version }}" ]; then
+              git commit -m "Release: Bump version to ${{ steps.version.outputs.full_version }}"
+            else
+              git commit -m "CI: Update build number to ${{ steps.version.outputs.build_number }} [skip ci]"
+            fi
+            git push origin ${{ github.ref_name }}
+          fi

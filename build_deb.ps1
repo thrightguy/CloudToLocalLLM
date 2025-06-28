@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 function Test-CommandExists {
     param ([string]$command)
     $exists = (wsl -- bash -c "command -v $command")
-    return $? -and ($exists -ne $null)
+    return $? -and ($null -ne $exists)
 }
 
 # Function to get version from pubspec.yaml
@@ -79,7 +79,12 @@ wsl -- cp -r build/linux/x64/release/bundle/lib "$buildDir/usr/lib/cloudtolocall
 
 # Create a wrapper script in /usr/bin
 Write-Host "Creating wrapper script..."
-$wrapperScript = "#!/bin/bash\n# Wrapper script to run the application from the installation directory\ncd /usr/lib/cloudtolocalllm\nexec ./cloudtolocalllm \"\$@\"\n"
+$wrapperScript = @'
+#!/bin/bash
+# Wrapper script to run the application from the installation directory
+cd /usr/lib/cloudtolocalllm
+exec ./cloudtolocalllm "$@"
+'@
 wsl -- bash -c "echo '$wrapperScript' > '$buildDir/usr/bin/cloudtolocalllm'"
 
 # Copy application icon

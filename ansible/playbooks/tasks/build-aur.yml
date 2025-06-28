@@ -1,0 +1,131 @@
+---
+# AUR Package Building Tasks
+# Creates Arch Linux User Repository packages
+
+- name: Check AUR build dependencies
+  shell: |
+    # Check if we have makepkg available
+    if command -v makepkg >/dev/null 2>&1; then
+      echo "native_arch"
+    elif command -v docker >/dev/null 2>&1; then
+      echo "docker_available"
+    else
+      echo "no_build_env"
+    fi
+  register: aur_build_env_check
+  changed_when: false
+
+- name: Set AUR build method
+  set_fact:
+    aur_build_method: "{{ aur_build_env_check.stdout }}"
+
+- name: Create AUR package directory
+  file:
+    path: "{{ project_root }}/dist/linux/aur"
+    state: directory
+    mode: '0755'
+
+- name: Create unified package structure
+  shell: |
+    cd "{{ project_root }}"
+    
+    # Create package directory
+    PACKAGE_DIR="dist/linux/aur/cloudtolocalllm-{{ project_version }}"
+    mkdir -p "$PACKAGE_DIR"/{bin,lib,data,config,scripts}
+    
+    # Copy main application
+    if [ -d "build/linux/x64/release/bundle" ]; then
+      cp -r build/linux/x64/release/bundle/* "$PACKAGE_DIR/"
+      mv "$PACKAGE_DIR/cloudtolocalllm" "$PACKAGE_DIR/bin/cloudtolocalllm_main"
+    fi
+    
+    # Create wrapper script
+    cat > "$PACKAGE_DIR/bin/cloudtolocalllm" << 'EOF'
+    #!/bin/bash
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+    export LD_LIBRARY_PATH="$APP_DIR/lib:$LD_LIBRARY_PATH"
+    
+    # Launch main Flutter application
+    if [[ -x "$SCRIPT_DIR/cloudtolocalllm_main" ]]; then
+        exec "$SCRIPT_DIR/cloudtolocalllm_main" "$@"
+    else
+        echo "Error: Main application not found"
+        exit 1
+    fi
+    EOF
+    
+    chmod +x "$PACKAGE_DIR/bin/cloudtolocalllm"
+    
+    # Create version info
+    echo "{{ project_version }}" > "$PACKAGE_DIR/VERSION"
+    
+    echo "Package structure created in $PACKAGE_DIR"
+  register: aur_package_structure
+
+- name: Create AUR package archive (Native Arch)
+  shell: |
+    cd "{{ project_root }}/dist/linux/aur"
+    tar -czf "cloudtolocalllm-{{ project_version }}-x86_64.tar.gz" "cloudtolocalllm-{{ project_version }}"
+    sha256sum "cloudtolocalllm-{{ project_version }}-x86_64.tar.gz" > "cloudtolocalllm-{{ project_version }}-x86_64.tar.gz.sha256"
+  register: aur_archive_native
+  when: aur_build_method == "native_arch"
+
+- name: Create AUR package archive (Docker)
+  shell: |
+    cd "{{ project_root }}"
+    
+    # Use Docker to create AUR package in Arch Linux environment
+    docker run --rm \
+      -v "$(pwd):/workspace" \
+      -w /workspace \
+      archlinux:latest \
+      bash -c "
+        pacman -Sy --noconfirm tar gzip
+        cd dist/linux/aur
+        tar -czf 'cloudtolocalllm-{{ project_version }}-x86_64.tar.gz' 'cloudtolocalllm-{{ project_version }}'
+        sha256sum 'cloudtolocalllm-{{ project_version }}-x86_64.tar.gz' > 'cloudtolocalllm-{{ project_version }}-x86_64.tar.gz.sha256'
+      "
+  register: aur_archive_docker
+  when: aur_build_method == "docker_available"
+
+- name: Fail if no AUR build environment
+  fail:
+    msg: "No suitable AUR build environment found. Need either native Arch Linux or Docker."
+  when: aur_build_method == "no_build_env"
+
+- name: Verify AUR package creation
+  stat:
+    path: "{{ project_root }}/dist/linux/aur/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz"
+  register: aur_package_check
+
+- name: Fail if AUR package not created
+  fail:
+    msg: "AUR package was not created successfully"
+  when: not aur_package_check.stat.exists
+
+- name: Copy AUR package to main dist directory
+  copy:
+    src: "{{ project_root }}/dist/linux/aur/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz"
+    dest: "{{ project_root }}/dist/linux/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz"
+    mode: '0644'
+
+- name: Copy AUR checksum to main dist directory
+  copy:
+    src: "{{ project_root }}/dist/linux/aur/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz.sha256"
+    dest: "{{ project_root }}/dist/linux/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz.sha256"
+    mode: '0644'
+
+- name: Set AUR package facts
+  set_fact:
+    aur_package_path: "{{ project_root }}/dist/linux/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz"
+    aur_checksum_path: "{{ project_root }}/dist/linux/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz.sha256"
+    aur_build_success: true
+
+- name: Display AUR build results
+  debug:
+    msg:
+      - "AUR package created successfully"
+      - "Method: {{ aur_build_method }}"
+      - "Package: {{ aur_package_path }}"
+      - "Checksum: {{ aur_checksum_path }}"

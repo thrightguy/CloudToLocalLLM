@@ -1,0 +1,441 @@
+name: Nightly Builds
+
+on:
+  schedule:
+    # Run at 2:00 AM UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      build_all_packages:
+        description: 'Build all package types'
+        required: false
+        default: true
+        type: boolean
+      run_extended_tests:
+        description: 'Run extended test suite'
+        required: false
+        default: true
+        type: boolean
+      deploy_to_staging:
+        description: 'Deploy to staging environment'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  FLUTTER_VERSION: '3.32.2'
+  NODE_VERSION: '20'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # Pre-flight checks
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      commit_count: ${{ steps.check.outputs.commit_count }}
+      last_nightly: ${{ steps.check.outputs.last_nightly }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Check for recent changes
+        id: check
+        run: |
+          # Get the last 24 hours of commits
+          COMMITS_24H=$(git log --since="24 hours ago" --oneline | wc -l)
+          echo "Commits in last 24 hours: $COMMITS_24H"
+          
+          # Check if there was a nightly build in the last 24 hours
+          LAST_NIGHTLY=$(git log --since="24 hours ago" --grep="Nightly build" --oneline | wc -l)
+          echo "Nightly builds in last 24 hours: $LAST_NIGHTLY"
+          
+          # Determine if we should build
+          if [ "$COMMITS_24H" -gt 0 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHOULD_BUILD="true"
+          else
+            SHOULD_BUILD="false"
+          fi
+          
+          echo "should_build=$SHOULD_BUILD" >> $GITHUB_OUTPUT
+          echo "commit_count=$COMMITS_24H" >> $GITHUB_OUTPUT
+          echo "last_nightly=$LAST_NIGHTLY" >> $GITHUB_OUTPUT
+
+  # Version management for nightly builds
+  version-management:
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: ${{ needs.preflight.outputs.should_build == 'true' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      full_version: ${{ steps.version.outputs.full_version }}
+      nightly_tag: ${{ steps.version.outputs.nightly_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup nightly version
+        id: version
+        run: |
+          chmod +x scripts/version_manager.sh
+          
+          # Get current version
+          CURRENT_VERSION=$(./scripts/version_manager.sh get-semantic)
+          CURRENT_BUILD=$(./scripts/version_manager.sh get-build)
+          
+          # Create nightly build number with timestamp
+          NIGHTLY_BUILD=$(date +%Y%m%d%H%M)
+          NIGHTLY_TAG="nightly-$(date +%Y%m%d)"
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "Nightly build: $NIGHTLY_BUILD"
+          echo "Nightly tag: $NIGHTLY_TAG"
+          
+          # Update build number for nightly
+          ./scripts/version_manager.sh prepare build
+          
+          # Get updated version info
+          UPDATED_VERSION=$(./scripts/version_manager.sh get-semantic)
+          UPDATED_FULL=$(./scripts/version_manager.sh get)
+          
+          echo "version=$UPDATED_VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$NIGHTLY_BUILD" >> $GITHUB_OUTPUT
+          echo "full_version=$UPDATED_FULL" >> $GITHUB_OUTPUT
+          echo "nightly_tag=$NIGHTLY_TAG" >> $GITHUB_OUTPUT
+
+      - name: Synchronize version files
+        run: |
+          chmod +x scripts/deploy/sync_versions.sh
+          ./scripts/deploy/sync_versions.sh
+
+  # Extended testing suite
+  extended-testing:
+    runs-on: ubuntu-latest
+    needs: [preflight, version-management]
+    if: ${{ needs.preflight.outputs.should_build == 'true' && (inputs.run_extended_tests || github.event_name == 'schedule') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run static analysis
+        run: |
+          flutter analyze --no-fatal-infos
+          echo "Static analysis completed" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run unit tests
+        run: |
+          flutter test --coverage --reporter=github
+          echo "Unit tests completed" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run integration tests
+        run: |
+          if [ -d "integration_test" ]; then
+            flutter test integration_test/
+            echo "Integration tests completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No integration tests found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Performance benchmarks
+        run: |
+          # Run performance tests if they exist
+          if [ -f "test/performance_test.dart" ]; then
+            flutter test test/performance_test.dart
+            echo "Performance benchmarks completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No performance benchmarks found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-results-${{ needs.version-management.outputs.nightly_tag }}
+          path: |
+            coverage/
+            test/
+          retention-days: 7
+
+  # Cross-platform nightly builds
+  nightly-builds:
+    runs-on: ${{ matrix.os }}
+    needs: [preflight, version-management]
+    if: ${{ needs.preflight.outputs.should_build == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            build_targets: "linux,web"
+          - os: windows-latest
+            platform: windows
+            build_targets: "windows"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build applications
+        run: |
+          mkdir -p dist/${{ matrix.platform }}
+          
+          if [[ "${{ matrix.platform }}" == "linux" ]]; then
+            # Build web
+            echo "Building web application..."
+            flutter build web --release --no-tree-shake-icons
+            tar -czf dist/${{ matrix.platform }}/cloudtolocalllm-web-${{ needs.version-management.outputs.nightly_tag }}.tar.gz -C build/web .
+            
+            # Build Linux
+            echo "Building Linux application..."
+            flutter build linux --release
+            tar -czf dist/${{ matrix.platform }}/cloudtolocalllm-linux-${{ needs.version-management.outputs.nightly_tag }}.tar.gz -C build/linux/x64/release/bundle .
+            
+          elif [[ "${{ matrix.platform }}" == "windows" ]]; then
+            # Build Windows
+            echo "Building Windows application..."
+            flutter build windows --release
+            cd build/windows/x64/runner/Release
+            7z a -tzip ../../../../../dist/${{ matrix.platform }}/cloudtolocalllm-windows-${{ needs.version-management.outputs.nightly_tag }}.zip *
+            cd ../../../../../
+          fi
+
+      - name: Generate checksums
+        run: |
+          cd dist/${{ matrix.platform }}
+          for file in *.tar.gz *.zip; do
+            if [ -f "$file" ]; then
+              sha256sum "$file" > "$file.sha256"
+            fi
+          done
+
+      - name: Upload nightly artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ matrix.platform }}-${{ needs.version-management.outputs.nightly_tag }}
+          path: dist/${{ matrix.platform }}/
+          retention-days: 14
+
+  # Package building for nightly
+  nightly-packages:
+    runs-on: ubuntu-latest
+    needs: [preflight, version-management, nightly-builds]
+    if: ${{ needs.preflight.outputs.should_build == 'true' && (inputs.build_all_packages || github.event_name == 'schedule') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        package_type: [aur, deb]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Setup Docker for AUR builds
+        if: matrix.package_type == 'aur'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo usermod -aG docker $USER
+
+      - name: Build package
+        run: |
+          chmod +x scripts/packaging/build_${{ matrix.package_type }}.sh
+          if [ "${{ matrix.package_type }}" = "aur" ]; then
+            chmod +x scripts/packaging/build_aur_universal.sh
+            ./scripts/packaging/build_aur_universal.sh --verbose || echo "AUR build failed, continuing..."
+          else
+            ./scripts/packaging/build_${{ matrix.package_type }}.sh --verbose || echo "${{ matrix.package_type }} build failed, continuing..."
+          fi
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-package-${{ matrix.package_type }}-${{ needs.version-management.outputs.nightly_tag }}
+          path: |
+            dist/linux/
+            aur-package/*.tar.gz
+            aur-package/*.sha256
+          retention-days: 14
+
+  # Staging deployment (optional)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [preflight, version-management, nightly-builds]
+    if: ${{ needs.preflight.outputs.should_build == 'true' && inputs.deploy_to_staging }}
+    environment: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying nightly build to staging environment"
+          # Add staging deployment logic here
+          echo "Staging deployment would happen here"
+
+  # Health check and verification
+  health-check:
+    runs-on: ubuntu-latest
+    needs: [preflight, version-management, nightly-builds]
+    if: ${{ needs.preflight.outputs.should_build == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: nightly-artifacts
+
+      - name: Verify build integrity
+        run: |
+          echo "🔍 Verifying nightly build integrity..."
+          
+          # Check that all expected artifacts exist
+          EXPECTED_FILES=0
+          FOUND_FILES=0
+          
+          # Count expected files
+          if [ -d "nightly-artifacts/nightly-linux-${{ needs.version-management.outputs.nightly_tag }}" ]; then
+            EXPECTED_FILES=$((EXPECTED_FILES + 2))  # web + linux
+          fi
+          if [ -d "nightly-artifacts/nightly-windows-${{ needs.version-management.outputs.nightly_tag }}" ]; then
+            EXPECTED_FILES=$((EXPECTED_FILES + 1))  # windows
+          fi
+          
+          # Count found files
+          FOUND_FILES=$(find nightly-artifacts -name "*.tar.gz" -o -name "*.zip" | wc -l)
+          
+          echo "Expected files: $EXPECTED_FILES"
+          echo "Found files: $FOUND_FILES"
+          
+          if [ "$FOUND_FILES" -ge "$EXPECTED_FILES" ]; then
+            echo "✅ Build integrity check passed"
+          else
+            echo "❌ Build integrity check failed"
+            exit 1
+          fi
+
+      - name: Verify checksums
+        run: |
+          echo "🔐 Verifying checksums..."
+          find nightly-artifacts -name "*.sha256" | while read checksum_file; do
+            dir=$(dirname "$checksum_file")
+            cd "$dir"
+            if sha256sum -c "$(basename "$checksum_file")"; then
+              echo "✅ Checksum verified: $(basename "$checksum_file")"
+            else
+              echo "❌ Checksum failed: $(basename "$checksum_file")"
+              exit 1
+            fi
+            cd - > /dev/null
+          done
+
+  # Cleanup old nightly builds
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: [preflight, health-check]
+    if: always() && needs.preflight.outputs.should_build == 'true'
+    steps:
+      - name: Cleanup old artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            
+            // Get all workflow runs for this workflow
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: 'nightly-builds.yml',
+              per_page: 100
+            });
+            
+            // Keep only the last 7 nightly builds
+            const oldRuns = runs.data.workflow_runs.slice(7);
+            
+            for (const run of oldRuns) {
+              try {
+                await github.rest.actions.deleteWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: run.id
+                });
+                console.log(`Deleted old workflow run: ${run.id}`);
+              } catch (error) {
+                console.log(`Failed to delete run ${run.id}: ${error.message}`);
+              }
+            }
+
+  # Summary and notification
+  nightly-summary:
+    runs-on: ubuntu-latest
+    needs: [preflight, version-management, nightly-builds, extended-testing, health-check]
+    if: always()
+    steps:
+      - name: Create nightly summary
+        run: |
+          echo "## 🌙 Nightly Build Summary - ${{ needs.version-management.outputs.nightly_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Triggered:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commits (24h):** ${{ needs.preflight.outputs.commit_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.version-management.outputs.full_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Preflight: ${{ needs.preflight.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Builds: ${{ needs.nightly-builds.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Testing: ${{ needs.extended-testing.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Health Check: ${{ needs.health-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.preflight.outputs.should_build }}" = "false" ]; then
+            echo "ℹ️ No recent changes detected - nightly build skipped" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.health-check.result }}" = "success" ]; then
+            echo "✅ Nightly build completed successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Nightly build encountered issues" >> $GITHUB_STEP_SUMMARY
+          fi

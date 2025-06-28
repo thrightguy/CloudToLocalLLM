@@ -1,0 +1,70 @@
+---
+# Linux Package Building Tasks
+# Handles AUR, AppImage, Flatpak, and .deb package creation
+
+- name: Check Linux build environment
+  shell: |
+    if command -v wsl.exe >/dev/null 2>&1; then
+      echo "wsl"
+    elif [ -f /proc/version ] && grep -q Microsoft /proc/version; then
+      echo "wsl"
+    else
+      echo "native_linux"
+    fi
+  register: linux_env_check
+  changed_when: false
+
+- name: Set Linux build environment
+  set_fact:
+    linux_build_env: "{{ linux_env_check.stdout }}"
+
+- name: Build Flutter Linux application
+  shell: |
+    cd "{{ project_root }}"
+    flutter build linux --release
+  register: flutter_linux_build
+
+- name: Verify Linux build output
+  stat:
+    path: "{{ project_root }}/build/linux/x64/release/bundle/cloudtolocalllm"
+  register: linux_exe_check
+
+- name: Fail if Linux executable not found
+  fail:
+    msg: "Linux executable not found after build"
+  when: not linux_exe_check.stat.exists
+
+- name: Create AUR binary package
+  include_tasks: build-aur.yml
+  tags: [aur]
+
+- name: Create AppImage package
+  include_tasks: build-appimage.yml
+  tags: [appimage]
+
+- name: Create Flatpak package
+  include_tasks: build-flatpak.yml
+  tags: [flatpak]
+
+- name: Create Debian package
+  include_tasks: build-deb.yml
+  tags: [deb]
+
+- name: Set Linux build facts
+  set_fact:
+    linux_build_success: true
+    linux_packages:
+      aur: "{{ aur_package_path | default('') }}"
+      appimage: "{{ appimage_package_path | default('') }}"
+      flatpak: "{{ flatpak_package_path | default('') }}"
+      deb: "{{ deb_package_path | default('') }}"
+
+- name: Display Linux build results
+  debug:
+    msg:
+      - "Linux build completed successfully"
+      - "Environment: {{ linux_build_env }}"
+      - "AUR package: {{ linux_packages.aur }}"
+      - "AppImage: {{ linux_packages.appimage }}"
+      - "Flatpak: {{ linux_packages.flatpak }}"
+      - "Debian: {{ linux_packages.deb }}"

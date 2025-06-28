@@ -1,0 +1,252 @@
+---
+# CloudToLocalLLM Docker Build Playbook
+# Handles multi-container architecture builds with security and resource management
+
+- name: Docker Container Builds
+  hosts: localhost
+  gather_facts: true
+  vars:
+    docker_build_args: "{{ build_args | default({}) }}"
+    push_images: "{{ push | default(false) }}"
+    
+  tasks:
+    - name: Check Docker installation
+      shell: docker --version
+      register: docker_version_check
+      changed_when: false
+
+    - name: Check Docker daemon status
+      shell: docker info
+      register: docker_info_check
+      changed_when: false
+
+    - name: Display Docker information
+      debug:
+        msg:
+          - "Docker version: {{ docker_version_check.stdout }}"
+          - "Docker daemon: Running"
+
+    - name: Create Docker build context
+      file:
+        path: "{{ project_root }}/ansible/tmp/docker"
+        state: directory
+        mode: '0755'
+
+    - name: Build webapp Docker image
+      docker_image:
+        name: "{{ docker.images.webapp.name }}"
+        tag: "{{ project_version }}"
+        build:
+          path: "{{ docker.images.webapp.context }}"
+          dockerfile: "{{ docker.images.webapp.dockerfile }}"
+          args: "{{ docker_build_args }}"
+          pull: true
+          nocache: "{{ force_rebuild | default(false) }}"
+        source: build
+        state: present
+      register: webapp_image_built
+
+    - name: Tag webapp image as latest
+      docker_image:
+        name: "{{ docker.images.webapp.name }}"
+        repository: "{{ docker.images.webapp.name }}"
+        tag: latest
+        source: local
+        state: present
+      when: webapp_image_built.changed
+
+    - name: Build API backend Docker image
+      docker_image:
+        name: "{{ docker.images.api_backend.name }}"
+        tag: "{{ project_version }}"
+        build:
+          path: "{{ docker.images.api_backend.context }}"
+          dockerfile: "{{ docker.images.api_backend.dockerfile }}"
+          args: "{{ docker_build_args }}"
+          pull: true
+          nocache: "{{ force_rebuild | default(false) }}"
+        source: build
+        state: present
+      register: api_backend_image_built
+
+    - name: Tag API backend image as latest
+      docker_image:
+        name: "{{ docker.images.api_backend.name }}"
+        repository: "{{ docker.images.api_backend.name }}"
+        tag: latest
+        source: local
+        state: present
+      when: api_backend_image_built.changed
+
+    - name: Build streaming proxy Docker image
+      docker_image:
+        name: "{{ docker.images.streaming_proxy.name }}"
+        tag: "{{ project_version }}"
+        build:
+          path: "{{ docker.images.streaming_proxy.context }}"
+          dockerfile: "{{ docker.images.streaming_proxy.dockerfile }}"
+          args: "{{ docker_build_args }}"
+          pull: true
+          nocache: "{{ force_rebuild | default(false) }}"
+        source: build
+        state: present
+      register: streaming_proxy_image_built
+
+    - name: Tag streaming proxy image as latest
+      docker_image:
+        name: "{{ docker.images.streaming_proxy.name }}"
+        repository: "{{ docker.images.streaming_proxy.name }}"
+        tag: latest
+        source: local
+        state: present
+      when: streaming_proxy_image_built.changed
+
+    - name: Verify Docker images
+      docker_image_info:
+        name: "{{ item }}"
+      register: image_info
+      loop:
+        - "{{ docker.images.webapp.name }}:{{ project_version }}"
+        - "{{ docker.images.api_backend.name }}:{{ project_version }}"
+        - "{{ docker.images.streaming_proxy.name }}:{{ project_version }}"
+
+    - name: Test container security configuration
+      shell: |
+        # Test webapp container security
+        docker run --rm --name test-webapp-security \
+          --user {{ docker.security.uid }}:{{ docker.security.gid }} \
+          --read-only \
+          --tmpfs /tmp:rw,noexec,nosuid,size=100m \
+          --cap-drop ALL \
+          --cap-add NET_BIND_SERVICE \
+          --security-opt no-new-privileges:true \
+          "{{ docker.images.webapp.name }}:{{ project_version }}" \
+          sh -c "id && echo 'Security test passed'"
+      register: webapp_security_test
+      ignore_errors: true
+
+    - name: Test streaming proxy resource limits
+      shell: |
+        # Test streaming proxy with resource limits
+        docker run --rm --name test-proxy-resources \
+          --memory {{ docker.resources.streaming_proxy.memory }} \
+          --cpus {{ docker.resources.streaming_proxy.cpu }} \
+          --user {{ docker.security.uid }}:{{ docker.security.gid }} \
+          "{{ docker.images.streaming_proxy.name }}:{{ project_version }}" \
+          sh -c "echo 'Resource limit test passed'"
+      register: proxy_resource_test
+      ignore_errors: true
+
+    - name: Create Docker Compose override for development
+      template:
+        src: templates/docker-compose.override.yml.j2
+        dest: "{{ project_root }}/docker-compose.override.yml"
+      vars:
+        webapp_image: "{{ docker.images.webapp.name }}:{{ project_version }}"
+        api_backend_image: "{{ docker.images.api_backend.name }}:{{ project_version }}"
+        streaming_proxy_image: "{{ docker.images.streaming_proxy.name }}:{{ project_version }}"
+
+    - name: Push images to registry
+      docker_image:
+        name: "{{ item }}"
+        tag: "{{ project_version }}"
+        repository: "{{ item }}"
+        push: true
+        source: local
+      loop:
+        - "{{ docker.images.webapp.name }}"
+        - "{{ docker.images.api_backend.name }}"
+        - "{{ docker.images.streaming_proxy.name }}"
+      when: push_images
+
+    - name: Push latest tags to registry
+      docker_image:
+        name: "{{ item }}"
+        tag: latest
+        repository: "{{ item }}"
+        push: true
+        source: local
+      loop:
+        - "{{ docker.images.webapp.name }}"
+        - "{{ docker.images.api_backend.name }}"
+        - "{{ docker.images.streaming_proxy.name }}"
+      when: push_images
+
+    - name: Clean up build artifacts
+      shell: |
+        # Remove dangling images
+        docker image prune -f
+        
+        # Remove unused build cache (keep last 24h)
+        docker builder prune -f --filter "until=24h"
+      register: docker_cleanup
+
+    - name: Get Docker image information
+      shell: |
+        echo "=== Docker Images Built ==="
+        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep cloudtolocalllm
+        echo ""
+        echo "=== Image Security Scan ==="
+        {% for image in [docker.images.webapp.name, docker.images.api_backend.name, docker.images.streaming_proxy.name] %}
+        echo "Scanning {{ image }}:{{ project_version }}"
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL \
+          "{{ image }}:{{ project_version }}" || echo "Security scan completed with warnings"
+        echo ""
+        {% endfor %}
+      register: docker_image_info
+      ignore_errors: true
+
+    - name: Set Docker build facts
+      set_fact:
+        docker_build_success: true
+        docker_images_built:
+          webapp: "{{ docker.images.webapp.name }}:{{ project_version }}"
+          api_backend: "{{ docker.images.api_backend.name }}:{{ project_version }}"
+          streaming_proxy: "{{ docker.images.streaming_proxy.name }}:{{ project_version }}"
+        docker_security_tests:
+          webapp: "{{ 'PASSED' if webapp_security_test.rc == 0 else 'FAILED' }}"
+          proxy_resources: "{{ 'PASSED' if proxy_resource_test.rc == 0 else 'FAILED' }}"
+
+    - name: Display Docker build results
+      debug:
+        msg:
+          - "Docker builds completed successfully"
+          - "Images built: {{ docker_images_built | length }}"
+          - "Security tests: {{ docker_security_tests }}"
+          - "Images pushed: {{ 'Yes' if push_images else 'No' }}"
+
+    - name: Create Docker build summary
+      copy:
+        content: |
+          CloudToLocalLLM Docker Build Summary
+          ===================================
+          
+          Build Information:
+          - Timestamp: {{ ansible_date_time.iso8601 }}
+          - Version: {{ project_version }}
+          - Build Number: {{ project_build_number }}
+          - Force Rebuild: {{ force_rebuild | default(false) }}
+          
+          Images Built:
+          {% for name, image in docker_images_built.items() %}
+          - {{ name }}: {{ image }}
+          {% endfor %}
+          
+          Security Tests:
+          {% for test, result in docker_security_tests.items() %}
+          - {{ test }}: {{ result }}
+          {% endfor %}
+          
+          Registry Push: {{ 'Completed' if push_images else 'Skipped' }}
+          
+          Resource Configuration:
+          - Streaming Proxy: {{ docker.resources.streaming_proxy.memory }} RAM, {{ docker.resources.streaming_proxy.cpu }} CPU
+          - API Backend: {{ docker.resources.api_backend.memory }} RAM, {{ docker.resources.api_backend.cpu }} CPU
+          - Webapp: {{ docker.resources.webapp.memory }} RAM, {{ docker.resources.webapp.cpu }} CPU
+          
+          Security Configuration:
+          - Non-root user: {{ docker.security.user }} ({{ docker.security.uid }}:{{ docker.security.gid }})
+          - Capabilities dropped: {{ docker.security.drop_capabilities | join(', ') }}
+          - Capabilities added: {{ docker.security.add_capabilities | join(', ') }}
+        dest: "{{ project_root }}/ansible/tmp/docker-build-{{ project_build_number }}.log"

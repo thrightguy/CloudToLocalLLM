@@ -1,0 +1,77 @@
+---
+# CloudToLocalLLM Cross-Platform Package Building Playbook
+# Handles Windows, Linux, and Web builds with proper platform abstraction
+
+- name: Cross-Platform Package Building
+  hosts: localhost
+  gather_facts: true
+  vars:
+    build_platforms: "{{ platforms | default(['windows', 'linux', 'web']) }}"
+    clean_build: "{{ clean | default(true) }}"
+    
+  tasks:
+    - name: Create build directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ project_root }}/dist"
+        - "{{ project_root }}/dist/windows"
+        - "{{ project_root }}/dist/linux"
+        - "{{ project_root }}/dist/web"
+        - "{{ project_root }}/ansible/tmp"
+
+    - name: Check Flutter installation
+      shell: flutter --version
+      register: flutter_version_check
+      changed_when: false
+      failed_when: flutter_version_check.rc != 0
+
+    - name: Display Flutter version
+      debug:
+        msg: "Flutter version: {{ flutter_version_check.stdout_lines[0] }}"
+
+    - name: Clean Flutter build cache
+      shell: flutter clean
+      args:
+        chdir: "{{ project_root }}"
+      when: clean_build
+      register: flutter_clean
+
+    - name: Get Flutter dependencies
+      shell: flutter pub get
+      args:
+        chdir: "{{ project_root }}"
+      register: flutter_pub_get
+
+    - name: Build Windows packages
+      include_tasks: tasks/build-windows.yml
+      when: "'windows' in build_platforms"
+      tags: [windows]
+
+    - name: Build Linux packages
+      include_tasks: tasks/build-linux.yml
+      when: "'linux' in build_platforms"
+      tags: [linux]
+
+    - name: Build Web application
+      include_tasks: tasks/build-web.yml
+      when: "'web' in build_platforms"
+      tags: [web]
+
+    - name: Generate build summary
+      template:
+        src: templates/build-summary.j2
+        dest: "{{ project_root }}/ansible/tmp/build-summary-{{ project_build_number }}.log"
+      vars:
+        build_timestamp: "{{ ansible_date_time.iso8601 }}"
+        build_platforms_used: "{{ build_platforms }}"
+
+    - name: Display build completion
+      debug:
+        msg:
+          - "Cross-platform build completed successfully"
+          - "Platforms: {{ build_platforms | join(', ') }}"
+          - "Version: {{ project_version | default('unknown') }}"
+          - "Build: {{ project_build_number | default('unknown') }}"

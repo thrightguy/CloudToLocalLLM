@@ -1,0 +1,177 @@
+---
+# CloudToLocalLLM GitHub Release Management Playbook
+# Handles GitHub release creation and asset uploading
+
+- name: GitHub Release Management
+  hosts: localhost
+  gather_facts: true
+  vars:
+    force_recreate: "{{ force | default(false) }}"
+    draft_release: "{{ draft | default(false) }}"
+    prerelease: "{{ prerelease | default(false) }}"
+    
+  tasks:
+    - name: Check GitHub CLI installation
+      shell: gh --version
+      register: gh_version_check
+      changed_when: false
+      failed_when: false
+
+    - name: Install GitHub CLI if not present
+      package:
+        name: gh
+        state: present
+      when: gh_version_check.rc != 0
+      become: true
+
+    - name: Check GitHub authentication
+      shell: gh auth status
+      register: gh_auth_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if GitHub not authenticated
+      fail:
+        msg: |
+          GitHub CLI is not authenticated. Please run:
+          gh auth login
+      when: gh_auth_check.rc != 0
+
+    - name: Set release tag
+      set_fact:
+        release_tag: "v{{ project_version }}"
+
+    - name: Check if release already exists
+      shell: |
+        gh release view "{{ release_tag }}" --repo "{{ github.owner }}/{{ github.repo }}"
+      register: existing_release_check
+      changed_when: false
+      failed_when: false
+
+    - name: Delete existing release if force recreate
+      shell: |
+        gh release delete "{{ release_tag }}" --repo "{{ github.owner }}/{{ github.repo }}" --yes
+        git tag -d "{{ release_tag }}" 2>/dev/null || true
+        git push origin --delete "{{ release_tag }}" 2>/dev/null || true
+      when: existing_release_check.rc == 0 and force_recreate
+      register: release_deleted
+
+    - name: Fail if release exists and not forcing
+      fail:
+        msg: "Release {{ release_tag }} already exists. Use force=true to recreate."
+      when: existing_release_check.rc == 0 and not force_recreate
+
+    - name: Generate release notes
+      template:
+        src: templates/release-notes.j2
+        dest: "{{ project_root }}/ansible/tmp/release-notes-{{ project_version }}.md"
+      vars:
+        version: "{{ project_version }}"
+        build_number: "{{ project_build_number }}"
+        release_date: "{{ ansible_date_time.date }}"
+
+    - name: Create and push git tag
+      shell: |
+        cd "{{ project_root }}"
+        git tag -a "{{ release_tag }}" -m "CloudToLocalLLM {{ project_version }}"
+        git push origin "{{ release_tag }}"
+      register: git_tag_created
+
+    - name: Collect release assets
+      find:
+        paths:
+          - "{{ project_root }}/dist/windows"
+          - "{{ project_root }}/dist/linux"
+        patterns:
+          - "*.zip"
+          - "*.tar.gz"
+          - "*.deb"
+          - "*.AppImage"
+          - "*.sha256"
+        recurse: false
+      register: release_assets_found
+
+    - name: Verify required assets exist
+      stat:
+        path: "{{ item }}"
+      register: asset_checks
+      loop:
+        - "{{ project_root }}/dist/windows/cloudtolocalllm-{{ project_version }}-portable.zip"
+        - "{{ project_root }}/dist/linux/cloudtolocalllm-{{ project_version }}-x86_64.tar.gz"
+      failed_when: not asset_checks.results[item_index].stat.exists
+      loop_control:
+        index_var: item_index
+
+    - name: Create GitHub release
+      shell: |
+        cd "{{ project_root }}"
+        gh release create "{{ release_tag }}" \
+          --repo "{{ github.owner }}/{{ github.repo }}" \
+          --title "CloudToLocalLLM {{ project_version }}" \
+          --notes-file "ansible/tmp/release-notes-{{ project_version }}.md" \
+          {% if draft_release %}--draft{% endif %} \
+          {% if prerelease %}--prerelease{% endif %} \
+          {% for asset in release_assets_found.files %}"{{ asset.path }}"{% if not loop.last %} \{% endif %}
+          {% endfor %}
+      register: github_release_created
+
+    - name: Get release information
+      shell: |
+        gh release view "{{ release_tag }}" --repo "{{ github.owner }}/{{ github.repo }}" --json url,id,tagName,name,publishedAt
+      register: release_info_result
+      changed_when: false
+
+    - name: Parse release information
+      set_fact:
+        release_info: "{{ release_info_result.stdout | from_json }}"
+
+    - name: Verify asset uploads
+      shell: |
+        gh release view "{{ release_tag }}" --repo "{{ github.owner }}/{{ github.repo }}" --json assets
+      register: release_assets_result
+      changed_when: false
+
+    - name: Parse release assets
+      set_fact:
+        uploaded_assets: "{{ (release_assets_result.stdout | from_json).assets }}"
+
+    - name: Display release summary
+      debug:
+        msg:
+          - "GitHub release created successfully"
+          - "Release URL: {{ release_info.url }}"
+          - "Release ID: {{ release_info.id }}"
+          - "Tag: {{ release_info.tagName }}"
+          - "Published: {{ release_info.publishedAt }}"
+          - "Assets uploaded: {{ uploaded_assets | length }}"
+
+    - name: Create release summary file
+      copy:
+        content: |
+          CloudToLocalLLM GitHub Release Summary
+          ====================================
+          
+          Release Information:
+          - Version: {{ project_version }}
+          - Tag: {{ release_tag }}
+          - URL: {{ release_info.url }}
+          - ID: {{ release_info.id }}
+          - Published: {{ release_info.publishedAt }}
+          
+          Assets Uploaded:
+          {% for asset in uploaded_assets %}
+          - {{ asset.name }} ({{ asset.size }} bytes)
+          {% endfor %}
+          
+          Build Information:
+          - Build Number: {{ project_build_number }}
+          - Build Date: {{ ansible_date_time.iso8601 }}
+          - Ansible Host: {{ ansible_hostname }}
+        dest: "{{ project_root }}/ansible/tmp/github-release-{{ project_version }}.log"
+
+    - name: Set release facts for other playbooks
+      set_fact:
+        github_release_created: true
+        github_release_url: "{{ release_info.url }}"
+        github_release_id: "{{ release_info.id }}"
+        github_release_tag: "{{ release_tag }}"

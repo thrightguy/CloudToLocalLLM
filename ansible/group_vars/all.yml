@@ -1,0 +1,165 @@
+---
+# CloudToLocalLLM Global Variables
+
+# Project Information
+project:
+  name: CloudToLocalLLM
+  description: "Flutter-based application bridging cloud-hosted web interfaces with local LLM instances"
+  homepage: https://cloudtolocalllm.online
+  repository: https://github.com/imrightguy/CloudToLocalLLM
+
+# Version Management
+version:
+  format: semantic  # major.minor.patch
+  build_number_format: timestamp  # YYYYMMDDHHMM
+  auto_increment: true
+  sync_files:
+    - path: pubspec.yaml
+      pattern: "^version:"
+      format: "version: {{ version }}+{{ build_number }}"
+    - path: assets/version.json
+      format: json
+      fields:
+        version: "{{ version }}"
+        buildNumber: "{{ build_number }}"
+        buildDate: "{{ ansible_date_time.iso8601 }}"
+    - path: lib/shared/lib/version.dart
+      pattern: "const String appVersion"
+      format: 'const String appVersion = "{{ version }}";'
+    - path: lib/config/app_config.dart
+      pattern: "static const String version"
+      format: 'static const String version = "{{ version }}";'
+
+# Build Configuration
+build:
+  clean_before_build: true
+  parallel_builds: true
+  max_parallel_jobs: 4
+  timeout: 1800  # 30 minutes
+  
+  flutter:
+    channel: stable
+    enable_web: true
+    enable_desktop: true
+    enable_linux: true
+    build_args:
+      web: "--release --no-tree-shake-icons"
+      windows: "--release"
+      linux: "--release"
+  
+  packages:
+    windows:
+      - portable_zip
+    linux:
+      - aur
+      - appimage
+      - flatpak
+      - deb
+    
+# Docker Configuration
+docker:
+  registry: docker.io
+  namespace: cloudtolocalllm
+  
+  images:
+    webapp:
+      name: "{{ docker.namespace }}/webapp"
+      dockerfile: config/docker/Dockerfile.web
+      context: "{{ project_root }}"
+    
+    api_backend:
+      name: "{{ docker.namespace }}/api-backend"
+      dockerfile: config/docker/Dockerfile.api-backend
+      context: "{{ project_root }}"
+    
+    streaming_proxy:
+      name: "{{ docker.namespace }}/streaming-proxy"
+      dockerfile: streaming-proxy/Dockerfile
+      context: "{{ project_root }}/streaming-proxy"
+  
+  security:
+    user: proxyuser
+    uid: 1001
+    gid: 1001
+    drop_capabilities:
+      - ALL
+    add_capabilities:
+      - NET_BIND_SERVICE
+  
+  resources:
+    streaming_proxy:
+      memory: 512m
+      cpu: 0.5
+    api_backend:
+      memory: 1g
+      cpu: 1.0
+    webapp:
+      memory: 512m
+      cpu: 0.5
+
+# GitHub Configuration
+github:
+  api_url: https://api.github.com
+  upload_url: https://uploads.github.com
+  owner: imrightguy
+  repo: CloudToLocalLLM
+  
+  release:
+    draft: false
+    prerelease: false
+    generate_release_notes: true
+    
+  assets:
+    - name: "cloudtolocalllm-{{ version }}-portable.zip"
+      path: "dist/windows/cloudtolocalllm-{{ version }}-portable.zip"
+      content_type: application/zip
+    - name: "cloudtolocalllm-{{ version }}-x86_64.tar.gz"
+      path: "dist/linux/cloudtolocalllm-{{ version }}-x86_64.tar.gz"
+      content_type: application/gzip
+    - name: "cloudtolocalllm_{{ version }}_amd64.deb"
+      path: "dist/linux/cloudtolocalllm_{{ version }}_amd64.deb"
+      content_type: application/vnd.debian.binary-package
+    - name: "cloudtolocalllm-{{ version }}-x86_64.AppImage"
+      path: "dist/linux/cloudtolocalllm-{{ version }}-x86_64.AppImage"
+      content_type: application/octet-stream
+
+# VPS Configuration
+vps:
+  host: app.cloudtolocalllm.online
+  user: cloudllm
+  project_dir: /opt/cloudtolocalllm
+  backup_dir: /opt/cloudtolocalllm/backups
+  
+  services:
+    - webapp
+    - api-backend
+    - streaming-proxy
+  
+  deployment:
+    strategy: rolling
+    max_retries: 3
+    retry_delay: 5
+    health_check_timeout: 60
+    
+  monitoring:
+    enabled: true
+    endpoints:
+      - url: https://app.cloudtolocalllm.online/health
+        expected_status: 200
+      - url: https://app.cloudtolocalllm.online/version.json
+        expected_status: 200
+
+# Security Configuration
+security:
+  auth0:
+    domain: dev-xafu7oedkd5wlrbo.us.auth0.com
+    audience: https://app.cloudtolocalllm.online
+  
+  ssl:
+    enabled: true
+    cert_path: /etc/letsencrypt/live/cloudtolocalllm.online
+    
+  container_security:
+    run_as_non_root: true
+    read_only_root_filesystem: false
+    allow_privilege_escalation: false

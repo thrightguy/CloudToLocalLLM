@@ -1,0 +1,165 @@
+---
+# CloudToLocalLLM Version Management Playbook
+# Handles version synchronization across multiple files with timestamp-based build numbers
+
+- name: Version Management
+  hosts: localhost
+  gather_facts: true
+  vars:
+    increment_type: "{{ increment | default('build') }}"  # major, minor, patch, build
+    
+  tasks:
+    - name: Create version management directory
+      file:
+        path: "{{ project_root }}/ansible/tmp"
+        state: directory
+        mode: '0755'
+
+    - name: Get current version from pubspec.yaml
+      shell: |
+        grep "^version:" "{{ project_root }}/pubspec.yaml" | cut -d' ' -f2 | cut -d'+' -f1
+      register: current_version_result
+      changed_when: false
+
+    - name: Set current version fact
+      set_fact:
+        current_version: "{{ current_version_result.stdout }}"
+
+    - name: Parse semantic version components
+      set_fact:
+        version_major: "{{ current_version.split('.')[0] | int }}"
+        version_minor: "{{ current_version.split('.')[1] | int }}"
+        version_patch: "{{ current_version.split('.')[2] | int }}"
+
+    - name: Calculate new version based on increment type
+      set_fact:
+        new_version: >-
+          {%- if increment_type == 'major' -%}
+          {{ (version_major + 1) }}.0.0
+          {%- elif increment_type == 'minor' -%}
+          {{ version_major }}.{{ (version_minor + 1) }}.0
+          {%- elif increment_type == 'patch' -%}
+          {{ version_major }}.{{ version_minor }}.{{ (version_patch + 1) }}
+          {%- else -%}
+          {{ current_version }}
+          {%- endif -%}
+
+    - name: Generate timestamp-based build number
+      set_fact:
+        build_number: "{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}"
+
+    - name: Display version information
+      debug:
+        msg:
+          - "Current version: {{ current_version }}"
+          - "New version: {{ new_version }}"
+          - "Build number: {{ build_number }}"
+          - "Increment type: {{ increment_type }}"
+
+    - name: Update pubspec.yaml version
+      lineinfile:
+        path: "{{ project_root }}/pubspec.yaml"
+        regexp: '^version:'
+        line: "version: {{ new_version }}+{{ build_number }}"
+        backup: true
+      register: pubspec_updated
+
+    - name: Update assets/version.json
+      copy:
+        content: |
+          {
+            "version": "{{ new_version }}",
+            "buildNumber": "{{ build_number }}",
+            "buildDate": "{{ ansible_date_time.iso8601 }}",
+            "gitCommit": "{{ ansible_env.GIT_COMMIT | default('unknown') }}",
+            "buildEnvironment": "ansible"
+          }
+        dest: "{{ project_root }}/assets/version.json"
+        backup: true
+      register: version_json_updated
+
+    - name: Update lib/shared/lib/version.dart
+      lineinfile:
+        path: "{{ project_root }}/lib/shared/lib/version.dart"
+        regexp: 'const String appVersion'
+        line: 'const String appVersion = "{{ new_version }}";'
+        backup: true
+      register: version_dart_updated
+
+    - name: Update lib/config/app_config.dart
+      lineinfile:
+        path: "{{ project_root }}/lib/config/app_config.dart"
+        regexp: 'static const String version'
+        line: '  static const String version = "{{ new_version }}";'
+        backup: true
+      register: app_config_updated
+
+    - name: Verify version consistency
+      shell: |
+        echo "Checking version consistency across files..."
+        
+        # Check pubspec.yaml
+        pubspec_version=$(grep "^version:" "{{ project_root }}/pubspec.yaml" | cut -d' ' -f2 | cut -d'+' -f1)
+        echo "pubspec.yaml: $pubspec_version"
+        
+        # Check version.json
+        json_version=$(jq -r '.version' "{{ project_root }}/assets/version.json")
+        echo "version.json: $json_version"
+        
+        # Check version.dart
+        dart_version=$(grep "const String appVersion" "{{ project_root }}/lib/shared/lib/version.dart" | sed 's/.*"\(.*\)".*/\1/')
+        echo "version.dart: $dart_version"
+        
+        # Check app_config.dart
+        config_version=$(grep "static const String version" "{{ project_root }}/lib/config/app_config.dart" | sed 's/.*"\(.*\)".*/\1/')
+        echo "app_config.dart: $config_version"
+        
+        # Verify all versions match
+        if [ "$pubspec_version" = "$json_version" ] && [ "$json_version" = "$dart_version" ] && [ "$dart_version" = "$config_version" ]; then
+          echo "✓ All versions are consistent: $pubspec_version"
+          exit 0
+        else
+          echo "✗ Version inconsistency detected"
+          exit 1
+        fi
+      register: version_consistency_check
+      changed_when: false
+
+    - name: Set version facts for other playbooks
+      set_fact:
+        project_version: "{{ new_version }}"
+        project_build_number: "{{ build_number }}"
+        version_updated: >-
+          {{ pubspec_updated.changed or 
+             version_json_updated.changed or 
+             version_dart_updated.changed or 
+             app_config_updated.changed }}
+
+    - name: Create version summary
+      copy:
+        content: |
+          CloudToLocalLLM Version Update Summary
+          ====================================
+          
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          Previous Version: {{ current_version }}
+          New Version: {{ new_version }}
+          Build Number: {{ build_number }}
+          Increment Type: {{ increment_type }}
+          
+          Files Updated:
+          - pubspec.yaml: {{ 'Yes' if pubspec_updated.changed else 'No' }}
+          - assets/version.json: {{ 'Yes' if version_json_updated.changed else 'No' }}
+          - lib/shared/lib/version.dart: {{ 'Yes' if version_dart_updated.changed else 'No' }}
+          - lib/config/app_config.dart: {{ 'Yes' if app_config_updated.changed else 'No' }}
+          
+          Version Consistency: {{ 'Verified' if version_consistency_check.rc == 0 else 'Failed' }}
+        dest: "{{ project_root }}/ansible/tmp/version-update-{{ build_number }}.log"
+
+    - name: Display version update summary
+      debug:
+        msg:
+          - "Version management completed successfully"
+          - "Version: {{ new_version }}"
+          - "Build: {{ build_number }}"
+          - "Files updated: {{ version_updated }}"

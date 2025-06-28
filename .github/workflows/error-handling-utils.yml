@@ -1,0 +1,310 @@
+name: Error Handling Utilities
+
+on:
+  workflow_call:
+    inputs:
+      max_retries:
+        description: 'Maximum number of retries for failed operations'
+        required: false
+        type: number
+        default: 3
+      retry_delay:
+        description: 'Delay between retries in seconds'
+        required: false
+        type: number
+        default: 30
+      notification_webhook:
+        description: 'Webhook URL for failure notifications'
+        required: false
+        type: string
+      enable_rollback:
+        description: 'Enable automatic rollback on deployment failure'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  # Utility job for error handling and retry logic
+  error-handling-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup retry function
+        run: |
+          # Create a retry function for use in subsequent steps
+          cat > retry.sh << 'EOF'
+          #!/bin/bash
+          
+          retry() {
+            local max_attempts=$1
+            local delay=$2
+            local command="${@:3}"
+            local attempt=1
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "🔄 Attempt $attempt of $max_attempts: $command"
+              
+              if eval "$command"; then
+                echo "✅ Command succeeded on attempt $attempt"
+                return 0
+              else
+                echo "❌ Command failed on attempt $attempt"
+                
+                if [ $attempt -lt $max_attempts ]; then
+                  echo "⏳ Waiting ${delay}s before retry..."
+                  sleep $delay
+                else
+                  echo "💥 All attempts failed"
+                  return 1
+                fi
+              fi
+              
+              ((attempt++))
+            done
+          }
+          
+          # Export function for use in other scripts
+          export -f retry
+          EOF
+          
+          chmod +x retry.sh
+          echo "Retry function created"
+
+      - name: Example retry usage
+        run: |
+          source retry.sh
+          
+          # Example: Retry a command that might fail
+          retry ${{ inputs.max_retries }} ${{ inputs.retry_delay }} "echo 'This command succeeds'"
+          
+          # Example: Retry with exponential backoff
+          exponential_retry() {
+            local max_attempts=$1
+            local base_delay=$2
+            local command="${@:3}"
+            local attempt=1
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "🔄 Exponential retry attempt $attempt of $max_attempts: $command"
+              
+              if eval "$command"; then
+                echo "✅ Command succeeded on attempt $attempt"
+                return 0
+              else
+                echo "❌ Command failed on attempt $attempt"
+                
+                if [ $attempt -lt $max_attempts ]; then
+                  local delay=$((base_delay * (2 ** (attempt - 1))))
+                  echo "⏳ Exponential backoff: waiting ${delay}s before retry..."
+                  sleep $delay
+                else
+                  echo "💥 All exponential retry attempts failed"
+                  return 1
+                fi
+              fi
+              
+              ((attempt++))
+            done
+          }
+          
+          echo "Exponential retry function demonstrated"
+
+      - name: Network operation with retry
+        run: |
+          source retry.sh
+          
+          # Example: Retry network operations
+          network_retry() {
+            local url=$1
+            local max_attempts=${2:-3}
+            local delay=${3:-10}
+            
+            retry $max_attempts $delay "curl -f --max-time 30 --retry 0 '$url'"
+          }
+          
+          # Test with a reliable endpoint
+          network_retry "https://httpbin.org/status/200" 3 5
+
+      - name: Build operation with retry
+        run: |
+          source retry.sh
+          
+          # Example: Retry build operations with cleanup
+          build_with_retry() {
+            local build_command=$1
+            local max_attempts=${2:-3}
+            local delay=${3:-30}
+            local attempt=1
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "🔨 Build attempt $attempt of $max_attempts"
+              
+              # Clean before each attempt
+              if [ $attempt -gt 1 ]; then
+                echo "🧹 Cleaning before retry..."
+                flutter clean || true
+                rm -rf build/ || true
+              fi
+              
+              if eval "$build_command"; then
+                echo "✅ Build succeeded on attempt $attempt"
+                return 0
+              else
+                echo "❌ Build failed on attempt $attempt"
+                
+                if [ $attempt -lt $max_attempts ]; then
+                  echo "⏳ Waiting ${delay}s before build retry..."
+                  sleep $delay
+                else
+                  echo "💥 All build attempts failed"
+                  return 1
+                fi
+              fi
+              
+              ((attempt++))
+            done
+          }
+          
+          echo "Build retry function demonstrated"
+
+      - name: Deployment with rollback
+        if: ${{ inputs.enable_rollback }}
+        run: |
+          # Example deployment with rollback capability
+          deploy_with_rollback() {
+            local deployment_command=$1
+            local rollback_command=$2
+            local verification_command=$3
+            
+            echo "🚀 Starting deployment with rollback capability..."
+            
+            # Create backup/checkpoint
+            echo "💾 Creating deployment checkpoint..."
+            CHECKPOINT_ID=$(date +%Y%m%d%H%M%S)
+            echo "checkpoint_id=$CHECKPOINT_ID" >> $GITHUB_ENV
+            
+            # Attempt deployment
+            if eval "$deployment_command"; then
+              echo "✅ Deployment command succeeded"
+              
+              # Verify deployment
+              if eval "$verification_command"; then
+                echo "✅ Deployment verification succeeded"
+                return 0
+              else
+                echo "❌ Deployment verification failed, initiating rollback..."
+                eval "$rollback_command" || echo "⚠️ Rollback command failed"
+                return 1
+              fi
+            else
+              echo "❌ Deployment command failed, initiating rollback..."
+              eval "$rollback_command" || echo "⚠️ Rollback command failed"
+              return 1
+            fi
+          }
+          
+          echo "Deployment with rollback function demonstrated"
+
+      - name: Error notification
+        if: failure() && inputs.notification_webhook
+        run: |
+          # Send failure notification
+          PAYLOAD=$(cat << EOF
+          {
+            "text": "🚨 GitHub Actions Workflow Failed",
+            "attachments": [
+              {
+                "color": "danger",
+                "fields": [
+                  {
+                    "title": "Repository",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Workflow",
+                    "value": "${{ github.workflow }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Commit",
+                    "value": "${{ github.sha }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Run URL",
+                    "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "short": false
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          )
+          
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "${{ inputs.notification_webhook }}" || echo "Failed to send notification"
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          echo "🧹 Performing cleanup after failure..."
+          
+          # Clean up temporary files
+          rm -rf /tmp/github-actions-* || true
+          
+          # Clean up Docker resources if needed
+          docker system prune -f || true
+          
+          # Clean up build artifacts
+          rm -rf build/ dist/ || true
+          
+          echo "✅ Cleanup completed"
+
+      - name: Success notification
+        if: success() && inputs.notification_webhook
+        run: |
+          # Send success notification
+          PAYLOAD=$(cat << EOF
+          {
+            "text": "✅ GitHub Actions Workflow Succeeded",
+            "attachments": [
+              {
+                "color": "good",
+                "fields": [
+                  {
+                    "title": "Repository",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Workflow",
+                    "value": "${{ github.workflow }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          )
+          
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "${{ inputs.notification_webhook }}" || echo "Failed to send notification"

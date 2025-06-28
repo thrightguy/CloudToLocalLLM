@@ -173,9 +173,11 @@ For detailed information about any component, see the respective README files in
 This project includes a variety of scripts to automate common tasks. Here are some of the key ones:
 *   `scripts/deploy/update_and_deploy.sh`: Deploys the multi-container architecture to a VPS.
 *   `scripts/deploy/complete_automated_deployment.sh`: A higher-level script for automated deployment to a live VPS environment.
-*   `scripts/create_aur_binary_package.sh`: Builds and packages the unified Flutter application for the Arch User Repository (AUR). This is a key script for creating AUR distributables.
+*   `scripts/packaging/build_aur_universal.sh`: **Universal AUR builder** - automatically detects platform and uses native or Docker-based building.
+*   `scripts/docker/build-aur-docker.sh`: Docker-based AUR package builder for Ubuntu systems using Arch Linux container.
+*   `scripts/create_aur_binary_package.sh`: Legacy AUR package builder (use universal builder instead).
 *   `scripts/build_unified_package.sh`: Builds and packages the unified Flutter application for static download distribution (e.g., a `.tar.gz` archive).
-*   `scripts/packaging/build_aur.sh`: Builds AUR packages for distribution.
+*   `scripts/packaging/build_aur.sh`: Native AUR package builder for Arch Linux systems.
 *   `scripts/build_unified_package.sh`: A comprehensive script that builds various components (Flutter app, potentially others) and assembles them into a unified structure, often used as a precursor to packaging scripts.
 *   `scripts/version_manager.sh`: Manages project version numbers across different files.
 *   `scripts/deploy/complete_automated_deployment.sh`: Orchestrates a full deployment workflow including versioning, building, and distributing.
@@ -197,14 +199,31 @@ Uses `scripts/build_unified_package.sh`. This script typically:
 The output will be in the `dist/` directory.
 
 ### Linux (AUR Package)
-Uses `scripts/create_aur_binary_package.sh`. This script:
-1.  Builds the Flutter application.
-2.  Prepares the package structure and metadata for AUR.
-3.  Generates files needed for the AUR submission.
+**Cross-Platform Support**: AUR packages can now be built on Ubuntu systems using Docker!
+
+**Universal Builder** (Recommended):
+```bash
+# Auto-detects platform (native on Arch, Docker on Ubuntu)
+./scripts/packaging/build_aur_universal.sh
+```
+
+**Platform-Specific Methods**:
+- **Arch Linux**: Uses native `scripts/packaging/build_aur.sh`
+- **Ubuntu/Other**: Uses Docker container with Arch Linux environment
+- **Manual Docker**: `./scripts/docker/build-aur-docker.sh build`
+
+**Legacy Method**:
 ```bash
 ./scripts/create_aur_binary_package.sh
 ```
-The output will be in the `dist/` directory, and files in `aur-package/` will be updated.
+
+The Docker-based solution provides:
+- Complete Arch Linux environment in container
+- Pre-installed Flutter SDK and build tools
+- Automatic file permission handling
+- Integration with existing deployment workflows
+
+For detailed Docker setup and usage, see [scripts/docker/README.md](scripts/docker/README.md).
 
 ### Windows
 **Status**: Available (v3.6.0+)

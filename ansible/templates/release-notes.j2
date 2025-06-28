@@ -1,0 +1,94 @@
+# CloudToLocalLLM {{ version }}
+
+## 🚀 New Features & Improvements
+
+### Enhanced Architecture
+- **Unified Flutter application** with integrated system tray functionality
+- **Improved deployment workflow** with Ansible automation
+- **Streamlined package distribution** with GitHub releases as primary source
+- **Enhanced build pipeline** with automated version management
+
+### System Integration
+- **Cross-platform compatibility** with Windows, Linux, and Web support
+- **Multi-tenant Docker architecture** with per-user isolation
+- **Authentication-aware system tray** with dynamic state updates
+- **Secure container deployment** with non-root privilege dropping
+
+### Security & Performance
+- **Enhanced authentication flow** with Auth0 PKCE support
+- **Container security hardening** with capability dropping and resource limits
+- **Improved error handling** and comprehensive logging
+- **Memory optimization** and resource management
+
+### User Interface
+- **Material Design 3 compliance** with comprehensive dark theme
+- **Production-quality interface** matching homepage design
+- **ChatGPT-like chat interface** for improved user experience
+- **Responsive design** with mobile-first breakpoints
+
+## 📦 Installation
+
+### Linux (AUR Package)
+```bash
+# Install from AUR (recommended)
+yay -S cloudtolocalllm
+
+# Or build manually
+git clone https://aur.archlinux.org/cloudtolocalllm.git
+cd cloudtolocalllm
+makepkg -si
+```
+
+### Windows (Portable)
+1. Download the portable package: `cloudtolocalllm-{{ version }}-portable.zip`
+2. Verify integrity: `certutil -hashfile cloudtolocalllm-{{ version }}-portable.zip SHA256`
+3. Extract and run `cloudtolocalllm.exe`
+
+### Manual Installation
+1. Download the binary package: `cloudtolocalllm-{{ version }}-x86_64.tar.gz`
+2. Verify integrity: `sha256sum -c cloudtolocalllm-{{ version }}-x86_64.tar.gz.sha256`
+3. Extract and install according to included instructions
+
+### System Requirements
+- **Linux**: Ubuntu 20.04+, Debian 11+, Arch Linux, or compatible
+- **Windows**: Windows 10 version 1903 or later
+- **Memory**: 4GB RAM minimum, 8GB recommended
+- **Storage**: 2GB available space
+- **Network**: Internet connection for cloud features
+
+## 🔧 Technical Details
+
+### Build Information
+- **Version**: {{ version }}
+- **Build Number**: {{ build_number }}
+- **Build Date**: {{ release_date }}
+- **Flutter Channel**: Stable
+- **Deployment Method**: Ansible Automation
+
+### Container Architecture
+- **Multi-tenant isolation** with SHA256-based user networks
+- **Resource limits**: 512MB RAM, 0.5 CPU per streaming proxy
+- **Security**: Non-root containers with capability dropping
+- **Monitoring**: Health checks and automatic cleanup
+
+### Authentication
+- **Auth0 integration** with PKCE flow
+- **JWT validation** with RS256 algorithm
+- **Platform-specific redirects** for web, desktop, and mobile
+- **Secure token storage** with platform-native encryption
+
+## 🔗 Links
+
+- **Homepage**: https://cloudtolocalllm.online
+- **Web App**: https://app.cloudtolocalllm.online
+- **Documentation**: https://github.com/imrightguy/CloudToLocalLLM/wiki
+- **Issues**: https://github.com/imrightguy/CloudToLocalLLM/issues
+- **Releases**: https://github.com/imrightguy/CloudToLocalLLM/releases
+
+## 🙏 Acknowledgments
+
+Special thanks to the Flutter, Ollama, and open-source communities for their continued support and contributions to this project.
+
+---
+
+**Full Changelog**: https://github.com/imrightguy/CloudToLocalLLM/compare/v{{ version | regex_replace('(\d+)\.(\d+)\.(\d+)', 'v\1.\2.' + (version.split('.')[2] | int - 1) | string) }}...v{{ version }}

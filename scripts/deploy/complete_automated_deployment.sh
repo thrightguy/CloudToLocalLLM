@@ -292,7 +292,7 @@ phase3_multiplatform_build() {
         log "Unified package not found - building with timestamp injection..."
 
         # Build unified package with timestamp injection
-        local build_script="$PROJECT_ROOT/scripts/create_unified_package.sh"
+        local build_script="$PROJECT_ROOT/scripts/build_unified_package.sh"
         if [[ -f "$build_script" ]]; then
             if [[ "$VERBOSE" == "true" ]]; then
                 if ! "$build_script"; then
@@ -349,6 +349,36 @@ phase3_multiplatform_build() {
         fi
 
         log_success "Web application built (fallback mode)"
+    fi
+
+    # Build AUR package using universal builder (Docker on Ubuntu, native on Arch)
+    log_verbose "Building AUR package using universal builder..."
+
+    local aur_build_script="$PROJECT_ROOT/scripts/packaging/build_aur_universal.sh"
+    if [[ -f "$aur_build_script" ]]; then
+        local aur_args=""
+        if [[ "$VERBOSE" == "true" ]]; then
+            aur_args="$aur_args --verbose"
+        fi
+
+        if [[ "$VERBOSE" == "true" ]]; then
+            if ! "$aur_build_script" $aur_args; then
+                log_warning "AUR package build failed - continuing with deployment"
+                log_warning "AUR package may need manual building"
+            else
+                log_success "AUR package built successfully"
+            fi
+        else
+            if ! "$aur_build_script" $aur_args &> /dev/null; then
+                log_warning "AUR package build failed - continuing with deployment"
+                log_warning "AUR package may need manual building"
+            else
+                log_success "AUR package built successfully"
+            fi
+        fi
+    else
+        log_warning "Universal AUR build script not found: $aur_build_script"
+        log_warning "AUR package building skipped"
     fi
 
     log_success "Multi-platform build completed with build-time timestamps"
