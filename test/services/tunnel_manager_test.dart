@@ -1,6 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
 import 'package:cloudtolocalllm/services/tunnel_manager_service.dart';
+import 'package:cloudtolocalllm/services/auth_service.dart';
+import 'package:cloudtolocalllm/services/ngrok_service.dart';
+
+// Generate mocks
+@GenerateMocks([AuthService, NgrokService])
+import 'tunnel_manager_test.mocks.dart';
 
 void main() {
   group('TunnelManagerService', () {
@@ -25,6 +33,10 @@ void main() {
         );
         expect(config.connectionTimeout, equals(10));
         expect(config.healthCheckInterval, equals(30));
+        expect(config.enableNgrok, equals(false));
+        expect(config.ngrokProtocol, equals('http'));
+        expect(config.ngrokLocalPort, equals(11434));
+        expect(config.ngrokLocalHost, equals('localhost'));
       });
 
       test('should update configuration', () async {
@@ -208,6 +220,90 @@ void main() {
         // This test verifies the configuration supports both behaviors
         expect(config.cloudProxyUrl, isNot(contains('localhost')));
         expect(config.cloudProxyUrl, startsWith('https://'));
+      });
+
+      test('should create configuration with ngrok settings', () {
+        final config = TunnelConfig(
+          enableCloudProxy: true,
+          cloudProxyUrl: 'https://test.example.com',
+          connectionTimeout: 15,
+          healthCheckInterval: 45,
+          enableNgrok: true,
+          ngrokAuthToken: 'test-token',
+          ngrokSubdomain: 'test-subdomain',
+          ngrokProtocol: 'https',
+          ngrokLocalPort: 8080,
+          ngrokLocalHost: '127.0.0.1',
+        );
+
+        expect(config.enableNgrok, isTrue);
+        expect(config.ngrokAuthToken, equals('test-token'));
+        expect(config.ngrokSubdomain, equals('test-subdomain'));
+        expect(config.ngrokProtocol, equals('https'));
+        expect(config.ngrokLocalPort, equals(8080));
+        expect(config.ngrokLocalHost, equals('127.0.0.1'));
+      });
+
+      test('should copy configuration with ngrok updates', () {
+        final original = TunnelConfig.defaultConfig();
+        final updated = original.copyWith(
+          enableNgrok: true,
+          ngrokAuthToken: 'new-token',
+          ngrokProtocol: 'https',
+          ngrokLocalPort: 9000,
+        );
+
+        expect(updated.enableNgrok, isTrue);
+        expect(updated.ngrokAuthToken, equals('new-token'));
+        expect(updated.ngrokProtocol, equals('https'));
+        expect(updated.ngrokLocalPort, equals(9000));
+        expect(
+          updated.ngrokLocalHost,
+          equals(original.ngrokLocalHost),
+        ); // unchanged
+      });
+
+      test('should convert to NgrokConfig correctly', () {
+        final tunnelConfig = TunnelConfig(
+          enableCloudProxy: true,
+          cloudProxyUrl: 'https://test.example.com',
+          connectionTimeout: 10,
+          healthCheckInterval: 30,
+          enableNgrok: true,
+          ngrokAuthToken: 'test-token',
+          ngrokSubdomain: 'test-subdomain',
+          ngrokProtocol: 'https',
+          ngrokLocalPort: 8080,
+          ngrokLocalHost: '127.0.0.1',
+        );
+
+        final ngrokConfig = tunnelConfig.toNgrokConfig();
+
+        expect(ngrokConfig.enabled, isTrue);
+        expect(ngrokConfig.authToken, equals('test-token'));
+        expect(ngrokConfig.subdomain, equals('test-subdomain'));
+        expect(ngrokConfig.protocol, equals('https'));
+        expect(ngrokConfig.localPort, equals(8080));
+        expect(ngrokConfig.localHost, equals('127.0.0.1'));
+      });
+    });
+
+    group('Ngrok Integration', () {
+      test('should include ngrok settings in toString', () {
+        final config = TunnelConfig(
+          enableCloudProxy: true,
+          cloudProxyUrl: 'https://test.example.com',
+          connectionTimeout: 10,
+          healthCheckInterval: 30,
+          enableNgrok: true,
+          ngrokProtocol: 'https',
+          ngrokLocalPort: 8080,
+        );
+
+        final str = config.toString();
+        expect(str, contains('enableNgrok: true'));
+        expect(str, contains('ngrokProtocol: https'));
+        expect(str, contains('ngrokLocalPort: 8080'));
       });
     });
   });

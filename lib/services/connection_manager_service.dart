@@ -43,16 +43,25 @@ class ConnectionManagerService extends ChangeNotifier {
   // Getters
   bool get hasLocalConnection => _localOllama.isConnected;
   bool get hasCloudConnection => _tunnelManager.isConnected;
-  bool get hasAnyConnection => hasLocalConnection || hasCloudConnection;
+  bool get hasNgrokConnection => _tunnelManager.hasNgrokTunnel;
+  bool get hasAnyConnection =>
+      hasLocalConnection || hasCloudConnection || hasNgrokConnection;
   String? get selectedModel => _selectedModel;
   List<String> get availableModels => _getAvailableModels();
 
   /// Get the best available connection type
+  /// Fallback hierarchy:
+  /// 1. Local Ollama (if preferred and available)
+  /// 2. Cloud proxy (WebSocket bridge)
+  /// 3. Ngrok tunnel (fallback for cloud proxy issues)
+  /// 4. Local Ollama (fallback if not preferred initially)
   ConnectionType getBestConnectionType() {
     if (_preferLocalOllama && hasLocalConnection) {
       return ConnectionType.local;
     } else if (hasCloudConnection) {
       return ConnectionType.cloud;
+    } else if (hasNgrokConnection) {
+      return ConnectionType.ngrok;
     } else if (hasLocalConnection) {
       return ConnectionType.local;
     } else {
@@ -92,6 +101,22 @@ class ConnectionManagerService extends ChangeNotifier {
           return _cloudStreamingService;
         }
 
+      case ConnectionType.ngrok:
+        // For ngrok connections, we use local Ollama streaming but through the tunnel
+        // The ngrok tunnel exposes the local Ollama instance publicly
+        final streamingService = _localOllama.streamingService;
+        if (streamingService != null && streamingService.connection.isActive) {
+          debugPrint(
+            '🔗 [ConnectionManager] Using local Ollama streaming via ngrok tunnel',
+          );
+          return streamingService;
+        } else {
+          debugPrint(
+            '🔗 [ConnectionManager] Ngrok tunnel available but local Ollama not ready',
+          );
+        }
+        break;
+
       case ConnectionType.none:
         debugPrint('🔗 [ConnectionManager] No streaming service available');
         break;
@@ -122,6 +147,17 @@ class ConnectionManagerService extends ChangeNotifier {
         // Create OllamaService configured for cloud proxy
         final ollamaService = OllamaService();
         return await ollamaService.chat(
+          model: model,
+          message: message,
+          history: history,
+        );
+
+      case ConnectionType.ngrok:
+        debugPrint(
+          '🔗 [ConnectionManager] Using local Ollama via ngrok tunnel for chat',
+        );
+        // For ngrok, we use local Ollama since the tunnel exposes it
+        return await _localOllama.chat(
           model: model,
           message: message,
           history: history,
@@ -213,6 +249,13 @@ class ConnectionManagerService extends ChangeNotifier {
         'error': _tunnelManager.error,
         'status': _tunnelManager.connectionStatus,
       },
+      'ngrok': {
+        'connected': hasNgrokConnection,
+        'tunnelUrl': _tunnelManager.ngrokTunnelUrl,
+        'isSupported': _tunnelManager.ngrokService?.isSupported ?? false,
+        'isRunning': _tunnelManager.ngrokService?.isRunning ?? false,
+        'error': _tunnelManager.ngrokService?.lastError,
+      },
       'active': getBestConnectionType().name,
       'selectedModel': _selectedModel,
     };
@@ -273,4 +316,4 @@ class ConnectionManagerService extends ChangeNotifier {
 }
 
 /// Connection type enumeration
-enum ConnectionType { local, cloud, none }
+enum ConnectionType { local, cloud, ngrok, none }

@@ -25,8 +25,16 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
   late TextEditingController _connectionTimeoutController;
   late TextEditingController _healthCheckIntervalController;
 
+  // Ngrok configuration controllers
+  late TextEditingController _ngrokAuthTokenController;
+  late TextEditingController _ngrokSubdomainController;
+  late TextEditingController _ngrokLocalPortController;
+  late TextEditingController _ngrokLocalHostController;
+
   // Local configuration state (cloud proxy only)
   bool _enableCloudProxy = true;
+  bool _enableNgrok = false;
+  String _ngrokProtocol = 'http';
   bool _isModified = false;
 
   @override
@@ -52,10 +60,31 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
 
     _enableCloudProxy = config.enableCloudProxy;
 
+    // Initialize ngrok controllers
+    _ngrokAuthTokenController = TextEditingController(
+      text: config.ngrokAuthToken ?? '',
+    );
+    _ngrokSubdomainController = TextEditingController(
+      text: config.ngrokSubdomain ?? '',
+    );
+    _ngrokLocalPortController = TextEditingController(
+      text: config.ngrokLocalPort.toString(),
+    );
+    _ngrokLocalHostController = TextEditingController(
+      text: config.ngrokLocalHost,
+    );
+
+    _enableNgrok = config.enableNgrok;
+    _ngrokProtocol = config.ngrokProtocol;
+
     // Add listeners to detect changes
     _cloudProxyUrlController.addListener(_onConfigChanged);
     _connectionTimeoutController.addListener(_onConfigChanged);
     _healthCheckIntervalController.addListener(_onConfigChanged);
+    _ngrokAuthTokenController.addListener(_onConfigChanged);
+    _ngrokSubdomainController.addListener(_onConfigChanged);
+    _ngrokLocalPortController.addListener(_onConfigChanged);
+    _ngrokLocalHostController.addListener(_onConfigChanged);
   }
 
   void _onConfigChanged() {
@@ -71,6 +100,10 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     _cloudProxyUrlController.dispose();
     _connectionTimeoutController.dispose();
     _healthCheckIntervalController.dispose();
+    _ngrokAuthTokenController.dispose();
+    _ngrokSubdomainController.dispose();
+    _ngrokLocalPortController.dispose();
+    _ngrokLocalHostController.dispose();
     super.dispose();
   }
 
@@ -106,6 +139,8 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
                   const SizedBox(height: 24),
                   _buildCloudProxyConfigSection(),
                   const SizedBox(height: 24),
+                  _buildNgrokConfigSection(),
+                  const SizedBox(height: 24),
                   _buildAdvancedSettingsSection(),
                   const SizedBox(height: 24),
                   _buildAdditionalSettingsSection(),
@@ -124,6 +159,7 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     final connectionStatus = tunnelManager.connectionStatus;
     final ollamaStatus = connectionStatus['ollama'];
     final cloudStatus = connectionStatus['cloud'];
+    final ngrokStatus = connectionStatus['ngrok'];
 
     return Card(
       child: Padding(
@@ -152,6 +188,12 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
             ),
             const SizedBox(height: 12),
             _buildConnectionStatusItem('Cloud Proxy', cloudStatus, Icons.cloud),
+            const SizedBox(height: 12),
+            _buildConnectionStatusItem(
+              'Ngrok Tunnel',
+              ngrokStatus,
+              Icons.vpn_lock,
+            ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -302,6 +344,152 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
                             child: const Text('Login'),
                           ),
                   );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNgrokConfigSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.vpn_lock,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Ngrok Tunnel Configuration',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Configure ngrok tunnel as a fallback option for cloud proxy connections. '
+              'Desktop platform only.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Enable Ngrok Tunnel'),
+              subtitle: const Text(
+                'Use ngrok as fallback when cloud proxy fails',
+              ),
+              value: _enableNgrok,
+              onChanged: (value) {
+                setState(() {
+                  _enableNgrok = value;
+                  _onConfigChanged();
+                });
+              },
+            ),
+            if (_enableNgrok) ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _ngrokAuthTokenController,
+                decoration: const InputDecoration(
+                  labelText: 'Auth Token',
+                  hintText: 'Your ngrok auth token (optional)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.key),
+                ),
+                obscureText: true,
+                validator: (value) {
+                  // Auth token is optional
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _ngrokSubdomainController,
+                decoration: const InputDecoration(
+                  labelText: 'Subdomain',
+                  hintText: 'Custom subdomain (optional, requires paid plan)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.language),
+                ),
+                validator: (value) {
+                  // Subdomain is optional
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _ngrokProtocol,
+                      decoration: const InputDecoration(
+                        labelText: 'Protocol',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.security),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'http', child: Text('HTTP')),
+                        DropdownMenuItem(value: 'https', child: Text('HTTPS')),
+                        DropdownMenuItem(value: 'tcp', child: Text('TCP')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _ngrokProtocol = value;
+                            _onConfigChanged();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _ngrokLocalPortController,
+                      decoration: const InputDecoration(
+                        labelText: 'Local Port',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.settings_ethernet),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Port is required';
+                        }
+                        final port = int.tryParse(value);
+                        if (port == null || port < 1 || port > 65535) {
+                          return 'Invalid port number';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _ngrokLocalHostController,
+                decoration: const InputDecoration(
+                  labelText: 'Local Host',
+                  hintText: 'localhost',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.computer),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Host is required';
+                  }
+                  return null;
                 },
               ),
             ],
@@ -481,7 +669,7 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
     }
 
     try {
-      // Create new configuration for cloud proxy only
+      // Create new configuration including ngrok settings
       final newConfig = TunnelConfig(
         enableCloudProxy: _enableCloudProxy,
         cloudProxyUrl: _cloudProxyUrlController.text.trim(),
@@ -489,6 +677,16 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
         healthCheckInterval: int.parse(
           _healthCheckIntervalController.text.trim(),
         ),
+        enableNgrok: _enableNgrok,
+        ngrokAuthToken: _ngrokAuthTokenController.text.trim().isEmpty
+            ? null
+            : _ngrokAuthTokenController.text.trim(),
+        ngrokSubdomain: _ngrokSubdomainController.text.trim().isEmpty
+            ? null
+            : _ngrokSubdomainController.text.trim(),
+        ngrokProtocol: _ngrokProtocol,
+        ngrokLocalPort: int.parse(_ngrokLocalPortController.text.trim()),
+        ngrokLocalHost: _ngrokLocalHostController.text.trim(),
       );
 
       // Apply configuration to tunnel manager
@@ -502,7 +700,7 @@ class _TunnelSettingsScreenState extends State<TunnelSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Cloud proxy configuration saved successfully'),
+            content: Text('Tunnel configuration saved successfully'),
             backgroundColor: Colors.green,
           ),
         );

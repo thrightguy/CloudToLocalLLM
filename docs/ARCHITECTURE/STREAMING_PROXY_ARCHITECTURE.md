@@ -9,6 +9,7 @@ CloudToLocalLLM implements a sophisticated multi-tenant streaming proxy architec
 - **Zero-Storage Design**: No persistent user data in cloud infrastructure
 - **Ephemeral Containers**: Auto-created/destroyed per user session
 - **WebSocket Streaming**: Real-time bidirectional communication
+- **Ngrok Tunnel Integration**: Secure HTTP/HTTPS tunneling as fallback option
 - **Resource Efficiency**: Lightweight containers with strict resource limits
 
 ---
@@ -188,6 +189,57 @@ async monitorAndCleanup() {
 - **Connection Activity**: Real-time WebSocket connection tracking
 - **Resource Usage**: Memory and CPU monitoring per proxy
 - **Cleanup Automation**: Stale proxy removal every 60 seconds
+
+---
+
+## 🔗 **Ngrok Tunnel Integration**
+
+### **Overview**
+Ngrok integration provides secure HTTP/HTTPS tunneling as an alternative or complement to the WebSocket bridge architecture, enabling robust fallback when cloud proxy connections fail.
+
+### **Platform Support**
+- **Desktop**: Full ngrok tunnel management and process execution
+- **Web**: Not supported (web platform acts as bridge server)
+- **Mobile**: Limited support (stub implementation)
+
+### **Architecture Integration**
+```
+Connection Fallback Hierarchy:
+1. Local Ollama (if preferred and available)
+2. Cloud Proxy (WebSocket bridge - primary)
+3. Ngrok Tunnel (fallback for cloud proxy issues)
+4. Local Ollama (final fallback)
+```
+
+### **Security Features**
+- **Auth0 JWT Validation**: Validates user authentication before tunnel access
+- **Token Verification**: Checks for valid access tokens
+- **Secure URLs**: Provides authenticated tunnel access
+- **Access Control**: Prevents unauthorized tunnel usage
+
+### **Configuration Example**
+```dart
+final config = TunnelConfig(
+  enableCloudProxy: true,
+  cloudProxyUrl: 'https://app.cloudtolocalllm.online',
+  enableNgrok: true,
+  ngrokAuthToken: 'your-ngrok-auth-token',
+  ngrokProtocol: 'https',
+  ngrokLocalPort: 11434,
+);
+```
+
+### **Tunnel Management**
+- **Automatic Startup**: Tunnels start automatically when enabled
+- **Health Monitoring**: Continuous tunnel health checks
+- **Auto-Reconnection**: Automatic reconnection on failures
+- **Resource Cleanup**: Proper cleanup on application exit
+
+### **Use Cases**
+- **WebSocket Connectivity Issues**: When cloud proxy WebSocket connections fail
+- **Network Restrictions**: Environments with restrictive firewall rules
+- **Development/Testing**: Local development with external access needs
+- **Backup Connectivity**: Redundant connection option for reliability
 
 ---
 
