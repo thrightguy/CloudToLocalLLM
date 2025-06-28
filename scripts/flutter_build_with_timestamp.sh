@@ -189,20 +189,30 @@ check_prerequisites() {
 
 # Update version and inject timestamp
 update_version_info() {
-    if [[ "$UPDATE_VERSION" == "true" ]]; then
+    # Check if version already has a proper timestamp (not placeholder)
+    local current_version=$(grep '^version:' "$PROJECT_ROOT/pubspec.yaml" | sed 's/version: *//')
+    local has_placeholder=false
+
+    if [[ "$current_version" == *"BUILD_TIME_PLACEHOLDER"* ]]; then
+        has_placeholder=true
+    fi
+
+    if [[ "$UPDATE_VERSION" == "true" && "$has_placeholder" == "true" ]]; then
         log_step "Updating version information..."
-        
+
         if [[ -f "$PROJECT_ROOT/scripts/version_manager.sh" ]]; then
             "$PROJECT_ROOT/scripts/version_manager.sh" increment build
             log_success "Version updated with new build number"
         else
             log_warning "Version manager script not found, skipping version update"
         fi
+    elif [[ "$UPDATE_VERSION" == "true" && "$has_placeholder" == "false" ]]; then
+        log_info "Version already has proper timestamp, skipping version update"
     fi
-    
+
     if [[ "$INJECT_TIMESTAMP" == "true" ]]; then
         log_step "Injecting build timestamp..."
-        
+
         if [[ -f "$PROJECT_ROOT/scripts/build_time_version_injector.sh" ]]; then
             "$PROJECT_ROOT/scripts/build_time_version_injector.sh" inject
             log_success "Build timestamp injected"
