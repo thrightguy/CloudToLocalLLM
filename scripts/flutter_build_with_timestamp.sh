@@ -204,7 +204,7 @@ update_version_info() {
         log_step "Injecting build timestamp..."
         
         if [[ -f "$PROJECT_ROOT/scripts/build_time_version_injector.sh" ]]; then
-            "$PROJECT_ROOT/scripts/build_time_version_injector.sh"
+            "$PROJECT_ROOT/scripts/build_time_version_injector.sh" inject
             log_success "Build timestamp injected"
         else
             log_warning "Build time injector script not found, skipping timestamp injection"
