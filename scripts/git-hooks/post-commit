@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# CloudToLocalLLM post-commit hook
+# Automatically pushes commits when documentation is complete
+#
+
+# Check if we're in the main development branch
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$current_branch" != "master" ] && [ "$current_branch" != "main" ]; then
+    echo "Not on main branch, skipping auto-push"
+    exit 0
+fi
+
+# Check if this is a development commit (not a release commit)
+commit_message=$(git log -1 --pretty=%B)
+if echo "$commit_message" | grep -q "Release v[0-9]"; then
+    echo "Release commit detected, skipping auto-push"
+    exit 0
+fi
+
+# Check if documentation marker exists (indicates documentation is complete)
+if [ -f ".docs-complete" ] || echo "$commit_message" | grep -q "Documentation complete"; then
+    echo "Documentation complete marker found, auto-pushing..."
+    git push origin "$current_branch"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Successfully auto-pushed commit to remote"
+    else
+        echo "❌ Failed to auto-push commit"
+    fi
+fi

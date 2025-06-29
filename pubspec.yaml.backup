@@ -1,9 +1,9 @@
-﻿name: cloudtolocalllm
+name: cloudtolocalllm
 description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.6.14+202506272243
+version: 3.7.3+202506282346
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -37,7 +37,7 @@ dependencies:
   # Connection monitoring
   connectivity_plus: ^6.1.4
 
-  # Process execution for ngrok integration
+  # Process execution for zrok integration
   process_run: ^1.2.4
 
   # App Information

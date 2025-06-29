@@ -43,9 +43,9 @@ class ConnectionManagerService extends ChangeNotifier {
   // Getters
   bool get hasLocalConnection => _localOllama.isConnected;
   bool get hasCloudConnection => _tunnelManager.isConnected;
-  bool get hasNgrokConnection => _tunnelManager.hasNgrokTunnel;
+  bool get hasZrokConnection => _tunnelManager.hasZrokTunnel;
   bool get hasAnyConnection =>
-      hasLocalConnection || hasCloudConnection || hasNgrokConnection;
+      hasLocalConnection || hasCloudConnection || hasZrokConnection;
   String? get selectedModel => _selectedModel;
   List<String> get availableModels => _getAvailableModels();
 
@@ -53,15 +53,15 @@ class ConnectionManagerService extends ChangeNotifier {
   /// Fallback hierarchy:
   /// 1. Local Ollama (if preferred and available)
   /// 2. Cloud proxy (WebSocket bridge)
-  /// 3. Ngrok tunnel (fallback for cloud proxy issues)
+  /// 3. Zrok tunnel (fallback for cloud proxy issues)
   /// 4. Local Ollama (fallback if not preferred initially)
   ConnectionType getBestConnectionType() {
     if (_preferLocalOllama && hasLocalConnection) {
       return ConnectionType.local;
     } else if (hasCloudConnection) {
       return ConnectionType.cloud;
-    } else if (hasNgrokConnection) {
-      return ConnectionType.ngrok;
+    } else if (hasZrokConnection) {
+      return ConnectionType.zrok;
     } else if (hasLocalConnection) {
       return ConnectionType.local;
     } else {
@@ -101,18 +101,18 @@ class ConnectionManagerService extends ChangeNotifier {
           return _cloudStreamingService;
         }
 
-      case ConnectionType.ngrok:
-        // For ngrok connections, we use local Ollama streaming but through the tunnel
-        // The ngrok tunnel exposes the local Ollama instance publicly
+      case ConnectionType.zrok:
+        // For zrok connections, we use local Ollama streaming but through the tunnel
+        // The zrok tunnel exposes the local Ollama instance publicly
         final streamingService = _localOllama.streamingService;
         if (streamingService != null && streamingService.connection.isActive) {
           debugPrint(
-            '🔗 [ConnectionManager] Using local Ollama streaming via ngrok tunnel',
+            '🔗 [ConnectionManager] Using local Ollama streaming via zrok tunnel',
           );
           return streamingService;
         } else {
           debugPrint(
-            '🔗 [ConnectionManager] Ngrok tunnel available but local Ollama not ready',
+            '🔗 [ConnectionManager] Zrok tunnel available but local Ollama not ready',
           );
         }
         break;
@@ -152,11 +152,11 @@ class ConnectionManagerService extends ChangeNotifier {
           history: history,
         );
 
-      case ConnectionType.ngrok:
+      case ConnectionType.zrok:
         debugPrint(
-          '🔗 [ConnectionManager] Using local Ollama via ngrok tunnel for chat',
+          '🔗 [ConnectionManager] Using local Ollama via zrok tunnel for chat',
         );
-        // For ngrok, we use local Ollama since the tunnel exposes it
+        // For zrok, we use local Ollama since the tunnel exposes it
         return await _localOllama.chat(
           model: model,
           message: message,
@@ -249,12 +249,12 @@ class ConnectionManagerService extends ChangeNotifier {
         'error': _tunnelManager.error,
         'status': _tunnelManager.connectionStatus,
       },
-      'ngrok': {
-        'connected': hasNgrokConnection,
-        'tunnelUrl': _tunnelManager.ngrokTunnelUrl,
-        'isSupported': _tunnelManager.ngrokService?.isSupported ?? false,
-        'isRunning': _tunnelManager.ngrokService?.isRunning ?? false,
-        'error': _tunnelManager.ngrokService?.lastError,
+      'zrok': {
+        'connected': hasZrokConnection,
+        'tunnelUrl': _tunnelManager.zrokTunnelUrl,
+        'isSupported': _tunnelManager.zrokService?.isSupported ?? false,
+        'isRunning': _tunnelManager.zrokService?.isRunning ?? false,
+        'error': _tunnelManager.zrokService?.lastError,
       },
       'active': getBestConnectionType().name,
       'selectedModel': _selectedModel,
@@ -316,4 +316,4 @@ class ConnectionManagerService extends ChangeNotifier {
 }
 
 /// Connection type enumeration
-enum ConnectionType { local, cloud, ngrok, none }
+enum ConnectionType { local, cloud, zrok, none }

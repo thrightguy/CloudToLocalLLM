@@ -154,6 +154,66 @@ CloudToLocalLLM follows an organized directory structure for better maintainabil
 
 For detailed information about any component, see the respective README files in each directory.
 
+## Development Workflow
+
+CloudToLocalLLM includes automated development workflow tools to streamline the development process:
+
+### Quick Development Push
+
+When you've completed development work and documentation, use the quick push script:
+
+```bash
+# Auto-commit and push with generated message
+.\push-dev.ps1
+
+# Custom commit message
+.\push-dev.ps1 -m "Complete zrok service implementation"
+
+# Preview changes without committing
+.\push-dev.ps1 -dry
+
+# Force push (skip validation)
+.\push-dev.ps1 -f
+```
+
+### Automated Development Workflow
+
+For comprehensive development workflow automation:
+
+```bash
+# Complete workflow with validation
+.\scripts\powershell\Complete-DevWorkflow.ps1
+
+# Skip static analysis
+.\scripts\powershell\Complete-DevWorkflow.ps1 -SkipAnalysis
+
+# Create development release
+.\scripts\powershell\Complete-DevWorkflow.ps1 -CreateDevRelease
+```
+
+### Development Standards
+
+The automated workflow enforces:
+- ✅ Flutter analyze with zero issues
+- ✅ PSScriptAnalyzer compliance for PowerShell scripts
+- ✅ Documentation completeness validation
+- ✅ Platform abstraction pattern compliance
+- ✅ Automatic commit message generation based on changes
+
+### Git Hooks (Optional)
+
+Install Git hooks for automatic push when documentation is complete:
+
+```bash
+# Copy post-commit hook
+Copy-Item scripts/git-hooks/post-commit .git/hooks/post-commit -Force
+
+# Make executable (Linux/macOS)
+chmod +x .git/hooks/post-commit
+```
+
+This ensures that commits are automatically pushed when documentation markers are present.
+
 ## 🚀 Getting Started
 1.  **Install Ollama**: Ensure Ollama is installed and running on your local machine. Download models you wish to use (e.g., `ollama pull llama3.2`).
 2.  **Install CloudToLocalLLM Client**:

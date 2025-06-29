@@ -11,8 +11,9 @@ import 'streaming_service.dart';
 import 'auth_service.dart';
 import 'desktop_client_detection_service.dart';
 import 'cloud_streaming_service.dart';
-import 'ngrok_service.dart';
-import 'ngrok_service_platform.dart';
+
+import 'zrok_service.dart';
+import 'zrok_service_platform.dart';
 
 /// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
 ///
@@ -61,8 +62,8 @@ class TunnelManagerService extends ChangeNotifier {
   StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
   CloudStreamingService? _cloudStreamingService;
 
-  // Ngrok service for desktop tunneling
-  NgrokServicePlatform? _ngrokService;
+  // Zrok service for desktop tunneling
+  ZrokService? _zrokService;
 
   // Desktop client detection listener (web platform only)
   StreamSubscription<void>? _clientDetectionSubscription;
@@ -83,14 +84,14 @@ class TunnelManagerService extends ChangeNotifier {
   /// Get cloud streaming service (local Ollama is now handled separately)
   CloudStreamingService? get cloudStreamingService => _cloudStreamingService;
 
-  /// Get ngrok service (desktop platform only)
-  NgrokServicePlatform? get ngrokService => _ngrokService;
+  /// Get zrok service (desktop platform only)
+  ZrokService? get zrokService => _zrokService;
 
-  /// Whether ngrok tunnel is active
-  bool get hasNgrokTunnel => _ngrokService?.activeTunnel != null;
+  /// Whether zrok tunnel is active
+  bool get hasZrokTunnel => _zrokService?.activeTunnel != null;
 
-  /// Get ngrok tunnel URL if active
-  String? get ngrokTunnelUrl => _ngrokService?.activeTunnel?.publicUrl;
+  /// Get zrok tunnel URL if active
+  String? get zrokTunnelUrl => _zrokService?.activeTunnel?.publicUrl;
 
   /// Debounced notifyListeners to prevent excessive UI rebuilds
   void _debouncedNotifyListeners() {
@@ -131,8 +132,8 @@ class TunnelManagerService extends ChangeNotifier {
         '🚇 [TunnelManager] Desktop platform detected - acting as tunnel client',
       );
 
-      // Initialize ngrok service for desktop platform
-      await _initializeNgrokService();
+      // Initialize tunnel services for desktop platform
+      await _initializeZrokService();
 
       await _initializeConnections();
     }
@@ -187,29 +188,29 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Initialize ngrok service for desktop platform
-  Future<void> _initializeNgrokService() async {
+  /// Initialize zrok service for desktop platform
+  Future<void> _initializeZrokService() async {
     try {
-      debugPrint('🚇 [TunnelManager] Initializing ngrok service...');
+      debugPrint('🚇 [TunnelManager] Initializing zrok service...');
 
-      _ngrokService = NgrokServicePlatform(authService: _authService);
-      await _ngrokService!.initialize();
+      _zrokService = ZrokServicePlatform(authService: _authService);
+      await _zrokService!.initialize();
 
-      // Listen to ngrok service changes
-      _ngrokService!.addListener(() {
+      // Listen to zrok service changes
+      _zrokService!.addListener(() {
         _debouncedNotifyListeners();
       });
 
-      // Start ngrok tunnel if enabled in configuration
-      if (_config.enableNgrok) {
-        debugPrint('🚇 [TunnelManager] Starting ngrok tunnel...');
-        await _ngrokService!.startTunnel(_config.toNgrokConfig());
+      // Start zrok tunnel if enabled in configuration
+      if (_config.enableZrok) {
+        debugPrint('🚇 [TunnelManager] Starting zrok tunnel...');
+        await _zrokService!.startTunnel(_config.toZrokConfig());
       }
 
-      debugPrint('🚇 [TunnelManager] Ngrok service initialized successfully');
+      debugPrint('🚇 [TunnelManager] Zrok service initialized successfully');
     } catch (e) {
-      debugPrint('🚇 [TunnelManager] Failed to initialize ngrok service: $e');
-      // Don't fail the entire initialization if ngrok fails
+      debugPrint('🚇 [TunnelManager] Failed to initialize zrok service: $e');
+      // Don't fail the entire initialization if zrok fails
     }
   }
 
@@ -721,8 +722,8 @@ class TunnelManagerService extends ChangeNotifier {
 
   /// Update overall connection status
   void _updateOverallStatus() {
-    // Update ngrok connection status if available
-    _updateNgrokConnectionStatus();
+    // Update tunnel connection status if available
+    _updateZrokConnectionStatus();
 
     final hasConnectedEndpoint = _connectionStatus.values.any(
       (status) => status.isConnected,
@@ -742,23 +743,23 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Update ngrok connection status
-  void _updateNgrokConnectionStatus() {
-    if (_ngrokService == null || !_ngrokService!.isSupported) {
+  /// Update zrok connection status
+  void _updateZrokConnectionStatus() {
+    if (_zrokService == null || !_zrokService!.isSupported) {
       return;
     }
 
-    final tunnel = _ngrokService!.activeTunnel;
-    final isRunning = _ngrokService!.isRunning;
-    final lastError = _ngrokService!.lastError;
+    final tunnel = _zrokService!.activeTunnel;
+    final isRunning = _zrokService!.isRunning;
+    final lastError = _zrokService!.lastError;
 
-    _connectionStatus['ngrok'] = ConnectionStatus(
-      type: 'ngrok',
+    _connectionStatus['zrok'] = ConnectionStatus(
+      type: 'zrok',
       isConnected: isRunning && tunnel != null,
       endpoint: tunnel?.publicUrl ?? 'Not available',
       version: tunnel != null ? 'Active' : 'Inactive',
       lastCheck: DateTime.now(),
-      latency: 0, // Ngrok latency is not directly measurable
+      latency: 0, // Zrok latency is not directly measurable
       error: lastError,
     );
   }
@@ -785,8 +786,8 @@ class TunnelManagerService extends ChangeNotifier {
 
         if (type == 'cloud') {
           await _checkCloudHealth(status);
-        } else if (type == 'ngrok') {
-          await _checkNgrokHealth(status);
+        } else if (type == 'zrok') {
+          await _checkZrokHealth(status);
         }
         // Local Ollama health is now handled independently
 
@@ -837,32 +838,32 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Check ngrok tunnel health
-  Future<void> _checkNgrokHealth(ConnectionStatus status) async {
-    if (_ngrokService == null) {
-      throw Exception('Ngrok service not available');
+  /// Check zrok tunnel health
+  Future<void> _checkZrokHealth(ConnectionStatus status) async {
+    if (_zrokService == null) {
+      throw Exception('Zrok service not available');
     }
 
     try {
-      final tunnelStatus = await _ngrokService!.getTunnelStatus();
+      final tunnelStatus = await _zrokService!.getTunnelStatus();
 
-      if (!_ngrokService!.isRunning) {
-        throw Exception('Ngrok tunnel is not running');
+      if (!_zrokService!.isRunning) {
+        throw Exception('Zrok tunnel is not running');
       }
 
-      if (_ngrokService!.activeTunnel == null) {
-        throw Exception('No active ngrok tunnel');
+      if (_zrokService!.activeTunnel == null) {
+        throw Exception('No active zrok tunnel');
       }
 
       // Verify tunnel status indicates it's supported and running
       if (tunnelStatus['supported'] != true) {
-        throw Exception('Ngrok not supported on this platform');
+        throw Exception('Zrok not supported on this platform');
       }
 
       // Additional health check could include testing the tunnel URL
       // For now, we just verify the service is running and has an active tunnel
     } catch (e) {
-      throw Exception('Ngrok health check failed: $e');
+      throw Exception('Zrok health check failed: $e');
     }
   }
 
@@ -875,10 +876,11 @@ class TunnelManagerService extends ChangeNotifier {
     _cloudWebSocket?.close();
     _httpClient.close();
 
-    // Ngrok service cleanup
-    if (_ngrokService != null) {
-      await _ngrokService!.stopTunnel();
-      _ngrokService!.dispose();
+    // Tunnel services cleanup
+
+    if (_zrokService != null) {
+      await _zrokService!.stopTunnel();
+      _zrokService!.dispose();
     }
 
     // Cloud streaming services cleanup (local Ollama handled separately)
@@ -897,9 +899,6 @@ class TunnelManagerService extends ChangeNotifier {
     _statusSubscription?.cancel();
     _clientDetectionSubscription?.cancel();
     _cloudWebSocket?.close();
-
-    // Ngrok service cleanup
-    _ngrokService?.dispose();
 
     // Only close HTTP client if it was initialized
     try {
@@ -940,9 +939,10 @@ class TunnelManagerService extends ChangeNotifier {
     _cloudWebSocket?.close();
     _cloudWebSocket = null;
 
-    // Update ngrok configuration if service is available
-    if (_ngrokService != null && !kIsWeb) {
-      await _ngrokService!.updateConfiguration(newConfig.toNgrokConfig());
+    // Update tunnel configurations if services are available
+
+    if (_zrokService != null && !kIsWeb) {
+      await _zrokService!.updateConfiguration(newConfig.toZrokConfig());
     }
 
     // Platform-specific reinitialization
@@ -955,15 +955,26 @@ class TunnelManagerService extends ChangeNotifier {
     debugPrint('🚇 [TunnelManager] Configuration updated successfully');
   }
 
-  /// Get cloud connection status (local Ollama handled separately)
+  /// Get best available connection following the fallback hierarchy:
+  /// 1. Local Ollama (primary) - handled by LocalOllamaConnectionService
+  /// 2. Cloud proxy (secondary)
+  /// 3. Zrok tunnel (tertiary)
+  /// 4. Local Ollama (final fallback) - handled by LocalOllamaConnectionService
   String? getBestConnection() {
-    // Only handle cloud proxy connections now
-    // Local Ollama connections are managed by LocalOllamaConnectionService
+    // Cloud proxy (secondary in hierarchy)
     final cloudStatus = _connectionStatus['cloud'];
     if (cloudStatus?.isConnected == true) {
       return 'cloud';
     }
 
+    // Zrok tunnel (tertiary - primary tunnel option)
+    final zrokStatus = _connectionStatus['zrok'];
+    if (zrokStatus?.isConnected == true) {
+      return 'zrok';
+    }
+
+    // No tunnel connections available
+    // Local Ollama fallback is handled by LocalOllamaConnectionService
     return null;
   }
 
@@ -1392,7 +1403,7 @@ class ConnectionStatus {
   }
 }
 
-/// Tunnel configuration (cloud proxy and ngrok)
+/// Tunnel configuration (cloud proxy and zrok)
 ///
 /// Local Ollama connections are now handled independently
 /// and are not part of tunnel management.
@@ -1402,25 +1413,33 @@ class TunnelConfig {
   final int connectionTimeout;
   final int healthCheckInterval;
 
-  // Ngrok configuration
-  final bool enableNgrok;
-  final String? ngrokAuthToken;
-  final String? ngrokSubdomain;
-  final String ngrokProtocol;
-  final int ngrokLocalPort;
-  final String ngrokLocalHost;
+  // Zrok configuration
+  final bool enableZrok;
+  final String? zrokAccountToken;
+  final String? zrokApiEndpoint;
+  final String? zrokEnvironment;
+  final String zrokProtocol;
+  final int zrokLocalPort;
+  final String zrokLocalHost;
+  final bool zrokUseReservedShare;
+  final String? zrokReservedShareToken;
+  final String zrokBackendMode;
 
   const TunnelConfig({
     required this.enableCloudProxy,
     required this.cloudProxyUrl,
     required this.connectionTimeout,
     required this.healthCheckInterval,
-    this.enableNgrok = false,
-    this.ngrokAuthToken,
-    this.ngrokSubdomain,
-    this.ngrokProtocol = 'http',
-    this.ngrokLocalPort = 11434,
-    this.ngrokLocalHost = 'localhost',
+    this.enableZrok = false,
+    this.zrokAccountToken,
+    this.zrokApiEndpoint,
+    this.zrokEnvironment,
+    this.zrokProtocol = 'http',
+    this.zrokLocalPort = 11434,
+    this.zrokLocalHost = 'localhost',
+    this.zrokUseReservedShare = false,
+    this.zrokReservedShareToken,
+    this.zrokBackendMode = 'proxy',
   });
 
   factory TunnelConfig.defaultConfig() {
@@ -1429,10 +1448,12 @@ class TunnelConfig {
       cloudProxyUrl: 'https://app.cloudtolocalllm.online',
       connectionTimeout: 10,
       healthCheckInterval: 30,
-      enableNgrok: false,
-      ngrokProtocol: 'http',
-      ngrokLocalPort: 11434,
-      ngrokLocalHost: 'localhost',
+      enableZrok: false,
+      zrokProtocol: 'http',
+      zrokLocalPort: 11434,
+      zrokLocalHost: 'localhost',
+      zrokUseReservedShare: false,
+      zrokBackendMode: 'proxy',
     );
   }
 
@@ -1442,36 +1463,47 @@ class TunnelConfig {
     String? cloudProxyUrl,
     int? connectionTimeout,
     int? healthCheckInterval,
-    bool? enableNgrok,
-    String? ngrokAuthToken,
-    String? ngrokSubdomain,
-    String? ngrokProtocol,
-    int? ngrokLocalPort,
-    String? ngrokLocalHost,
+    bool? enableZrok,
+    String? zrokAccountToken,
+    String? zrokApiEndpoint,
+    String? zrokEnvironment,
+    String? zrokProtocol,
+    int? zrokLocalPort,
+    String? zrokLocalHost,
+    bool? zrokUseReservedShare,
+    String? zrokReservedShareToken,
+    String? zrokBackendMode,
   }) {
     return TunnelConfig(
       enableCloudProxy: enableCloudProxy ?? this.enableCloudProxy,
       cloudProxyUrl: cloudProxyUrl ?? this.cloudProxyUrl,
       connectionTimeout: connectionTimeout ?? this.connectionTimeout,
       healthCheckInterval: healthCheckInterval ?? this.healthCheckInterval,
-      enableNgrok: enableNgrok ?? this.enableNgrok,
-      ngrokAuthToken: ngrokAuthToken ?? this.ngrokAuthToken,
-      ngrokSubdomain: ngrokSubdomain ?? this.ngrokSubdomain,
-      ngrokProtocol: ngrokProtocol ?? this.ngrokProtocol,
-      ngrokLocalPort: ngrokLocalPort ?? this.ngrokLocalPort,
-      ngrokLocalHost: ngrokLocalHost ?? this.ngrokLocalHost,
+      enableZrok: enableZrok ?? this.enableZrok,
+      zrokAccountToken: zrokAccountToken ?? this.zrokAccountToken,
+      zrokApiEndpoint: zrokApiEndpoint ?? this.zrokApiEndpoint,
+      zrokEnvironment: zrokEnvironment ?? this.zrokEnvironment,
+      zrokProtocol: zrokProtocol ?? this.zrokProtocol,
+      zrokLocalPort: zrokLocalPort ?? this.zrokLocalPort,
+      zrokLocalHost: zrokLocalHost ?? this.zrokLocalHost,
+      zrokUseReservedShare: zrokUseReservedShare ?? this.zrokUseReservedShare,
+      zrokReservedShareToken:
+          zrokReservedShareToken ?? this.zrokReservedShareToken,
+      zrokBackendMode: zrokBackendMode ?? this.zrokBackendMode,
     );
   }
 
-  /// Convert to NgrokConfig for the ngrok service
-  NgrokConfig toNgrokConfig() {
-    return NgrokConfig(
-      enabled: enableNgrok,
-      authToken: ngrokAuthToken,
-      subdomain: ngrokSubdomain,
-      protocol: ngrokProtocol,
-      localPort: ngrokLocalPort,
-      localHost: ngrokLocalHost,
+  /// Convert to ZrokConfig for the zrok service
+  ZrokConfig toZrokConfig() {
+    return ZrokConfig(
+      enabled: enableZrok,
+      accountToken: zrokAccountToken,
+      protocol: zrokProtocol,
+      localPort: zrokLocalPort,
+      localHost: zrokLocalHost,
+      useReservedShare: zrokUseReservedShare,
+      reservedShareToken: zrokReservedShareToken,
+      backendMode: zrokBackendMode,
     );
   }
 
@@ -1480,9 +1512,9 @@ class TunnelConfig {
     return 'TunnelConfig('
         'enableCloudProxy: $enableCloudProxy, '
         'cloudProxyUrl: $cloudProxyUrl, '
-        'enableNgrok: $enableNgrok, '
-        'ngrokProtocol: $ngrokProtocol, '
-        'ngrokLocalPort: $ngrokLocalPort'
+        'enableZrok: $enableZrok, '
+        'zrokProtocol: $zrokProtocol, '
+        'zrokLocalPort: $zrokLocalPort'
         ')';
   }
 }

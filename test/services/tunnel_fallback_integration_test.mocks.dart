@@ -3,17 +3,16 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i5;
-import 'dart:ui' as _i7;
+import 'dart:async' as _i4;
+import 'dart:ui' as _i6;
 
-import 'package:cloudtolocalllm/services/auth_service.dart' as _i9;
+import 'package:cloudtolocalllm/services/auth_service.dart' as _i8;
 import 'package:cloudtolocalllm/services/local_ollama_connection_service.dart'
-    as _i8;
-import 'package:cloudtolocalllm/services/ngrok_service.dart' as _i4;
+    as _i7;
 import 'package:cloudtolocalllm/services/tunnel_manager_service.dart' as _i2;
 import 'package:flutter/foundation.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i6;
+import 'package:mockito/src/dummies.dart' as _i5;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -37,11 +36,6 @@ class _FakeTunnelConfig_0 extends _i1.SmartFake implements _i2.TunnelConfig {
 class _FakeValueNotifier_1<T> extends _i1.SmartFake
     implements _i3.ValueNotifier<T> {
   _FakeValueNotifier_1(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-class _FakeNgrokConfig_2 extends _i1.SmartFake implements _i4.NgrokConfig {
-  _FakeNgrokConfig_2(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -81,11 +75,8 @@ class MockTunnelManagerService extends _i1.Mock
           as Map<String, _i2.ConnectionStatus>);
 
   @override
-  bool get hasNgrokTunnel =>
-      (super.noSuchMethod(
-            Invocation.getter(#hasNgrokTunnel),
-            returnValue: false,
-          )
+  bool get hasZrokTunnel =>
+      (super.noSuchMethod(Invocation.getter(#hasZrokTunnel), returnValue: false)
           as bool);
 
   @override
@@ -94,13 +85,13 @@ class MockTunnelManagerService extends _i1.Mock
           as bool);
 
   @override
-  _i5.Future<void> initialize() =>
+  _i4.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
   void handleCloudBridgeMessage(Map<String, dynamic>? message) =>
@@ -120,7 +111,7 @@ class MockTunnelManagerService extends _i1.Mock
   String generateUuid() =>
       (super.noSuchMethod(
             Invocation.method(#generateUuid, []),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i5.dummyValue<String>(
               this,
               Invocation.method(#generateUuid, []),
             ),
@@ -128,13 +119,13 @@ class MockTunnelManagerService extends _i1.Mock
           as String);
 
   @override
-  _i5.Future<void> shutdown() =>
+  _i4.Future<void> shutdown() =>
       (super.noSuchMethod(
             Invocation.method(#shutdown, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -143,22 +134,22 @@ class MockTunnelManagerService extends _i1.Mock
   );
 
   @override
-  _i5.Future<void> reconnect() =>
+  _i4.Future<void> reconnect() =>
       (super.noSuchMethod(
             Invocation.method(#reconnect, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<void> updateConfiguration(_i2.TunnelConfig? newConfig) =>
+  _i4.Future<void> updateConfiguration(_i2.TunnelConfig? newConfig) =>
       (super.noSuchMethod(
             Invocation.method(#updateConfiguration, [newConfig]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
   _i2.TrayConnectionStatus getTrayConnectionStatus() =>
@@ -189,16 +180,16 @@ class MockTunnelManagerService extends _i1.Mock
           as Map<String, dynamic>);
 
   @override
-  _i5.Future<Map<String, dynamic>> testConnectionForWizard(
+  _i4.Future<Map<String, dynamic>> testConnectionForWizard(
     _i2.TunnelConfig? testConfig,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#testConnectionForWizard, [testConfig]),
-            returnValue: _i5.Future<Map<String, dynamic>>.value(
+            returnValue: _i4.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),
           )
-          as _i5.Future<Map<String, dynamic>>);
+          as _i4.Future<Map<String, dynamic>>);
 
   @override
   Map<String, dynamic> getConnectionDiagnostics() =>
@@ -209,23 +200,23 @@ class MockTunnelManagerService extends _i1.Mock
           as Map<String, dynamic>);
 
   @override
-  _i5.Future<Map<String, dynamic>> validateTunnelEndToEnd() =>
+  _i4.Future<Map<String, dynamic>> validateTunnelEndToEnd() =>
       (super.noSuchMethod(
             Invocation.method(#validateTunnelEndToEnd, []),
-            returnValue: _i5.Future<Map<String, dynamic>>.value(
+            returnValue: _i4.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),
           )
-          as _i5.Future<Map<String, dynamic>>);
+          as _i4.Future<Map<String, dynamic>>);
 
   @override
-  void addListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i6.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i6.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );
@@ -241,7 +232,7 @@ class MockTunnelManagerService extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockLocalOllamaConnectionService extends _i1.Mock
-    implements _i8.LocalOllamaConnectionService {
+    implements _i7.LocalOllamaConnectionService {
   MockLocalOllamaConnectionService() {
     _i1.throwOnMissingStub(this);
   }
@@ -267,24 +258,24 @@ class MockLocalOllamaConnectionService extends _i1.Mock
           as bool);
 
   @override
-  _i5.Future<void> initialize() =>
+  _i4.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<bool> testConnection() =>
+  _i4.Future<bool> testConnection() =>
       (super.noSuchMethod(
             Invocation.method(#testConnection, []),
-            returnValue: _i5.Future<bool>.value(false),
+            returnValue: _i4.Future<bool>.value(false),
           )
-          as _i5.Future<bool>);
+          as _i4.Future<bool>);
 
   @override
-  _i5.Future<String?> chat({
+  _i4.Future<String?> chat({
     required String? model,
     required String? message,
     List<Map<String, String>>? history,
@@ -295,18 +286,18 @@ class MockLocalOllamaConnectionService extends _i1.Mock
               #message: message,
               #history: history,
             }),
-            returnValue: _i5.Future<String?>.value(),
+            returnValue: _i4.Future<String?>.value(),
           )
-          as _i5.Future<String?>);
+          as _i4.Future<String?>);
 
   @override
-  _i5.Future<void> reconnect() =>
+  _i4.Future<void> reconnect() =>
       (super.noSuchMethod(
             Invocation.method(#reconnect, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -315,13 +306,13 @@ class MockLocalOllamaConnectionService extends _i1.Mock
   );
 
   @override
-  void addListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i6.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i6.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );
@@ -336,7 +327,7 @@ class MockLocalOllamaConnectionService extends _i1.Mock
 /// A class which mocks [AuthService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAuthService extends _i1.Mock implements _i9.AuthService {
+class MockAuthService extends _i1.Mock implements _i8.AuthService {
   MockAuthService() {
     _i1.throwOnMissingStub(this);
   }
@@ -414,7 +405,7 @@ class MockAuthService extends _i1.Mock implements _i9.AuthService {
   String get recommendedAuthMethod =>
       (super.noSuchMethod(
             Invocation.getter(#recommendedAuthMethod),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i5.dummyValue<String>(
               this,
               Invocation.getter(#recommendedAuthMethod),
             ),
@@ -427,56 +418,56 @@ class MockAuthService extends _i1.Mock implements _i9.AuthService {
           as bool);
 
   @override
-  _i5.Future<void> login() =>
+  _i4.Future<void> login() =>
       (super.noSuchMethod(
             Invocation.method(#login, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<void> logout() =>
+  _i4.Future<void> logout() =>
       (super.noSuchMethod(
             Invocation.method(#logout, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<bool> handleCallback() =>
+  _i4.Future<bool> handleCallback() =>
       (super.noSuchMethod(
             Invocation.method(#handleCallback, []),
-            returnValue: _i5.Future<bool>.value(false),
+            returnValue: _i4.Future<bool>.value(false),
           )
-          as _i5.Future<bool>);
+          as _i4.Future<bool>);
 
   @override
-  _i5.Future<void> loginWithBiometrics() =>
+  _i4.Future<void> loginWithBiometrics() =>
       (super.noSuchMethod(
             Invocation.method(#loginWithBiometrics, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<bool> isBiometricAvailable() =>
+  _i4.Future<bool> isBiometricAvailable() =>
       (super.noSuchMethod(
             Invocation.method(#isBiometricAvailable, []),
-            returnValue: _i5.Future<bool>.value(false),
+            returnValue: _i4.Future<bool>.value(false),
           )
-          as _i5.Future<bool>);
+          as _i4.Future<bool>);
 
   @override
-  _i5.Future<void> refreshTokenIfNeeded() =>
+  _i4.Future<void> refreshTokenIfNeeded() =>
       (super.noSuchMethod(
             Invocation.method(#refreshTokenIfNeeded, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
   Map<String, dynamic> getPlatformInfo() =>
@@ -487,40 +478,40 @@ class MockAuthService extends _i1.Mock implements _i9.AuthService {
           as Map<String, dynamic>);
 
   @override
-  _i5.Future<String?> getValidatedAccessToken({bool? forceRefresh = false}) =>
+  _i4.Future<String?> getValidatedAccessToken({bool? forceRefresh = false}) =>
       (super.noSuchMethod(
             Invocation.method(#getValidatedAccessToken, [], {
               #forceRefresh: forceRefresh,
             }),
-            returnValue: _i5.Future<String?>.value(),
+            returnValue: _i4.Future<String?>.value(),
           )
-          as _i5.Future<String?>);
+          as _i4.Future<String?>);
 
   @override
-  _i5.Future<void> loginWithPersistence() =>
+  _i4.Future<void> loginWithPersistence() =>
       (super.noSuchMethod(
             Invocation.method(#loginWithPersistence, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<void> logoutWithCleanup() =>
+  _i4.Future<void> logoutWithCleanup() =>
       (super.noSuchMethod(
             Invocation.method(#logoutWithCleanup, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i4.Future<void>);
 
   @override
-  _i5.Future<bool> validateAuthentication() =>
+  _i4.Future<bool> validateAuthentication() =>
       (super.noSuchMethod(
             Invocation.method(#validateAuthentication, []),
-            returnValue: _i5.Future<bool>.value(false),
+            returnValue: _i4.Future<bool>.value(false),
           )
-          as _i5.Future<bool>);
+          as _i4.Future<bool>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -529,135 +520,13 @@ class MockAuthService extends _i1.Mock implements _i9.AuthService {
   );
 
   @override
-  void addListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i6.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i7.VoidCallback? listener) => super.noSuchMethod(
-    Invocation.method(#removeListener, [listener]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void notifyListeners() => super.noSuchMethod(
-    Invocation.method(#notifyListeners, []),
-    returnValueForMissingStub: null,
-  );
-}
-
-/// A class which mocks [NgrokService].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockNgrokService extends _i1.Mock implements _i4.NgrokService {
-  MockNgrokService() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  _i4.NgrokConfig get config =>
-      (super.noSuchMethod(
-            Invocation.getter(#config),
-            returnValue: _FakeNgrokConfig_2(this, Invocation.getter(#config)),
-          )
-          as _i4.NgrokConfig);
-
-  @override
-  bool get isRunning =>
-      (super.noSuchMethod(Invocation.getter(#isRunning), returnValue: false)
-          as bool);
-
-  @override
-  bool get isStarting =>
-      (super.noSuchMethod(Invocation.getter(#isStarting), returnValue: false)
-          as bool);
-
-  @override
-  bool get isSupported =>
-      (super.noSuchMethod(Invocation.getter(#isSupported), returnValue: false)
-          as bool);
-
-  @override
-  bool get hasListeners =>
-      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
-          as bool);
-
-  @override
-  _i5.Future<void> initialize() =>
-      (super.noSuchMethod(
-            Invocation.method(#initialize, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<_i4.NgrokTunnel?> startTunnel(_i4.NgrokConfig? config) =>
-      (super.noSuchMethod(
-            Invocation.method(#startTunnel, [config]),
-            returnValue: _i5.Future<_i4.NgrokTunnel?>.value(),
-          )
-          as _i5.Future<_i4.NgrokTunnel?>);
-
-  @override
-  _i5.Future<void> stopTunnel() =>
-      (super.noSuchMethod(
-            Invocation.method(#stopTunnel, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<bool> isNgrokInstalled() =>
-      (super.noSuchMethod(
-            Invocation.method(#isNgrokInstalled, []),
-            returnValue: _i5.Future<bool>.value(false),
-          )
-          as _i5.Future<bool>);
-
-  @override
-  _i5.Future<String?> getNgrokVersion() =>
-      (super.noSuchMethod(
-            Invocation.method(#getNgrokVersion, []),
-            returnValue: _i5.Future<String?>.value(),
-          )
-          as _i5.Future<String?>);
-
-  @override
-  _i5.Future<void> updateConfiguration(_i4.NgrokConfig? newConfig) =>
-      (super.noSuchMethod(
-            Invocation.method(#updateConfiguration, [newConfig]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<Map<String, dynamic>> getTunnelStatus() =>
-      (super.noSuchMethod(
-            Invocation.method(#getTunnelStatus, []),
-            returnValue: _i5.Future<Map<String, dynamic>>.value(
-              <String, dynamic>{},
-            ),
-          )
-          as _i5.Future<Map<String, dynamic>>);
-
-  @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void addListener(_i7.VoidCallback? listener) => super.noSuchMethod(
-    Invocation.method(#addListener, [listener]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void removeListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i6.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );

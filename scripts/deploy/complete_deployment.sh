@@ -15,6 +15,10 @@ VPS_HOST="cloudtolocalllm.online"
 VPS_USER="cloudllm"
 VPS_PROJECT_DIR="/opt/cloudtolocalllm"
 
+# WSL Flutter configuration
+WSL_FLUTTER_PATH="/opt/flutter/bin"
+export PATH="$WSL_FLUTTER_PATH:$PATH"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -81,23 +85,51 @@ get_version() {
     "$PROJECT_ROOT/scripts/version_manager.sh" get-semantic
 }
 
+# Verify WSL Flutter installation
+verify_wsl_flutter() {
+    log_info "Verifying WSL-native Flutter installation..."
+
+    # Check if WSL Flutter exists
+    if [[ ! -f "$WSL_FLUTTER_PATH/flutter" ]]; then
+        log_error "WSL-native Flutter not found at $WSL_FLUTTER_PATH/flutter"
+        log_error "Please install Flutter in WSL or update WSL_FLUTTER_PATH in the script"
+        exit 1
+    fi
+
+    # Test Flutter command
+    local flutter_version
+    if ! flutter_version=$("$WSL_FLUTTER_PATH/flutter" --version 2>&1); then
+        log_error "WSL Flutter installation is not working properly"
+        log_error "Flutter output: $flutter_version"
+        exit 1
+    fi
+
+    log_success "WSL Flutter verified: $(echo "$flutter_version" | head -n1)"
+
+    # Ensure we're using WSL Flutter, not Windows Flutter
+    local flutter_path
+    flutter_path=$(which flutter)
+    if [[ "$flutter_path" == *"/mnt/c/"* ]]; then
+        log_warning "Detected Windows Flutter in PATH: $flutter_path"
+        log_info "Prioritizing WSL-native Flutter: $WSL_FLUTTER_PATH/flutter"
+        export PATH="$WSL_FLUTTER_PATH:$PATH"
+    fi
+}
+
 # Pre-deployment checks
 pre_deployment_checks() {
     log_phase 1 "PRE-DEPLOYMENT CHECKS"
     
     log_step 1.1 "Checking local environment..."
-    
-    # Check if Flutter is available
-    if ! command -v flutter &> /dev/null; then
-        log_error "Flutter is not installed or not in PATH"
-        exit 1
-    fi
-    
+
     # Check if we're in the correct directory
     if [[ ! -f "$PROJECT_ROOT/pubspec.yaml" ]]; then
         log_error "Not in CloudToLocalLLM project directory"
         exit 1
     fi
+
+    # Verify WSL Flutter installation
+    verify_wsl_flutter
     
     # Check VPS connectivity
     log_step 1.2 "Checking VPS connectivity..."
@@ -119,25 +151,26 @@ pre_deployment_checks() {
 # Build application
 build_application() {
     log_phase 2 "APPLICATION BUILD"
-    
+
     local version=$(get_version)
-    log_info "Building CloudToLocalLLM version: $version"
-    
+    log_info "Building CloudToLocalLLM version: $version using WSL-native Flutter"
+
     log_step 2.1 "Updating version information..."
-    "$PROJECT_ROOT/scripts/version_manager.sh" update-build-number
-    
+    "$PROJECT_ROOT/scripts/version_manager.sh" increment build
+
     log_step 2.2 "Installing Flutter dependencies..."
     cd "$PROJECT_ROOT"
-    flutter pub get
-    
+    log_info "Using Flutter: $WSL_FLUTTER_PATH/flutter"
+    "$WSL_FLUTTER_PATH/flutter" pub get
+
     log_step 2.3 "Building Flutter web application..."
-    flutter build web --release --web-renderer html
-    
+    "$WSL_FLUTTER_PATH/flutter" build web --release
+
     if [[ ! -d "$PROJECT_ROOT/build/web" ]]; then
         log_error "Flutter web build failed - build directory not found"
         exit 1
     fi
-    
+
     log_success "Application build completed successfully"
 }
 

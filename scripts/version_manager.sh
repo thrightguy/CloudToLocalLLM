@@ -78,12 +78,11 @@ generate_build_number() {
     date +"%Y%m%d%H%M"
 }
 
-# Increment build number - generates placeholder for build-time injection
-# Build timestamp will be injected at actual build execution time
+# Increment build number - generates actual timestamp for immediate use
+# For deployment workflows that need immediate valid version numbers
 increment_build_number() {
-    # Generate placeholder timestamp that will be replaced at build time
-    # This allows version preparation without finalizing the build timestamp
-    echo "BUILD_TIME_PLACEHOLDER"
+    # Generate actual timestamp for immediate use in deployment
+    generate_build_number
 }
 
 # Check if version qualifies for GitHub release

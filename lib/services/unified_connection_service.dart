@@ -109,10 +109,10 @@ class UnifiedConnectionService extends ChangeNotifier {
         _clearError();
         break;
 
-      case ConnectionType.ngrok:
+      case ConnectionType.zrok:
         _isConnected = true;
-        _connectionType = 'ngrok';
-        _version = 'Ngrok Tunnel';
+        _connectionType = 'zrok';
+        _version = 'Zrok Tunnel';
         _models = _connectionManager!.availableModels;
         _clearError();
         break;
