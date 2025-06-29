@@ -1,4 +1,4 @@
-# CloudToLocalLLM Unified Package Creator (PowerShell)
+﻿# CloudToLocalLLM Unified Package Creator (PowerShell)
 # Creates multiple package formats for Windows and Linux distributions
 
 [CmdletBinding()]
@@ -82,7 +82,7 @@ function Show-Help {
 }
 
 # Create directory if it doesn't exist
-function New-DirectoryIfNotExists {
+function New-Directory {
     param([string]$Path)
     if (-not (Test-Path $Path)) {
         New-Item -ItemType Directory -Path $Path -Force | Out-Null
@@ -139,7 +139,7 @@ function New-PortableZipPackage {
     
     $packageName = "cloudtolocalllm-$Version-portable.zip"
     $zipOutputDir = Join-Path $WindowsOutputDir "portable"
-    New-DirectoryIfNotExists -Path $zipOutputDir
+    New-Directory -Path $zipOutputDir
     
     # Verify Windows build exists
     if (-not (Test-Path $WindowsBuildDir)) {
@@ -179,6 +179,18 @@ function New-WindowsPackages {
                     New-PortableZipPackage
                     $script:SuccessfulPackages += 'PortableZip'
                 }
+                'MSI' {
+                    Write-LogWarning "MSI package creation not yet implemented"
+                    Write-LogInfo "MSI packages require WiX Toolset and additional configuration"
+                    Write-LogInfo "For now, use the portable ZIP package for distribution"
+                    $script:FailedPackages += @{ Package = $packageType; Reason = 'MSI creation not implemented' }
+                }
+                'NSIS' {
+                    Write-LogWarning "NSIS package creation not yet implemented"
+                    Write-LogInfo "NSIS packages require NSIS compiler and installer script"
+                    Write-LogInfo "For now, use the portable ZIP package for distribution"
+                    $script:FailedPackages += @{ Package = $packageType; Reason = 'NSIS creation not implemented' }
+                }
                 default {
                     Write-LogWarning "Unknown Windows package type: $packageType"
                     $script:FailedPackages += @{ Package = $packageType; Reason = 'Unknown package type' }
@@ -206,7 +218,7 @@ function Invoke-Main {
     # Validate dependencies if not skipped
     if (-not $SkipDependencyCheck) {
         Write-LogInfo "Validating build dependencies..."
-        Test-BuildDependencies -AutoInstall:$AutoInstall
+        Install-BuildDependencies -AutoInstall:$AutoInstall
     }
     
     # Set output directory
@@ -216,8 +228,8 @@ function Invoke-Main {
     }
     
     # Create output directories
-    New-DirectoryIfNotExists -Path $OutputDir
-    New-DirectoryIfNotExists -Path $WindowsOutputDir
+    New-Directory -Path $OutputDir
+    New-Directory -Path $WindowsOutputDir
     
     # Build Flutter application if not skipped
     if (-not $SkipBuild) {
