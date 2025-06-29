@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import 'auth_service_mobile.dart';
 import 'auth_service_desktop.dart';
+import 'auth_service_desktop_windows.dart';
 
 /// IO platform authentication service factory (handles mobile and desktop)
 class AuthServicePlatform extends ChangeNotifier {
@@ -30,13 +31,22 @@ class AuthServicePlatform extends ChangeNotifier {
       _platformService = AuthServiceMobile();
       debugPrint('📱 Initialized Mobile Authentication Service');
     } else if (isDesktop) {
-      _platformService = AuthServiceDesktop();
-      debugPrint('🖥️ Initialized Desktop Authentication Service');
+      // Use Windows-specific authentication service for Windows
+      if (Platform.isWindows) {
+        _platformService = AuthServiceDesktopWindows();
+        debugPrint('🖥️ Initialized Windows Desktop Authentication Service');
+      } else {
+        // Use flutter_appauth for macOS and Linux (supported platforms)
+        _platformService = AuthServiceDesktop();
+        debugPrint(
+          '🖥️ Initialized Desktop Authentication Service (macOS/Linux)',
+        );
+      }
     } else {
-      // Fallback to desktop service for unknown platforms
-      _platformService = AuthServiceDesktop();
+      // Fallback to Windows service for unknown platforms
+      _platformService = AuthServiceDesktopWindows();
       debugPrint(
-        '⚠️ Unknown platform, falling back to Desktop Authentication Service',
+        '⚠️ Unknown platform, falling back to Windows Desktop Authentication Service',
       );
     }
 

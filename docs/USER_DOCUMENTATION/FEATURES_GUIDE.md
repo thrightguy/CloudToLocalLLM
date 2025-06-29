@@ -131,8 +131,8 @@ context7-mcp --test-connection
 // Auth0 Configuration
 const auth0Config = {
   domain: 'dev-xafu7oedkd5wlrbo.us.auth0.com',
-  clientId: 'H10eY1pG9e2g6MvFKPDFbJ3ASIhxDgNu',
-  audience: 'https://api.cloudtolocalllm.online',
+  clientId: 'ESfES9tnQ4qGxFlwzXpDuRVXCyk0KF29',
+  audience: 'https://app.cloudtolocalllm.online',
   redirectUri: {
     web: 'https://app.cloudtolocalllm.online/callback',
     desktop: 'http://localhost:8080/callback'

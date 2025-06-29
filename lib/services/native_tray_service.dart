@@ -69,12 +69,34 @@ class NativeTrayService with TrayListener {
       _onQuit = onQuit;
 
       // Initialize tray manager with basic setup first
-      await trayManager.setIcon(
-        _getIconPath(TrayConnectionStatus.disconnected),
-      );
+      try {
+        final iconPath = _getIconPath(TrayConnectionStatus.disconnected);
+        debugPrint('🖥️ [NativeTray] Setting tray icon: $iconPath');
+        await trayManager.setIcon(iconPath);
+        debugPrint('🖥️ [NativeTray] Tray icon set successfully');
+      } catch (e) {
+        debugPrint('🖥️ [NativeTray] Failed to set tray icon: $e');
+        // Try with a fallback icon using platform-specific format
+        try {
+          final fallbackExtension = Platform.isWindows ? '.ico' : '.png';
+          await trayManager.setIcon(
+            'assets/images/tray_icon$fallbackExtension',
+          );
+          debugPrint('🖥️ [NativeTray] Fallback tray icon set successfully');
+        } catch (fallbackError) {
+          debugPrint(
+            '🖥️ [NativeTray] Fallback tray icon also failed: $fallbackError',
+          );
+        }
+      }
 
       // Set up context menu first (this is more reliable)
-      await _updateContextMenu();
+      try {
+        await _updateContextMenu();
+        debugPrint('🖥️ [NativeTray] Context menu set successfully');
+      } catch (e) {
+        debugPrint('🖥️ [NativeTray] Failed to set context menu: $e');
+      }
 
       // Add listener for tray events
       trayManager.addListener(this);
@@ -183,17 +205,21 @@ class NativeTrayService with TrayListener {
     }
   }
 
-  /// Get icon path for connection status
+  /// Get icon path for connection status with platform-specific format
   String _getIconPath(TrayConnectionStatus status) {
+    // Use .ico files on Windows for better system tray compatibility
+    // Use .png files on other platforms (Linux, macOS)
+    final extension = Platform.isWindows ? '.ico' : '.png';
+
     switch (status) {
       case TrayConnectionStatus.allConnected:
-        return 'assets/images/tray_icon_connected.png';
+        return 'assets/images/tray_icon_connected$extension';
       case TrayConnectionStatus.partiallyConnected:
-        return 'assets/images/tray_icon_partial.png';
+        return 'assets/images/tray_icon_partial$extension';
       case TrayConnectionStatus.connecting:
-        return 'assets/images/tray_icon_connecting.png';
+        return 'assets/images/tray_icon_connecting$extension';
       case TrayConnectionStatus.disconnected:
-        return 'assets/images/tray_icon_disconnected.png';
+        return 'assets/images/tray_icon_disconnected$extension';
     }
   }
 

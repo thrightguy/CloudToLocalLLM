@@ -459,22 +459,51 @@ EOF
     log_success "Distribution files updated for Flutter-native homepage"
 }
 
-# Manage containers
+# Manage containers with comprehensive cleanup
 manage_containers() {
     log "Managing Docker containers..."
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log "DRY RUN: Would stop and restart containers"
+        log "DRY RUN: Would stop and restart containers with cleanup"
         return 0
     fi
 
-    # Stop running containers
-    log_verbose "Stopping existing containers..."
+    # Comprehensive container cleanup to prevent port conflicts
+    log_verbose "Performing comprehensive container cleanup..."
+
+    # Step 1: Stop and remove all containers including orphans
+    log_verbose "Stopping and removing all containers (including orphans)..."
     if [[ "$VERBOSE" == "true" ]]; then
-        docker compose -f docker-compose.yml down
+        docker compose -f docker-compose.yml down --remove-orphans
     else
-        docker compose -f docker-compose.yml down &> /dev/null
+        docker compose -f docker-compose.yml down --remove-orphans &> /dev/null
     fi
+
+    # Step 2: Additional cleanup for any remaining containers that might be using our ports
+    log_verbose "Checking for containers using ports 80, 443, and 8080..."
+    local containers_using_ports=$(docker ps -q --filter "publish=80" --filter "publish=443" --filter "publish=8080" 2>/dev/null || true)
+    if [[ -n "$containers_using_ports" ]]; then
+        log_verbose "Found containers using required ports, stopping them..."
+        if [[ "$VERBOSE" == "true" ]]; then
+            echo "$containers_using_ports" | xargs -r docker stop
+            echo "$containers_using_ports" | xargs -r docker rm
+        else
+            echo "$containers_using_ports" | xargs -r docker stop &> /dev/null
+            echo "$containers_using_ports" | xargs -r docker rm &> /dev/null
+        fi
+    fi
+
+    # Step 3: Clean up unused Docker resources (optional but recommended)
+    log_verbose "Cleaning up unused Docker resources..."
+    if [[ "$VERBOSE" == "true" ]]; then
+        docker system prune -f
+    else
+        docker system prune -f &> /dev/null
+    fi
+
+    # Step 4: Wait a moment for cleanup to complete
+    log_verbose "Waiting for cleanup to complete..."
+    sleep 3
 
     # Check SSL certificates
     if [ -d "certbot/live/cloudtolocalllm.online" ]; then
