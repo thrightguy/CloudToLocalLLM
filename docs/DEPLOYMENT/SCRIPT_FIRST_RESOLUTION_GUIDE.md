@@ -151,7 +151,8 @@ git add . && git commit && git push
 ```powershell
 # After successful deployment verification
 ./scripts/powershell/version_manager.ps1 increment <type>  # patch|minor|major
-git add . && git commit -m "Increment version after deployment" && git push
+git add . && git commit -m "Increment version after deployment"
+bash -c "git push origin master"  # Use Git Bash for Windows SSH compatibility
 ```
 
 ### Build and Distribution

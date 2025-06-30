@@ -87,7 +87,10 @@ Choose your deployment scenario:
 # - build: Build increments (x.y.z+timestamp) - no GitHub release
 
 # Commit version changes
-git add . && git commit -m "Increment version after deployment" && git push
+git add . && git commit -m "Increment version after deployment"
+
+# Push using Git Bash (Windows SSH compatibility)
+bash -c "git push origin master"
 ```
 
 **Expected Output:**
@@ -133,6 +136,8 @@ Before ANY deployment, verify these files match pubspec.yaml version:
 
 **Note:** Version incrementing is now performed **manually after deployment verification** to give developers control over when versions are committed.
 
+**Windows Git Push:** All `git push` operations use Git Bash (`bash -c "git push ..."`) to resolve SSH authentication issues on Windows.
+
 **Expected Output:**
 ```
 === CloudToLocalLLM Version Information ===
@@ -177,12 +182,12 @@ git log --oneline -1
 ```
 
 #### **Step 1.4: Push to Git Repository** ✅
-```bash
-# Push to GitHub (primary for development)
-git push origin master
+```powershell
+# Push to GitHub using Git Bash (Windows SSH compatibility)
+bash -c "git push origin master"
 
 # Alternative: Push to SourceForge (if configured)
-# git push sourceforge master
+# bash -c "git push sourceforge master"
 
 # Verify push succeeded
 git log --oneline -5
@@ -402,8 +407,8 @@ git add PKGBUILD .SRCINFO
 # Commit with version info
 git commit -m "Update to version $(./scripts/version_manager.sh get-semantic)"
 
-# Push to AUR (requires SSH key setup)
-git push origin master
+# Push to AUR using Git Bash (requires SSH key setup)
+bash -c "git push origin master"
 ```
 
 **Expected Output:**
@@ -684,7 +689,7 @@ cd aur-package && makepkg --printsrcinfo | grep "pkgver ="
 # Rollback to previous version
 git log --oneline -10  # Find previous good commit
 git reset --hard <previous-commit-hash>
-git push --force-with-lease origin master
+bash -c "git push --force-with-lease origin master"
 ```
 
 #### **VPS Rollback** 🔙
@@ -701,7 +706,7 @@ git reset --hard <previous-commit-hash>
 # Rollback AUR package
 cd aur-package/
 git reset --hard <previous-commit-hash>
-git push --force-with-lease origin master
+bash -c "git push --force-with-lease origin master"
 ```
 
 ---
@@ -747,8 +752,8 @@ git commit -m "Increment version after successful deployment
 - Prepare repository for next development cycle
 - Automated version synchronization across all files"
 
-# Push to repository
-git push origin master
+# Push to repository using Git Bash (Windows SSH compatibility)
+bash -c "git push origin master"
 ```
 
 #### **Step 4: Verify Version Increment** ✅
@@ -1211,7 +1216,7 @@ echo "🚀 Quick Update Deployment"
 # Deploy current version without incrementing
 ./scripts/deploy/sync_versions.sh
 git add -A && git commit -m "Quick update deployment"
-git push origin master
+bash -c "git push origin master"
 flutter build web --release
 ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull && ./scripts/deploy/update_and_deploy.sh"
 ./scripts/deploy/verify_deployment.sh

@@ -136,7 +136,8 @@ CloudToLocalLLM follows a strict semantic versioning scheme that aligns release 
 ./scripts/powershell/version_manager.ps1 increment major    # For breaking changes
 
 # Commit the version increment
-git add . && git commit -m "Increment version after deployment" && git push
+git add . && git commit -m "Increment version after deployment"
+bash -c "git push origin master"  # Use Git Bash for Windows SSH compatibility
 ```
 
 ### 6-Phase Deployment Considerations
@@ -216,8 +217,9 @@ git add . && git commit -m "Increment version after deployment" && git push
 5. **Deploy Immediately**: Use expedited 6-phase deployment with current version
 6. **Verify Fix**: Ensure hotfix resolves the critical issue
 7. **Manual Version Increment**: `./scripts/powershell/version_manager.ps1 increment patch`
-8. **Commit Version**: `git add . && git commit -m "Increment version after hotfix" && git push`
-9. **Monitor Closely**: Enhanced monitoring post-deployment
+8. **Commit Version**: `git add . && git commit -m "Increment version after hotfix"`
+9. **Push Changes**: `bash -c "git push origin master"`  # Use Git Bash for Windows SSH compatibility
+10. **Monitor Closely**: Enhanced monitoring post-deployment
 
 ## Version History Examples
 
