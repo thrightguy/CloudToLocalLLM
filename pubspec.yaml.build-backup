@@ -1,0 +1,83 @@
+﻿name: cloudtolocalllm
+description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
+publish_to: none
+homepage: https://cloudtolocalllm.online
+repository: https://github.com/imrightguy/CloudToLocalLLM
+version: 3.7.7+202506301122
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI and Navigation
+  cupertino_icons: ^1.0.8
+  go_router: ^15.2.3
+
+  # Authentication
+  flutter_appauth: ^9.0.1
+  url_launcher: ^6.3.1
+
+  # HTTP and Web
+  http: ^1.4.0
+  web: ^1.1.1
+
+  # Streaming and WebSocket support
+  web_socket_channel: ^3.0.3
+  stream_channel: ^2.1.2
+
+  # Enhanced HTTP handling for streaming
+  dio: ^5.8.0
+
+  # Real-time event handling
+  rxdart: ^0.28.0
+
+  # Connection monitoring
+  connectivity_plus: ^6.1.4
+
+  # Process execution for zrok integration
+  process_run: ^1.2.4
+
+  # App Information
+  package_info_plus: ^8.3.0
+
+  # File System
+  path: ^1.9.1
+  path_provider: ^2.1.5
+
+  # Local Storage
+  sqflite: ^2.4.2
+  sqflite_common_ffi: ^2.3.6
+
+  # State Management
+  provider: ^6.1.5
+
+  # System Integration - Flutter plugins for window management and secure storage
+  window_manager: ^0.5.0
+  flutter_secure_storage_x: ^11.0.0
+
+  # System Integration - Native Flutter system tray integration
+  tray_manager: ^0.5.0
+  shelf: ^1.4.2
+  crypto: ^3.0.6
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+  # Streaming and integration testing
+  test: ^1.24.6
+  mockito: ^5.4.2
+  build_runner: ^2.4.9
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/version.json

@@ -1,0 +1,37 @@
+﻿name: cloudtolocalllm_shared
+description: Shared libraries and utilities for CloudToLocalLLM applications
+publish_to: none
+version: 3.7.7+202506301122
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP and Web
+  http: ^1.2.2
+  web: ^1.1.1
+
+  # File System
+  path: ^1.9.1
+
+  # State Management
+  provider: ^6.1.2
+
+  # JSON handling
+  json_annotation: ^4.9.0
+
+  # App Information
+  package_info_plus: ^8.1.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.13
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
