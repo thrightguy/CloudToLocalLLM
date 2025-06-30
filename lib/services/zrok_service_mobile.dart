@@ -34,20 +34,20 @@ class ZrokServiceMobile extends ZrokService {
 
   @override
   Future<void> initialize() async {
-    debugPrint('📱 [ZrokService] Mobile service initialized (read-only mode)');
+    debugPrint('🌐 [ZrokService] Mobile service initialized (read-only mode)');
   }
 
   @override
   Future<ZrokTunnel?> startTunnel(ZrokConfig config) async {
     debugPrint(
-      '📱 [ZrokService] Tunnel creation not supported on mobile platform',
+      '🌐 [ZrokService] Tunnel creation not supported on mobile platform',
     );
     return null;
   }
 
   @override
   Future<void> stopTunnel() async {
-    debugPrint('📱 [ZrokService] No tunnel to stop on mobile platform');
+    debugPrint('🌐 [ZrokService] No tunnel to stop on mobile platform');
   }
 
   @override
@@ -62,7 +62,7 @@ class ZrokServiceMobile extends ZrokService {
 
   @override
   Future<void> updateConfiguration(ZrokConfig newConfig) async {
-    debugPrint('📱 [ZrokService] Configuration update not supported on mobile');
+    debugPrint('🌐 [ZrokService] Configuration update not supported on mobile');
   }
 
   @override
@@ -85,7 +85,7 @@ class ZrokServiceMobile extends ZrokService {
 
   @override
   Future<bool> enableEnvironment(String accountToken) async {
-    debugPrint('📱 [ZrokService] Environment enable not supported on mobile');
+    debugPrint('🌐 [ZrokService] Environment enable not supported on mobile');
     return false;
   }
 
@@ -96,13 +96,17 @@ class ZrokServiceMobile extends ZrokService {
 
   @override
   Future<String?> createReservedShare(ZrokConfig config) async {
-    debugPrint('📱 [ZrokService] Reserved share creation not supported on mobile');
+    debugPrint(
+      '🌐 [ZrokService] Reserved share creation not supported on mobile',
+    );
     return null;
   }
 
   @override
   Future<void> releaseReservedShare(String shareToken) async {
-    debugPrint('📱 [ZrokService] Reserved share release not supported on mobile');
+    debugPrint(
+      '🌐 [ZrokService] Reserved share release not supported on mobile',
+    );
   }
 
   @override
@@ -113,7 +117,7 @@ class ZrokServiceMobile extends ZrokService {
 
   @override
   void dispose() {
-    debugPrint('📱 [ZrokService] Mobile service disposed');
+    debugPrint('🌐 [ZrokService] Mobile service disposed');
     super.dispose();
   }
 }

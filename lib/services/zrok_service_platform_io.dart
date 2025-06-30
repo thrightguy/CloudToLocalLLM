@@ -25,14 +25,16 @@ class ZrokServicePlatform extends ZrokService {
     // Create platform-specific service
     if (isMobile) {
       _platformService = ZrokServiceMobile(authService: _authService);
-      debugPrint('📱 Initialized Mobile Zrok Service');
+      debugPrint('🌐 [ZrokService] Initialized Mobile Zrok Service');
     } else if (isDesktop) {
       _platformService = ZrokServiceDesktop(authService: _authService);
-      debugPrint('🖥️ Initialized Desktop Zrok Service');
+      debugPrint('🌐 [ZrokService] Initialized Desktop Zrok Service');
     } else {
       // Fallback to desktop service for unknown platforms
       _platformService = ZrokServiceDesktop(authService: _authService);
-      debugPrint('⚠️ Unknown platform, falling back to Desktop Zrok Service');
+      debugPrint(
+        '🌐 [ZrokService] Unknown platform, falling back to Desktop Zrok Service',
+      );
     }
 
     // Listen to platform service changes

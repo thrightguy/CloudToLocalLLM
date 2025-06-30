@@ -16,7 +16,7 @@ class ZrokServicePlatform extends ZrokService {
 
   ZrokServicePlatform({AuthService? authService}) {
     _platformService = ZrokServiceWeb(authService: authService);
-    debugPrint('🌐 Initialized Web Zrok Service (stub)');
+    debugPrint('🌐 [ZrokService] Initialized Web Zrok Service (stub)');
   }
 
   // Delegate all properties to web service
