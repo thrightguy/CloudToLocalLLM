@@ -506,32 +506,50 @@ phase4_distribution_execution() {
     log_verbose "Checking for uncommitted changes..."
     local git_status=$(git status --porcelain)
     if [[ -n "$git_status" ]]; then
-        log_error "❌ Repository has uncommitted changes - deployment cannot proceed"
-        log_error "Please commit all changes with proper changelog before deployment:"
-        echo "$git_status"
-        log_error ""
-        log_error "Required manual workflow before deployment:"
-        log_error "  1. Review all changes: git status"
-        log_error "  2. Stage changes: git add ."
-        log_error "  3. Commit with changelog: git commit -m 'Release v${current_version}: [description]'"
-        log_error "  4. Push to GitHub: git push origin master"
-        log_error "  5. Re-run deployment script"
-        exit 4
+        if [[ "$FORCE" == "true" ]]; then
+            log_warning "⚠️ Repository has uncommitted changes but continuing with force mode"
+            log_verbose "Uncommitted changes detected:"
+            echo "$git_status" | head -10
+            if [[ $(echo "$git_status" | wc -l) -gt 10 ]]; then
+                log_verbose "... and $(($(echo "$git_status" | wc -l) - 10)) more files"
+            fi
+        else
+            log_error "❌ Repository has uncommitted changes - deployment cannot proceed"
+            log_error "Please commit all changes with proper changelog before deployment:"
+            echo "$git_status"
+            log_error ""
+            log_error "Required manual workflow before deployment:"
+            log_error "  1. Review all changes: git status"
+            log_error "  2. Stage changes: git add ."
+            log_error "  3. Commit with changelog: git commit -m 'Release v${current_version}: [description]'"
+            log_error "  4. Push to GitHub: git push origin master"
+            log_error "  5. Re-run deployment script"
+            log_error "  6. Or use --force flag to bypass this check"
+            exit 4
+        fi
+    else
+        log_success "✓ Repository is clean (no uncommitted changes)"
     fi
-    log_success "✓ Repository is clean (no uncommitted changes)"
 
     # Validate local branch is up-to-date with origin/master
     log_verbose "Checking if local branch is up-to-date with origin/master..."
     git fetch origin master --quiet
     local unpushed_commits=$(git rev-list HEAD...origin/master --count 2>/dev/null || echo "unknown")
     if [[ "$unpushed_commits" != "0" ]]; then
-        log_error "❌ Local branch is not synchronized with origin/master"
-        log_error "Unpushed commits: $unpushed_commits"
-        log_error "Please push all commits before deployment:"
-        log_error "  git push origin master"
-        exit 4
+        if [[ "$FORCE" == "true" ]]; then
+            log_warning "⚠️ Local branch has unpushed commits but continuing with force mode"
+            log_verbose "Unpushed commits: $unpushed_commits"
+        else
+            log_error "❌ Local branch is not synchronized with origin/master"
+            log_error "Unpushed commits: $unpushed_commits"
+            log_error "Please push all commits before deployment:"
+            log_error "  git push origin master"
+            log_error "  Or use --force flag to bypass this check"
+            exit 4
+        fi
+    else
+        log_success "✓ Local branch is up-to-date with origin/master"
     fi
-    log_success "✓ Local branch is up-to-date with origin/master"
 
     # Validate version files contain proper release version (not BUILD_TIME_PLACEHOLDER)
     local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.+]*\).*/\1/')
