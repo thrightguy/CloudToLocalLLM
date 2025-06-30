@@ -10,11 +10,13 @@ The "Script-First Resolution" principle is a core deployment philosophy for Clou
 
 ### ✅ Correct Approach
 ```bash
-# Use automation scripts
-./scripts/version_manager.sh increment patch
+# Use automation scripts for deployment
 ./scripts/deploy/sync_versions.sh
 ./scripts/create_aur_binary_package.sh
 ./scripts/deploy/complete_automated_deployment.sh --force --verbose
+
+# Manual version increment AFTER deployment verification
+./scripts/powershell/version_manager.ps1 increment patch
 ```
 
 ### ❌ Incorrect Approach
@@ -141,8 +143,16 @@ git add . && git commit && git push
 ## Script Inventory
 
 ### Version Management
-- `./scripts/version_manager.sh` - Version increment and synchronization
+- `./scripts/version_manager.sh` - Version operations (Linux/WSL)
+- `./scripts/powershell/version_manager.ps1` - Version operations (Windows/PowerShell) - **Primary tool**
 - `./scripts/deploy/sync_versions.sh` - Cross-file version consistency
+
+**Manual Version Increment Workflow:**
+```powershell
+# After successful deployment verification
+./scripts/powershell/version_manager.ps1 increment <type>  # patch|minor|major
+git add . && git commit -m "Increment version after deployment" && git push
+```
 
 ### Build and Distribution
 - `./scripts/create_aur_binary_package.sh` - Create AUR distribution package

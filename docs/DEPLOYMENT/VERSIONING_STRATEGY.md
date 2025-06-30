@@ -94,13 +94,13 @@ CloudToLocalLLM follows a strict semantic versioning scheme that aligns release 
 # Show current version information
 ./scripts/version_manager.sh info
 
-# Increment version types
-./scripts/version_manager.sh increment patch    # For urgent fixes
-./scripts/version_manager.sh increment minor    # For planned features
-./scripts/version_manager.sh increment major    # For breaking changes
-./scripts/version_manager.sh increment build    # For timestamp updates
+# Manual version increment (AFTER deployment verification)
+./scripts/powershell/version_manager.ps1 increment patch    # For urgent fixes
+./scripts/powershell/version_manager.ps1 increment minor    # For planned features
+./scripts/powershell/version_manager.ps1 increment major    # For breaking changes
+./scripts/powershell/version_manager.ps1 increment build    # For timestamp updates
 
-# Prepare versions for build-time injection
+# Prepare versions for build-time injection (during deployment)
 ./scripts/version_manager.sh prepare patch      # Prepare with placeholder
 ./scripts/version_manager.sh prepare minor      # Build-time timestamp injection
 ```
@@ -118,6 +118,27 @@ CloudToLocalLLM follows a strict semantic versioning scheme that aligns release 
 
 ## Deployment Workflow Integration
 
+### Manual Version Increment Strategy
+
+**Version incrementing is now performed AFTER deployment verification** to give developers control over when versions are committed.
+
+#### **New Workflow:**
+1. **Deploy Current Version**: Use existing version for deployment
+2. **Verify Deployment**: Ensure all components are working correctly
+3. **Manual Version Increment**: Choose appropriate increment type
+4. **Commit Version Changes**: Prepare repository for next development cycle
+
+#### **Version Increment Commands (Post-Deployment):**
+```powershell
+# After successful deployment verification
+./scripts/powershell/version_manager.ps1 increment patch    # For bug fixes
+./scripts/powershell/version_manager.ps1 increment minor    # For new features
+./scripts/powershell/version_manager.ps1 increment major    # For breaking changes
+
+# Commit the version increment
+git add . && git commit -m "Increment version after deployment" && git push
+```
+
 ### 6-Phase Deployment Considerations
 
 **PATCH Releases:**
@@ -125,18 +146,21 @@ CloudToLocalLLM follows a strict semantic versioning scheme that aligns release 
 - **Phase 4**: Minimal distribution testing
 - **Phase 5**: Immediate VPS deployment
 - **Phase 6**: Fast-track verification
+- **Post-Deployment**: Verify fixes, then manually increment patch version
 
 **MINOR Releases:**
 - **Phase 1-3**: Standard execution
 - **Phase 4**: Full distribution testing
 - **Phase 5**: Scheduled VPS deployment
 - **Phase 6**: Complete verification including AUR testing
+- **Post-Deployment**: Verify features, then manually increment minor version
 
 **MAJOR Releases:**
 - **Phase 1-3**: Extended testing and validation
 - **Phase 4**: Comprehensive distribution testing
 - **Phase 5**: Coordinated VPS deployment with rollback plan
 - **Phase 6**: Extended verification and monitoring
+- **Post-Deployment**: Verify compatibility, then manually increment major version
 
 ## GitHub Release Strategy
 
@@ -188,10 +212,12 @@ CloudToLocalLLM follows a strict semantic versioning scheme that aligns release 
 1. **Identify Critical Issue**: Confirm issue requires immediate fix
 2. **Create Hotfix Branch**: `git checkout -b hotfix/critical-auth-fix`
 3. **Implement Fix**: Minimal code changes to address issue
-4. **Version Increment**: `./scripts/version_manager.sh increment patch`
-5. **Fast-Track Testing**: Focus on fix verification only
-6. **Deploy Immediately**: Use expedited 6-phase deployment
-7. **Monitor Closely**: Enhanced monitoring post-deployment
+4. **Fast-Track Testing**: Focus on fix verification only
+5. **Deploy Immediately**: Use expedited 6-phase deployment with current version
+6. **Verify Fix**: Ensure hotfix resolves the critical issue
+7. **Manual Version Increment**: `./scripts/powershell/version_manager.ps1 increment patch`
+8. **Commit Version**: `git add . && git commit -m "Increment version after hotfix" && git push`
+9. **Monitor Closely**: Enhanced monitoring post-deployment
 
 ## Version History Examples
 

@@ -61,7 +61,7 @@ flutter --version
 ### **Deployment Type Selection**
 Choose your deployment scenario:
 - **🆕 First-Time Deployment**: Complete setup from scratch
-- **🔄 Version Update**: Increment version and deploy changes
+- **🔄 Version Update**: Deploy changes, then manually increment version
 - **🐛 Hotfix Deployment**: Critical bug fix deployment
 - **🔧 Configuration Update**: No version change, config only
 
@@ -74,24 +74,31 @@ Choose your deployment scenario:
 - Format: `MAJOR.MINOR.PATCH+BUILD` (e.g., `3.1.3+001`)
 - **NEVER** manually edit version numbers anywhere else
 
-### **Version Increment Process** (⏱️ 2 minutes)
-```bash
-# Use the version manager script - ALWAYS
-./scripts/version_manager.sh increment <type>
+### **Manual Version Increment Process** (⏱️ 2 minutes)
+**Performed AFTER deployment verification**
+```powershell
+# Use the PowerShell version manager script - ALWAYS
+./scripts/powershell/version_manager.ps1 increment <type>
 
 # Types:
 # - major: Creates GitHub release (x.0.0) - significant changes
 # - minor: Feature additions (x.y.0) - no GitHub release
 # - patch: Bug fixes (x.y.z) - no GitHub release
-# - build: Build increments (x.y.z+nnn) - no GitHub release
+# - build: Build increments (x.y.z+timestamp) - no GitHub release
+
+# Commit version changes
+git add . && git commit -m "Increment version after deployment" && git push
 ```
 
 **Expected Output:**
 ```
-✅ Version updated from 3.1.2+001 to 3.1.3+001
+✅ Version updated from 3.1.2+202506301245 to 3.1.3+202506301246
 📋 Updated files:
   - pubspec.yaml
   - assets/version.json
+  - lib/shared/lib/version.dart
+  - lib/config/app_config.dart
+  - lib/shared/pubspec.yaml
 ```
 
 ### **Version Consistency Requirements**
@@ -113,16 +120,18 @@ Before ANY deployment, verify these files match pubspec.yaml version:
 
 ## 🔄 **COMPLETE DEPLOYMENT PROCESS**
 
-### **Phase 1: Local Development & Version Management** (⏱️ 10 minutes)
+### **Phase 1: Local Development & Pre-Deployment Preparation** (⏱️ 8 minutes)
 
-#### **Step 1.1: Increment Version** ✅
+#### **Step 1.1: Verify Current Version** ✅
 ```bash
-# Determine increment type based on changes
-./scripts/version_manager.sh increment patch  # or minor/major/build
-
-# Verify version updated correctly
+# Check current version status
 ./scripts/version_manager.sh info
+
+# Verify all version files are synchronized
+./scripts/deploy/sync_versions.sh
 ```
+
+**Note:** Version incrementing is now performed **manually after deployment verification** to give developers control over when versions are committed.
 
 **Expected Output:**
 ```
@@ -697,6 +706,72 @@ git push --force-with-lease origin master
 
 ---
 
+## 🎯 **FINAL STEP: MANUAL VERSION INCREMENT** (⏱️ 2 minutes)
+
+### **🔄 Post-Deployment Version Management**
+
+**After successful deployment verification**, increment the version for the next development cycle:
+
+#### **Step 1: Choose Version Increment Type** ✅
+```powershell
+# Determine the appropriate increment based on what was just deployed:
+# - patch: Bug fixes, security updates, minor improvements
+# - minor: New features, UI enhancements, functionality additions
+# - major: Breaking changes, architectural overhauls, API changes
+
+# Show current version before increment
+./scripts/powershell/version_manager.ps1 info
+```
+
+#### **Step 2: Increment Version** ✅
+```powershell
+# For bug fixes and minor improvements (most common)
+./scripts/powershell/version_manager.ps1 increment patch
+
+# For new features and functionality
+./scripts/powershell/version_manager.ps1 increment minor
+
+# For breaking changes (rare)
+./scripts/powershell/version_manager.ps1 increment major
+```
+
+#### **Step 3: Commit Version Changes** ✅
+```bash
+# Add all version-related files
+git add pubspec.yaml assets/version.json lib/shared/lib/version.dart lib/config/app_config.dart lib/shared/pubspec.yaml
+
+# Commit with descriptive message
+git commit -m "Increment version after successful deployment
+
+- Post-deployment version management
+- Prepare repository for next development cycle
+- Automated version synchronization across all files"
+
+# Push to repository
+git push origin master
+```
+
+#### **Step 4: Verify Version Increment** ✅
+```powershell
+# Confirm new version is set correctly
+./scripts/powershell/version_manager.ps1 info
+
+# Verify all files are synchronized
+./scripts/deploy/sync_versions.sh
+```
+
+### **🎉 Deployment Complete!**
+
+**Your deployment is now fully complete with version management prepared for the next development cycle.**
+
+**Key Benefits of Manual Version Increment:**
+- ✅ **Developer Control**: You decide when to increment versions
+- ✅ **Deployment Verification**: Ensure deployment works before committing to new version
+- ✅ **Flexible Timing**: Increment immediately or after additional testing
+- ✅ **Clear Separation**: Deployment success is independent of version management
+
+---
+
 ## 🔧 **TROUBLESHOOTING GUIDE**
 
 ### **🔄 Version Mismatch Issues**
@@ -873,7 +948,7 @@ ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && ./scripts/deploy
 ```
 □ Pre-flight checks completed
 □ Environment verified (Flutter, Git, SSH)
-□ Version incremented and synchronized
+□ Current version verified and synchronized
 □ Git changes committed and pushed
 □ Flutter builds completed (Linux + Web)
 □ Binary packages created
@@ -883,39 +958,42 @@ ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && ./scripts/deploy
 □ Comprehensive verification passed
 □ All functional tests passed
 □ Deployment completion confirmed
+□ Manual version increment performed (post-deployment)
+□ Version increment committed and pushed
 ```
 
 ### **🔄 Update Deployment Checklist**
 ```
 □ Pre-flight checks completed
-□ Version incremented appropriately
-□ Version synchronization completed
+□ Current version verified and synchronized
 □ Git changes committed and pushed
 □ Flutter web build completed
 □ AUR package updated and tested
 □ VPS deployment completed
 □ Verification script passed
 □ Deployment completion confirmed
+□ Manual version increment performed (post-deployment)
+□ Version increment committed and pushed
 ```
 
 ### **⚡ Quick Commands Reference**
 
-#### **Version Management**
-```bash
+#### **Version Management (Manual Post-Deployment)**
+```powershell
 # CloudToLocalLLM Semantic Versioning Strategy:
 # PATCH (0.0.X) - Urgent fixes: hotfixes, security updates, critical bugs
 # MINOR (0.X.0) - Planned features: new functionality, UI enhancements
 # MAJOR (X.0.0) - Breaking changes: architectural overhauls, API changes
 
 # Show current version
-./scripts/version_manager.sh info
+./scripts/powershell/version_manager.ps1 info
 
-# Increment version based on change type
-./scripts/version_manager.sh increment patch    # For urgent fixes
-./scripts/version_manager.sh increment minor    # For planned features
-./scripts/version_manager.sh increment major    # For breaking changes
+# Manual version increment (AFTER deployment verification)
+./scripts/powershell/version_manager.ps1 increment patch    # For urgent fixes
+./scripts/powershell/version_manager.ps1 increment minor    # For planned features
+./scripts/powershell/version_manager.ps1 increment major    # For breaking changes
 
-# Synchronize versions
+# Synchronize versions (if needed)
 ./scripts/deploy/sync_versions.sh
 
 # Verify deployment
@@ -1088,22 +1166,22 @@ Resolution: [steps taken]
 
 ### **🔧 Script Usage Examples**
 
-#### **Version Management**
-```bash
+#### **Version Management (Manual Post-Deployment)**
+```powershell
 # Show detailed version information
-./scripts/version_manager.sh info
+./scripts/powershell/version_manager.ps1 info
 
-# Increment version types
-./scripts/version_manager.sh increment build    # 3.1.3+001 → 3.1.3+002
-./scripts/version_manager.sh increment patch    # 3.1.3+001 → 3.1.4+001
-./scripts/version_manager.sh increment minor    # 3.1.3+001 → 3.2.0+001
-./scripts/version_manager.sh increment major    # 3.1.3+001 → 4.0.0+001
+# Manual version increment (AFTER deployment verification)
+./scripts/powershell/version_manager.ps1 increment build    # 3.1.3+202506301245 → 3.1.3+202506301246
+./scripts/powershell/version_manager.ps1 increment patch    # 3.1.3+202506301245 → 3.1.4+202506301246
+./scripts/powershell/version_manager.ps1 increment minor    # 3.1.3+202506301245 → 3.2.0+202506301246
+./scripts/powershell/version_manager.ps1 increment major    # 3.1.3+202506301245 → 4.0.0+202506301246
 
 # Set specific version
-./scripts/version_manager.sh set 3.2.0
+./scripts/powershell/version_manager.ps1 set 3.2.0
 
 # Validate version format
-./scripts/version_manager.sh validate
+./scripts/powershell/version_manager.ps1 validate
 ```
 
 #### **Deployment Automation**
@@ -1130,14 +1208,16 @@ Resolution: [steps taken]
 set -e
 
 echo "🚀 Quick Update Deployment"
-./scripts/version_manager.sh increment patch
+# Deploy current version without incrementing
 ./scripts/deploy/sync_versions.sh
-git add -A && git commit -m "Quick update to $(./scripts/version_manager.sh get)"
+git add -A && git commit -m "Quick update deployment"
 git push origin master
 flutter build web --release
 ssh cloudllm@cloudtolocalllm.online "cd /opt/cloudtolocalllm && git pull && ./scripts/deploy/update_and_deploy.sh"
 ./scripts/deploy/verify_deployment.sh
 echo "✅ Quick update completed!"
+echo "📋 Next: Run manual version increment when ready:"
+echo "   ./scripts/powershell/version_manager.ps1 increment patch"
 ```
 
 #### **AUR-Only Update**

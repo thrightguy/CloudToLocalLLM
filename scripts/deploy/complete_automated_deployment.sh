@@ -685,7 +685,8 @@ phase4_distribution_execution() {
 
         # Verify GitHub raw URL accessibility with retry logic
         log_verbose "Verifying GitHub raw URL accessibility..."
-        local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
+        local semantic_version=$(echo "$current_version" | cut -d'+' -f1)
+        local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${semantic_version}-x86_64.tar.gz"
         local max_attempts=5
         local attempt=1
         local github_accessible=false
@@ -791,7 +792,8 @@ phase4_distribution_execution() {
         # Final verification before AUR submission
         log_verbose "Performing final GitHub raw URL verification before AUR submission..."
         if [[ "$DRY_RUN" != "true" ]]; then
-            local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
+            local semantic_version=$(echo "$current_version" | cut -d'+' -f1)
+            local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${semantic_version}-x86_64.tar.gz"
             if ! curl -s -I "$github_url" | head -1 | grep -q "200"; then
                 log_error "GitHub raw URL not accessible before AUR submission"
                 log_error "URL: $github_url"
@@ -997,55 +999,19 @@ phase6_operational_readiness() {
         echo ""
         echo -e "${YELLOW}📋 DRY RUN completed - no actual deployment performed${NC}"
     else
-        # Automatic version increment for next development cycle
-        log "Preparing repository for next development cycle..."
-
-        # Extract current semantic version (without build number)
-        local current_semantic_version="${deployed_semantic_version}"
-        local version_parts=(${current_semantic_version//./ })
-        local major=${version_parts[0]}
-        local minor=${version_parts[1]}
-        local patch=${version_parts[2]}
-
-        # Increment patch version for next development cycle
-        local next_patch=$((patch + 1))
-        local next_version="${major}.${minor}.${next_patch}"
-
-        log_verbose "Incrementing version from $current_semantic_version to $next_version"
-
-        # Use version_manager.ps1 to set next development version
-        if command -v powershell &> /dev/null; then
-            log_verbose "Using PowerShell version_manager.ps1 for version increment..."
-            if powershell -Command "& './scripts/powershell/version_manager.ps1' set '${next_version}+BUILD_TIME_PLACEHOLDER'"; then
-                log_success "✓ Version incremented to $next_version+BUILD_TIME_PLACEHOLDER"
-
-                # Commit the version increment
-                git add pubspec.yaml assets/version.json lib/shared/lib/version.dart lib/config/app_config.dart lib/shared/pubspec.yaml
-                if git commit -m "Prepare for next development cycle: v${next_version}
-
-- Incremented version from v${current_semantic_version} to v${next_version}
-- Reset build number to BUILD_TIME_PLACEHOLDER for development
-- Automatic post-deployment version management
-- Repository ready for next development cycle"; then
-                    log_success "✓ Version increment committed to repository"
-
-                    # Push the version increment
-                    if git push origin master; then
-                        log_success "✓ Version increment pushed to GitHub"
-                    else
-                        log_warning "Failed to push version increment - manual push may be required"
-                    fi
-                else
-                    log_warning "No changes to commit for version increment"
-                fi
-            else
-                log_warning "Failed to increment version using version_manager.ps1"
-                log_warning "Manual version increment may be required for next development cycle"
-            fi
-        else
-            log_warning "PowerShell not available - skipping automatic version increment"
-            log_warning "Manual version increment recommended for next development cycle"
-        fi
+        echo ""
+        echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
+        echo ""
+        echo -e "${YELLOW}📋 Next Steps - Manual Version Management:${NC}"
+        echo -e "  ${BLUE}1.${NC} Verify deployment is working correctly"
+        echo -e "  ${BLUE}2.${NC} Run manual version increment when ready:"
+        echo -e "     ${CYAN}./scripts/powershell/version_manager.ps1 increment patch${NC}  # For bug fixes"
+        echo -e "     ${CYAN}./scripts/powershell/version_manager.ps1 increment minor${NC}  # For new features"
+        echo -e "     ${CYAN}./scripts/powershell/version_manager.ps1 increment major${NC}  # For breaking changes"
+        echo -e "  ${BLUE}3.${NC} Commit and push version changes:"
+        echo -e "     ${CYAN}git add . && git commit -m \"Increment version after deployment\" && git push${NC}"
+        echo ""
+        echo -e "${YELLOW}💡 Version increment is now manual to give you control over when versions are committed.${NC}"
     fi
 
     log_success "Operational readiness confirmed with build timestamp correlation"
