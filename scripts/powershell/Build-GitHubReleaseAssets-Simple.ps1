@@ -71,26 +71,31 @@ function New-DirectoryIfNotExists {
 }
 
 function Build-FlutterWindows {
-    Write-LogInfo "Building Flutter application for Windows using WSL..."
+    Write-LogInfo "Building Flutter application for Windows using native Windows Flutter..."
 
     try {
+        # Verify Windows Flutter is available
+        if (-not (Test-WindowsFlutterInstallation)) {
+            throw "Windows Flutter is not properly installed or configured"
+        }
+
         if ($Clean) {
             Write-LogInfo "Cleaning Flutter build..."
-            Invoke-WSLFlutterCommand -FlutterArgs "clean" -WorkingDirectory $ProjectRoot
+            Invoke-WindowsFlutterCommand -FlutterArgs "clean" -WorkingDirectory $ProjectRoot
         }
 
         Write-LogInfo "Running flutter pub get..."
-        Invoke-WSLFlutterCommand -FlutterArgs "pub get" -WorkingDirectory $ProjectRoot
+        Invoke-WindowsFlutterCommand -FlutterArgs "pub get" -WorkingDirectory $ProjectRoot
 
         Write-LogInfo "Running flutter build windows --release..."
-        Invoke-WSLFlutterCommand -FlutterArgs "build windows --release" -WorkingDirectory $ProjectRoot
+        Invoke-WindowsFlutterCommand -FlutterArgs "build windows --release" -WorkingDirectory $ProjectRoot
 
         $mainExecutable = Join-Path $WindowsBuildDir "cloudtolocalllm.exe"
         if (-not (Test-Path $mainExecutable)) {
-            throw "Flutter Windows executable not found after build"
+            throw "Flutter Windows executable not found after build at: $mainExecutable"
         }
 
-        Write-LogSuccess "Windows Flutter application built successfully using WSL"
+        Write-LogSuccess "Windows Flutter application built successfully using native Windows Flutter"
     }
     catch {
         Write-LogError "Flutter build failed: $($_.Exception.Message)"

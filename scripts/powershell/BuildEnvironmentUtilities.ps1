@@ -1155,6 +1155,82 @@ function Invoke-WSLFlutterCommand {
     }
 }
 
+# Test if Windows Flutter is installed and working
+function Test-WindowsFlutterInstallation {
+    [CmdletBinding()]
+    param()
+
+    try {
+        # Check if Flutter is in PATH
+        $flutterCommand = Get-Command flutter -ErrorAction SilentlyContinue
+        if (-not $flutterCommand) {
+            Write-LogWarning "Flutter not found in PATH"
+            return $false
+        }
+
+        # Test Flutter command
+        $flutterVersion = flutter --version 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-LogError "Flutter command failed"
+            return $false
+        }
+
+        Write-LogSuccess "Windows Flutter verified: $($flutterVersion -split "`n" | Select-Object -First 1)"
+        return $true
+    }
+    catch {
+        Write-LogError "Error testing Windows Flutter installation: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# Execute Flutter commands on Windows
+function Invoke-WindowsFlutterCommand {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FlutterArgs,
+
+        [Parameter(Mandatory = $false)]
+        [string]$WorkingDirectory = (Get-Location).Path
+    )
+
+    try {
+        # Verify Flutter is available
+        if (-not (Test-WindowsFlutterInstallation)) {
+            throw "Windows Flutter is not properly installed or configured"
+        }
+
+        # Change to working directory if specified
+        $originalLocation = Get-Location
+        if ($WorkingDirectory -and (Test-Path $WorkingDirectory)) {
+            Set-Location $WorkingDirectory
+        }
+
+        # Execute Flutter command
+        Write-LogInfo "Executing: flutter $FlutterArgs"
+
+        # Split arguments properly for PowerShell execution
+        $argArray = $FlutterArgs -split '\s+'
+        $output = & flutter $argArray 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Flutter command failed with exit code $LASTEXITCODE. Output: $output"
+        }
+
+        Write-Output $output
+    }
+    catch {
+        Write-LogError "Windows Flutter command failed: flutter $FlutterArgs"
+        Write-LogError "Error: $($_.Exception.Message)"
+        throw
+    }
+    finally {
+        # Restore original location
+        Set-Location $originalLocation
+    }
+}
+
 # Install Flutter in WSL if not present
 function Install-WSLFlutter {
     [CmdletBinding()]
