@@ -38,28 +38,24 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+
+
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
-    # Check Flutter
-    if ! command -v flutter &> /dev/null; then
+
+    # Determine which Flutter to use
+    if [[ -f "/opt/flutter/bin/flutter" && (-n "${WSL_DISTRO_NAME:-}" || -f "/proc/version") ]]; then
+        export FLUTTER_CMD="/opt/flutter/bin/flutter"
+        log_info "Using WSL Flutter: $FLUTTER_CMD"
+    elif command -v flutter &> /dev/null; then
+        export FLUTTER_CMD="flutter"
+        log_info "Using system Flutter: $FLUTTER_CMD"
+    else
         log_error "Flutter is not installed or not in PATH"
         exit 1
     fi
-    
-    # Check Python
-    if ! command -v python3 &> /dev/null; then
-        log_error "Python 3 is not installed"
-        exit 1
-    fi
-    
-    # Check PyInstaller
-    if ! python3 -c "import PyInstaller" &> /dev/null; then
-        log_warning "PyInstaller not found, installing..."
-        pip3 install --user pyinstaller
-    fi
-    
+
     log_success "Prerequisites check completed"
 }
 
@@ -72,18 +68,18 @@ clean_builds() {
     
     # Clean Flutter builds
     cd "$PROJECT_ROOT"
-    flutter clean
-    
+    "$FLUTTER_CMD" clean
+
     # Clean sub-apps
     if [[ -d "apps/main" ]]; then
         cd "apps/main"
-        flutter clean
+        "$FLUTTER_CMD" clean
         cd "$PROJECT_ROOT"
     fi
-    
+
     if [[ -d "apps/tunnel_manager" ]]; then
         cd "apps/tunnel_manager"
-        flutter clean
+        "$FLUTTER_CMD" clean
         cd "$PROJECT_ROOT"
     fi
     
@@ -95,12 +91,12 @@ build_main_app() {
     log_info "Building main Flutter application..."
     
     cd "$PROJECT_ROOT"
-    
+
     # Get dependencies
-    flutter pub get
-    
+    "$FLUTTER_CMD" pub get
+
     # Build for Linux
-    flutter build linux --release
+    "$FLUTTER_CMD" build linux --release
     
     if [[ ! -d "build/linux/x64/release/bundle" ]]; then
         log_error "Main app build failed"
@@ -120,12 +116,12 @@ build_tunnel_manager() {
     fi
     
     cd "$PROJECT_ROOT/apps/tunnel_manager"
-    
+
     # Get dependencies
-    flutter pub get
-    
+    "$FLUTTER_CMD" pub get
+
     # Build for Linux
-    flutter build linux --release
+    "$FLUTTER_CMD" build linux --release
     
     if [[ ! -d "build/linux/x64/release/bundle" ]]; then
         log_error "Tunnel manager build failed"
@@ -146,12 +142,12 @@ build_main_chat() {
     fi
     
     cd "$PROJECT_ROOT/apps/main"
-    
+
     # Get dependencies
-    flutter pub get
-    
+    "$FLUTTER_CMD" pub get
+
     # Build for Linux
-    flutter build linux --release
+    "$FLUTTER_CMD" build linux --release
     
     if [[ ! -d "build/linux/x64/release/bundle" ]]; then
         log_error "Main chat app build failed"
@@ -162,38 +158,7 @@ build_main_chat() {
     log_success "Main chat application built successfully"
 }
 
-# Build Python tray daemon
-build_tray_daemon() {
-    log_info "Building Python tray daemon..."
-    
-    cd "$PROJECT_ROOT/tray_daemon"
-    
-    # Install dependencies
-    pip3 install --user -r requirements.txt
-    pip3 install --user pyinstaller aiohttp requests
-    
-    # Build enhanced tray daemon
-    pyinstaller --onefile --name cloudtolocalllm-tray \
-        --hidden-import pystray._xorg \
-        --console \
-        enhanced_tray_daemon.py
-    
-    # Build settings application
-    pyinstaller --onefile --name cloudtolocalllm-settings \
-        --hidden-import tkinter \
-        --hidden-import tkinter.ttk \
-        --hidden-import tkinter.scrolledtext \
-        --windowed \
-        settings_app.py
-    
-    if [[ ! -f "dist/cloudtolocalllm-tray" ]]; then
-        log_error "Tray daemon build failed"
-        exit 1
-    fi
-    
-    cd "$PROJECT_ROOT"
-    log_success "Tray daemon built successfully"
-}
+
 
 # Create unified package structure
 create_package_structure() {
@@ -221,14 +186,7 @@ create_package_structure() {
         cp -n apps/main/build/linux/x64/release/bundle/lib/* "$PACKAGE_DIR/lib/" 2>/dev/null || true
     fi
     
-    # Copy tray daemon
-    if [[ -f "tray_daemon/dist/cloudtolocalllm-tray" ]]; then
-        cp tray_daemon/dist/cloudtolocalllm-tray "$PACKAGE_DIR/bin/"
-    fi
-    
-    if [[ -f "tray_daemon/dist/cloudtolocalllm-settings" ]]; then
-        cp tray_daemon/dist/cloudtolocalllm-settings "$PACKAGE_DIR/bin/"
-    fi
+
     
     log_success "Package structure created"
 }
@@ -241,23 +199,13 @@ create_wrapper_scripts() {
     cat > "$PACKAGE_DIR/bin/cloudtolocalllm" << EOF
 #!/bin/bash
 # CloudToLocalLLM v$VERSION unified wrapper script
-# Manages tray daemon and launches main Flutter application
+# Launches main Flutter application
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Set library path
 export LD_LIBRARY_PATH="$APP_DIR/lib:$LD_LIBRARY_PATH"
-
-# Start tray daemon if available and not already running
-if [[ -x "$SCRIPT_DIR/cloudtolocalllm-tray" ]]; then
-    if ! pgrep -f "cloudtolocalllm-tray" > /dev/null; then
-        "$SCRIPT_DIR/cloudtolocalllm-tray" &
-        sleep 1
-    fi
-else
-    echo "Warning: Tray daemon not found. Some functionality may be limited."
-fi
 
 # Launch main Flutter application
 if [[ -x "$SCRIPT_DIR/cloudtolocalllm_main" ]]; then
@@ -296,15 +244,39 @@ main() {
     build_main_app
     build_tunnel_manager
     build_main_chat
-    build_tray_daemon
     create_package_structure
     create_wrapper_scripts
     
     # Create version info
     echo "$VERSION" > "$PACKAGE_DIR/VERSION"
-    
+
+    # Create tar.gz archive for distribution
+    log_info "Creating distribution archive..."
+    local archive_name="cloudtolocalllm-${VERSION}-x86_64.tar.gz"
+    local archive_path="$PROJECT_ROOT/dist/$archive_name"
+
+    # Ensure dist directory exists
+    mkdir -p "$PROJECT_ROOT/dist"
+
+    # Create the archive from the package directory
+    cd "$DIST_DIR"
+    if tar -czf "$archive_path" "$(basename "$PACKAGE_DIR")"; then
+        log_success "Distribution archive created: $archive_path"
+
+        # Create SHA256 checksum
+        cd "$PROJECT_ROOT/dist"
+        sha256sum "$archive_name" > "${archive_name}.sha256"
+        log_success "SHA256 checksum created: ${archive_name}.sha256"
+    else
+        log_error "Failed to create distribution archive"
+        exit 1
+    fi
+
+    cd "$PROJECT_ROOT"
+
     log_success "Unified package build completed successfully!"
     log_info "Package location: $PACKAGE_DIR"
+    log_info "Distribution archive: $archive_path"
     log_info "To install: sudo cp -r $PACKAGE_DIR /usr/share/cloudtolocalllm"
     log_info "To create symlinks: sudo ln -sf /usr/share/cloudtolocalllm/bin/* /usr/bin/"
 }

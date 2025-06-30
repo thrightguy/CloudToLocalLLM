@@ -105,93 +105,124 @@ EOFVERSION
     log_success "Created version.json asset"
 }
 
-# Build Snap package
-build_snap() {
-    log_info "Building Snap package..."
+# Build Flutter Linux application
+build_flutter_linux() {
+    log_info "Building Flutter Linux application..."
 
+    # Check if we're in WSL or need to use WSL
     if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-        log_warning "Skipping Snap build (Linux required)"
-        return 0
+        log_error "Linux build requires WSL or native Linux environment"
+        return 1
     fi
 
-    cd "$SCRIPT_DIR"
-    if ./build_snap.sh; then
-        log_success "Snap build completed"
+    # Use WSL-native Flutter installation
+    local flutter_cmd="/opt/flutter/bin/flutter"
+
+    # Check if WSL-native Flutter is available
+    if [[ ! -f "$flutter_cmd" ]]; then
+        log_error "WSL-native Flutter not found at $flutter_cmd"
+        log_error "Please install Flutter in WSL or use the PowerShell build scripts"
+        return 1
+    fi
+
+    # Clean previous builds
+    log_info "Cleaning previous Flutter builds..."
+    "$flutter_cmd" clean
+
+    # Get dependencies
+    log_info "Getting Flutter dependencies..."
+    "$flutter_cmd" pub get
+
+    # Build Linux release
+    log_info "Building Flutter Linux release..."
+    if "$flutter_cmd" build linux --release; then
+        log_success "Flutter Linux build completed"
+
+        # Verify build artifacts
+        if [[ -f "$PROJECT_ROOT/build/linux/x64/release/bundle/cloudtolocalllm" ]]; then
+            log_success "Flutter Linux build artifacts verified"
+        else
+            log_error "Flutter Linux build artifacts not found"
+            return 1
+        fi
     else
-        log_error "Snap build failed"
+        log_error "Flutter Linux build failed"
         return 1
     fi
 }
 
-# Build Debian package (use PowerShell script for full functionality)
+# Build AppImage package
+build_appimage() {
+    log_info "Building AppImage package..."
+
+    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+        log_warning "Skipping AppImage build (Linux required)"
+        return 0
+    fi
+
+    cd "$SCRIPT_DIR"
+    if ./build_appimage.sh; then
+        log_success "AppImage build completed"
+    else
+        log_error "AppImage build failed"
+        return 1
+    fi
+}
+
+# Build Debian package
 build_debian() {
-    log_info "Debian package building is available via PowerShell script"
-    log_info "For full DEB package creation, use: scripts/powershell/Create-UnifiedPackages.ps1 -DEBOnly"
-    log_info "This bash script supports: AUR, AppImage, Flatpak, and Snap packages"
-    log_warning "DEB package creation requires WSL Ubuntu and is handled by PowerShell script"
-    return 0
-}
-
-# Build AUR package
-build_aur() {
-    log_info "Building AUR package..."
+    log_info "Building Debian package..."
 
     if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-        log_warning "Skipping AUR build (Linux required)"
-        return 0
-    fi
-
-    if [[ ! -f /etc/arch-release ]]; then
-        log_warning "Skipping AUR build (Arch Linux required)"
+        log_warning "Skipping Debian build (Linux required)"
         return 0
     fi
 
     cd "$SCRIPT_DIR"
-    if ./build_aur.sh; then
-        log_success "AUR package build completed"
+    if ./build_deb.sh; then
+        log_success "Debian build completed"
     else
-        log_error "AUR package build failed"
+        log_error "Debian build failed"
         return 1
     fi
 }
+
+
 
 # Validate all generated packages
 validate_packages() {
     log_info "Validating generated packages..."
-    
-    local version=$(get_version)
-    local dist_dir="$PROJECT_ROOT/dist"
-    local validation_errors=0
-    
-    # Check Snap package
-    if [[ -f "$dist_dir/cloudtolocalllm_${version}_amd64.snap" ]]; then
-        log_success "Snap package found: cloudtolocalllm_${version}_amd64.snap"
-        if [[ -f "$dist_dir/cloudtolocalllm_${version}_amd64.snap.sha256" ]]; then
-            log_success "Snap package checksum found"
-        else
-            log_error "Snap package checksum missing"
-            ((validation_errors++))
-        fi
-    else
-        log_warning "Snap package not found (may have been skipped)"
-    fi
-    
-    # Debian packages no longer supported
-    log_info "Debian package building is deprecated - skipping validation"
 
-    # Check AUR package
-    if [[ -f "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz" ]]; then
-        log_success "AUR source tarball found: cloudtolocalllm-${version}.tar.gz"
-        if [[ -f "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz.sha256" ]]; then
-            log_success "AUR source tarball checksum found"
+    local version=$(get_version)
+    local dist_dir="$PROJECT_ROOT/dist/linux"
+    local validation_errors=0
+
+    # Check Debian package
+    if [[ -f "$dist_dir/cloudtolocalllm-${version}-amd64.deb" ]]; then
+        log_success "Debian package found: cloudtolocalllm-${version}-amd64.deb"
+        if [[ -f "$dist_dir/cloudtolocalllm-${version}-amd64.deb.sha256" ]]; then
+            log_success "Debian package checksum found"
         else
-            log_error "AUR source tarball checksum missing"
+            log_error "Debian package checksum missing"
             ((validation_errors++))
         fi
     else
-        log_warning "AUR package not found (may have been skipped)"
+        log_warning "Debian package not found (may have been skipped)"
     fi
-    
+
+    # Check AppImage package
+    if [[ -f "$dist_dir/cloudtolocalllm-${version}-x86_64.AppImage" ]]; then
+        log_success "AppImage package found: cloudtolocalllm-${version}-x86_64.AppImage"
+        if [[ -f "$dist_dir/cloudtolocalllm-${version}-x86_64.AppImage.sha256" ]]; then
+            log_success "AppImage package checksum found"
+        else
+            log_error "AppImage package checksum missing"
+            ((validation_errors++))
+        fi
+    else
+        log_warning "AppImage package not found (may have been skipped)"
+    fi
+
     if [[ $validation_errors -gt 0 ]]; then
         log_error "Package validation failed with $validation_errors errors"
         return 1
@@ -204,12 +235,12 @@ validate_packages() {
 # Generate build summary
 generate_summary() {
     log_info "Generating build summary..."
-    
+
     local version=$(get_version)
     local full_version=$(get_full_version)
     local build_number=$(get_build_number)
-    local dist_dir="$PROJECT_ROOT/dist"
-    
+    local dist_dir="$PROJECT_ROOT/dist/linux"
+
     echo
     echo "=== CloudToLocalLLM Build Summary ==="
     echo "Semantic Version: $version"
@@ -218,20 +249,18 @@ generate_summary() {
     echo "Build Date: $(date)"
     echo
     echo "Generated Packages:"
-    
-    # List all generated packages with sizes
-    if [[ -f "$dist_dir/cloudtolocalllm_${version}_amd64.snap" ]]; then
-        local size=$(du -h "$dist_dir/cloudtolocalllm_${version}_amd64.snap" | cut -f1)
-        echo "  Snap: cloudtolocalllm_${version}_amd64.snap ($size)"
-    fi
-    
-    # Debian packages no longer supported
 
-    if [[ -f "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz" ]]; then
-        local size=$(du -h "$dist_dir/aur/cloudtolocalllm-${version}.tar.gz" | cut -f1)
-        echo "  AUR: cloudtolocalllm-${version}.tar.gz ($size)"
+    # List all generated packages with sizes
+    if [[ -f "$dist_dir/cloudtolocalllm-${version}-amd64.deb" ]]; then
+        local size=$(du -h "$dist_dir/cloudtolocalllm-${version}-amd64.deb" | cut -f1)
+        echo "  Debian: cloudtolocalllm-${version}-amd64.deb ($size)"
     fi
-    
+
+    if [[ -f "$dist_dir/cloudtolocalllm-${version}-x86_64.AppImage" ]]; then
+        local size=$(du -h "$dist_dir/cloudtolocalllm-${version}-x86_64.AppImage" | cut -f1)
+        echo "  AppImage: cloudtolocalllm-${version}-x86_64.AppImage ($size)"
+    fi
+
     echo
     echo "Distribution Directory: $dist_dir"
     echo
@@ -266,7 +295,7 @@ main() {
                 echo "Options:"
                 echo "  --increment <type>    Increment version (major|minor|patch)"
                 echo "  --skip-increment      Skip version increment"
-                echo "  --packages <list>     Build specific packages (all|snap|aur)"
+                echo "  --packages <list>     Build specific packages (all|debian|appimage)"
                 echo "  --help, -h           Show this help message"
                 echo
                 exit 0
@@ -290,28 +319,27 @@ main() {
     
     # Update Flutter version configuration
     update_flutter_version
-    
+
+    # Build Flutter Linux application first
+    build_flutter_linux || exit 1
+
     # Build packages based on selection
     local build_errors=0
-    
+
     case "$packages_to_build" in
         "all")
-            build_snap || ((build_errors++))
-            build_aur || ((build_errors++))
-            ;;
-        "snap")
-            build_snap || ((build_errors++))
+            build_debian || ((build_errors++))
+            build_appimage || ((build_errors++))
             ;;
         "debian")
-            log_info "Debian package building available via PowerShell script."
-            build_debian  # Will show information message
+            build_debian || ((build_errors++))
             ;;
-        "aur")
-            build_aur || ((build_errors++))
+        "appimage")
+            build_appimage || ((build_errors++))
             ;;
         *)
             log_error "Invalid package selection: $packages_to_build"
-            log_error "Supported options: all, snap, aur"
+            log_error "Supported options: all, debian, appimage"
             exit 1
             ;;
     esac
