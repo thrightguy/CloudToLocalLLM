@@ -3,5 +3,8 @@
     "esbuild": "^0.25.5",
     "vite": "^6.3.5",
     "vitepress": "^1.6.3"
+  },
+  "comments": {
+    "security": "Note: Dependabot alert #20 for esbuild <=0.24.2 exists in vitepress transitive dependency. Main esbuild is safe at 0.25.5. Vulnerability only affects dev server, not production builds."
   }
 }
