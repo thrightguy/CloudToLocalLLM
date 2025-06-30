@@ -103,7 +103,7 @@ DEPLOYMENT PHASES:
     1. Pre-Flight Validation
     2. Version Management
     3. Multi-Platform Build
-    4. Distribution Execution
+    4. Distribution Validation
     5. Comprehensive Verification
     6. Operational Readiness
 EOF
@@ -492,44 +492,63 @@ phase3_multiplatform_build() {
     log_success "Multi-platform build completed with build-time timestamps"
 }
 
-# Phase 4: Distribution Execution
+# Phase 4: Distribution Validation
 phase4_distribution_execution() {
-    log_phase 4 "Distribution Execution"
+    log_phase 4 "Distribution Validation"
 
-    log "Executing git-based distribution deployment..."
+    log "Validating git repository state for automated deployment..."
 
-    # Git-based distribution: Repository as single source of truth
-    # The unified package files in dist/ are committed to the repository
-    # and will be pulled to the VPS during deployment
-    log_verbose "Using git repository as single source of truth for distribution files..."
+    # IMPORTANT: This phase now validates git state instead of performing git operations
+    # Developers must manually commit and push changes with proper changelogs before deployment
+    log_verbose "Checking repository state for deployment readiness..."
 
-    # Ensure distribution files are committed to git
-    local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
-    local package_file="dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
-    local checksum_file="${package_file}.sha256"
-
-    # Add distribution files to git if they exist but aren't tracked
-    if [[ -f "$package_file" && ! $(git ls-files --error-unmatch "$package_file" 2>/dev/null) ]]; then
-        log_verbose "Adding distribution package to git: $package_file"
-        git add "$package_file"
-
-        if [[ -f "$checksum_file" ]]; then
-            log_verbose "Adding checksum file to git: $checksum_file"
-            git add "$checksum_file"
-        fi
-
-        # Commit the distribution files
-        if git commit -m "Add distribution package for v${current_version}
-
-- Added unified Linux package: $package_file
-- Added SHA256 checksum: $checksum_file
-- Package size: $(du -h "$package_file" | cut -f1)
-- Build timestamp: $(date -u +%Y%m%d%H%M)"; then
-            log_success "Distribution files committed to git"
-        else
-            log_warning "No changes to commit for distribution files"
-        fi
+    # Validate repository is clean (no uncommitted changes)
+    log_verbose "Checking for uncommitted changes..."
+    local git_status=$(git status --porcelain)
+    if [[ -n "$git_status" ]]; then
+        log_error "❌ Repository has uncommitted changes - deployment cannot proceed"
+        log_error "Please commit all changes with proper changelog before deployment:"
+        echo "$git_status"
+        log_error ""
+        log_error "Required manual workflow before deployment:"
+        log_error "  1. Review all changes: git status"
+        log_error "  2. Stage changes: git add ."
+        log_error "  3. Commit with changelog: git commit -m 'Release v${current_version}: [description]'"
+        log_error "  4. Push to GitHub: git push origin master"
+        log_error "  5. Re-run deployment script"
+        exit 4
     fi
+    log_success "✓ Repository is clean (no uncommitted changes)"
+
+    # Validate local branch is up-to-date with origin/master
+    log_verbose "Checking if local branch is up-to-date with origin/master..."
+    git fetch origin master --quiet
+    local unpushed_commits=$(git rev-list HEAD...origin/master --count 2>/dev/null || echo "unknown")
+    if [[ "$unpushed_commits" != "0" ]]; then
+        log_error "❌ Local branch is not synchronized with origin/master"
+        log_error "Unpushed commits: $unpushed_commits"
+        log_error "Please push all commits before deployment:"
+        log_error "  git push origin master"
+        exit 4
+    fi
+    log_success "✓ Local branch is up-to-date with origin/master"
+
+    # Validate version files contain proper release version (not BUILD_TIME_PLACEHOLDER)
+    local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.+]*\).*/\1/')
+    local semantic_version="${current_version%+*}"
+    local build_number="${current_version#*+}"
+
+    if [[ "$build_number" == "BUILD_TIME_PLACEHOLDER" ]]; then
+        log_error "❌ Version files still contain BUILD_TIME_PLACEHOLDER"
+        log_error "Please ensure version management (Phase 2) completed successfully"
+        log_error "Current version: $current_version"
+        exit 4
+    fi
+    log_success "✓ Version files contain proper release version: $current_version"
+
+    # Validate distribution files exist and are committed
+    local package_file="dist/cloudtolocalllm-${semantic_version}-x86_64.tar.gz"
+    local checksum_file="${package_file}.sha256"
 
     if ! git ls-files --error-unmatch "$package_file" &> /dev/null; then
         log_warning "Distribution package not found in git repository: $package_file"
@@ -537,50 +556,43 @@ phase4_distribution_execution() {
         log_verbose "Binary package distribution will be skipped"
         local skip_binary_distribution=true
     else
-        log_verbose "✓ Distribution files verified in git repository"
+        log_success "✓ Distribution files verified in git repository"
         local skip_binary_distribution=false
     fi
 
-    # CRITICAL FIX: Push to GitHub repository BEFORE AUR submission
-    # AUR packages reference GitHub raw URLs, so files must exist on GitHub first
-    log "Pushing distribution files to GitHub repository..."
+    # Validate GitHub repository state matches local repository
+    log "Validating GitHub repository synchronization..."
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log "DRY RUN: Would push to GitHub repository"
+        log "DRY RUN: Would validate GitHub repository state"
     else
-        # SSH-only authentication strategy for automated deployment
+        # Validate GitHub repository state without performing git operations
         local current_remote=$(git remote get-url origin)
-        local push_successful=false
-        local github_push_skipped=false
-
         log_verbose "Current remote URL: $current_remote"
 
-        # Ensure SSH remote configuration
+        # Ensure SSH remote configuration for validation
         if [[ "$current_remote" == https://github.com/* ]]; then
-            log_verbose "Converting HTTPS remote to SSH for automated deployment..."
+            log_verbose "Converting HTTPS remote to SSH for validation..."
             local ssh_url=$(echo "$current_remote" | sed 's|https://github.com/|git@github.com:|')
             git remote set-url origin "$ssh_url"
             current_remote="$ssh_url"
             log_verbose "Remote URL updated to: $current_remote"
         fi
 
-        # Validate SSH authentication before attempting push
+        # Validate SSH authentication is available (but don't push)
         if [[ "$current_remote" == git@github.com:* ]]; then
             log_verbose "Validating SSH authentication to GitHub..."
 
-            # Use the same SSH validation logic as pre-flight checks
             local ssh_validated=false
             local ssh_output
 
-            # Test with ssh-agent first
+            # Test SSH authentication without performing operations
             if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new 2>&1); then
-                # SSH command succeeded (exit code 0) - unexpected but valid
                 if echo "$ssh_output" | grep -q "successfully authenticated"; then
                     log_verbose "SSH authentication validated (ssh-agent)"
                     ssh_validated=true
                 fi
             elif [[ $? -eq 1 ]]; then
-                # SSH command returned exit code 1 (expected for GitHub)
                 if echo "$ssh_output" | grep -q "successfully authenticated"; then
                     log_verbose "SSH authentication validated (ssh-agent)"
                     ssh_validated=true
@@ -622,38 +634,36 @@ phase4_distribution_execution() {
             fi
 
             if [[ "$ssh_validated" == "true" ]]; then
-                log_verbose "SSH authentication validated, attempting push..."
-                if git push origin master; then
-                    log_success "✓ Distribution files pushed to GitHub repository via SSH"
-                    push_successful=true
-                else
-                    log_error "SSH push failed despite valid authentication"
-                fi
+                log_success "✓ SSH authentication validated for GitHub access"
             else
-                log_error "SSH authentication to GitHub failed"
-                log_error "Please ensure SSH key is added to GitHub account and ssh-agent"
+                log_error "❌ SSH authentication to GitHub failed"
+                log_error "SSH authentication is required for automated deployment:"
+                log_error "  1. Ensure SSH key is added to GitHub account"
+                log_error "  2. Verify SSH key is loaded in ssh-agent: ssh-add -l"
+                log_error "  3. Test SSH connection: ssh -T git@github.com"
+                log_error "  4. Verify remote URL: git remote -v"
+                exit 4
             fi
         else
             log_error "Invalid remote URL format: $current_remote"
             log_error "Expected SSH format: git@github.com:imrightguy/CloudToLocalLLM.git"
-        fi
-
-        # Mandatory SSH push validation - no fallback allowed
-        if [[ "$push_successful" != "true" ]]; then
-            log_error "❌ SSH GitHub push failed - automated deployment cannot continue"
-            log_error "GitHub push is mandatory for AUR submission (requires GitHub raw URLs)"
-            log_error "SSH authentication is required for automated deployment:"
-            log_error "  1. Ensure SSH key is added to GitHub account"
-            log_error "  2. Verify SSH key is loaded in ssh-agent: ssh-add -l"
-            log_error "  3. Test SSH connection: ssh -T git@github.com"
-            log_error "  4. Verify remote URL: git remote -v"
-            log_error "Current remote: $current_remote"
-            log_error "No HTTPS fallback available in automated mode"
             exit 4
         fi
 
-        # Push successful - continue with deployment
-        local github_push_skipped=false
+        # Validate that latest commits are already on GitHub (no push needed)
+        log_verbose "Verifying latest commits are on GitHub..."
+        local local_commit=$(git rev-parse HEAD)
+        local remote_commit=$(git rev-parse origin/master)
+
+        if [[ "$local_commit" != "$remote_commit" ]]; then
+            log_error "❌ Local commits not synchronized with GitHub"
+            log_error "Local commit: $local_commit"
+            log_error "Remote commit: $remote_commit"
+            log_error "Please push commits manually before deployment:"
+            log_error "  git push origin master"
+            exit 4
+        fi
+        log_success "✓ Latest commits verified on GitHub"
 
         # Verify GitHub raw URL accessibility with retry logic
         log_verbose "Verifying GitHub raw URL accessibility..."
@@ -806,7 +816,7 @@ phase4_distribution_execution() {
         log_verbose "AUR package will need to be submitted manually from an Arch Linux system"
     fi
 
-    log_success "Git-based distribution execution completed"
+    log_success "Git-based distribution validation completed"
 }
 
 # Phase 5: Comprehensive Verification
@@ -968,6 +978,56 @@ phase6_operational_readiness() {
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""
         echo -e "${YELLOW}📋 DRY RUN completed - no actual deployment performed${NC}"
+    else
+        # Automatic version increment for next development cycle
+        log "Preparing repository for next development cycle..."
+
+        # Extract current semantic version (without build number)
+        local current_semantic_version="${deployed_semantic_version}"
+        local version_parts=(${current_semantic_version//./ })
+        local major=${version_parts[0]}
+        local minor=${version_parts[1]}
+        local patch=${version_parts[2]}
+
+        # Increment patch version for next development cycle
+        local next_patch=$((patch + 1))
+        local next_version="${major}.${minor}.${next_patch}"
+
+        log_verbose "Incrementing version from $current_semantic_version to $next_version"
+
+        # Use version_manager.ps1 to set next development version
+        if command -v powershell &> /dev/null; then
+            log_verbose "Using PowerShell version_manager.ps1 for version increment..."
+            if powershell -Command "& './scripts/powershell/version_manager.ps1' set '${next_version}+BUILD_TIME_PLACEHOLDER'"; then
+                log_success "✓ Version incremented to $next_version+BUILD_TIME_PLACEHOLDER"
+
+                # Commit the version increment
+                git add pubspec.yaml assets/version.json lib/shared/lib/version.dart lib/config/app_config.dart lib/shared/pubspec.yaml
+                if git commit -m "Prepare for next development cycle: v${next_version}
+
+- Incremented version from v${current_semantic_version} to v${next_version}
+- Reset build number to BUILD_TIME_PLACEHOLDER for development
+- Automatic post-deployment version management
+- Repository ready for next development cycle"; then
+                    log_success "✓ Version increment committed to repository"
+
+                    # Push the version increment
+                    if git push origin master; then
+                        log_success "✓ Version increment pushed to GitHub"
+                    else
+                        log_warning "Failed to push version increment - manual push may be required"
+                    fi
+                else
+                    log_warning "No changes to commit for version increment"
+                fi
+            else
+                log_warning "Failed to increment version using version_manager.ps1"
+                log_warning "Manual version increment may be required for next development cycle"
+            fi
+        else
+            log_warning "PowerShell not available - skipping automatic version increment"
+            log_warning "Manual version increment recommended for next development cycle"
+        fi
     fi
 
     log_success "Operational readiness confirmed with build timestamp correlation"
