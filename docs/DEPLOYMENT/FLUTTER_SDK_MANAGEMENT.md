@@ -144,7 +144,7 @@ bash scripts/deploy/update_and_deploy.sh --force --verbose
 **Windows users should use WSL:**
 ```powershell
 # From Windows PowerShell, access WSL
-wsl -d archlinux
+wsl -d Ubuntu-24.04
 # Then run the bash deployment script
 cd /opt/cloudtolocalllm
 bash scripts/deploy/update_and_deploy.sh --force --verbose

@@ -117,19 +117,19 @@ function Find-WSLDistribution {
 
     $distributions = Get-WSLDistributions
 
-    # Always prioritize archlinux as the default distribution
-    $archCandidates = @('archlinux', 'Arch', 'ArchLinux', 'Manjaro', 'EndeavourOS')
+    # Always prioritize Ubuntu as the default distribution
+    $ubuntuCandidates = @('Ubuntu-24.04', 'Ubuntu-22.04', 'Ubuntu-20.04', 'Ubuntu', 'ubuntu')
 
-    # First, check for archlinux regardless of purpose
-    foreach ($candidate in $archCandidates) {
+    # First, check for Ubuntu regardless of purpose
+    foreach ($candidate in $ubuntuCandidates) {
         $distro = $distributions | Where-Object { $_.Name -ilike "*$candidate*" -and $_.State -eq 'Running' }
         if ($distro) {
-            Write-LogInfo "Using default Arch Linux WSL distribution: $($distro.Name)"
+            Write-LogInfo "Using default Ubuntu WSL distribution: $($distro.Name)"
             return $distro.Name
         }
     }
 
-    # Fallback to purpose-specific search only if archlinux is not available
+    # Fallback to purpose-specific search only if Ubuntu is not available
     switch ($Purpose) {
         'Arch' {
             # Already checked above, return null if not found
@@ -196,7 +196,7 @@ function Invoke-WSLCommand {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$DistroName = 'archlinux',
+        [string]$DistroName = 'Ubuntu-24.04',
 
         [Parameter(Mandatory = $true)]
         [string]$Command,
@@ -208,9 +208,9 @@ function Invoke-WSLCommand {
         [switch]$AsRoot
     )
 
-    # Default to archlinux if no distribution specified
+    # Default to Ubuntu-24.04 if no distribution specified
     if (-not $DistroName -or [string]::IsNullOrWhiteSpace($DistroName)) {
-        $DistroName = 'archlinux'
+        $DistroName = 'Ubuntu-24.04'
     }
 
     # Validate distribution name
@@ -271,7 +271,7 @@ function Test-WSLCommand {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$DistroName = 'archlinux',
+        [string]$DistroName = 'Ubuntu-24.04',
 
         [Parameter(Mandatory = $true)]
         [string]$CommandName
@@ -293,7 +293,7 @@ function Initialize-WSLDistribution {
     param(
         [Parameter(Mandatory = $false)]
         [ValidateNotNullOrEmpty()]
-        [string]$DistroName = 'archlinux'
+        [string]$DistroName = 'Ubuntu-24.04'
     )
 
     # Additional validation
@@ -732,8 +732,8 @@ function Sync-SSHKeys {
             return $false
         }
 
-        # Prioritize Arch Linux, then by key count
-        $sourceDistribution = ($foundKeys | Sort-Object @{Expression={if($_.Distro -like "*Arch*") {0} else {1}}}, @{Expression={$_.KeyCount}; Descending=$true} | Select-Object -First 1).Distro
+        # Prioritize Ubuntu, then by key count
+        $sourceDistribution = ($foundKeys | Sort-Object @{Expression={if($_.Distro -like "*Ubuntu*") {0} else {1}}}, @{Expression={$_.KeyCount}; Descending=$true} | Select-Object -First 1).Distro
         Write-LogInfo "Selected WSL distribution: $sourceDistribution"
     }
 
@@ -1076,6 +1076,148 @@ function Install-BuildDependencies {
     }
 
     return $allSuccessful
+}
+
+# Test if WSL Flutter is installed and working
+function Test-WSLFlutterInstallation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$DistroName = 'Ubuntu-24.04',
+
+        [Parameter(Mandatory = $false)]
+        [string]$FlutterPath = '/opt/flutter/bin/flutter'
+    )
+
+    try {
+        # Check if Flutter binary exists
+        $flutterExists = Invoke-WSLCommand -DistroName $DistroName -Command "test -f $FlutterPath && echo 'EXISTS'" -PassThru
+        if ($flutterExists -ne "EXISTS") {
+            Write-LogWarning "Flutter not found at $FlutterPath in WSL distribution: $DistroName"
+            return $false
+        }
+
+        # Test Flutter command
+        $flutterVersion = Invoke-WSLCommand -DistroName $DistroName -Command "$FlutterPath --version" -PassThru
+        if ($LASTEXITCODE -ne 0) {
+            Write-LogError "Flutter command failed in WSL distribution: $DistroName"
+            return $false
+        }
+
+        Write-LogSuccess "WSL Flutter verified: $(($flutterVersion -split "`n")[0])"
+        return $true
+    }
+    catch {
+        Write-LogError "Failed to test WSL Flutter installation: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# Execute Flutter commands via WSL
+function Invoke-WSLFlutterCommand {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FlutterArgs,
+
+        [Parameter(Mandatory = $false)]
+        [string]$DistroName = 'Ubuntu-24.04',
+
+        [Parameter(Mandatory = $false)]
+        [string]$FlutterPath = '/opt/flutter/bin/flutter',
+
+        [Parameter(Mandatory = $false)]
+        [string]$WorkingDirectory = $null,
+
+        [switch]$PassThru
+    )
+
+    # Verify Flutter is available
+    if (-not (Test-WSLFlutterInstallation -DistroName $DistroName -FlutterPath $FlutterPath)) {
+        throw "WSL Flutter is not properly installed or configured"
+    }
+
+    # Build the complete Flutter command
+    $command = "$FlutterPath $FlutterArgs"
+
+    try {
+        if ($PassThru) {
+            return Invoke-WSLCommand -DistroName $DistroName -Command $command -WorkingDirectory $WorkingDirectory -PassThru
+        }
+        else {
+            Invoke-WSLCommand -DistroName $DistroName -Command $command -WorkingDirectory $WorkingDirectory
+        }
+    }
+    catch {
+        Write-LogError "WSL Flutter command failed: $command"
+        Write-LogError "Error: $($_.Exception.Message)"
+        throw
+    }
+}
+
+# Install Flutter in WSL if not present
+function Install-WSLFlutter {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$DistroName = 'Ubuntu-24.04',
+
+        [Parameter(Mandatory = $false)]
+        [string]$FlutterPath = '/opt/flutter',
+
+        [Parameter(Mandatory = $false)]
+        [string]$FlutterVersion = 'stable'
+    )
+
+    Write-LogInfo "Installing Flutter in WSL distribution: $DistroName"
+
+    try {
+        # Check if Flutter is already installed
+        if (Test-WSLFlutterInstallation -DistroName $DistroName -FlutterPath "$FlutterPath/bin/flutter") {
+            Write-LogInfo "Flutter is already installed in WSL"
+            return $true
+        }
+
+        # Install dependencies
+        Write-LogInfo "Installing Flutter dependencies..."
+        Invoke-WSLCommand -DistroName $DistroName -Command "sudo apt update && sudo apt install -y curl git unzip xz-utils zip libglu1-mesa" -AsRoot
+
+        # Download and install Flutter
+        Write-LogInfo "Downloading Flutter SDK..."
+        $downloadCommand = @"
+cd /tmp && \
+curl -L https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.5-stable.tar.xz -o flutter.tar.xz && \
+sudo mkdir -p $FlutterPath && \
+sudo tar xf flutter.tar.xz -C /opt/ && \
+sudo chown -R `$USER:`$USER $FlutterPath && \
+rm flutter.tar.xz
+"@
+
+        Invoke-WSLCommand -DistroName $DistroName -Command $downloadCommand
+
+        # Add Flutter to PATH in .bashrc if not already present
+        Write-LogInfo "Configuring Flutter PATH..."
+        $pathCommand = @"
+if ! grep -q '$FlutterPath/bin' ~/.bashrc; then
+    echo 'export PATH=`$PATH:$FlutterPath/bin' >> ~/.bashrc
+fi
+"@
+        Invoke-WSLCommand -DistroName $DistroName -Command $pathCommand
+
+        # Verify installation
+        if (Test-WSLFlutterInstallation -DistroName $DistroName -FlutterPath "$FlutterPath/bin/flutter") {
+            Write-LogSuccess "Flutter successfully installed in WSL"
+            return $true
+        }
+        else {
+            Write-LogError "Flutter installation verification failed"
+            return $false
+        }
+    }
+    catch {
+        Write-LogError "Failed to install Flutter in WSL: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 # Export all functions (only when loaded as a module)

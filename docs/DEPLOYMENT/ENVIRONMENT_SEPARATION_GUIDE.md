@@ -14,7 +14,7 @@ CloudToLocalLLM uses a clear separation between Windows and Linux environments t
 
 **Key Principles:**
 - All VPS deployment operations use bash scripts in `scripts/deploy/` directory
-- Must be executed via WSL (Arch Linux distribution) from Windows
+- Must be executed via WSL (Ubuntu distribution) from Windows
 - SSH operations to cloudtolocalllm.online VPS go through WSL
 - Flutter web builds, Docker container management, and git operations use Linux commands only
 - No PowerShell scripts for VPS deployment

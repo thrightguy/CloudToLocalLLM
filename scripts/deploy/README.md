@@ -6,7 +6,7 @@ This directory contains the deployment scripts for the CloudToLocalLLM applicati
 
 **VPS Deployment (Linux-only):**
 - All VPS deployment operations use bash scripts (.sh files) exclusively
-- Must be executed via WSL (Arch Linux distribution) from Windows
+- Must be executed via WSL (Ubuntu distribution) from Windows
 - SSH operations to cloudtolocalllm.online VPS go through WSL
 - Flutter web builds, Docker container management, and git operations use Linux commands only
 
@@ -29,7 +29,7 @@ The primary deployment script for the VPS. This script handles the complete depl
 #### Usage
 ```bash
 # From WSL (Windows users)
-wsl -d archlinux
+wsl -d Ubuntu-24.04
 cd /opt/cloudtolocalllm
 bash scripts/deploy/update_and_deploy.sh
 

@@ -10,12 +10,17 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 
 ### Core Scripts
 
-- **`BuildEnvironmentUtilities.ps1`** - Common utilities for WSL detection, logging, dependency management, and SSH key synchronization
+- **`BuildEnvironmentUtilities.ps1`** - Common utilities for WSL detection, logging, dependency management, SSH key synchronization, and WSL Flutter integration
 - **`version_manager.ps1`** - Version management across all project files
 - **`build_unified_package.ps1`** - Build Flutter applications for Windows
-- **`create_unified_aur_package.ps1`** - Create AUR packages (requires WSL with Arch Linux)
-- **`build_deb.ps1`** - Create Debian packages (requires WSL with Ubuntu/Debian or Docker)
+- **`create_unified_aur_package.ps1`** - Create AUR packages (requires WSL with Ubuntu)
+- **`Build-DebianPackage.ps1`** - Create Debian packages (requires WSL with Ubuntu/Debian or Docker)
 - **`Test-Environment.ps1`** - Comprehensive environment validation and testing
+- **`Test-WSLFlutter.ps1`** - Test WSL Flutter integration and installation
+- **`Test-FlutterBuild.ps1`** - Test complete Flutter build workflow via WSL
+- **`Check-Syntax.ps1`** - PowerShell syntax checking utility
+- **`Fix-Whitespace.ps1`** - Fix whitespace and line ending issues
+- **`Push-Dev.ps1`** - Development push utility
 - **`launcher.ps1`** - Smart script launcher with auto-detection
 
 **Note**: VPS deployment operations should use the bash scripts in `scripts/deploy/` directory via WSL, not PowerShell scripts.
@@ -36,7 +41,7 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 
 #### Optional WSL Integration
 - **WSL 2** - Windows Subsystem for Linux
-- **Arch Linux WSL** - For AUR package creation (`create_unified_aur_package.ps1`)
+- **Ubuntu WSL** - For AUR package creation (`create_unified_aur_package.ps1`)
 - **Ubuntu/Debian WSL** - For Debian package creation (`build_deb.ps1`)
 
 #### Alternative to WSL
@@ -103,7 +108,7 @@ The PowerShell scripts provide the same functionality as their bash counterparts
 
 ```bash
 # From Windows, access WSL for VPS deployment
-wsl -d archlinux
+wsl -d Ubuntu-24.04
 cd /opt/cloudtolocalllm
 bash scripts/deploy/update_and_deploy.sh --force --verbose
 ```
@@ -133,6 +138,18 @@ Sync-SSHKeys -SourceDistro "Ubuntu-22.04" -Force
 Sync-SSHKeys -AutoSync
 ```
 
+### WSL Flutter Testing
+```powershell
+# Test WSL Flutter integration
+.\Test-WSLFlutter.ps1
+
+# Test complete Flutter build workflow
+.\Test-FlutterBuild.ps1
+
+# Test Flutter build with specific project root
+.\Test-FlutterBuild.ps1 -ProjectRoot "C:\MyProject"
+```
+
 ## WSL Setup
 
 ### Installing WSL
@@ -141,22 +158,21 @@ Sync-SSHKeys -AutoSync
 wsl --install
 
 # Install specific distributions
+wsl --install -d Ubuntu-24.04
 wsl --install -d Ubuntu-22.04
-wsl --install -d ArchLinux
 ```
 
-### Setting Up Arch Linux for AUR
+### Setting Up Ubuntu for Flutter and Package Building
 ```bash
-# In WSL Arch Linux
-sudo pacman -Syu
-sudo pacman -S base-devel git
-```
+# In WSL Ubuntu
+sudo apt update
+sudo apt install -y dpkg-dev fakeroot build-essential curl git unzip xz-utils zip libglu1-mesa
 
-### Setting Up Ubuntu/Debian for Package Building
-```bash
-# In WSL Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install dpkg-dev fakeroot build-essential
+# Flutter will be automatically installed at /opt/flutter by the PowerShell scripts
+# Or install manually:
+# curl -L https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.5-stable.tar.xz -o flutter.tar.xz
+# sudo tar xf flutter.tar.xz -C /opt/
+# echo 'export PATH=$PATH:/opt/flutter/bin' >> ~/.bashrc
 ```
 
 ## Features

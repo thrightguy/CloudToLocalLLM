@@ -132,10 +132,13 @@ try {
     
     # Quick validation (unless forced)
     if (-not $Force) {
-        # Check if flutter analyze passes
-        Write-Status "Running quick flutter analyze check..." "INFO"
-        $analyzeResult = flutter analyze 2>&1
-        if ($LASTEXITCODE -ne 0) {
+        # Check if flutter analyze passes using WSL
+        Write-Status "Running quick flutter analyze check via WSL..." "INFO"
+        try {
+            $analyzeResult = Invoke-WSLFlutterCommand -FlutterArgs "analyze" -WorkingDirectory (Get-Location).Path -PassThru
+            Write-Status "Flutter analyze passed" "INFO"
+        }
+        catch {
             Write-Status "Flutter analyze found issues. Use -Force to override." "WARN"
             Write-Host $analyzeResult -ForegroundColor Yellow
             if (-not $Force) {

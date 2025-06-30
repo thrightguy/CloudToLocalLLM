@@ -148,14 +148,16 @@ function Test-DocumentationCompleteness {
 function Invoke-StaticAnalysis {
     Write-Step "Running static analysis"
     
-    # Flutter analyze
-    Write-Log "Running flutter analyze..."
-    flutter analyze
-    if ($LASTEXITCODE -ne 0) {
+    # Flutter analyze using WSL
+    Write-Log "Running flutter analyze via WSL..."
+    try {
+        Invoke-WSLFlutterCommand -FlutterArgs "analyze" -WorkingDirectory (Get-Location).Path
+        Write-Log "Flutter analyze passed" "SUCCESS"
+    }
+    catch {
         Write-Log "Flutter analyze found issues" "ERROR"
         return $false
     }
-    Write-Log "Flutter analyze passed" "SUCCESS"
     
     # PSScriptAnalyzer for PowerShell scripts
     Write-Log "Running PSScriptAnalyzer on PowerShell scripts..."

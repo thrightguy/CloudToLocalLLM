@@ -35,8 +35,8 @@ Write-Host "All dependencies are satisfied."
 
 # --- Build Steps ---
 
-Write-Host "Starting Flutter build for Linux..."
-wsl -- flutter build linux --release
+Write-Host "Starting Flutter build for Linux using WSL..."
+wsl -d Ubuntu-24.04 -- /opt/flutter/bin/flutter build linux --release
 Write-Host "Flutter build completed."
 
 # --- Packaging ---
