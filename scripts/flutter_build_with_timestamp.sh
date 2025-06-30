@@ -57,10 +57,12 @@ show_usage() {
     echo "Targets:"
     echo "  web                Build for web (default)"
     echo "  linux              Build for Linux desktop"
-    echo "  windows            Build for Windows desktop"
     echo "  android            Build for Android"
     echo "  ios                Build for iOS"
     echo "  all                Build for all available platforms"
+    echo ""
+    echo "Note: Windows builds are handled by PowerShell scripts:"
+    echo "  Use: ./scripts/powershell/Build-GitHubReleaseAssets-Simple.ps1"
     echo
     echo "Options:"
     echo "  --debug            Build in debug mode (default: release)"
@@ -278,13 +280,9 @@ build_platform() {
             fi
             ;;
         windows)
-            flutter build windows --$mode $build_args
-            if [[ -d "$PROJECT_ROOT/build/windows" ]]; then
-                log_success "Windows build completed: build/windows/"
-            else
-                log_error "Windows build failed"
-                return 1
-            fi
+            log_error "Windows builds not supported in bash scripts - use PowerShell scripts instead"
+            log_error "Use: ./scripts/powershell/Build-GitHubReleaseAssets-Simple.ps1 for Windows builds"
+            return 1
             ;;
         android)
             flutter build apk --$mode $build_args
@@ -316,15 +314,13 @@ build_all_platforms() {
     local platforms=("web" "linux")
     local failed_builds=()
     
-    # Add other platforms if available
+    # Add other platforms if available (Linux-focused bash script)
     if flutter doctor | grep -q "Android toolchain"; then
         platforms+=("android")
     fi
-    
-    if flutter doctor | grep -q "Visual Studio"; then
-        platforms+=("windows")
-    fi
-    
+
+    # Note: Windows builds handled by PowerShell scripts
+    # Note: iOS builds require macOS environment
     if flutter doctor | grep -q "Xcode"; then
         platforms+=("ios")
     fi

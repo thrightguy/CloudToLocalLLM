@@ -1,5 +1,5 @@
 ﻿#define MyAppName "CloudToLocalLLM"
-#define MyAppVersion "3.7.5"
+#define MyAppVersion "3.7.7"
 #define MyAppPublisher "CloudToLocalLLM"
 #define MyAppURL "https://cloudtolocalllm.online"
 #define MyAppExeName "cloudtolocalllm.exe"
@@ -36,6 +36,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent 
+
+
 
 
 
