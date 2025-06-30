@@ -157,9 +157,18 @@ phase1_preflight_validation() {
     fi
 
     # Check required tools with enhanced validation
-    local required_tools=("flutter" "git" "ssh" "scp" "makepkg" "curl" "timeout")
+    local required_tools=("flutter" "git" "ssh" "scp" "curl" "timeout")
     if ! validate_required_tools "${required_tools[@]}"; then
         exit 2
+    fi
+
+    # Check optional tools (makepkg for AUR building)
+    local aur_available=true
+    if ! command -v makepkg &> /dev/null; then
+        log_warning "makepkg not available - AUR package building will be skipped"
+        aur_available=false
+    else
+        log_verbose "✓ makepkg available - AUR package building enabled"
     fi
 
     # Validate build-time injection components
@@ -237,23 +246,12 @@ phase2_version_management() {
         log "Generating real timestamp and updating all version files..."
         if [[ "$DRY_RUN" == "true" ]]; then
             log "DRY RUN: Would inject real timestamp into version files"
-            if [[ "$VERBOSE" == "true" ]]; then
-                "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh" --dry-run --verbose
-            else
-                "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh" --dry-run
-            fi
+            log_verbose "Would execute: $PROJECT_ROOT/scripts/build_time_version_injector.sh inject"
         else
-            # Use simple timestamp injector to set real timestamp immediately
-            if [[ "$VERBOSE" == "true" ]]; then
-                if ! "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh" --verbose; then
-                    log_error "Failed to inject real timestamp into version files"
-                    exit 2
-                fi
-            else
-                if ! "$PROJECT_ROOT/scripts/simple_timestamp_injector.sh"; then
-                    log_error "Failed to inject real timestamp into version files"
-                    exit 2
-                fi
+            # Use build time version injector to set real timestamp immediately
+            if ! "$PROJECT_ROOT/scripts/build_time_version_injector.sh" inject; then
+                log_error "Failed to inject real timestamp into version files"
+                exit 2
             fi
             log_success "Real timestamp injected into all version files - no more BUILD_TIME_PLACEHOLDER!"
         fi
@@ -296,19 +294,22 @@ phase3_multiplatform_build() {
         if [[ -f "$build_script" ]]; then
             if [[ "$VERBOSE" == "true" ]]; then
                 if ! "$build_script"; then
-                    log_error "Failed to build unified package"
-                    exit 3
+                    log_warning "Failed to build unified package - continuing with web-only deployment"
+                    log_warning "Unified package may need manual building later"
+                else
+                    log_success "Unified package built with build-time timestamp"
                 fi
             else
                 if ! "$build_script" &> /dev/null; then
-                    log_error "Failed to build unified package"
-                    exit 3
+                    log_warning "Failed to build unified package - continuing with web-only deployment"
+                    log_warning "Unified package may need manual building later"
+                else
+                    log_success "Unified package built with build-time timestamp"
                 fi
             fi
-            log_success "Unified package built with build-time timestamp"
         else
-            log_error "Unified package build script not found: $build_script"
-            exit 3
+            log_warning "Unified package build script not found: $build_script"
+            log_warning "Unified package building skipped - continuing with web-only deployment"
         fi
     else
         log_verbose "✓ Unified package already exists: $package_file"
@@ -317,32 +318,50 @@ phase3_multiplatform_build() {
     # Build web application with build-time timestamp injection
     log_verbose "Building web application with build-time timestamp injection..."
 
-    if [[ "${BUILD_TIME_INJECTION_AVAILABLE:-false}" == "true" ]]; then
+    # Check if we're in WSL environment (which has Flutter line ending issues)
+    local use_fallback=false
+    if [[ -n "${WSL_DISTRO_NAME:-}" ]] || [[ -f "/proc/version" && $(grep -i microsoft /proc/version) ]]; then
+        log_warning "WSL environment detected - using fallback Flutter build to avoid line ending issues"
+        use_fallback=true
+    fi
+
+    if [[ "${BUILD_TIME_INJECTION_AVAILABLE:-false}" == "true" && "$use_fallback" == "false" ]]; then
         # Use Flutter build wrapper with timestamp injection
         local build_wrapper="$PROJECT_ROOT/scripts/flutter_build_with_timestamp.sh"
-        local build_args="web --release --no-tree-shake-icons"
+        local build_args="web --no-tree-shake-icons"
 
         if [[ "$VERBOSE" == "true" ]]; then
             build_args="--verbose $build_args"
         fi
 
         if ! "$build_wrapper" $build_args; then
-            log_error "Flutter web build with timestamp injection failed"
-            exit 3
+            log_warning "Flutter web build with timestamp injection failed - falling back to direct build"
+            use_fallback=true
+        else
+            log_success "Web application built with build-time timestamp injection"
         fi
-
-        log_success "Web application built with build-time timestamp injection"
     else
+        use_fallback=true
+    fi
+
+    if [[ "$use_fallback" == "true" ]]; then
         # Fallback to direct Flutter build
         log_warning "Using fallback Flutter build (no timestamp injection)"
 
+        # Use WSL Flutter if available and we're in WSL
+        local flutter_cmd="flutter"
+        if [[ -f "/opt/flutter/bin/flutter" && (-n "${WSL_DISTRO_NAME:-}" || -f "/proc/version") ]]; then
+            flutter_cmd="/opt/flutter/bin/flutter"
+            log_verbose "Using WSL Flutter: $flutter_cmd"
+        fi
+
         if [[ "$VERBOSE" == "true" ]]; then
-            if ! flutter build web --release --no-tree-shake-icons; then
+            if ! "$flutter_cmd" build web --release --no-tree-shake-icons; then
                 log_error "Flutter web build failed"
                 exit 3
             fi
         else
-            if ! flutter build web --release --no-tree-shake-icons &> /dev/null; then
+            if ! "$flutter_cmd" build web --release --no-tree-shake-icons &> /dev/null; then
                 log_error "Flutter web build failed"
                 exit 3
             fi
@@ -352,33 +371,38 @@ phase3_multiplatform_build() {
     fi
 
     # Build AUR package using universal builder (Docker on Ubuntu, native on Arch)
-    log_verbose "Building AUR package using universal builder..."
+    if command -v makepkg &> /dev/null; then
+        log_verbose "Building AUR package using universal builder..."
 
-    local aur_build_script="$PROJECT_ROOT/scripts/packaging/build_aur_universal.sh"
-    if [[ -f "$aur_build_script" ]]; then
-        local aur_args=""
-        if [[ "$VERBOSE" == "true" ]]; then
-            aur_args="$aur_args --verbose"
-        fi
+        local aur_build_script="$PROJECT_ROOT/scripts/packaging/build_aur_universal.sh"
+        if [[ -f "$aur_build_script" ]]; then
+            local aur_args=""
+            if [[ "$VERBOSE" == "true" ]]; then
+                aur_args="$aur_args --verbose"
+            fi
 
-        if [[ "$VERBOSE" == "true" ]]; then
-            if ! "$aur_build_script" $aur_args; then
-                log_warning "AUR package build failed - continuing with deployment"
-                log_warning "AUR package may need manual building"
+            if [[ "$VERBOSE" == "true" ]]; then
+                if ! "$aur_build_script" $aur_args; then
+                    log_warning "AUR package build failed - continuing with deployment"
+                    log_warning "AUR package may need manual building"
+                else
+                    log_success "AUR package built successfully"
+                fi
             else
-                log_success "AUR package built successfully"
+                if ! "$aur_build_script" $aur_args &> /dev/null; then
+                    log_warning "AUR package build failed - continuing with deployment"
+                    log_warning "AUR package may need manual building"
+                else
+                    log_success "AUR package built successfully"
+                fi
             fi
         else
-            if ! "$aur_build_script" $aur_args &> /dev/null; then
-                log_warning "AUR package build failed - continuing with deployment"
-                log_warning "AUR package may need manual building"
-            else
-                log_success "AUR package built successfully"
-            fi
+            log_warning "Universal AUR build script not found: $aur_build_script"
+            log_warning "AUR package building skipped"
         fi
     else
-        log_warning "Universal AUR build script not found: $aur_build_script"
-        log_warning "AUR package building skipped"
+        log_warning "makepkg not available - AUR package building skipped"
+        log_verbose "Install makepkg (Arch Linux tools) to enable AUR package building"
     fi
 
     log_success "Multi-platform build completed with build-time timestamps"
@@ -395,16 +419,43 @@ phase4_distribution_execution() {
     # and will be pulled to the VPS during deployment
     log_verbose "Using git repository as single source of truth for distribution files..."
 
-    # Verify distribution files are committed to git
+    # Ensure distribution files are committed to git
     local current_version=$(grep '^version:' pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
     local package_file="dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
+    local checksum_file="${package_file}.sha256"
+
+    # Add distribution files to git if they exist but aren't tracked
+    if [[ -f "$package_file" && ! $(git ls-files --error-unmatch "$package_file" 2>/dev/null) ]]; then
+        log_verbose "Adding distribution package to git: $package_file"
+        git add "$package_file"
+
+        if [[ -f "$checksum_file" ]]; then
+            log_verbose "Adding checksum file to git: $checksum_file"
+            git add "$checksum_file"
+        fi
+
+        # Commit the distribution files
+        if git commit -m "Add distribution package for v${current_version}
+
+- Added unified Linux package: $package_file
+- Added SHA256 checksum: $checksum_file
+- Package size: $(du -h "$package_file" | cut -f1)
+- Build timestamp: $(date -u +%Y%m%d%H%M)"; then
+            log_success "Distribution files committed to git"
+        else
+            log_warning "No changes to commit for distribution files"
+        fi
+    fi
 
     if ! git ls-files --error-unmatch "$package_file" &> /dev/null; then
-        log_error "Distribution package not found in git repository: $package_file"
-        log_error "Ensure distribution files are committed to git before deployment"
-        exit 4
+        log_warning "Distribution package not found in git repository: $package_file"
+        log_warning "Continuing with web-only deployment (no binary distribution)"
+        log_verbose "Binary package distribution will be skipped"
+        local skip_binary_distribution=true
+    else
+        log_verbose "✓ Distribution files verified in git repository"
+        local skip_binary_distribution=false
     fi
-    log_verbose "✓ Distribution files verified in git repository"
 
     # CRITICAL FIX: Push to GitHub repository BEFORE AUR submission
     # AUR packages reference GitHub raw URLs, so files must exist on GitHub first
@@ -413,12 +464,80 @@ phase4_distribution_execution() {
     if [[ "$DRY_RUN" == "true" ]]; then
         log "DRY RUN: Would push to GitHub repository"
     else
-        if ! git push origin master; then
-            log_error "Failed to push to GitHub repository"
-            log_error "AUR submission requires files to be available on GitHub"
+        # Robust authentication strategy: try multiple methods automatically
+        local current_remote=$(git remote get-url origin)
+        local push_successful=false
+        local github_push_skipped=false
+
+        log_verbose "Current remote URL: $current_remote"
+
+        # Strategy 1: Try SSH if remote is SSH or can be converted
+        if [[ "$current_remote" == git@github.com:* ]]; then
+            log_verbose "SSH remote already configured, attempting SSH push..."
+            if git push origin master; then
+                log_success "✓ Distribution files pushed to GitHub repository via SSH"
+                push_successful=true
+            else
+                log_verbose "SSH push failed, will try alternative methods"
+            fi
+        elif [[ "$current_remote" == https://github.com/* ]]; then
+            log_verbose "HTTPS remote detected, testing SSH conversion..."
+            local ssh_url=$(echo "$current_remote" | sed 's|https://github.com/|git@github.com:|')
+
+            # Test SSH with proper host key handling
+            if ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new &>/dev/null; then
+                log_verbose "SSH authentication available, switching to SSH remote"
+                git remote set-url origin "$ssh_url"
+                if git push origin master; then
+                    log_success "✓ Distribution files pushed to GitHub repository via SSH"
+                    push_successful=true
+                else
+                    log_verbose "SSH push failed after remote conversion, reverting to HTTPS"
+                    git remote set-url origin "$current_remote"
+                fi
+            else
+                log_verbose "SSH authentication not available, will use HTTPS"
+            fi
+        fi
+
+        # Strategy 2: Try HTTPS with credential helper if SSH failed
+        if [[ "$push_successful" != "true" && "$current_remote" == https://github.com/* ]]; then
+            log_verbose "Attempting HTTPS push with credential helper..."
+
+            # Ensure we're using HTTPS remote
+            git remote set-url origin "$current_remote"
+
+            # Try push with credential helper
+            if git push origin master; then
+                log_success "✓ Distribution files pushed to GitHub repository via HTTPS"
+                push_successful=true
+            else
+                log_verbose "HTTPS push with credential helper failed"
+            fi
+        fi
+
+        # Strategy 3: Final attempt with current configuration
+        if [[ "$push_successful" != "true" ]]; then
+            log_verbose "Strategy 3: Final push attempt with current configuration..."
+            if git push origin master; then
+                log_success "✓ Distribution files pushed to GitHub repository (final attempt)"
+                push_successful=true
+            fi
+        fi
+
+        # Mandatory push validation - no skipping allowed
+        if [[ "$push_successful" != "true" ]]; then
+            log_error "❌ All GitHub push strategies failed - automated deployment cannot continue"
+            log_error "GitHub push is mandatory for AUR submission (requires GitHub raw URLs)"
+            log_error "Please configure GitHub authentication:"
+            log_error "  - SSH: Add SSH key to GitHub account and ssh-agent"
+            log_error "  - HTTPS: Configure Git credential helper or personal access token"
+            log_error "Current remote: $current_remote"
             exit 4
         fi
-        log_success "✓ Distribution files pushed to GitHub repository"
+
+        # Push successful - continue with deployment
+        local github_push_skipped=false
 
         # Verify GitHub raw URL accessibility with retry logic
         log_verbose "Verifying GitHub raw URL accessibility..."
@@ -444,11 +563,13 @@ phase4_distribution_execution() {
         if [[ "$github_accessible" != "true" ]]; then
             log_error "GitHub raw URL not accessible after $max_attempts attempts"
             log_error "URL: $github_url"
-            log_error "This will cause AUR installation failures"
+            log_error "AUR submission requires accessible GitHub distribution files"
             exit 4
         fi
 
-        # Verify checksum consistency between local and GitHub
+        local skip_aur_submission=false
+
+        # Verify checksum consistency between local and GitHub files
         log_verbose "Verifying checksum consistency between local and GitHub files..."
         local local_sha256=$(cat "dist/cloudtolocalllm-${current_version}-x86_64.tar.gz.sha256" 2>/dev/null | cut -d' ' -f1 || echo "")
         if [[ -n "$local_sha256" ]]; then
@@ -500,64 +621,73 @@ phase4_distribution_execution() {
     fi
 
     # Test AUR package after VPS deployment (when static files are available)
-    local aur_flags="--skip-install"
-    if [[ "$VERBOSE" == "true" ]]; then
-        aur_flags="$aur_flags --verbose"
-    fi
-    if [[ "$DRY_RUN" == "true" ]]; then
-        aur_flags="$aur_flags --dry-run"
-    fi
+    if command -v makepkg &> /dev/null; then
+        local aur_flags="--skip-install"
+        if [[ "$VERBOSE" == "true" ]]; then
+            aur_flags="$aur_flags --verbose"
+        fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            aur_flags="$aur_flags --dry-run"
+        fi
 
-    log_verbose "Testing AUR package with static distribution..."
-    if ./scripts/deploy/test_aur_package.sh $aur_flags; then
-        log_verbose "✓ AUR package test passed"
+        log_verbose "Testing AUR package with static distribution..."
+        if ./scripts/deploy/test_aur_package.sh $aur_flags; then
+            log_verbose "✓ AUR package test passed"
+        else
+            log_warning "AUR package test failed - may need manual verification"
+        fi
     else
-        log_warning "AUR package test failed - may need manual verification"
+        log_verbose "makepkg not available - AUR package testing skipped"
     fi
 
     # Submit AUR package immediately after VPS deployment
-    log_verbose "Submitting AUR package using GitHub raw URL distribution..."
+    if command -v makepkg &> /dev/null; then
+        log_verbose "Submitting AUR package using GitHub raw URL distribution..."
 
-    # Final verification before AUR submission
-    log_verbose "Performing final GitHub raw URL verification before AUR submission..."
-    if [[ "$DRY_RUN" != "true" ]]; then
-        local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
-        if ! curl -s -I "$github_url" | head -1 | grep -q "200"; then
-            log_error "GitHub raw URL not accessible before AUR submission"
-            log_error "URL: $github_url"
-            log_error "AUR installation will fail - aborting AUR submission"
-            exit 4
+        # Final verification before AUR submission
+        log_verbose "Performing final GitHub raw URL verification before AUR submission..."
+        if [[ "$DRY_RUN" != "true" ]]; then
+            local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${current_version}-x86_64.tar.gz"
+            if ! curl -s -I "$github_url" | head -1 | grep -q "200"; then
+                log_error "GitHub raw URL not accessible before AUR submission"
+                log_error "URL: $github_url"
+                log_error "AUR installation will fail - aborting AUR submission"
+                exit 4
+            fi
+            log_success "✓ Final GitHub raw URL verification passed"
         fi
-        log_success "✓ Final GitHub raw URL verification passed"
-    fi
 
-    # Skip local distribution file preparation - use GitHub raw URL approach
-    log_verbose "Using git-based distribution tracking (GitHub raw URLs)..."
-    log_verbose "AUR package configured with verified GitHub raw URL and SHA256"
-    log_verbose "No local binary file preparation needed - avoiding AUR size limits"
+        # Skip local distribution file preparation - use GitHub raw URL approach
+        log_verbose "Using git-based distribution tracking (GitHub raw URLs)..."
+        log_verbose "AUR package configured with verified GitHub raw URL and SHA256"
+        log_verbose "No local binary file preparation needed - avoiding AUR size limits"
 
-    # Prepare AUR submission flags
-    local aur_submit_flags=""
-    if [[ "$FORCE" == "true" ]]; then
-        aur_submit_flags="$aur_submit_flags --force"
-    fi
-    if [[ "$VERBOSE" == "true" ]]; then
-        aur_submit_flags="$aur_submit_flags --verbose"
-    fi
-    if [[ "$DRY_RUN" == "true" ]]; then
-        aur_submit_flags="$aur_submit_flags --dry-run"
-    fi
+        # Prepare AUR submission flags
+        local aur_submit_flags=""
+        if [[ "$FORCE" == "true" ]]; then
+            aur_submit_flags="$aur_submit_flags --force"
+        fi
+        if [[ "$VERBOSE" == "true" ]]; then
+            aur_submit_flags="$aur_submit_flags --verbose"
+        fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            aur_submit_flags="$aur_submit_flags --dry-run"
+        fi
 
-    # Submit AUR package with proper handling of "no changes" case
-    local aur_exit_code=0
-    ./scripts/deploy/submit_aur_package.sh $aur_submit_flags || aur_exit_code=$?
+        # Submit AUR package with proper handling of "no changes" case
+        local aur_exit_code=0
+        ./scripts/deploy/submit_aur_package.sh $aur_submit_flags || aur_exit_code=$?
 
-    if [[ $aur_exit_code -eq 0 ]]; then
-        log_success "AUR package submission completed successfully"
+        if [[ $aur_exit_code -eq 0 ]]; then
+            log_success "AUR package submission completed successfully"
+        else
+            log_warning "AUR package submission returned exit code $aur_exit_code"
+            log_warning "This may indicate the package is already up to date"
+            log_warning "Continuing with deployment - manual verification may be needed"
+        fi
     else
-        log_warning "AUR package submission returned exit code $aur_exit_code"
-        log_warning "This may indicate the package is already up to date"
-        log_warning "Continuing with deployment - manual verification may be needed"
+        log_verbose "makepkg not available - AUR package submission skipped"
+        log_verbose "AUR package will need to be submitted manually from an Arch Linux system"
     fi
 
     log_success "Git-based distribution execution completed"
