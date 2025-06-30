@@ -220,6 +220,90 @@ phase1_preflight_validation() {
         exit 2
     fi
 
+    # Validate GitHub SSH authentication for automated deployment
+    log_verbose "Validating GitHub SSH authentication..."
+
+    # Try SSH with agent first, then with explicit key specification
+    # Note: GitHub SSH test returns exit code 1 (expected) with success message
+    local ssh_output
+    local ssh_success=false
+
+    # Test with ssh-agent first
+    if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new 2>&1); then
+        # SSH command succeeded (exit code 0) - unexpected but valid
+        if echo "$ssh_output" | grep -q "successfully authenticated"; then
+            log_success "✓ GitHub SSH authentication validated (ssh-agent)"
+            ssh_success=true
+        fi
+    elif [[ $? -eq 1 ]]; then
+        # SSH command returned exit code 1 (expected for GitHub)
+        if echo "$ssh_output" | grep -q "successfully authenticated"; then
+            log_success "✓ GitHub SSH authentication validated (ssh-agent)"
+            ssh_success=true
+        fi
+    fi
+
+    # Try with explicit ed25519 key if ssh-agent failed
+    if [[ "$ssh_success" != "true" && -f ~/.ssh/id_ed25519 ]]; then
+        if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 2>&1); then
+            if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                log_success "✓ GitHub SSH authentication validated (explicit ed25519 key)"
+                export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
+                ssh_success=true
+            fi
+        elif [[ $? -eq 1 ]]; then
+            if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                log_success "✓ GitHub SSH authentication validated (explicit ed25519 key)"
+                export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
+                ssh_success=true
+            fi
+        fi
+    fi
+
+    # Try with explicit RSA key if both previous methods failed
+    if [[ "$ssh_success" != "true" && -f ~/.ssh/id_rsa ]]; then
+        if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa 2>&1); then
+            if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                log_success "✓ GitHub SSH authentication validated (explicit RSA key)"
+                export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new"
+                ssh_success=true
+            fi
+        elif [[ $? -eq 1 ]]; then
+            if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                log_success "✓ GitHub SSH authentication validated (explicit RSA key)"
+                export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new"
+                ssh_success=true
+            fi
+        fi
+    fi
+
+    # Final validation
+    if [[ "$ssh_success" != "true" ]]; then
+        log_error "GitHub SSH authentication failed"
+        log_error "SSH output: $ssh_output"
+        log_error "Automated deployment requires SSH access to GitHub:"
+        log_error "  1. Generate SSH key: ssh-keygen -t ed25519 -C 'your_email@example.com'"
+        log_error "  2. Add key to ssh-agent: ssh-add ~/.ssh/id_ed25519"
+        log_error "  3. Add public key to GitHub account"
+        log_error "  4. Test connection: ssh -T git@github.com"
+        exit 2
+    fi
+
+    # Ensure git remote is configured for SSH
+    local current_remote=$(git remote get-url origin)
+    if [[ "$current_remote" == https://github.com/* ]]; then
+        log_verbose "Converting git remote from HTTPS to SSH..."
+        local ssh_url=$(echo "$current_remote" | sed 's|https://github.com/|git@github.com:|')
+        git remote set-url origin "$ssh_url"
+        log_success "✓ Git remote configured for SSH: $ssh_url"
+    elif [[ "$current_remote" == git@github.com:* ]]; then
+        log_success "✓ Git remote already configured for SSH: $current_remote"
+    else
+        log_error "Invalid git remote URL: $current_remote"
+        log_error "Expected GitHub URL (HTTPS or SSH format)"
+        exit 2
+    fi
+
     log_success "Pre-flight validation completed"
 }
 
@@ -464,75 +548,107 @@ phase4_distribution_execution() {
     if [[ "$DRY_RUN" == "true" ]]; then
         log "DRY RUN: Would push to GitHub repository"
     else
-        # Robust authentication strategy: try multiple methods automatically
+        # SSH-only authentication strategy for automated deployment
         local current_remote=$(git remote get-url origin)
         local push_successful=false
         local github_push_skipped=false
 
         log_verbose "Current remote URL: $current_remote"
 
-        # Strategy 1: Try SSH if remote is SSH or can be converted
-        if [[ "$current_remote" == git@github.com:* ]]; then
-            log_verbose "SSH remote already configured, attempting SSH push..."
-            if git push origin master; then
-                log_success "✓ Distribution files pushed to GitHub repository via SSH"
-                push_successful=true
-            else
-                log_verbose "SSH push failed, will try alternative methods"
-            fi
-        elif [[ "$current_remote" == https://github.com/* ]]; then
-            log_verbose "HTTPS remote detected, testing SSH conversion..."
+        # Ensure SSH remote configuration
+        if [[ "$current_remote" == https://github.com/* ]]; then
+            log_verbose "Converting HTTPS remote to SSH for automated deployment..."
             local ssh_url=$(echo "$current_remote" | sed 's|https://github.com/|git@github.com:|')
+            git remote set-url origin "$ssh_url"
+            current_remote="$ssh_url"
+            log_verbose "Remote URL updated to: $current_remote"
+        fi
 
-            # Test SSH with proper host key handling
-            if ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new &>/dev/null; then
-                log_verbose "SSH authentication available, switching to SSH remote"
-                git remote set-url origin "$ssh_url"
+        # Validate SSH authentication before attempting push
+        if [[ "$current_remote" == git@github.com:* ]]; then
+            log_verbose "Validating SSH authentication to GitHub..."
+
+            # Use the same SSH validation logic as pre-flight checks
+            local ssh_validated=false
+            local ssh_output
+
+            # Test with ssh-agent first
+            if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new 2>&1); then
+                # SSH command succeeded (exit code 0) - unexpected but valid
+                if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                    log_verbose "SSH authentication validated (ssh-agent)"
+                    ssh_validated=true
+                fi
+            elif [[ $? -eq 1 ]]; then
+                # SSH command returned exit code 1 (expected for GitHub)
+                if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                    log_verbose "SSH authentication validated (ssh-agent)"
+                    ssh_validated=true
+                fi
+            fi
+
+            # Try with explicit ed25519 key if ssh-agent failed
+            if [[ "$ssh_validated" != "true" && -f ~/.ssh/id_ed25519 ]]; then
+                if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 2>&1); then
+                    if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                        log_verbose "SSH authentication validated (explicit ed25519 key)"
+                        export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
+                        ssh_validated=true
+                    fi
+                elif [[ $? -eq 1 ]]; then
+                    if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                        log_verbose "SSH authentication validated (explicit ed25519 key)"
+                        export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
+                        ssh_validated=true
+                    fi
+                fi
+            fi
+
+            # Try with explicit RSA key if both previous methods failed
+            if [[ "$ssh_validated" != "true" && -f ~/.ssh/id_rsa ]]; then
+                if ssh_output=$(ssh -T git@github.com -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_rsa 2>&1); then
+                    if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                        log_verbose "SSH authentication validated (explicit RSA key)"
+                        export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new"
+                        ssh_validated=true
+                    fi
+                elif [[ $? -eq 1 ]]; then
+                    if echo "$ssh_output" | grep -q "successfully authenticated"; then
+                        log_verbose "SSH authentication validated (explicit RSA key)"
+                        export GIT_SSH_COMMAND="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=accept-new"
+                        ssh_validated=true
+                    fi
+                fi
+            fi
+
+            if [[ "$ssh_validated" == "true" ]]; then
+                log_verbose "SSH authentication validated, attempting push..."
                 if git push origin master; then
                     log_success "✓ Distribution files pushed to GitHub repository via SSH"
                     push_successful=true
                 else
-                    log_verbose "SSH push failed after remote conversion, reverting to HTTPS"
-                    git remote set-url origin "$current_remote"
+                    log_error "SSH push failed despite valid authentication"
                 fi
             else
-                log_verbose "SSH authentication not available, will use HTTPS"
+                log_error "SSH authentication to GitHub failed"
+                log_error "Please ensure SSH key is added to GitHub account and ssh-agent"
             fi
+        else
+            log_error "Invalid remote URL format: $current_remote"
+            log_error "Expected SSH format: git@github.com:imrightguy/CloudToLocalLLM.git"
         fi
 
-        # Strategy 2: Try HTTPS with credential helper if SSH failed
-        if [[ "$push_successful" != "true" && "$current_remote" == https://github.com/* ]]; then
-            log_verbose "Attempting HTTPS push with credential helper..."
-
-            # Ensure we're using HTTPS remote
-            git remote set-url origin "$current_remote"
-
-            # Try push with credential helper
-            if git push origin master; then
-                log_success "✓ Distribution files pushed to GitHub repository via HTTPS"
-                push_successful=true
-            else
-                log_verbose "HTTPS push with credential helper failed"
-            fi
-        fi
-
-        # Strategy 3: Final attempt with current configuration
+        # Mandatory SSH push validation - no fallback allowed
         if [[ "$push_successful" != "true" ]]; then
-            log_verbose "Strategy 3: Final push attempt with current configuration..."
-            if git push origin master; then
-                log_success "✓ Distribution files pushed to GitHub repository (final attempt)"
-                push_successful=true
-            fi
-        fi
-
-        # Mandatory push validation - no skipping allowed
-        if [[ "$push_successful" != "true" ]]; then
-            log_error "❌ All GitHub push strategies failed - automated deployment cannot continue"
+            log_error "❌ SSH GitHub push failed - automated deployment cannot continue"
             log_error "GitHub push is mandatory for AUR submission (requires GitHub raw URLs)"
-            log_error "Please configure GitHub authentication:"
-            log_error "  - SSH: Add SSH key to GitHub account and ssh-agent"
-            log_error "  - HTTPS: Configure Git credential helper or personal access token"
+            log_error "SSH authentication is required for automated deployment:"
+            log_error "  1. Ensure SSH key is added to GitHub account"
+            log_error "  2. Verify SSH key is loaded in ssh-agent: ssh-add -l"
+            log_error "  3. Test SSH connection: ssh -T git@github.com"
+            log_error "  4. Verify remote URL: git remote -v"
             log_error "Current remote: $current_remote"
+            log_error "No HTTPS fallback available in automated mode"
             exit 4
         fi
 
