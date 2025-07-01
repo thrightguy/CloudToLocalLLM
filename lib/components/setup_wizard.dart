@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/theme.dart';
 import '../services/desktop_client_detection_service.dart';
+import '../services/setup_wizard_service.dart';
+import 'setup_wizard_zrok_step.dart';
 
 /// Setup wizard component that appears for first-time users or when no desktop client is detected
 ///
@@ -60,6 +62,12 @@ class _SetupWizardState extends State<SetupWizard> {
       description:
           'Verify that your desktop client is connected and ready to use.',
       icon: Icons.check_circle_outline,
+    ),
+    SetupStep(
+      title: 'Zrok Configuration',
+      description:
+          'Configure zrok tunneling for enhanced connectivity and security.',
+      icon: Icons.vpn_lock_outlined,
     ),
   ];
 
@@ -217,6 +225,8 @@ class _SetupWizardState extends State<SetupWizard> {
         return _buildInstallationContent();
       case 4:
         return _buildVerificationContent(clientDetection);
+      case 5:
+        return _buildZrokConfigurationContent();
       default:
         return const SizedBox.shrink();
     }
@@ -489,9 +499,9 @@ class _SetupWizardState extends State<SetupWizard> {
           if (hasConnectedClients) ...[
             SizedBox(height: AppTheme.spacingL),
             ElevatedButton.icon(
-              onPressed: _completeWizard,
-              icon: const Icon(Icons.check),
-              label: const Text('Complete Setup'),
+              onPressed: _nextStep,
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Continue to Zrok Setup'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.successColor,
                 foregroundColor: Colors.white,
@@ -547,6 +557,16 @@ class _SetupWizardState extends State<SetupWizard> {
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
                   ),
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: _completeWizard,
+                  icon: const Icon(Icons.check),
+                  label: const Text('Complete Setup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.successColor,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
             ],
           ),
@@ -583,6 +603,23 @@ class _SetupWizardState extends State<SetupWizard> {
       _isDismissed = true;
     });
     widget.onComplete?.call();
+  }
+
+  Widget _buildZrokConfigurationContent() {
+    return Consumer<SetupWizardService>(
+      builder: (context, setupWizardService, child) {
+        return SetupWizardZrokStep(
+          onComplete: () {
+            // Move to next step or complete wizard
+            if (_currentStep < _steps.length - 1) {
+              _nextStep();
+            } else {
+              _completeWizard();
+            }
+          },
+        );
+      },
+    );
   }
 }
 

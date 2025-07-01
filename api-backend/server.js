@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import dotenv from 'dotenv';
 import { StreamingProxyManager } from './streaming-proxy-manager.js';
+import zrokRoutes from './routes/zrok.js';
 
 dotenv.config();
 
@@ -339,6 +340,9 @@ function handleBridgeMessage(bridgeId, message) {
 
 // API Routes
 
+// Zrok tunnel management routes
+app.use('/api/zrok', zrokRoutes);
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
@@ -431,6 +435,57 @@ app.post('/api/proxy/stop', authenticateToken, async(req, res) => {
     res.status(500).json({
       error: 'Failed to stop streaming proxy',
       message: error.message
+    });
+  }
+});
+
+// Provision streaming proxy for user (with test mode support)
+app.post('/api/streaming-proxy/provision', authenticateToken, async(req, res) => {
+  try {
+    const userId = req.user.sub;
+    const userToken = req.headers.authorization;
+    const { testMode = false, zrokDiscoveryEnabled = false } = req.body;
+
+    logger.info(`Provisioning streaming proxy for user: ${userId}, testMode: ${testMode}`);
+
+    if (testMode) {
+      // In test mode, simulate successful provisioning without creating actual containers
+      logger.info(`Test mode: Simulating proxy provisioning for user ${userId}`);
+
+      res.json({
+        success: true,
+        message: 'Streaming proxy provisioned successfully (test mode)',
+        testMode: true,
+        zrokDiscoveryEnabled: zrokDiscoveryEnabled,
+        proxy: {
+          proxyId: `test-proxy-${userId}`,
+          status: 'simulated',
+          createdAt: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Normal mode - provision actual proxy
+    const proxyMetadata = await proxyManager.provisionProxy(userId, userToken);
+
+    res.json({
+      success: true,
+      message: 'Streaming proxy provisioned successfully',
+      testMode: false,
+      zrokDiscoveryEnabled: zrokDiscoveryEnabled,
+      proxy: {
+        proxyId: proxyMetadata.proxyId,
+        status: proxyMetadata.status,
+        createdAt: proxyMetadata.createdAt
+      }
+    });
+  } catch (error) {
+    logger.error(`Failed to provision proxy for user ${req.user.sub}:`, error);
+    res.status(500).json({
+      error: 'Failed to provision streaming proxy',
+      message: error.message,
+      testMode: req.body.testMode || false
     });
   }
 });

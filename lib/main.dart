@@ -18,6 +18,7 @@ import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
 import 'services/desktop_client_detection_service.dart';
 import 'services/setup_wizard_service.dart';
+import 'services/zrok_service_platform_web.dart';
 import 'widgets/window_listener_widget.dart';
 
 // Global navigator key for navigation from system tray
@@ -211,15 +212,27 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
             return clientDetection;
           },
         ),
+        // Zrok service (platform-specific)
+        ChangeNotifierProvider(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            final zrokService = ZrokServicePlatform(authService: authService);
+            // Initialize the zrok service asynchronously
+            zrokService.initialize();
+            return zrokService;
+          },
+        ),
         // Setup wizard service (web platform only)
         ChangeNotifierProvider(
           create: (context) {
             final authService = context.read<AuthService>();
             final clientDetection = context
                 .read<DesktopClientDetectionService>();
+            final zrokService = context.read<ZrokServicePlatform>();
             final setupWizard = SetupWizardService(
               authService: authService,
               clientDetectionService: clientDetection,
+              zrokService: zrokService,
             );
             return setupWizard;
           },
