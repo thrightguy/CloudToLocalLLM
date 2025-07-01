@@ -2,12 +2,15 @@ import { WebSocketServer } from 'ws';
 import http from 'http';
 import jwt from 'jsonwebtoken';
 import winston from 'winston';
+import { ZrokDiscoveryService, ContainerConnectionManager } from './zrok-discovery.js';
 
 // Configuration from environment variables
 const PORT = process.env.PROXY_PORT || 8080;
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 const USER_ID = process.env.USER_ID; // Injected by container orchestrator
 const PROXY_ID = process.env.PROXY_ID; // Unique proxy identifier
+const API_BASE_URL = process.env.API_BASE_URL || 'http://api-backend:8080';
+const ZROK_DISCOVERY_ENABLED = process.env.ZROK_DISCOVERY_ENABLED === 'true';
 
 // Initialize logger for streaming proxy
 const logger = winston.createLogger({
@@ -36,6 +39,19 @@ const logger = winston.createLogger({
 const connections = new Map();
 let connectionCount = 0;
 
+// Initialize zrok discovery service if enabled
+let zrokDiscovery = null;
+let connectionManager = null;
+
+if (ZROK_DISCOVERY_ENABLED && USER_ID) {
+  zrokDiscovery = new ZrokDiscoveryService(USER_ID, API_BASE_URL);
+  connectionManager = new ContainerConnectionManager(USER_ID, zrokDiscovery);
+
+  logger.info('🌐 [Proxy] Zrok discovery enabled for user', { userId: USER_ID });
+} else {
+  logger.info('🌐 [Proxy] Zrok discovery disabled or no user ID provided');
+}
+
 // HTTP server for health checks and basic endpoints
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -49,7 +65,8 @@ const server = http.createServer((req, res) => {
       proxyId: PROXY_ID,
       connections: connectionCount,
       uptime: process.uptime(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      zrok: connectionManager ? connectionManager.getStatus() : { enabled: false }
     }));
     break;
 
@@ -59,8 +76,26 @@ const server = http.createServer((req, res) => {
       connections: connectionCount,
       activeStreams: connections.size,
       memoryUsage: process.memoryUsage(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
+      zrok: connectionManager ? connectionManager.getStatus() : { enabled: false }
     }));
+    break;
+
+  case '/zrok/status':
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    if (connectionManager) {
+      res.end(JSON.stringify({
+        success: true,
+        data: connectionManager.getStatus(),
+        timestamp: new Date().toISOString()
+      }));
+    } else {
+      res.end(JSON.stringify({
+        success: false,
+        error: 'Zrok discovery not enabled',
+        timestamp: new Date().toISOString()
+      }));
+    }
     break;
 
   default:
@@ -169,6 +204,11 @@ wss.on('connection', (ws, req) => {
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully');
 
+  // Stop zrok discovery service
+  if (zrokDiscovery) {
+    zrokDiscovery.stop();
+  }
+
   // Close all WebSocket connections
   connections.forEach((connection, _connectionId) => {
     connection.ws.close(1001, 'Server shutting down');
@@ -186,14 +226,31 @@ process.on('SIGINT', () => {
   process.emit('SIGTERM');
 });
 
+// Initialize zrok discovery service
+async function initializeZrokDiscovery() {
+  if (zrokDiscovery) {
+    try {
+      await zrokDiscovery.start();
+      logger.info('🌐 [Proxy] Zrok discovery service started successfully');
+    } catch (error) {
+      logger.error('🌐 [Proxy] Failed to start zrok discovery service', error);
+      // Continue without zrok discovery
+    }
+  }
+}
+
 // Start the streaming proxy server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   logger.info(`Streaming proxy server listening on port ${PORT}`, {
     userId: USER_ID,
     proxyId: PROXY_ID,
     port: PORT,
-    nodeVersion: process.version
+    nodeVersion: process.version,
+    zrokEnabled: ZROK_DISCOVERY_ENABLED
   });
+
+  // Initialize zrok discovery after server starts
+  await initializeZrokDiscovery();
 });
 
 // Periodic connection cleanup (remove stale connections)

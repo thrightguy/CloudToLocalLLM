@@ -123,7 +123,9 @@ export class StreamingProxyManager {
           `USER_ID=${userId}`,
           `PROXY_ID=${proxyId}`,
           'NODE_ENV=production',
-          'LOG_LEVEL=info'
+          'LOG_LEVEL=info',
+          'ZROK_DISCOVERY_ENABLED=true',
+          `API_BASE_URL=http://api-backend:8080`
         ],
         Labels: {
           'cloudtolocalllm.user': userId,

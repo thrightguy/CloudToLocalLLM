@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'zrok_service.dart';
 import 'auth_service.dart';
+import '../config/app_config.dart';
 
 /// Desktop zrok service implementation
 /// Provides full zrok functionality on Windows, Linux, and macOS
@@ -16,6 +18,14 @@ class ZrokServiceDesktop extends ZrokService {
   Process? _zrokProcess;
   Timer? _startupTimer;
   final AuthService? _authService;
+
+  // HTTP client for API communication
+  late http.Client _httpClient;
+
+  // Tunnel registration and health monitoring
+  Timer? _registrationHeartbeat;
+  Timer? _healthMonitor;
+  String? _registeredTunnelId;
 
   // Startup timeout for zrok initialization
   static const Duration _startupTimeout = Duration(seconds: 30);
@@ -48,6 +58,9 @@ class ZrokServiceDesktop extends ZrokService {
   Future<void> initialize() async {
     debugPrint('🌐 [ZrokService] Initializing desktop zrok service...');
 
+    // Initialize HTTP client
+    _httpClient = http.Client();
+
     try {
       // Check if zrok is installed
       final isInstalled = await isZrokInstalled();
@@ -68,6 +81,9 @@ class ZrokServiceDesktop extends ZrokService {
           '🌐 [ZrokService] Zrok environment not enabled - will need account token',
         );
       }
+
+      // Start health monitoring
+      _startHealthMonitoring();
 
       debugPrint('🌐 [ZrokService] Desktop service initialized successfully');
     } catch (e) {
@@ -144,6 +160,12 @@ class ZrokServiceDesktop extends ZrokService {
       // Poll for tunnel information
       await _waitForTunnelReady();
 
+      // Register tunnel with API backend
+      if (_activeTunnel != null) {
+        await _registerTunnelWithBackend(_activeTunnel!);
+        _startRegistrationHeartbeat();
+      }
+
       return _activeTunnel;
     } catch (e) {
       _lastError = 'Failed to start zrok tunnel: $e';
@@ -159,6 +181,15 @@ class ZrokServiceDesktop extends ZrokService {
   @override
   Future<void> stopTunnel() async {
     debugPrint('🌐 [ZrokService] Stopping zrok tunnel...');
+
+    // Unregister tunnel from backend
+    if (_registeredTunnelId != null) {
+      await _unregisterTunnelFromBackend(_registeredTunnelId!);
+      _registeredTunnelId = null;
+    }
+
+    // Stop heartbeat and health monitoring
+    _stopRegistrationHeartbeat();
 
     await _cleanup();
 
@@ -447,6 +478,11 @@ class ZrokServiceDesktop extends ZrokService {
     _startupTimer?.cancel();
     _startupTimer = null;
 
+    // Stop registration heartbeat and health monitoring
+    _stopRegistrationHeartbeat();
+    _healthMonitor?.cancel();
+    _healthMonitor = null;
+
     if (_zrokProcess != null) {
       try {
         _zrokProcess!.kill();
@@ -489,5 +525,177 @@ class ZrokServiceDesktop extends ZrokService {
 
     // If no auth service, allow access (for development/testing)
     return true;
+  }
+
+  /// Register tunnel with API backend
+  Future<void> _registerTunnelWithBackend(ZrokTunnel tunnel) async {
+    if (_authService == null || !_authService.isAuthenticated.value) {
+      debugPrint('🌐 [ZrokService] Cannot register tunnel - not authenticated');
+      return;
+    }
+
+    try {
+      final accessToken = _authService.getAccessToken();
+      final response = await _httpClient.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/api/zrok/register'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: json.encode({
+          'tunnelInfo': {
+            'publicUrl': tunnel.publicUrl,
+            'localUrl': tunnel.localUrl,
+            'shareToken': tunnel.shareToken,
+            'protocol': tunnel.protocol,
+            'userAgent': 'CloudToLocalLLM-Desktop',
+            'version': '1.0.0',
+            'platform': Platform.operatingSystem,
+          },
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        _registeredTunnelId = data['data']['tunnelId'];
+        debugPrint(
+          '🌐 [ZrokService] Tunnel registered successfully: $_registeredTunnelId',
+        );
+      } else {
+        debugPrint(
+          '🌐 [ZrokService] Failed to register tunnel: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('🌐 [ZrokService] Error registering tunnel: $e');
+    }
+  }
+
+  /// Unregister tunnel from API backend
+  Future<void> _unregisterTunnelFromBackend(String tunnelId) async {
+    if (_authService == null || !_authService.isAuthenticated.value) {
+      return;
+    }
+
+    try {
+      final accessToken = _authService.getAccessToken();
+      final response = await _httpClient.delete(
+        Uri.parse('${AppConfig.apiBaseUrl}/api/zrok/unregister'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: json.encode({'tunnelId': tunnelId}),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint(
+          '🌐 [ZrokService] Tunnel unregistered successfully: $tunnelId',
+        );
+      } else {
+        debugPrint(
+          '🌐 [ZrokService] Failed to unregister tunnel: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('🌐 [ZrokService] Error unregistering tunnel: $e');
+    }
+  }
+
+  /// Start registration heartbeat
+  void _startRegistrationHeartbeat() {
+    _stopRegistrationHeartbeat();
+
+    _registrationHeartbeat = Timer.periodic(const Duration(seconds: 30), (
+      _,
+    ) async {
+      if (_registeredTunnelId != null) {
+        await _updateTunnelHeartbeat(_registeredTunnelId!);
+      }
+    });
+
+    debugPrint('🌐 [ZrokService] Registration heartbeat started');
+  }
+
+  /// Stop registration heartbeat
+  void _stopRegistrationHeartbeat() {
+    _registrationHeartbeat?.cancel();
+    _registrationHeartbeat = null;
+  }
+
+  /// Update tunnel heartbeat
+  Future<void> _updateTunnelHeartbeat(String tunnelId) async {
+    if (_authService == null || !_authService.isAuthenticated.value) {
+      return;
+    }
+
+    try {
+      final accessToken = _authService.getAccessToken();
+      final response = await _httpClient.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/api/zrok/heartbeat'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: json.encode({'tunnelId': tunnelId}),
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint('🌐 [ZrokService] Heartbeat failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('🌐 [ZrokService] Error updating heartbeat: $e');
+    }
+  }
+
+  /// Start health monitoring
+  void _startHealthMonitoring() {
+    _healthMonitor?.cancel();
+
+    _healthMonitor = Timer.periodic(const Duration(minutes: 1), (_) async {
+      if (_activeTunnel != null && !await _verifyTunnelHealth()) {
+        debugPrint(
+          '🌐 [ZrokService] Tunnel health check failed, attempting recovery',
+        );
+        await _attemptTunnelRecovery();
+      }
+    });
+
+    debugPrint('🌐 [ZrokService] Health monitoring started');
+  }
+
+  /// Verify tunnel health
+  Future<bool> _verifyTunnelHealth() async {
+    if (_activeTunnel == null) return false;
+
+    try {
+      final response = await _httpClient
+          .head(Uri.parse(_activeTunnel!.publicUrl))
+          .timeout(const Duration(seconds: 5));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🌐 [ZrokService] Health check failed: $e');
+      return false;
+    }
+  }
+
+  /// Attempt tunnel recovery
+  Future<void> _attemptTunnelRecovery() async {
+    try {
+      debugPrint('🌐 [ZrokService] Attempting tunnel recovery...');
+
+      // Stop current tunnel
+      await stopTunnel();
+
+      // Restart with same configuration
+      await startTunnel(_config);
+
+      debugPrint('🌐 [ZrokService] Tunnel recovery successful');
+    } catch (e) {
+      debugPrint('🌐 [ZrokService] Tunnel recovery failed: $e');
+      _lastError = 'Tunnel recovery failed: $e';
+      notifyListeners();
+    }
   }
 }
