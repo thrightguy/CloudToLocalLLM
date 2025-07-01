@@ -614,6 +614,18 @@ cd aur-package && makepkg --printsrcinfo | grep "pkgver ="
 - [ ] Desktop entry appears in application menu
 - [ ] Uninstall works cleanly: `yay -R cloudtolocalllm`
 
+#### **Administrative Data Flush System Testing** 🔥
+- [ ] Admin endpoints accessible: `curl -H "Authorization: Bearer $ADMIN_TOKEN" https://app.cloudtolocalllm.online/api/admin/health`
+- [ ] Admin authentication enforced (non-admin users get 403)
+- [ ] Rate limiting active (admin operations: 10/15min, flush operations: 3/hour)
+- [ ] System statistics endpoint returns valid data
+- [ ] Confirmation token generation works with 5-minute expiration
+- [ ] Data flush preparation completes without errors
+- [ ] Emergency container cleanup functions correctly
+- [ ] Audit trail logging captures all operations
+- [ ] Admin UI loads and displays system statistics
+- [ ] Multi-step confirmation process enforced
+
 ---
 
 ## 🚫 **DEPLOYMENT COMPLETION CRITERIA**

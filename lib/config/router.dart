@@ -17,6 +17,9 @@ import '../screens/settings/connection_status_screen.dart';
 import '../screens/tunnel_settings_screen.dart';
 import '../screens/unified_settings_screen.dart';
 
+// Admin screens
+import '../screens/admin/admin_data_flush_screen.dart';
+
 // Marketing screens (web-only)
 import '../screens/marketing/homepage_screen.dart';
 import '../screens/marketing/download_screen.dart';
@@ -197,6 +200,16 @@ class AppRouter {
           builder: (context, state) {
             debugPrint("📊 [Router] Building ConnectionStatusScreen");
             return const ConnectionStatusScreen();
+          },
+        ),
+
+        // Admin Data Flush route (requires admin privileges)
+        GoRoute(
+          path: '/admin/data-flush',
+          name: 'admin-data-flush',
+          builder: (context, state) {
+            debugPrint("🗑️ [Router] Building AdminDataFlushScreen");
+            return const AdminDataFlushScreen();
           },
         ),
       ],

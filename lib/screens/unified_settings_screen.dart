@@ -20,6 +20,7 @@ import '../services/auth_service.dart';
 import '../services/local_ollama_connection_service.dart';
 import '../services/ollama_service.dart';
 import '../services/tunnel_manager_service.dart';
+import '../services/user_data_service.dart';
 import '../services/version_service.dart';
 
 /// Unified Settings Screen for CloudToLocalLLM v3.3.1+
@@ -354,6 +355,8 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
       // Add a case for 'downloads' (web platform only)
       case 'downloads':
         return _buildDownloadsSettings();
+      case 'data-management':
+        return _buildDataManagementSettings();
       case 'about':
         return _buildAboutSettings();
       default:
@@ -2444,6 +2447,219 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen> {
       context: context,
       builder: (context) => OllamaSetupGuide(connectionError: error),
     );
+  }
+
+  /// Build data management settings section
+  Widget _buildDataManagementSettings() {
+    return Column(
+      children: [
+        ModernCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.delete_sweep,
+                    color: AppTheme.warningColor,
+                    size: 24,
+                  ),
+                  SizedBox(width: AppTheme.spacingS),
+                  const Text(
+                    'Data Management',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppTheme.spacingM),
+              const Text(
+                'Manage your personal data stored by CloudToLocalLLM. This includes conversations, authentication tokens, settings, and cached data.',
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+              SizedBox(height: AppTheme.spacingL),
+
+              // Clear All Data Section
+              Container(
+                padding: EdgeInsets.all(AppTheme.spacingM),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningColor.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: AppTheme.warningColor.withValues(alpha: 0.3),
+                  ),
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning,
+                          color: AppTheme.warningColor,
+                          size: 20,
+                        ),
+                        SizedBox(width: AppTheme.spacingS),
+                        const Text(
+                          'Clear All User Data',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: AppTheme.spacingS),
+                    const Text(
+                      'This will permanently delete:\n'
+                      '• All conversation history and chat messages\n'
+                      '• Authentication tokens and login sessions\n'
+                      '• Application settings and preferences\n'
+                      '• Cached data and temporary files',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    SizedBox(height: AppTheme.spacingM),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _showDataClearConfirmation,
+                            icon: const Icon(Icons.delete_forever),
+                            label: const Text('Clear All Data'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.dangerColor,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: AppTheme.spacingM),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              context.go('/admin/data-flush');
+                            },
+                            icon: const Icon(Icons.admin_panel_settings),
+                            label: const Text('Admin Panel'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.primaryColor,
+                              side: BorderSide(color: AppTheme.primaryColor),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Show data clear confirmation dialog
+  Future<void> _showDataClearConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Clear All Data'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will permanently delete all your data including conversations, settings, and authentication tokens.',
+            ),
+            SizedBox(height: 16),
+            Text(
+              'This action cannot be undone!',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clear All Data'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _executeDataClear();
+    }
+  }
+
+  /// Execute data clearing operation
+  Future<void> _executeDataClear() async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Clearing data...'),
+            ],
+          ),
+        ),
+      );
+
+      // Use the simple UserDataService for data clearing
+      final userDataService = UserDataService();
+      final results = await userDataService.clearAllUserData();
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Show results
+      final successCount = results.values.where((success) => success).length;
+      final totalCount = results.length;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Data clearing completed: $successCount/$totalCount operations successful',
+            ),
+            backgroundColor: successCount == totalCount
+                ? Colors.green
+                : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error clearing data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   /// Show the tunnel connection wizard

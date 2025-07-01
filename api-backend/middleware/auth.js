@@ -220,31 +220,69 @@ function validateContainerToken(token, containerId) {
 
 /**
  * Admin authentication middleware
- * Requires admin role/scope for access
+ * Requires admin role/scope for access with comprehensive role checking
  */
 export function requireAdmin(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({
-      error: 'Authentication required',
-      code: 'AUTHENTICATION_REQUIRED'
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED'
+      });
+    }
+
+    // Check for admin role in multiple possible locations
+    const userMetadata = req.user['https://cloudtolocalllm.com/user_metadata'] || {};
+    const appMetadata = req.user['https://cloudtolocalllm.com/app_metadata'] || {};
+    const userRoles = req.user['https://cloudtolocalllm.online/roles'] || [];
+    const userScopes = req.user.scope ? req.user.scope.split(' ') : [];
+
+    // Check various places where admin role might be stored
+    const hasAdminRole =
+      userMetadata.role === 'admin' ||
+      appMetadata.role === 'admin' ||
+      userRoles.includes('admin') ||
+      userScopes.includes('admin') ||
+      (req.user.permissions && req.user.permissions.includes('admin')) ||
+      req.user.role === 'admin';
+
+    if (!hasAdminRole) {
+      logger.warn('🔥 [AdminAuth] Admin access denied', {
+        userId: req.user.sub,
+        userMetadata,
+        appMetadata,
+        userRoles,
+        userScopes,
+        permissions: req.user.permissions,
+        userAgent: req.get('User-Agent'),
+        ipAddress: req.ip
+      });
+
+      return res.status(403).json({
+        error: 'Admin access required',
+        code: 'ADMIN_ACCESS_REQUIRED',
+        message: 'This operation requires administrative privileges'
+      });
+    }
+
+    logger.info('🔥 [AdminAuth] Admin access granted', {
+      userId: req.user.sub,
+      role: userMetadata.role || appMetadata.role || 'admin',
+      userAgent: req.get('User-Agent')
+    });
+
+    next();
+  } catch (error) {
+    logger.error('🔥 [AdminAuth] Admin role check failed', {
+      error: error.message,
+      userId: req.user?.sub
+    });
+
+    res.status(500).json({
+      error: 'Admin role verification failed',
+      code: 'ADMIN_CHECK_FAILED'
     });
   }
-
-  // Check for admin role in user metadata or scopes
-  const userRoles = req.user['https://cloudtolocalllm.online/roles'] || [];
-  const userScopes = req.user.scope ? req.user.scope.split(' ') : [];
-  
-  const isAdmin = userRoles.includes('admin') || userScopes.includes('admin');
-  
-  if (!isAdmin) {
-    logger.warn(`🔐 [Auth] User ${req.user.sub} attempted admin access without permissions`);
-    return res.status(403).json({
-      error: 'Admin access required',
-      code: 'ADMIN_ACCESS_REQUIRED'
-    });
-  }
-
-  next();
 }
 
 /**

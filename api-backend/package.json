@@ -41,5 +41,9 @@
     "ollama"
   ],
   "author": "CloudToLocalLLM Team",
-  "license": "MIT"
+  "license": "MIT",
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  }
 }

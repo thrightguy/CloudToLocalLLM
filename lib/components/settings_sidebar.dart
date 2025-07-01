@@ -72,6 +72,12 @@ class SettingsSidebar extends StatelessWidget {
           subtitle: 'Desktop client & installation',
         ),
         const SettingsSection(
+          id: 'data-management',
+          title: 'Data Management',
+          icon: Icons.delete_sweep,
+          subtitle: 'Clear user data',
+        ),
+        const SettingsSection(
           id: 'about',
           title: 'About',
           icon: Icons.info,
@@ -112,6 +118,12 @@ class SettingsSidebar extends StatelessWidget {
           title: 'System Tray',
           icon: Icons.desktop_windows,
           subtitle: 'Advanced tray settings',
+        ),
+        const SettingsSection(
+          id: 'data-management',
+          title: 'Data Management',
+          icon: Icons.delete_sweep,
+          subtitle: 'Clear user data',
         ),
         const SettingsSection(
           id: 'about',

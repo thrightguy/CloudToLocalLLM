@@ -11,6 +11,7 @@ import winston from 'winston';
 import dotenv from 'dotenv';
 import { StreamingProxyManager } from './streaming-proxy-manager.js';
 import zrokRoutes from './routes/zrok.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -342,6 +343,9 @@ function handleBridgeMessage(bridgeId, message) {
 
 // Zrok tunnel management routes
 app.use('/api/zrok', zrokRoutes);
+
+// Administrative routes
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
