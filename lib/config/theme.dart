@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 /// Modern Material Design 3 theme configuration matching homepage design
 class AppTheme {
   // Color scheme matching static_homepage/css/theme.css
-  static const Color primaryColor =
-      Color(0xFFa777e3); // --color-primary: #a777e3
-  static const Color secondaryColor =
-      Color(0xFF6e8efb); // --color-secondary: #6e8efb
+  static const Color primaryColor = Color(
+    0xFFa777e3,
+  ); // --color-primary: #a777e3
+  static const Color secondaryColor = Color(
+    0xFF6e8efb,
+  ); // --color-secondary: #6e8efb
   static const Color accentColor = Color(0xFF00c58e); // --color-accent: #00c58e
 
   // Background colors
@@ -16,16 +18,21 @@ class AppTheme {
 
   // Text colors
   static const Color textColor = Color(0xFFf1f1f1); // --text-color: #f1f1f1
-  static const Color textColorLight =
-      Color(0xFFb0b0b0); // --text-color-light: #b0b0b0
-  static const Color textColorDark =
-      Color(0xFF2c3e50); // --text-color-dark: #2c3e50
+  static const Color textColorLight = Color(
+    0xFFb0b0b0,
+  ); // --text-color-light: #b0b0b0
+  static const Color textColorDark = Color(
+    0xFF2c3e50,
+  ); // --text-color-dark: #2c3e50
 
   // Status colors
   static const Color successColor = Color(0xFF4caf50);
   static const Color warningColor = Color(0xFFffa726);
   static const Color dangerColor = Color(0xFFff5252);
   static const Color infoColor = Color(0xFF2196f3);
+
+  // Border colors
+  static const Color borderColor = Color(0xFF3a3a3a);
 
   // Gradients matching homepage
   static const LinearGradient headerGradient = LinearGradient(
@@ -114,10 +121,7 @@ class AppTheme {
             horizontal: spacingL,
             vertical: spacingM,
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
 
@@ -141,24 +145,15 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadiusS),
-          borderSide: BorderSide(
-            color: primaryColor,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadiusS),
-          borderSide: BorderSide(
-            color: dangerColor,
-            width: 1,
-          ),
+          borderSide: BorderSide(color: dangerColor, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadiusS),
-          borderSide: BorderSide(
-            color: dangerColor,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: dangerColor, width: 2),
         ),
         labelStyle: TextStyle(color: textColorLight),
         hintStyle: TextStyle(color: textColorLight.withValues(alpha: 0.7)),
@@ -237,9 +232,7 @@ class AppTheme {
           color: secondaryColor.withValues(alpha: 0.5),
           width: 2,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
       // Radio theme
@@ -399,10 +392,7 @@ class AppTheme {
             horizontal: spacingL,
             vertical: spacingM,
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
     );

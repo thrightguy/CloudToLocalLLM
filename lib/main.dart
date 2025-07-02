@@ -18,6 +18,8 @@ import 'services/native_tray_service.dart';
 import 'services/window_manager_service.dart';
 import 'services/desktop_client_detection_service.dart';
 import 'services/setup_wizard_service.dart';
+import 'services/admin_service.dart';
+import 'services/admin_data_flush_service.dart';
 import 'services/zrok_service_platform_web.dart';
 import 'widgets/window_listener_widget.dart';
 
@@ -284,6 +286,20 @@ class _CloudToLocalLLMAppState extends State<CloudToLocalLLMApp> {
             // Initialize the unified connection service
             unifiedService.initialize();
             return unifiedService;
+          },
+        ),
+        // Admin service (requires authentication)
+        ChangeNotifierProvider(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            return AdminService(authService: authService);
+          },
+        ),
+        // Admin data flush service (requires authentication)
+        ChangeNotifierProvider(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            return AdminDataFlushService(authService: authService);
           },
         ),
       ],

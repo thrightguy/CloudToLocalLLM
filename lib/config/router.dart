@@ -18,6 +18,7 @@ import '../screens/tunnel_settings_screen.dart';
 import '../screens/unified_settings_screen.dart';
 
 // Admin screens
+import '../screens/admin/admin_panel_screen.dart';
 import '../screens/admin/admin_data_flush_screen.dart';
 
 // Marketing screens (web-only)
@@ -200,6 +201,16 @@ class AppRouter {
           builder: (context, state) {
             debugPrint("📊 [Router] Building ConnectionStatusScreen");
             return const ConnectionStatusScreen();
+          },
+        ),
+
+        // Admin Panel route (requires admin privileges)
+        GoRoute(
+          path: '/admin',
+          name: 'admin-panel',
+          builder: (context, state) {
+            debugPrint("🔧 [AdminPanel] Building AdminPanelScreen");
+            return const AdminPanelScreen();
           },
         ),
 

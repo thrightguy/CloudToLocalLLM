@@ -66,12 +66,49 @@ class AppConfig {
   static const String cloudOllamaUrl =
       'https://app.cloudtolocalllm.online/api/ollama';
 
+  // Admin Interface Configuration
+  static const bool enableAdminInterface = true;
+  static const int adminServerPort = 3001;
+
+  // Platform-specific admin server URLs
+  static const String adminServerUrlWeb =
+      'https://app.cloudtolocalllm.online:3001';
+  static const String adminServerUrlDesktop = 'http://localhost:3001';
+
+  // Get admin server URL based on platform
+  static String get adminServerUrl =>
+      kIsWeb ? adminServerUrlWeb : adminServerUrlDesktop;
+  static String get adminApiBaseUrl => '$adminServerUrl/api/admin';
+
+  static const Duration adminApiTimeout = Duration(seconds: 45);
+
+  // Admin Interface Feature Flags
+  static const bool enableAdminSystemMonitoring = true;
+  static const bool enableAdminUserManagement = true;
+  static const bool enableAdminConfigManagement = true;
+  static const bool enableAdminContainerManagement = true;
+  static const bool enableAdminDataFlush = true;
+
+  // Admin Interface Security Settings
+  static const bool requireAdminRole = true;
+  static const bool enableAdminAuditLogging = true;
+  static const bool enableAdminRateLimiting = true;
+  static const int adminSessionTimeoutMinutes = 30;
+
+  // Admin Interface UI Configuration
+  static const int adminDashboardRefreshIntervalSeconds = 30;
+  static const int adminRealtimeUpdateIntervalSeconds = 5;
+  static const bool enableAdminDarkMode = true;
+  static const bool showAdminDebugInfo = enableDebugMode;
+
   // Debug logging for configuration
   static void logConfiguration() {
     debugPrint('[DEBUG] AppConfig loaded:');
     debugPrint('[DEBUG] - Ollama URL: $defaultOllamaUrl');
     debugPrint('[DEBUG] - Bridge Status URL: $bridgeStatusUrl');
     debugPrint('[DEBUG] - Bridge Register URL: $bridgeRegisterUrl');
+    debugPrint('[DEBUG] - Admin Server URL: $adminServerUrl');
+    debugPrint('[DEBUG] - Admin API Base URL: $adminApiBaseUrl');
   }
 
   // Bridge Configuration
