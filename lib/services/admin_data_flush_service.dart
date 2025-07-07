@@ -7,9 +7,9 @@ import 'conversation_storage_service.dart';
 import 'auth_logger.dart';
 
 // Conditional import for web package - only import on web platform
-import 'package:web/web.dart'
+import 'auth_logger_stub.dart'
     as web
-    if (dart.library.html) 'package:web/web.dart';
+    if (dart.library.html) 'auth_logger_web.dart';
 
 /// Administrative data flush service for CloudToLocalLLM
 ///

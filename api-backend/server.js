@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import { StreamingProxyManager } from './streaming-proxy-manager.js';
 import zrokRoutes from './routes/zrok.js';
 import adminRoutes from './routes/admin.js';
+import encryptedTunnelRoutes from './routes/encrypted-tunnel.js';
 
 dotenv.config();
 
@@ -246,8 +247,281 @@ wss.on('connection', (ws, req) => {
   }, 30000);
 });
 
+// Encrypted Tunnel WebSocket server
+const encryptedTunnelWss = new WebSocketServer({
+  server,
+  path: '/ws/encrypted-tunnel',
+  verifyClient: async(info) => {
+    try {
+      const url = new URL(info.req.url, `http://${info.req.headers.host}`);
+      const token = url.searchParams.get('token');
+
+      if (!token) {
+        logger.warn('Encrypted tunnel WebSocket connection rejected: No token provided');
+        return false;
+      }
+
+      // Verify token (similar to HTTP middleware)
+      const decoded = jwt.decode(token, { complete: true });
+      if (!decoded || !decoded.header.kid) {
+        logger.warn('Encrypted tunnel WebSocket connection rejected: Invalid token format');
+        return false;
+      }
+
+      const key = await jwksClientInstance.getSigningKey(decoded.header.kid);
+      const signingKey = key.getPublicKey();
+
+      const verified = jwt.verify(token, signingKey, {
+        audience: AUTH0_AUDIENCE,
+        issuer: `https://${AUTH0_DOMAIN}/`,
+        algorithms: ['RS256']
+      });
+
+      // Store user info for the connection
+      info.req.user = verified;
+      return true;
+    } catch (error) {
+      logger.error('Encrypted tunnel WebSocket token verification failed:', error);
+      return false;
+    }
+  }
+});
+
+encryptedTunnelWss.on('connection', (ws, req) => {
+  const connectionId = uuidv4();
+  const userId = req.user?.sub;
+
+  if (!userId) {
+    logger.error('Encrypted tunnel WebSocket connection established but no user ID found');
+    ws.close(1008, 'Authentication failed');
+    return;
+  }
+
+  logger.info(`🔐 [EncryptedTunnel] Connection established: ${connectionId} for user: ${userId}`);
+
+  // Store connection
+  encryptedTunnelConnections.set(connectionId, {
+    ws,
+    userId,
+    connectionId,
+    connectedAt: new Date(),
+    lastActivity: new Date(),
+    sessionId: null,
+    isDesktop: false,
+    isContainer: false
+  });
+
+  // Handle messages from encrypted tunnel
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data);
+      handleEncryptedTunnelMessage(connectionId, message);
+    } catch (error) {
+      logger.error(`🔐 [EncryptedTunnel] Failed to parse message from connection ${connectionId}:`, error);
+    }
+  });
+
+  // Handle connection close
+  ws.on('close', () => {
+    logger.info(`🔐 [EncryptedTunnel] Connection closed: ${connectionId}`);
+    const connection = encryptedTunnelConnections.get(connectionId);
+    if (connection && connection.sessionId) {
+      encryptedTunnelSessions.delete(connection.sessionId);
+    }
+    encryptedTunnelConnections.delete(connectionId);
+  });
+
+  // Handle errors
+  ws.on('error', (error) => {
+    logger.error(`🔐 [EncryptedTunnel] Connection ${connectionId} error:`, error);
+    const connection = encryptedTunnelConnections.get(connectionId);
+    if (connection && connection.sessionId) {
+      encryptedTunnelSessions.delete(connection.sessionId);
+    }
+    encryptedTunnelConnections.delete(connectionId);
+  });
+
+  // Send ping every 30 seconds
+  const pingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'ping',
+        id: uuidv4(),
+        timestamp: new Date().toISOString()
+      }));
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 30000);
+});
+
 // Store for pending requests (requestId -> response handler)
 const pendingRequests = new Map();
+
+// Store for encrypted tunnel connections
+const encryptedTunnelConnections = new Map();
+
+// Store for encrypted tunnel sessions
+const encryptedTunnelSessions = new Map();
+
+// Handle encrypted tunnel messages
+function handleEncryptedTunnelMessage(connectionId, message) {
+  const connection = encryptedTunnelConnections.get(connectionId);
+  if (!connection) {
+    logger.warn(`🔐 [EncryptedTunnel] Message from unknown connection: ${connectionId}`);
+    return;
+  }
+
+  connection.lastActivity = new Date();
+
+  try {
+    switch (message.type) {
+      case 'keyExchange':
+        handleKeyExchange(connectionId, message);
+        break;
+      case 'encryptedData':
+        handleEncryptedData(connectionId, message);
+        break;
+      case 'pong':
+        logger.debug(`🔐 [EncryptedTunnel] Pong received from ${connectionId}`);
+        break;
+      default:
+        logger.warn(`🔐 [EncryptedTunnel] Unknown message type: ${message.type} from ${connectionId}`);
+    }
+  } catch (error) {
+    logger.error(`🔐 [EncryptedTunnel] Error handling message from ${connectionId}:`, error);
+
+    // Send error response
+    if (connection.ws.readyState === WebSocket.OPEN) {
+      connection.ws.send(JSON.stringify({
+        type: 'error',
+        id: uuidv4(),
+        error: 'Message processing failed',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      }));
+    }
+  }
+}
+
+// Handle key exchange for encrypted tunnel
+function handleKeyExchange(connectionId, message) {
+  const connection = encryptedTunnelConnections.get(connectionId);
+  if (!connection) return;
+
+  logger.info(`🔐 [EncryptedTunnel] Key exchange from ${connectionId}, user: ${connection.userId}`);
+
+  // Determine if this is desktop or container based on connection pattern
+  // Desktop connections typically come first and initiate key exchange
+  const existingUserConnections = Array.from(encryptedTunnelConnections.values())
+    .filter(conn => conn.userId === connection.userId && conn.connectionId !== connectionId);
+
+  if (existingUserConnections.length === 0) {
+    // First connection for this user - assume desktop
+    connection.isDesktop = true;
+    logger.info(`🔐 [EncryptedTunnel] Marked connection ${connectionId} as desktop`);
+  } else {
+    // Subsequent connection - assume container
+    connection.isContainer = true;
+    logger.info(`🔐 [EncryptedTunnel] Marked connection ${connectionId} as container`);
+
+    // Find desktop connection for this user
+    const desktopConnection = existingUserConnections.find(conn => conn.isDesktop);
+    if (desktopConnection) {
+      // Establish session between desktop and container
+      const sessionId = uuidv4();
+
+      // Store session
+      encryptedTunnelSessions.set(sessionId, {
+        sessionId,
+        userId: connection.userId,
+        desktopConnectionId: desktopConnection.connectionId,
+        containerConnectionId: connectionId,
+        establishedAt: new Date(),
+        lastActivity: new Date()
+      });
+
+      // Update connections with session ID
+      connection.sessionId = sessionId;
+      desktopConnection.sessionId = sessionId;
+
+      // Send session established to both parties
+      const sessionMessage = {
+        type: 'sessionEstablished',
+        id: uuidv4(),
+        sessionId,
+        publicKey: message.publicKey, // Container's public key to desktop
+        timestamp: new Date().toISOString()
+      };
+
+      if (desktopConnection.ws.readyState === WebSocket.OPEN) {
+        desktopConnection.ws.send(JSON.stringify(sessionMessage));
+      }
+
+      // Send desktop's public key to container (if we have it)
+      // This would be stored from desktop's key exchange
+      const desktopKeyExchange = {
+        type: 'sessionEstablished',
+        id: uuidv4(),
+        sessionId,
+        publicKey: desktopConnection.publicKey || '', // Desktop's public key to container
+        timestamp: new Date().toISOString()
+      };
+
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify(desktopKeyExchange));
+      }
+
+      logger.info(`🔐 [EncryptedTunnel] Session established: ${sessionId} between desktop and container`);
+    }
+  }
+
+  // Store public key for this connection
+  connection.publicKey = message.publicKey;
+}
+
+// Handle encrypted data relay
+function handleEncryptedData(connectionId, message) {
+  const connection = encryptedTunnelConnections.get(connectionId);
+  if (!connection || !connection.sessionId) {
+    logger.warn(`🔐 [EncryptedTunnel] Encrypted data from connection without session: ${connectionId}`);
+    return;
+  }
+
+  const session = encryptedTunnelSessions.get(connection.sessionId);
+  if (!session) {
+    logger.warn(`🔐 [EncryptedTunnel] Encrypted data for unknown session: ${connection.sessionId}`);
+    return;
+  }
+
+  // Update session activity
+  session.lastActivity = new Date();
+
+  // Determine target connection (relay to the other party in the session)
+  let targetConnectionId;
+  if (connectionId === session.desktopConnectionId) {
+    targetConnectionId = session.containerConnectionId;
+  } else if (connectionId === session.containerConnectionId) {
+    targetConnectionId = session.desktopConnectionId;
+  } else {
+    logger.warn(`🔐 [EncryptedTunnel] Connection ${connectionId} not part of session ${session.sessionId}`);
+    return;
+  }
+
+  const targetConnection = encryptedTunnelConnections.get(targetConnectionId);
+  if (!targetConnection || targetConnection.ws.readyState !== WebSocket.OPEN) {
+    logger.warn(`🔐 [EncryptedTunnel] Target connection ${targetConnectionId} not available for relay`);
+    return;
+  }
+
+  // Relay encrypted message (server cannot decrypt)
+  try {
+    targetConnection.ws.send(JSON.stringify(message));
+    logger.debug(`🔐 [EncryptedTunnel] Relayed encrypted data from ${connectionId} to ${targetConnectionId}`);
+  } catch (error) {
+    logger.error(`🔐 [EncryptedTunnel] Failed to relay encrypted data:`, error);
+  }
+}
 
 // Clean up pending requests for a disconnected bridge
 function cleanupPendingRequestsForBridge(bridgeId) {
@@ -343,6 +617,9 @@ function handleBridgeMessage(bridgeId, message) {
 
 // Zrok tunnel management routes
 app.use('/api/zrok', zrokRoutes);
+
+// Encrypted tunnel routes
+app.use('/api/encrypted-tunnel', encryptedTunnelRoutes);
 
 // Administrative routes
 app.use('/api/admin', adminRoutes);

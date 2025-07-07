@@ -1,11 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage_x/flutter_secure_storage_x.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'auth_service.dart';
 import 'desktop_client_detection_service.dart';
-import 'zrok_service.dart';
-import '../config/app_config.dart';
 
 /// Service to manage setup wizard state and first-time user detection
 ///
@@ -16,17 +12,10 @@ import '../config/app_config.dart';
 class SetupWizardService extends ChangeNotifier {
   static const String _setupCompletedKey = 'cloudtolocalllm_setup_completed';
   static const String _userSeenWizardKey = 'cloudtolocalllm_user_seen_wizard';
-  static const String _zrokConfiguredKey = 'cloudtolocalllm_zrok_configured';
-  static const String _zrokTokenKey = 'cloudtolocalllm_zrok_token';
-  static const String _zrokTunnelTestedKey =
-      'cloudtolocalllm_zrok_tunnel_tested';
-  static const String _containerIntegrationTestedKey =
-      'cloudtolocalllm_container_integration_tested';
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final AuthService _authService;
   final DesktopClientDetectionService? _clientDetectionService;
-  final ZrokService? _zrokService;
 
   // State
   bool _isSetupCompleted = false;
@@ -35,21 +24,11 @@ class SetupWizardService extends ChangeNotifier {
   bool _isFirstTimeUser = false;
   bool _isInitialized = false;
 
-  // Zrok configuration state
-  bool _isZrokConfigured = false;
-  String? _zrokToken;
-  bool _isZrokTunnelTested = false;
-  bool _isContainerIntegrationTested = false;
-  bool _isZrokValidating = false;
-  String? _zrokValidationError;
-
   SetupWizardService({
     required AuthService authService,
     DesktopClientDetectionService? clientDetectionService,
-    ZrokService? zrokService,
   }) : _authService = authService,
-       _clientDetectionService = clientDetectionService,
-       _zrokService = zrokService {
+       _clientDetectionService = clientDetectionService {
     _initialize();
   }
 
@@ -59,14 +38,6 @@ class SetupWizardService extends ChangeNotifier {
   bool get shouldShowWizard => _shouldShowWizard;
   bool get isFirstTimeUser => _isFirstTimeUser;
   bool get isInitialized => _isInitialized;
-
-  // Zrok getters
-  bool get isZrokConfigured => _isZrokConfigured;
-  String? get zrokToken => _zrokToken;
-  bool get isZrokTunnelTested => _isZrokTunnelTested;
-  bool get isContainerIntegrationTested => _isContainerIntegrationTested;
-  bool get isZrokValidating => _isZrokValidating;
-  String? get zrokValidationError => _zrokValidationError;
 
   /// Initialize the service and check setup state
   Future<void> _initialize() async {
@@ -107,33 +78,17 @@ class SetupWizardService extends ChangeNotifier {
     try {
       final setupCompleted = await _secureStorage.read(key: _setupCompletedKey);
       final userSeenWizard = await _secureStorage.read(key: _userSeenWizardKey);
-      final zrokConfigured = await _secureStorage.read(key: _zrokConfiguredKey);
-      final zrokToken = await _secureStorage.read(key: _zrokTokenKey);
-      final zrokTunnelTested = await _secureStorage.read(
-        key: _zrokTunnelTestedKey,
-      );
-      final containerIntegrationTested = await _secureStorage.read(
-        key: _containerIntegrationTestedKey,
-      );
 
       _isSetupCompleted = setupCompleted == 'true';
       _hasUserSeenWizard = userSeenWizard == 'true';
-      _isZrokConfigured = zrokConfigured == 'true';
-      _zrokToken = zrokToken;
-      _isZrokTunnelTested = zrokTunnelTested == 'true';
-      _isContainerIntegrationTested = containerIntegrationTested == 'true';
 
       debugPrint(
-        '🧙 [SetupWizard] Loaded setup state: completed=$_isSetupCompleted, seen=$_hasUserSeenWizard, zrok=$_isZrokConfigured',
+        '🧙 [SetupWizard] Loaded setup state: completed=$_isSetupCompleted, seen=$_hasUserSeenWizard',
       );
     } catch (e) {
       debugPrint('🧙 [SetupWizard] Error loading setup state: $e');
       _isSetupCompleted = false;
       _hasUserSeenWizard = false;
-      _isZrokConfigured = false;
-      _zrokToken = null;
-      _isZrokTunnelTested = false;
-      _isContainerIntegrationTested = false;
     }
   }
 
@@ -148,23 +103,8 @@ class SetupWizardService extends ChangeNotifier {
         key: _userSeenWizardKey,
         value: _hasUserSeenWizard.toString(),
       );
-      await _secureStorage.write(
-        key: _zrokConfiguredKey,
-        value: _isZrokConfigured.toString(),
-      );
-      if (_zrokToken != null) {
-        await _secureStorage.write(key: _zrokTokenKey, value: _zrokToken!);
-      }
-      await _secureStorage.write(
-        key: _zrokTunnelTestedKey,
-        value: _isZrokTunnelTested.toString(),
-      );
-      await _secureStorage.write(
-        key: _containerIntegrationTestedKey,
-        value: _isContainerIntegrationTested.toString(),
-      );
       debugPrint(
-        '🧙 [SetupWizard] Saved setup state: completed=$_isSetupCompleted, seen=$_hasUserSeenWizard, zrok=$_isZrokConfigured',
+        '🧙 [SetupWizard] Saved setup state: completed=$_isSetupCompleted, seen=$_hasUserSeenWizard',
       );
     } catch (e) {
       debugPrint('🧙 [SetupWizard] Error saving setup state: $e');
@@ -311,192 +251,7 @@ class SetupWizardService extends ChangeNotifier {
       'isAuthenticated': _authService.isAuthenticated.value,
       'connectedClientCount':
           _clientDetectionService?.connectedClientCount ?? 0,
-      'zrok': {
-        'isConfigured': _isZrokConfigured,
-        'hasToken': _zrokToken != null,
-        'isTunnelTested': _isZrokTunnelTested,
-        'isContainerIntegrationTested': _isContainerIntegrationTested,
-        'isValidating': _isZrokValidating,
-        'validationError': _zrokValidationError,
-      },
     };
-  }
-
-  /// Configure zrok with account token
-  Future<bool> configureZrok(String accountToken) async {
-    if (_zrokService == null) {
-      _zrokValidationError = 'Zrok service not available';
-      debugPrint('🧙 [SetupWizard] Zrok service not available');
-      return false;
-    }
-
-    _isZrokValidating = true;
-    _zrokValidationError = null;
-    notifyListeners();
-
-    try {
-      debugPrint('🧙 [SetupWizard] Configuring zrok with account token...');
-
-      // Enable zrok environment with the provided token
-      final isValid = await _zrokService.enableEnvironment(accountToken);
-
-      if (isValid) {
-        _zrokToken = accountToken;
-        _isZrokConfigured = true;
-        _zrokValidationError = null;
-        await _saveSetupState();
-
-        debugPrint('🧙 [SetupWizard] Zrok configured successfully');
-        return true;
-      } else {
-        _zrokValidationError = 'Invalid zrok account token';
-        debugPrint('🧙 [SetupWizard] Invalid zrok account token');
-        return false;
-      }
-    } catch (e) {
-      _zrokValidationError = 'Failed to configure zrok: $e';
-      debugPrint('🧙 [SetupWizard] Error configuring zrok: $e');
-      return false;
-    } finally {
-      _isZrokValidating = false;
-      notifyListeners();
-    }
-  }
-
-  /// Test zrok tunnel creation and registration
-  Future<bool> testZrokTunnel() async {
-    if (_zrokService == null || !_isZrokConfigured) {
-      _zrokValidationError = 'Zrok not configured';
-      return false;
-    }
-
-    _isZrokValidating = true;
-    _zrokValidationError = null;
-    notifyListeners();
-
-    try {
-      debugPrint('🧙 [SetupWizard] Testing zrok tunnel creation...');
-
-      // Create a test tunnel
-      final tunnel = await _zrokService.startTunnel(_zrokService.config);
-
-      if (tunnel != null && tunnel.isActive) {
-        _isZrokTunnelTested = true;
-        await _saveSetupState();
-
-        debugPrint('🧙 [SetupWizard] Zrok tunnel test successful');
-
-        // Stop the test tunnel
-        await _zrokService.stopTunnel();
-
-        return true;
-      } else {
-        _zrokValidationError = 'Failed to create zrok tunnel';
-        debugPrint('🧙 [SetupWizard] Failed to create zrok tunnel');
-        return false;
-      }
-    } catch (e) {
-      _zrokValidationError = 'Tunnel test failed: $e';
-      debugPrint('🧙 [SetupWizard] Tunnel test error: $e');
-      return false;
-    } finally {
-      _isZrokValidating = false;
-      notifyListeners();
-    }
-  }
-
-  /// Test container integration with zrok discovery
-  Future<bool> testContainerIntegration() async {
-    if (!_authService.isAuthenticated.value) {
-      _zrokValidationError = 'User not authenticated';
-      return false;
-    }
-
-    _isZrokValidating = true;
-    _zrokValidationError = null;
-    notifyListeners();
-
-    try {
-      debugPrint('🧙 [SetupWizard] Testing container integration...');
-
-      // Test container provisioning and zrok discovery
-      final testResult = await _testContainerZrokIntegration();
-
-      if (testResult) {
-        _isContainerIntegrationTested = true;
-        await _saveSetupState();
-
-        debugPrint('🧙 [SetupWizard] Container integration test successful');
-        return true;
-      } else {
-        _zrokValidationError = 'Container integration test failed';
-        debugPrint('🧙 [SetupWizard] Container integration test failed');
-        return false;
-      }
-    } catch (e) {
-      _zrokValidationError = 'Container integration error: $e';
-      debugPrint('🧙 [SetupWizard] Container integration error: $e');
-      return false;
-    } finally {
-      _isZrokValidating = false;
-      notifyListeners();
-    }
-  }
-
-  /// Test container zrok integration by calling API backend
-  Future<bool> _testContainerZrokIntegration() async {
-    try {
-      final accessToken = _authService.getAccessToken();
-      if (accessToken == null) {
-        return false;
-      }
-
-      // Test container provisioning endpoint
-      final response = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/streaming-proxy/provision'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        },
-        body: json.encode({'testMode': true, 'zrokDiscoveryEnabled': true}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['success'] == true && data['zrokDiscoveryEnabled'] == true;
-      }
-
-      return false;
-    } catch (e) {
-      debugPrint('🧙 [SetupWizard] Container integration test error: $e');
-      return false;
-    }
-  }
-
-  /// Reset zrok configuration
-  Future<void> resetZrokConfiguration() async {
-    _isZrokConfigured = false;
-    _zrokToken = null;
-    _isZrokTunnelTested = false;
-    _isContainerIntegrationTested = false;
-    _zrokValidationError = null;
-    _isZrokValidating = false;
-
-    // Clear from secure storage
-    await _secureStorage.delete(key: _zrokConfiguredKey);
-    await _secureStorage.delete(key: _zrokTokenKey);
-    await _secureStorage.delete(key: _zrokTunnelTestedKey);
-    await _secureStorage.delete(key: _containerIntegrationTestedKey);
-
-    debugPrint('🧙 [SetupWizard] Zrok configuration reset');
-    notifyListeners();
-  }
-
-  /// Check if zrok setup is complete
-  bool get isZrokSetupComplete {
-    return _isZrokConfigured &&
-        _isZrokTunnelTested &&
-        _isContainerIntegrationTested;
   }
 
   @override

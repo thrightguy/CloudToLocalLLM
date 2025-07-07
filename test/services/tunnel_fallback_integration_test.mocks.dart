@@ -74,7 +74,6 @@ class MockTunnelManagerService extends _i1.Mock
           )
           as Map<String, _i2.ConnectionStatus>);
 
-  @override
   bool get hasZrokTunnel =>
       (super.noSuchMethod(Invocation.getter(#hasZrokTunnel), returnValue: false)
           as bool);

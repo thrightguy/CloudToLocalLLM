@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 // Conditional import for web package - only import on web platform
-import 'package:web/web.dart' as web;
+import 'auth_logger_stub.dart'
+    as web
+    if (dart.library.html) 'auth_logger_web.dart';
 
 /// Persistent authentication logger for debugging
 /// Stores logs in browser localStorage and provides download functionality
@@ -15,8 +17,11 @@ class AuthLogger {
   AuthLogger._internal();
 
   /// Log an authentication event with timestamp
-  static void log(String message,
-      {String level = 'INFO', Map<String, dynamic>? data}) {
+  static void log(
+    String message, {
+    String level = 'INFO',
+    Map<String, dynamic>? data,
+  }) {
     if (!kIsWeb) return; // Only works on web
 
     try {
@@ -42,7 +47,8 @@ class AuthLogger {
 
       // Also log to console for immediate viewing
       debugPrint(
-          '[$level] $timestamp: $message${data != null ? ' | Data: $data' : ''}');
+        '[$level] $timestamp: $message${data != null ? ' | Data: $data' : ''}',
+      );
     } catch (e) {
       debugPrint('AuthLogger error: $e');
     }
@@ -161,17 +167,20 @@ class AuthLogger {
   static Map<String, dynamic> getAuthSummary() {
     final logs = getLogs();
     final authLogs = logs
-        .where((log) =>
-            log['message'].toString().contains('login') ||
-            log['message'].toString().contains('auth') ||
-            log['message'].toString().contains('redirect'))
+        .where(
+          (log) =>
+              log['message'].toString().contains('login') ||
+              log['message'].toString().contains('auth') ||
+              log['message'].toString().contains('redirect'),
+        )
         .toList();
 
     return {
       'totalLogs': logs.length,
       'authRelatedLogs': authLogs.length,
-      'lastAuthAttempt':
-          authLogs.isNotEmpty ? authLogs.last['timestamp'] : null,
+      'lastAuthAttempt': authLogs.isNotEmpty
+          ? authLogs.last['timestamp']
+          : null,
       'errorCount': logs.where((log) => log['level'] == 'ERROR').length,
       'warningCount': logs.where((log) => log['level'] == 'WARN').length,
     };

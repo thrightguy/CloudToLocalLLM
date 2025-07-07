@@ -6,7 +6,9 @@ import '../models/user_model.dart';
 import 'auth_logger.dart';
 
 // Conditional import for web package - only import on web platform
-import 'package:web/web.dart' as web;
+import 'auth_logger_stub.dart'
+    as web
+    if (dart.library.html) 'auth_logger_web.dart';
 
 /// Web-specific authentication service using direct Auth0 redirect with JWT tokens
 class AuthServiceWeb extends ChangeNotifier {
@@ -118,17 +120,13 @@ class AuthServiceWeb extends ChangeNotifier {
         'scopes': AppConfig.auth0Scopes,
       });
 
-      final authUrl = Uri.https(
-        AppConfig.auth0Domain,
-        '/authorize',
-        {
-          'client_id': AppConfig.auth0ClientId,
-          'redirect_uri': redirectUri,
-          'response_type': 'code',
-          'scope': AppConfig.auth0Scopes.join(' '),
-          'state': state,
-        },
-      );
+      final authUrl = Uri.https(AppConfig.auth0Domain, '/authorize', {
+        'client_id': AppConfig.auth0ClientId,
+        'redirect_uri': redirectUri,
+        'response_type': 'code',
+        'scope': AppConfig.auth0Scopes.join(' '),
+        'state': state,
+      });
 
       AuthLogger.info('🔐 Auth0 URL constructed', {
         'url': authUrl.toString(),
@@ -145,7 +143,8 @@ class AuthServiceWeb extends ChangeNotifier {
           // Add a small delay to ensure the redirect happens
           await Future.delayed(const Duration(milliseconds: 100));
           AuthLogger.warning(
-              '🔐 Still executing after redirect - this should not happen');
+            '🔐 Still executing after redirect - this should not happen',
+          );
         } catch (redirectError) {
           AuthLogger.error('🔐 Primary redirect failed', {
             'error': redirectError.toString(),
@@ -168,7 +167,8 @@ class AuthServiceWeb extends ChangeNotifier {
       } else {
         // For non-web platforms, this service shouldn't be used
         throw UnsupportedError(
-            'Web authentication service is only supported on web platform');
+          'Web authentication service is only supported on web platform',
+        );
       }
     } catch (e) {
       AuthLogger.error('🔐 Login error', {
@@ -219,7 +219,8 @@ class AuthServiceWeb extends ChangeNotifier {
 
       if (!kIsWeb) {
         AuthLogger.error(
-            '🔐 Callback handling is only supported on web platform');
+          '🔐 Callback handling is only supported on web platform',
+        );
         return false;
       }
 
@@ -380,8 +381,9 @@ class AuthServiceWeb extends ChangeNotifier {
         });
       }
     } catch (e) {
-      AuthLogger.error(
-          '🔐 User profile loading error', {'error': e.toString()});
+      AuthLogger.error('🔐 User profile loading error', {
+        'error': e.toString(),
+      });
     }
   }
 
@@ -391,15 +393,19 @@ class AuthServiceWeb extends ChangeNotifier {
       if (!kIsWeb) return;
 
       if (_accessToken != null) {
-        web.window.localStorage
-            .setItem('cloudtolocalllm_access_token', _accessToken!);
+        web.window.localStorage.setItem(
+          'cloudtolocalllm_access_token',
+          _accessToken!,
+        );
       }
       if (_idToken != null) {
         web.window.localStorage.setItem('cloudtolocalllm_id_token', _idToken!);
       }
       if (_tokenExpiry != null) {
         web.window.localStorage.setItem(
-            'cloudtolocalllm_token_expiry', _tokenExpiry!.toIso8601String());
+          'cloudtolocalllm_token_expiry',
+          _tokenExpiry!.toIso8601String(),
+        );
       }
 
       AuthLogger.info('🔐 Tokens stored in localStorage');
@@ -413,12 +419,14 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       if (!kIsWeb) return;
 
-      _accessToken =
-          web.window.localStorage.getItem('cloudtolocalllm_access_token');
+      _accessToken = web.window.localStorage.getItem(
+        'cloudtolocalllm_access_token',
+      );
       _idToken = web.window.localStorage.getItem('cloudtolocalllm_id_token');
 
-      final expiryString =
-          web.window.localStorage.getItem('cloudtolocalllm_token_expiry');
+      final expiryString = web.window.localStorage.getItem(
+        'cloudtolocalllm_token_expiry',
+      );
       if (expiryString != null) {
         _tokenExpiry = DateTime.tryParse(expiryString);
       }
@@ -427,8 +435,9 @@ class AuthServiceWeb extends ChangeNotifier {
         AuthLogger.info('🔐 Tokens loaded from localStorage');
       }
     } catch (e) {
-      AuthLogger.error(
-          '🔐 Error loading stored tokens', {'error': e.toString()});
+      AuthLogger.error('🔐 Error loading stored tokens', {
+        'error': e.toString(),
+      });
     }
   }
 
@@ -440,13 +449,15 @@ class AuthServiceWeb extends ChangeNotifier {
       web.window.localStorage.removeItem('cloudtolocalllm_access_token');
       web.window.localStorage.removeItem('cloudtolocalllm_id_token');
       web.window.localStorage.removeItem('cloudtolocalllm_token_expiry');
-      web.window.localStorage
-          .removeItem('cloudtolocalllm_authenticated'); // Legacy cleanup
+      web.window.localStorage.removeItem(
+        'cloudtolocalllm_authenticated',
+      ); // Legacy cleanup
 
       AuthLogger.info('🔐 Stored tokens cleared');
     } catch (e) {
-      AuthLogger.error(
-          '🔐 Error clearing stored tokens', {'error': e.toString()});
+      AuthLogger.error('🔐 Error clearing stored tokens', {
+        'error': e.toString(),
+      });
     }
   }
 

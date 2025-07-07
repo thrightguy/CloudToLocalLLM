@@ -3,7 +3,7 @@ description: Manage and run powerful Large Language Models locally, orchestrated
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.8.0+202507020144
+version: 3.9.0+202507071305
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -14,7 +14,7 @@ dependencies:
 
   # UI and Navigation
   cupertino_icons: ^1.0.8
-  go_router: ^15.2.3
+  go_router: ^16.0.0
 
   # Authentication
   flutter_appauth: ^9.0.1
@@ -22,7 +22,6 @@ dependencies:
 
   # HTTP and Web
   http: ^1.4.0
-  web: ^1.1.1
 
   # Streaming and WebSocket support
   web_socket_channel: ^3.0.3
@@ -37,8 +36,7 @@ dependencies:
   # Connection monitoring
   connectivity_plus: ^6.1.4
 
-  # Process execution for zrok integration
-  process_run: ^1.2.4
+
 
   # App Information
   package_info_plus: ^8.3.0
@@ -62,6 +60,10 @@ dependencies:
   tray_manager: ^0.5.0
   shelf: ^1.4.2
   crypto: ^3.0.6
+
+  # Cryptography for end-to-end encryption
+  cryptography: ^2.7.0
+  pointycastle: ^3.9.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0

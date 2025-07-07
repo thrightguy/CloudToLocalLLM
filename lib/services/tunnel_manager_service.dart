@@ -11,9 +11,7 @@ import 'streaming_service.dart';
 import 'auth_service.dart';
 import 'desktop_client_detection_service.dart';
 import 'cloud_streaming_service.dart';
-
-import 'zrok_service.dart';
-import 'zrok_service_platform.dart';
+import 'encrypted_tunnel_client.dart';
 
 /// Integrated tunnel manager service for CloudToLocalLLM v3.3.1+
 ///
@@ -62,8 +60,8 @@ class TunnelManagerService extends ChangeNotifier {
   StreamSubscription<ConnectionStatusEvent>? _statusSubscription;
   CloudStreamingService? _cloudStreamingService;
 
-  // Zrok service for desktop tunneling
-  ZrokService? _zrokService;
+  // Encrypted tunnel client for desktop-to-cloud tunneling
+  EncryptedTunnelClient? _encryptedTunnelClient;
 
   // Desktop client detection listener (web platform only)
   StreamSubscription<void>? _clientDetectionSubscription;
@@ -84,14 +82,17 @@ class TunnelManagerService extends ChangeNotifier {
   /// Get cloud streaming service (local Ollama is now handled separately)
   CloudStreamingService? get cloudStreamingService => _cloudStreamingService;
 
-  /// Get zrok service (desktop platform only)
-  ZrokService? get zrokService => _zrokService;
+  /// Get encrypted tunnel client (desktop platform only)
+  EncryptedTunnelClient? get encryptedTunnelClient => _encryptedTunnelClient;
 
-  /// Whether zrok tunnel is active
-  bool get hasZrokTunnel => _zrokService?.activeTunnel != null;
+  /// Whether encrypted tunnel is connected
+  bool get hasEncryptedTunnel => _encryptedTunnelClient?.isConnected == true;
 
-  /// Get zrok tunnel URL if active
-  String? get zrokTunnelUrl => _zrokService?.activeTunnel?.publicUrl;
+  /// Set encrypted tunnel client (for dependency injection)
+  void setEncryptedTunnelClient(EncryptedTunnelClient client) {
+    _encryptedTunnelClient = client;
+    debugPrint('🚇 [TunnelManager] Encrypted tunnel client injected');
+  }
 
   /// Debounced notifyListeners to prevent excessive UI rebuilds
   void _debouncedNotifyListeners() {
@@ -132,10 +133,8 @@ class TunnelManagerService extends ChangeNotifier {
         '🚇 [TunnelManager] Desktop platform detected - acting as tunnel client',
       );
 
-      // Initialize tunnel services for desktop platform
-      await _initializeZrokService();
-
       await _initializeConnections();
+      await _initializeEncryptedTunnel();
     }
 
     // Start health monitoring
@@ -188,29 +187,40 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Initialize zrok service for desktop platform
-  Future<void> _initializeZrokService() async {
+  /// Initialize encrypted tunnel client for desktop platform
+  Future<void> _initializeEncryptedTunnel() async {
     try {
-      debugPrint('🚇 [TunnelManager] Initializing zrok service...');
+      debugPrint('🚇 [TunnelManager] Initializing encrypted tunnel client...');
 
-      _zrokService = ZrokServicePlatform(authService: _authService);
-      await _zrokService!.initialize();
+      // Get encrypted tunnel client from provider
+      // Note: This will be injected via dependency injection
+      // For now, we'll create it directly if needed
+      if (_encryptedTunnelClient == null) {
+        debugPrint('🚇 [TunnelManager] No encrypted tunnel client available');
+        return;
+      }
 
-      // Listen to zrok service changes
-      _zrokService!.addListener(() {
+      // Listen to encrypted tunnel client changes
+      _encryptedTunnelClient!.addListener(() {
         _debouncedNotifyListeners();
       });
 
-      // Start zrok tunnel if enabled in configuration
-      if (_config.enableZrok) {
-        debugPrint('🚇 [TunnelManager] Starting zrok tunnel...');
-        await _zrokService!.startTunnel(_config.toZrokConfig());
+      // Connect to encrypted tunnel if enabled in configuration
+      if (_config.enableCloudProxy) {
+        debugPrint(
+          '🚇 [TunnelManager] Starting encrypted tunnel connection...',
+        );
+        await _encryptedTunnelClient!.connect();
       }
 
-      debugPrint('🚇 [TunnelManager] Zrok service initialized successfully');
+      debugPrint(
+        '🚇 [TunnelManager] Encrypted tunnel client initialized successfully',
+      );
     } catch (e) {
-      debugPrint('🚇 [TunnelManager] Failed to initialize zrok service: $e');
-      // Don't fail the entire initialization if zrok fails
+      debugPrint(
+        '🚇 [TunnelManager] Failed to initialize encrypted tunnel client: $e',
+      );
+      // Don't fail the entire initialization if encrypted tunnel fails
     }
   }
 
@@ -720,11 +730,34 @@ class TunnelManagerService extends ChangeNotifier {
     return null;
   }
 
+  /// Update encrypted tunnel connection status
+  void _updateEncryptedTunnelConnectionStatus() {
+    if (_encryptedTunnelClient == null ||
+        !_encryptedTunnelClient!.isConnected) {
+      return;
+    }
+
+    final isConnected = _encryptedTunnelClient!.isConnected;
+    final isConnecting = _encryptedTunnelClient!.isConnecting;
+    final lastError = _encryptedTunnelClient!.lastError;
+
+    _connectionStatus['encrypted_tunnel'] = ConnectionStatus(
+      type: 'encrypted_tunnel',
+      isConnected: isConnected,
+      endpoint: 'Encrypted Tunnel',
+      version: isConnected
+          ? 'Connected'
+          : (isConnecting ? 'Connecting' : 'Disconnected'),
+      lastCheck: DateTime.now(),
+      latency: 0, // Encrypted tunnel latency is not directly measurable
+      error: lastError,
+    );
+  }
+
   /// Update overall connection status
   void _updateOverallStatus() {
-    // Update tunnel connection status if available
-    _updateZrokConnectionStatus();
-
+    // Update encrypted tunnel connection status if available
+    _updateEncryptedTunnelConnectionStatus();
     final hasConnectedEndpoint = _connectionStatus.values.any(
       (status) => status.isConnected,
     );
@@ -741,27 +774,6 @@ class TunnelManagerService extends ChangeNotifier {
     } else {
       _error = null;
     }
-  }
-
-  /// Update zrok connection status
-  void _updateZrokConnectionStatus() {
-    if (_zrokService == null || !_zrokService!.isSupported) {
-      return;
-    }
-
-    final tunnel = _zrokService!.activeTunnel;
-    final isRunning = _zrokService!.isRunning;
-    final lastError = _zrokService!.lastError;
-
-    _connectionStatus['zrok'] = ConnectionStatus(
-      type: 'zrok',
-      isConnected: isRunning && tunnel != null,
-      endpoint: tunnel?.publicUrl ?? 'Not available',
-      version: tunnel != null ? 'Active' : 'Inactive',
-      lastCheck: DateTime.now(),
-      latency: 0, // Zrok latency is not directly measurable
-      error: lastError,
-    );
   }
 
   /// Start periodic health checks
@@ -786,8 +798,8 @@ class TunnelManagerService extends ChangeNotifier {
 
         if (type == 'cloud') {
           await _checkCloudHealth(status);
-        } else if (type == 'zrok') {
-          await _checkZrokHealth(status);
+        } else if (type == 'encrypted_tunnel') {
+          await _checkEncryptedTunnelHealth(status);
         }
         // Local Ollama health is now handled independently
 
@@ -838,32 +850,21 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Check zrok tunnel health
-  Future<void> _checkZrokHealth(ConnectionStatus status) async {
-    if (_zrokService == null) {
-      throw Exception('Zrok service not available');
+  /// Check encrypted tunnel health
+  Future<void> _checkEncryptedTunnelHealth(ConnectionStatus status) async {
+    if (_encryptedTunnelClient == null) {
+      throw Exception('Encrypted tunnel client not available');
     }
 
     try {
-      final tunnelStatus = await _zrokService!.getTunnelStatus();
-
-      if (!_zrokService!.isRunning) {
-        throw Exception('Zrok tunnel is not running');
+      if (!_encryptedTunnelClient!.isConnected) {
+        throw Exception('Encrypted tunnel is not connected');
       }
 
-      if (_zrokService!.activeTunnel == null) {
-        throw Exception('No active zrok tunnel');
-      }
-
-      // Verify tunnel status indicates it's supported and running
-      if (tunnelStatus['supported'] != true) {
-        throw Exception('Zrok not supported on this platform');
-      }
-
-      // Additional health check could include testing the tunnel URL
-      // For now, we just verify the service is running and has an active tunnel
+      // Additional health check could include testing the tunnel connection
+      // For now, we just verify the client is connected
     } catch (e) {
-      throw Exception('Zrok health check failed: $e');
+      throw Exception('Encrypted tunnel health check failed: $e');
     }
   }
 
@@ -877,10 +878,9 @@ class TunnelManagerService extends ChangeNotifier {
     _httpClient.close();
 
     // Tunnel services cleanup
-
-    if (_zrokService != null) {
-      await _zrokService!.stopTunnel();
-      _zrokService!.dispose();
+    if (_encryptedTunnelClient != null) {
+      await _encryptedTunnelClient!.disconnect();
+      _encryptedTunnelClient = null;
     }
 
     // Cloud streaming services cleanup (local Ollama handled separately)
@@ -941,10 +941,6 @@ class TunnelManagerService extends ChangeNotifier {
 
     // Update tunnel configurations if services are available
 
-    if (_zrokService != null && !kIsWeb) {
-      await _zrokService!.updateConfiguration(newConfig.toZrokConfig());
-    }
-
     // Platform-specific reinitialization
     if (kIsWeb) {
       await _initializeWebBridgeServer();
@@ -958,7 +954,7 @@ class TunnelManagerService extends ChangeNotifier {
   /// Get best available connection following the fallback hierarchy:
   /// 1. Local Ollama (primary) - handled by LocalOllamaConnectionService
   /// 2. Cloud proxy (secondary)
-  /// 3. Zrok tunnel (tertiary)
+  /// 3. Encrypted tunnel (tertiary)
   /// 4. Local Ollama (final fallback) - handled by LocalOllamaConnectionService
   String? getBestConnection() {
     // Cloud proxy (secondary in hierarchy)
@@ -967,10 +963,10 @@ class TunnelManagerService extends ChangeNotifier {
       return 'cloud';
     }
 
-    // Zrok tunnel (tertiary - primary tunnel option)
-    final zrokStatus = _connectionStatus['zrok'];
-    if (zrokStatus?.isConnected == true) {
-      return 'zrok';
+    // Encrypted tunnel (tertiary - primary tunnel option)
+    final encryptedTunnelStatus = _connectionStatus['encrypted_tunnel'];
+    if (encryptedTunnelStatus?.isConnected == true) {
+      return 'encrypted_tunnel';
     }
 
     // No tunnel connections available
@@ -1403,7 +1399,7 @@ class ConnectionStatus {
   }
 }
 
-/// Tunnel configuration (cloud proxy and zrok)
+/// Tunnel configuration (cloud proxy only)
 ///
 /// Local Ollama connections are now handled independently
 /// and are not part of tunnel management.
@@ -1413,33 +1409,11 @@ class TunnelConfig {
   final int connectionTimeout;
   final int healthCheckInterval;
 
-  // Zrok configuration
-  final bool enableZrok;
-  final String? zrokAccountToken;
-  final String? zrokApiEndpoint;
-  final String? zrokEnvironment;
-  final String zrokProtocol;
-  final int zrokLocalPort;
-  final String zrokLocalHost;
-  final bool zrokUseReservedShare;
-  final String? zrokReservedShareToken;
-  final String zrokBackendMode;
-
   const TunnelConfig({
     required this.enableCloudProxy,
     required this.cloudProxyUrl,
     required this.connectionTimeout,
     required this.healthCheckInterval,
-    this.enableZrok = false,
-    this.zrokAccountToken,
-    this.zrokApiEndpoint,
-    this.zrokEnvironment,
-    this.zrokProtocol = 'http',
-    this.zrokLocalPort = 11434,
-    this.zrokLocalHost = 'localhost',
-    this.zrokUseReservedShare = false,
-    this.zrokReservedShareToken,
-    this.zrokBackendMode = 'proxy',
   });
 
   factory TunnelConfig.defaultConfig() {
@@ -1448,12 +1422,6 @@ class TunnelConfig {
       cloudProxyUrl: 'https://app.cloudtolocalllm.online',
       connectionTimeout: 10,
       healthCheckInterval: 30,
-      enableZrok: false,
-      zrokProtocol: 'http',
-      zrokLocalPort: 11434,
-      zrokLocalHost: 'localhost',
-      zrokUseReservedShare: false,
-      zrokBackendMode: 'proxy',
     );
   }
 
@@ -1463,47 +1431,12 @@ class TunnelConfig {
     String? cloudProxyUrl,
     int? connectionTimeout,
     int? healthCheckInterval,
-    bool? enableZrok,
-    String? zrokAccountToken,
-    String? zrokApiEndpoint,
-    String? zrokEnvironment,
-    String? zrokProtocol,
-    int? zrokLocalPort,
-    String? zrokLocalHost,
-    bool? zrokUseReservedShare,
-    String? zrokReservedShareToken,
-    String? zrokBackendMode,
   }) {
     return TunnelConfig(
       enableCloudProxy: enableCloudProxy ?? this.enableCloudProxy,
       cloudProxyUrl: cloudProxyUrl ?? this.cloudProxyUrl,
       connectionTimeout: connectionTimeout ?? this.connectionTimeout,
       healthCheckInterval: healthCheckInterval ?? this.healthCheckInterval,
-      enableZrok: enableZrok ?? this.enableZrok,
-      zrokAccountToken: zrokAccountToken ?? this.zrokAccountToken,
-      zrokApiEndpoint: zrokApiEndpoint ?? this.zrokApiEndpoint,
-      zrokEnvironment: zrokEnvironment ?? this.zrokEnvironment,
-      zrokProtocol: zrokProtocol ?? this.zrokProtocol,
-      zrokLocalPort: zrokLocalPort ?? this.zrokLocalPort,
-      zrokLocalHost: zrokLocalHost ?? this.zrokLocalHost,
-      zrokUseReservedShare: zrokUseReservedShare ?? this.zrokUseReservedShare,
-      zrokReservedShareToken:
-          zrokReservedShareToken ?? this.zrokReservedShareToken,
-      zrokBackendMode: zrokBackendMode ?? this.zrokBackendMode,
-    );
-  }
-
-  /// Convert to ZrokConfig for the zrok service
-  ZrokConfig toZrokConfig() {
-    return ZrokConfig(
-      enabled: enableZrok,
-      accountToken: zrokAccountToken,
-      protocol: zrokProtocol,
-      localPort: zrokLocalPort,
-      localHost: zrokLocalHost,
-      useReservedShare: zrokUseReservedShare,
-      reservedShareToken: zrokReservedShareToken,
-      backendMode: zrokBackendMode,
     );
   }
 
@@ -1511,10 +1444,7 @@ class TunnelConfig {
   String toString() {
     return 'TunnelConfig('
         'enableCloudProxy: $enableCloudProxy, '
-        'cloudProxyUrl: $cloudProxyUrl, '
-        'enableZrok: $enableZrok, '
-        'zrokProtocol: $zrokProtocol, '
-        'zrokLocalPort: $zrokLocalPort'
+        'cloudProxyUrl: $cloudProxyUrl'
         ')';
   }
 }

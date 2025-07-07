@@ -13,6 +13,9 @@ import 'auth_service.dart';
 /// 1. Primary: Local Ollama (direct connection, no tunnel needed)
 /// 2. Secondary: Cloud proxy via tunnel connection
 ///
+/// Note: Zrok tunnel functionality is now handled as a standalone service
+/// separate from Ollama connections.
+///
 /// Ensures provider isolation - each connection can fail independently.
 class ConnectionManagerService extends ChangeNotifier {
   final LocalOllamaConnectionService _localOllama;
@@ -43,9 +46,7 @@ class ConnectionManagerService extends ChangeNotifier {
   // Getters
   bool get hasLocalConnection => _localOllama.isConnected;
   bool get hasCloudConnection => _tunnelManager.isConnected;
-  bool get hasZrokConnection => _tunnelManager.hasZrokTunnel;
-  bool get hasAnyConnection =>
-      hasLocalConnection || hasCloudConnection || hasZrokConnection;
+  bool get hasAnyConnection => hasLocalConnection || hasCloudConnection;
   String? get selectedModel => _selectedModel;
   List<String> get availableModels => _getAvailableModels();
 
@@ -53,15 +54,15 @@ class ConnectionManagerService extends ChangeNotifier {
   /// Fallback hierarchy:
   /// 1. Local Ollama (if preferred and available)
   /// 2. Cloud proxy (WebSocket bridge)
-  /// 3. Zrok tunnel (fallback for cloud proxy issues)
-  /// 4. Local Ollama (fallback if not preferred initially)
+  /// 3. Local Ollama (fallback if not preferred initially)
+  ///
+  /// Note: Zrok is now handled as a standalone service and not part of
+  /// the Ollama connection fallback hierarchy.
   ConnectionType getBestConnectionType() {
     if (_preferLocalOllama && hasLocalConnection) {
       return ConnectionType.local;
     } else if (hasCloudConnection) {
       return ConnectionType.cloud;
-    } else if (hasZrokConnection) {
-      return ConnectionType.zrok;
     } else if (hasLocalConnection) {
       return ConnectionType.local;
     } else {
@@ -101,22 +102,6 @@ class ConnectionManagerService extends ChangeNotifier {
           return _cloudStreamingService;
         }
 
-      case ConnectionType.zrok:
-        // For zrok connections, we use local Ollama streaming but through the tunnel
-        // The zrok tunnel exposes the local Ollama instance publicly
-        final streamingService = _localOllama.streamingService;
-        if (streamingService != null && streamingService.connection.isActive) {
-          debugPrint(
-            '🔗 [ConnectionManager] Using local Ollama streaming via zrok tunnel',
-          );
-          return streamingService;
-        } else {
-          debugPrint(
-            '🔗 [ConnectionManager] Zrok tunnel available but local Ollama not ready',
-          );
-        }
-        break;
-
       case ConnectionType.none:
         debugPrint('🔗 [ConnectionManager] No streaming service available');
         break;
@@ -147,17 +132,6 @@ class ConnectionManagerService extends ChangeNotifier {
         // Create OllamaService configured for cloud proxy
         final ollamaService = OllamaService();
         return await ollamaService.chat(
-          model: model,
-          message: message,
-          history: history,
-        );
-
-      case ConnectionType.zrok:
-        debugPrint(
-          '🔗 [ConnectionManager] Using local Ollama via zrok tunnel for chat',
-        );
-        // For zrok, we use local Ollama since the tunnel exposes it
-        return await _localOllama.chat(
           model: model,
           message: message,
           history: history,
@@ -235,6 +209,7 @@ class ConnectionManagerService extends ChangeNotifier {
   }
 
   /// Get connection status summary
+  /// Note: Zrok status is now handled separately as a standalone service
   Map<String, dynamic> getConnectionStatus() {
     return {
       'local': {
@@ -248,13 +223,6 @@ class ConnectionManagerService extends ChangeNotifier {
         'connected': hasCloudConnection,
         'error': _tunnelManager.error,
         'status': _tunnelManager.connectionStatus,
-      },
-      'zrok': {
-        'connected': hasZrokConnection,
-        'tunnelUrl': _tunnelManager.zrokTunnelUrl,
-        'isSupported': _tunnelManager.zrokService?.isSupported ?? false,
-        'isRunning': _tunnelManager.zrokService?.isRunning ?? false,
-        'error': _tunnelManager.zrokService?.lastError,
       },
       'active': getBestConnectionType().name,
       'selectedModel': _selectedModel,
@@ -316,4 +284,5 @@ class ConnectionManagerService extends ChangeNotifier {
 }
 
 /// Connection type enumeration
-enum ConnectionType { local, cloud, zrok, none }
+/// Note: Zrok is now handled as a standalone service
+enum ConnectionType { local, cloud, none }

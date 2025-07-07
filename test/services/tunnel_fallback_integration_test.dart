@@ -42,7 +42,6 @@ void main() {
       // Setup: Local connection available and preferred
       when(mockLocalOllama.isConnected).thenReturn(true);
       when(mockTunnelManager.isConnected).thenReturn(true);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(true);
 
       final connectionType = connectionManager.getBestConnectionType();
 
@@ -53,29 +52,26 @@ void main() {
       // Setup: Local connection unavailable, cloud available
       when(mockLocalOllama.isConnected).thenReturn(false);
       when(mockTunnelManager.isConnected).thenReturn(true);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(false);
 
       final connectionType = connectionManager.getBestConnectionType();
 
       expect(connectionType, ConnectionType.cloud);
     });
 
-    test('should fallback to zrok when cloud proxy fails', () {
-      // Setup: Local and cloud unavailable, zrok available
+    test('should return none when local and cloud unavailable', () {
+      // Setup: No connections available (zrok is now standalone)
       when(mockLocalOllama.isConnected).thenReturn(false);
       when(mockTunnelManager.isConnected).thenReturn(false);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(true);
 
       final connectionType = connectionManager.getBestConnectionType();
 
-      expect(connectionType, ConnectionType.zrok);
+      expect(connectionType, ConnectionType.none);
     });
 
-    test('should fallback to local when preferred but cloud/zrok available', () {
-      // Setup: Local preferred but unavailable initially, cloud and zrok available
+    test('should fallback to local when preferred but cloud available', () {
+      // Setup: Local preferred but unavailable initially, cloud available
       when(mockLocalOllama.isConnected).thenReturn(false);
       when(mockTunnelManager.isConnected).thenReturn(true);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(true);
 
       var connectionType = connectionManager.getBestConnectionType();
       expect(connectionType, ConnectionType.cloud);
@@ -91,7 +87,6 @@ void main() {
       // Setup: All connections unavailable
       when(mockLocalOllama.isConnected).thenReturn(false);
       when(mockTunnelManager.isConnected).thenReturn(false);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(false);
 
       final connectionType = connectionManager.getBestConnectionType();
 
@@ -104,7 +99,6 @@ void main() {
       // No connections
       when(mockLocalOllama.isConnected).thenReturn(false);
       when(mockTunnelManager.isConnected).thenReturn(false);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(false);
       expect(connectionManager.hasAnyConnection, false);
 
       // Only local
@@ -116,23 +110,16 @@ void main() {
       when(mockTunnelManager.isConnected).thenReturn(true);
       expect(connectionManager.hasAnyConnection, true);
 
-      // Only zrok
-      when(mockTunnelManager.isConnected).thenReturn(false);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(true);
-      expect(connectionManager.hasAnyConnection, true);
-
       // All connections
       when(mockLocalOllama.isConnected).thenReturn(true);
       when(mockTunnelManager.isConnected).thenReturn(true);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(true);
       expect(connectionManager.hasAnyConnection, true);
     });
 
     test('should handle connection failures gracefully', () async {
-      // Setup: Zrok connection but local ollama fails
+      // Setup: No connections available
       when(mockLocalOllama.isConnected).thenReturn(false);
       when(mockTunnelManager.isConnected).thenReturn(false);
-      when(mockTunnelManager.hasZrokTunnel).thenReturn(true);
 
       // Mock local ollama failure
       when(

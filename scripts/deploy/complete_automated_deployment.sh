@@ -214,7 +214,7 @@ phase1_preflight_validation() {
     fi
 
     # Test SSH connection to VPS with retry logic
-    if ! test_ssh_connectivity "cloudllm@cloudtolocalllm.online" 15 5; then
+    if ! test_ssh_connectivity "ubuntu@cloudtolocalllm.online" 15 5; then
         log_error "SSH connectivity to VPS failed after multiple attempts"
         log_error "Please check VPS status and SSH key configuration"
         exit 2
