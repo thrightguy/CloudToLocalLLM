@@ -1,49 +1,49 @@
-// Web-specific implementation using dart:html
-import 'dart:html' as html;
+// Web-specific implementation using package:web
+import 'package:web/web.dart' as web;
 
 class Window {
   Navigator get navigator => Navigator();
   Location get location => Location();
   Storage get localStorage => Storage();
   History get history => History();
-  void open(String url, String target) => html.window.open(url, target);
+  void open(String url, String target) => web.window.open(url, target);
 }
 
 class Navigator {
-  String get userAgent => html.window.navigator.userAgent;
+  String get userAgent => web.window.navigator.userAgent;
 }
 
 class Location {
-  String get href => html.window.location.href;
-  set href(String value) => html.window.location.href = value;
+  String get href => web.window.location.href;
+  set href(String value) => web.window.location.href = value;
 }
 
 class Storage {
-  void removeItem(String key) => html.window.localStorage.remove(key);
-  String? getItem(String key) => html.window.localStorage[key];
+  void removeItem(String key) => web.window.localStorage.removeItem(key);
+  String? getItem(String key) => web.window.localStorage.getItem(key);
   void setItem(String key, String value) =>
-      html.window.localStorage[key] = value;
+      web.window.localStorage.setItem(key, value);
 }
 
 class History {
   void replaceState(dynamic data, String title, String url) =>
-      html.window.history.replaceState(data, title, url);
+      web.window.history.replaceState(data, title, url);
 }
 
 class Document {
   Element createElement(String tagName) =>
-      Element(html.document.createElement(tagName));
+      Element(web.document.createElement(tagName));
 }
 
 class Element {
-  final html.Element _element;
+  final web.Element _element;
   Element(this._element);
 
   void setAttribute(String name, String value) =>
       _element.setAttribute(name, value);
   void click() {
-    // Use click method directly
-    _element.click();
+    // Use click method directly - cast to HTMLElement for click support
+    (_element as web.HTMLElement).click();
   }
 }
 

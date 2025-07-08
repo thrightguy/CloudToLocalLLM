@@ -1,9 +1,9 @@
-﻿name: cloudtolocalllm
+name: cloudtolocalllm
 description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.9.0+202507071305
+version: 3.9.1+202507072317
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -64,6 +64,7 @@ dependencies:
   # Cryptography for end-to-end encryption
   cryptography: ^2.7.0
   pointycastle: ^3.9.1
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0
