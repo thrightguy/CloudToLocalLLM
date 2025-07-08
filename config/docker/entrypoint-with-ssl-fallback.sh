@@ -28,8 +28,14 @@ else
     -out "$FALLBACK_CERT" \
     -subj "/CN=cloudtolocalllm.online" \
     2>/dev/null || echo "[entrypoint] Self-signed cert generation failed, continuing..."
-  
+
+  # Create Let's Encrypt directory structure and link self-signed certs
+  mkdir -p "$CERT_DIR"
+  ln -sf "$FALLBACK_CERT" "$CERT_DIR/fullchain.pem"
+  ln -sf "$FALLBACK_KEY" "$CERT_DIR/privkey.pem"
+
   echo "[entrypoint] Self-signed certificates created as fallback."
+  echo "[entrypoint] Symbolic links created for nginx configuration compatibility."
   echo "[entrypoint] WARNING: Using self-signed certificates. Configuration may need to be updated manually for production use."
 fi
 
