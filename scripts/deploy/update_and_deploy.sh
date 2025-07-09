@@ -551,6 +551,14 @@ manage_containers() {
     log_verbose "Using Docker command: $docker_cmd"
     log_verbose "Using Docker Compose command: $docker_compose_cmd"
 
+    # Test if Docker Compose can access the docker-compose.yml file
+    if ! $docker_compose_cmd -f docker-compose.yml config &> /dev/null; then
+        log_warning "Docker Compose cannot access docker-compose.yml (likely snap confinement issue)"
+        log_warning "Skipping Docker container management"
+        log_warning "Web application is built and ready for manual deployment"
+        return 0
+    fi
+
     if [[ "$VERBOSE" == "true" ]]; then
         $docker_compose_cmd -f docker-compose.yml down --remove-orphans || {
             log_warning "Failed to stop containers, continuing anyway..."
