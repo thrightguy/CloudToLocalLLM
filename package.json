@@ -1,8 +1,23 @@
 {
+  "name": "cloudtolocalllm",
+  "version": "3.10.0",
+  "description": "CloudToLocalLLM with E2E authentication testing",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:auth-loop": "playwright test auth-loop-analysis.spec.js",
+    "test:auth-loop:headed": "playwright test auth-loop-analysis.spec.js --headed",
+    "test:auth-loop:debug": "playwright test auth-loop-analysis.spec.js --debug",
+    "test:report": "playwright show-report",
+    "test:install": "playwright install",
+    "test:install-deps": "playwright install-deps"
+  },
   "devDependencies": {
     "esbuild": "^0.25.5",
     "vite": "^6.3.5",
-    "vitepress": "^1.6.3"
+    "vitepress": "^1.6.3",
+    "@playwright/test": "^1.40.0"
   },
   "comments": {
     "security": "Note: Dependabot alert #20 for esbuild <=0.24.2 exists in vitepress transitive dependency. Main esbuild is safe at 0.25.5. Vulnerability only affects dev server, not production builds."

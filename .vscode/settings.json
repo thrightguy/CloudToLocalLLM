@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "C:/Users/chris/Dev/CloudToLocalLLM/linux",
+    "cmake.sourceDirectory": "C:/Users/chris/Dev/CloudToLocalLLM/windows",
     "bitoAI.codeCompletion.enableAutoCompletion": false,
     "zencoder.enableRepoIndexing": true
 }

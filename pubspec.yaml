@@ -1,9 +1,9 @@
-name: cloudtolocalllm
+﻿name: cloudtolocalllm
 description: Manage and run powerful Large Language Models locally, orchestrated via a cloud interface.
 publish_to: none
 homepage: https://cloudtolocalllm.online
 repository: https://github.com/imrightguy/CloudToLocalLLM
-version: 3.9.1+202507072321
+version: 3.10.1+202507090726
 
 environment:
   sdk: '>=3.8.0 <4.0.0'

@@ -239,22 +239,33 @@ class AppRouter {
         // Use robust hostname detection
         final isAppSubdomain = _isAppSubdomain();
 
+        debugPrint('🔄 [Router] Redirect check: ${state.matchedLocation}');
+        debugPrint(
+          '🔄 [Router] Auth state: $isAuthenticated, App subdomain: $isAppSubdomain',
+        );
+
         // Allow access to marketing pages on web root domain without authentication
         if (kIsWeb && !isAppSubdomain && (isHomepage || isDownload || isDocs)) {
+          debugPrint('🔄 [Router] Allowing access to marketing page');
           return null;
         }
 
         // Allow access to login, callback, and loading pages
         if (isLoggingIn || isCallback || isLoading) {
+          debugPrint('🔄 [Router] Allowing access to auth/loading page');
           return null;
         }
 
         // For app subdomain or desktop, require authentication
         if (!isAuthenticated && (isAppSubdomain || !kIsWeb)) {
+          debugPrint(
+            '🔄 [Router] Redirecting to login - user not authenticated',
+          );
           return '/login';
         }
 
         // Allow access to protected routes
+        debugPrint('🔄 [Router] Allowing access to protected route');
         return null;
       },
 

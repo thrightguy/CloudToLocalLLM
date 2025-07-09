@@ -22,20 +22,44 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
+  DateTime? _lastLoginAttempt;
 
   Future<void> _handleLogin() async {
-    if (_isLoading) return;
+    // Prevent multiple rapid login attempts
+    if (_isLoading) {
+      debugPrint('🔐 [Login] Login already in progress, ignoring button click');
+      return;
+    }
+
+    // Prevent rapid successive clicks (within 2 seconds)
+    if (_lastLoginAttempt != null &&
+        DateTime.now().difference(_lastLoginAttempt!).inSeconds < 2) {
+      debugPrint(
+        '🔐 [Login] Login button clicked too soon after previous attempt, ignoring',
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
+    _lastLoginAttempt = DateTime.now();
+    debugPrint('🔐 [Login] Starting login process');
 
     try {
       final authService = context.read<AuthService>();
+      debugPrint('🔐 [Login] Calling authService.login()');
       await authService.login();
 
+      debugPrint(
+        '🔐 [Login] Login call completed, checking authentication state',
+      );
       if (mounted && authService.isAuthenticated.value) {
+        debugPrint('🔐 [Login] User authenticated, redirecting to home');
         context.go('/');
+      } else {
+        debugPrint('🔐 [Login] User not authenticated after login call');
       }
     } catch (e) {
+      debugPrint('🔐 [Login] Login failed with error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -50,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } finally {
       if (mounted) {
+        debugPrint('🔐 [Login] Setting loading state to false');
         setState(() => _isLoading = false);
       }
     }

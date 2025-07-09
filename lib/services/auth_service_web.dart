@@ -19,6 +19,10 @@ class AuthServiceWeb extends ChangeNotifier {
   String? _idToken;
   DateTime? _tokenExpiry;
 
+  // Login state tracking to prevent multiple simultaneous attempts
+  bool _isLoginInProgress = false;
+  DateTime? _lastLoginAttempt;
+
   // Getters
   ValueNotifier<bool> get isAuthenticated => _isAuthenticated;
   ValueNotifier<bool> get isLoading => _isLoading;
@@ -98,15 +102,48 @@ class AuthServiceWeb extends ChangeNotifier {
     }
   }
 
-  /// Login using Auth0 redirect flow
+  /// Login using Auth0 redirect flow with enhanced protection against loops
   Future<void> login() async {
-    AuthLogger.info('🔐 Web login method called');
+    // Add stack trace to identify what's calling login repeatedly
+    final stackTrace = StackTrace.current;
+    AuthLogger.info('🔐 Web login method called', {
+      'stackTrace': stackTrace.toString().split('\n').take(5).join('\n'),
+    });
     AuthLogger.logAuthStateChange(false, 'Login attempt started');
 
+    // Prevent multiple simultaneous login attempts
+    if (_isLoginInProgress) {
+      AuthLogger.warning(
+        '🔐 Login already in progress, ignoring duplicate call',
+      );
+      return;
+    }
+
+    // Prevent rapid successive login attempts (within 3 seconds)
+    if (_lastLoginAttempt != null &&
+        DateTime.now().difference(_lastLoginAttempt!).inSeconds < 3) {
+      AuthLogger.warning(
+        '🔐 Login attempted too soon after previous attempt, ignoring',
+      );
+      return;
+    }
+
+    // Check if already loading to prevent race conditions
+    if (_isLoading.value) {
+      AuthLogger.warning(
+        '🔐 Authentication already in loading state, ignoring login call',
+      );
+      return;
+    }
+
     try {
+      _isLoginInProgress = true;
+      _lastLoginAttempt = DateTime.now();
       _isLoading.value = true;
       notifyListeners();
-      AuthLogger.debug('🔐 Loading state set to true');
+      AuthLogger.debug(
+        '🔐 Loading state set to true, login protection enabled',
+      );
 
       // For web, redirect directly to Auth0 login page
       final redirectUri = AppConfig.auth0WebRedirectUri;
@@ -135,35 +172,7 @@ class AuthServiceWeb extends ChangeNotifier {
 
       // For web, redirect the current window to Auth0
       if (kIsWeb) {
-        try {
-          AuthLogger.info('🔐 Attempting window.location.href redirect');
-          web.window.location.href = authUrl.toString();
-          AuthLogger.info('🔐 Redirect initiated successfully');
-
-          // Add a small delay to ensure the redirect happens
-          await Future.delayed(const Duration(milliseconds: 100));
-          AuthLogger.warning(
-            '🔐 Still executing after redirect - this should not happen',
-          );
-        } catch (redirectError) {
-          AuthLogger.error('🔐 Primary redirect failed', {
-            'error': redirectError.toString(),
-            'errorType': redirectError.runtimeType.toString(),
-          });
-
-          // Fallback: try using window.open with _self
-          try {
-            AuthLogger.info('🔐 Attempting fallback redirect with window.open');
-            web.window.open(authUrl.toString(), '_self');
-            AuthLogger.info('🔐 Fallback redirect initiated');
-          } catch (fallbackError) {
-            AuthLogger.error('🔐 Fallback redirect also failed', {
-              'error': fallbackError.toString(),
-              'errorType': fallbackError.runtimeType.toString(),
-            });
-            throw 'Both redirect methods failed: $redirectError, $fallbackError';
-          }
-        }
+        await _performRedirectToAuth0(authUrl.toString());
       } else {
         // For non-web platforms, this service shouldn't be used
         throw UnsupportedError(
@@ -181,8 +190,106 @@ class AuthServiceWeb extends ChangeNotifier {
       rethrow;
     } finally {
       _isLoading.value = false;
+      _isLoginInProgress = false;
       notifyListeners();
       AuthLogger.debug('🔐 Login method finally block executed');
+    }
+  }
+
+  /// Perform redirect to Auth0 with multiple fallback methods
+  Future<void> _performRedirectToAuth0(String authUrl) async {
+    try {
+      AuthLogger.info('🔐 Attempting window.location.href redirect');
+
+      // Method 1: Use window.location.href (primary method)
+      web.window.location.href = authUrl;
+      AuthLogger.info('🔐 Redirect initiated with window.location.href');
+
+      // Wait to check if redirect actually happened
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // If we're still here after 1 second, the redirect might have failed
+      AuthLogger.warning(
+        '🔐 Still executing after redirect - checking if navigation occurred',
+      );
+
+      // Check if we're still on the same page
+      final currentUrl = web.window.location.href;
+      if (!currentUrl.contains('auth0.com')) {
+        AuthLogger.error('🔐 Redirect failed - still on original page', {
+          'currentUrl': currentUrl,
+          'expectedDomain': 'auth0.com',
+        });
+
+        // Try alternative redirect methods
+        await _attemptAlternativeRedirect(authUrl);
+      } else {
+        AuthLogger.info('🔐 Redirect successful - now on Auth0 domain');
+      }
+    } catch (redirectError) {
+      AuthLogger.error('🔐 Primary redirect failed', {
+        'error': redirectError.toString(),
+        'errorType': redirectError.runtimeType.toString(),
+      });
+
+      // Try alternative redirect methods
+      await _attemptAlternativeRedirect(authUrl);
+    }
+  }
+
+  /// Attempt alternative redirect methods if primary method fails
+  Future<void> _attemptAlternativeRedirect(String authUrl) async {
+    AuthLogger.info('🔐 Attempting alternative redirect methods');
+
+    try {
+      // Method 1: window.open with _self
+      AuthLogger.info('🔐 Trying window.open with _self');
+      web.window.open(authUrl, '_self');
+
+      // Wait to see if this worked
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Check if redirect happened
+      final currentUrl = web.window.location.href;
+      if (!currentUrl.contains('auth0.com')) {
+        // Method 2: Try multiple href assignments
+        AuthLogger.info('🔐 Trying multiple location.href assignments');
+
+        for (int i = 0; i < 3; i++) {
+          web.window.location.href = authUrl;
+          await Future.delayed(const Duration(milliseconds: 200));
+
+          final checkUrl = web.window.location.href;
+          if (checkUrl.contains('auth0.com')) {
+            AuthLogger.info(
+              '🔐 Multiple href assignment succeeded on attempt ${i + 1}',
+            );
+            return;
+          }
+        }
+
+        // Final check - if we still haven't redirected, throw an error
+        final finalUrl = web.window.location.href;
+        if (!finalUrl.contains('auth0.com')) {
+          AuthLogger.error('🔐 All redirect methods failed', {
+            'finalUrl': finalUrl,
+            'targetUrl': authUrl,
+          });
+          throw Exception(
+            'Unable to redirect to Auth0 - all methods failed. This may be due to browser security restrictions, popup blockers, or CORS policies.',
+          );
+        }
+      }
+
+      AuthLogger.info('🔐 Alternative redirect method succeeded');
+    } catch (fallbackError) {
+      AuthLogger.error('🔐 All redirect methods failed', {
+        'error': fallbackError.toString(),
+        'errorType': fallbackError.runtimeType.toString(),
+      });
+      throw Exception(
+        'All redirect methods failed: ${fallbackError.toString()}. Please check browser settings and disable popup blockers.',
+      );
     }
   }
 
@@ -259,23 +366,45 @@ class AuthServiceWeb extends ChangeNotifier {
           final success = await _exchangeCodeForTokens(code);
 
           if (success) {
-            // Load user profile with the new access token
-            await _loadUserProfile();
+            try {
+              // Load user profile with the new access token
+              await _loadUserProfile();
 
-            _isAuthenticated.value = true;
-            notifyListeners();
-            AuthLogger.logAuthStateChange(true, 'Token exchange successful');
+              // Set authentication state and notify listeners
+              _isAuthenticated.value = true;
+              notifyListeners();
+              AuthLogger.logAuthStateChange(
+                true,
+                'Token exchange and profile loading successful',
+              );
 
-            // Clear the URL parameters (web only)
-            if (kIsWeb) {
-              web.window.history.replaceState(null, '', '/');
+              // Ensure state change has time to propagate through widget tree
+              // This is critical to prevent race conditions with router redirect logic
+              await Future.delayed(const Duration(milliseconds: 100));
+
+              // Clear the URL parameters (web only) after state is set
+              if (kIsWeb) {
+                web.window.history.replaceState(null, '', '/');
+              }
+
+              // Additional delay to ensure all state updates are complete
+              await Future.delayed(const Duration(milliseconds: 100));
+
+              AuthLogger.info('🔐 Authentication completed successfully');
+              return true;
+            } catch (profileError) {
+              AuthLogger.error(
+                '🔐 Profile loading failed after successful token exchange',
+                {'error': profileError.toString()},
+              );
+
+              // Clear tokens since profile loading failed
+              await _clearStoredTokens();
+              _isAuthenticated.value = false;
+              notifyListeners();
+
+              return false;
             }
-
-            // Small delay to ensure state is updated
-            await Future.delayed(const Duration(milliseconds: 200));
-
-            AuthLogger.info('🔐 Authentication completed successfully');
-            return true;
           } else {
             AuthLogger.error('🔐 Token exchange failed');
             return false;
@@ -297,7 +426,10 @@ class AuthServiceWeb extends ChangeNotifier {
   /// Exchange authorization code for access and ID tokens
   Future<bool> _exchangeCodeForTokens(String code) async {
     try {
-      AuthLogger.info('🔐 Exchanging authorization code for tokens');
+      AuthLogger.info('🔐 Exchanging authorization code for tokens', {
+        'codeLength': code.length,
+        'redirectUri': AppConfig.auth0WebRedirectUri,
+      });
 
       final response = await http.post(
         Uri.https(AppConfig.auth0Domain, '/oauth/token'),
@@ -310,11 +442,23 @@ class AuthServiceWeb extends ChangeNotifier {
         }),
       );
 
+      AuthLogger.debug('🔐 Token exchange response received', {
+        'statusCode': response.statusCode,
+        'hasBody': response.body.isNotEmpty,
+      });
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
         _accessToken = data['access_token'] as String?;
         _idToken = data['id_token'] as String?;
+
+        if (_accessToken == null) {
+          AuthLogger.error('🔐 No access token in response', {
+            'response': data,
+          });
+          return false;
+        }
 
         // Calculate token expiry
         final expiresIn = data['expires_in'] as int? ?? 3600;
@@ -323,17 +467,25 @@ class AuthServiceWeb extends ChangeNotifier {
         // Store tokens securely
         await _storeTokens();
 
-        AuthLogger.info('🔐 Tokens received and stored successfully');
+        AuthLogger.info('🔐 Tokens received and stored successfully', {
+          'hasAccessToken': _accessToken != null,
+          'hasIdToken': _idToken != null,
+          'expiresIn': expiresIn,
+        });
         return true;
       } else {
         AuthLogger.error('🔐 Token exchange failed', {
           'statusCode': response.statusCode,
           'body': response.body,
+          'headers': response.headers,
         });
         return false;
       }
     } catch (e) {
-      AuthLogger.error('🔐 Token exchange error', {'error': e.toString()});
+      AuthLogger.error('🔐 Token exchange error', {
+        'error': e.toString(),
+        'errorType': e.runtimeType.toString(),
+      });
       return false;
     }
   }
@@ -343,7 +495,7 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       if (_accessToken == null) {
         AuthLogger.warning('🔐 No access token available for profile loading');
-        return;
+        throw Exception('No access token available for profile loading');
       }
 
       AuthLogger.info('🔐 Loading user profile');
@@ -356,11 +508,25 @@ class AuthServiceWeb extends ChangeNotifier {
         },
       );
 
+      AuthLogger.debug('🔐 User profile response received', {
+        'statusCode': response.statusCode,
+        'hasBody': response.body.isNotEmpty,
+      });
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
+        // Validate required fields
+        final userId = data['sub'] as String?;
+        if (userId == null || userId.isEmpty) {
+          AuthLogger.error('🔐 Invalid user profile: missing user ID', {
+            'response': data,
+          });
+          throw Exception('Invalid user profile: missing user ID');
+        }
+
         _currentUser = UserModel(
-          id: data['sub'] as String,
+          id: userId,
           email: data['email'] as String? ?? '',
           name: data['name'] as String? ?? '',
           picture: data['picture'] as String?,
@@ -373,17 +539,23 @@ class AuthServiceWeb extends ChangeNotifier {
         AuthLogger.info('🔐 User profile loaded successfully', {
           'userId': _currentUser!.id,
           'email': _currentUser!.email,
+          'name': _currentUser!.name,
         });
       } else {
         AuthLogger.error('🔐 Failed to load user profile', {
           'statusCode': response.statusCode,
           'body': response.body,
+          'headers': response.headers,
         });
+        throw Exception('Failed to load user profile: ${response.statusCode}');
       }
     } catch (e) {
       AuthLogger.error('🔐 User profile loading error', {
         'error': e.toString(),
+        'errorType': e.runtimeType.toString(),
       });
+      // Re-throw to ensure calling code knows profile loading failed
+      rethrow;
     }
   }
 

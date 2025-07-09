@@ -27,16 +27,35 @@ class _CallbackScreenState extends State<CallbackScreen> {
       final success = await authService.handleCallback();
 
       if (mounted) {
-        if (success && authService.isAuthenticated.value) {
-          // Redirect to home page on successful authentication
-          context.go('/');
+        if (success) {
+          // Wait for authentication state to be properly set and propagated
+          // This prevents race conditions with the router redirect logic
+          await Future.delayed(const Duration(milliseconds: 100));
+
+          // Double-check authentication state after delay and ensure context is still mounted
+          if (mounted) {
+            if (authService.isAuthenticated.value) {
+              debugPrint(
+                '🔐 [Callback] Authentication successful, redirecting to home',
+              );
+              context.go('/');
+            } else {
+              debugPrint(
+                '🔐 [Callback] Authentication state not set after success, redirecting to login',
+              );
+              context.go('/login');
+            }
+          }
         } else {
+          debugPrint(
+            '🔐 [Callback] Authentication failed, redirecting to login',
+          );
           // Redirect to login page on failure
           context.go('/login');
         }
       }
     } catch (e) {
-      debugPrint('Callback processing error: $e');
+      debugPrint('🔐 [Callback] Processing error: $e');
       if (mounted) {
         // Show error and redirect to login
         ScaffoldMessenger.of(context).showSnackBar(
@@ -52,8 +71,6 @@ class _CallbackScreenState extends State<CallbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const LoadingScreen(
-      message: 'Processing authentication...',
-    );
+    return const LoadingScreen(message: 'Processing authentication...');
   }
 }
