@@ -523,42 +523,64 @@ manage_containers() {
         return 0
     fi
 
-    # Check if Docker is available
-    if ! command -v docker &> /dev/null; then
+    # Check if Docker is available and determine the correct command
+    local docker_cmd=""
+    local docker_compose_cmd=""
+
+    if command -v docker &> /dev/null; then
+        docker_cmd="docker"
+    elif command -v /snap/bin/docker &> /dev/null; then
+        docker_cmd="/snap/bin/docker"
+    else
         log_warning "Docker not found, skipping container management"
         return 0
     fi
 
+    # Determine Docker Compose command
+    if $docker_cmd compose version &> /dev/null; then
+        docker_compose_cmd="$docker_cmd compose"
+    elif command -v docker-compose &> /dev/null; then
+        docker_compose_cmd="docker-compose"
+    elif command -v /snap/bin/docker-compose &> /dev/null; then
+        docker_compose_cmd="/snap/bin/docker-compose"
+    else
+        log_warning "Docker Compose not found, skipping container management"
+        return 0
+    fi
+
+    log_verbose "Using Docker command: $docker_cmd"
+    log_verbose "Using Docker Compose command: $docker_compose_cmd"
+
     if [[ "$VERBOSE" == "true" ]]; then
-        docker compose -f docker-compose.yml down --remove-orphans || {
+        $docker_compose_cmd -f docker-compose.yml down --remove-orphans || {
             log_warning "Failed to stop containers, continuing anyway..."
         }
     else
-        docker compose -f docker-compose.yml down --remove-orphans &> /dev/null || {
+        $docker_compose_cmd -f docker-compose.yml down --remove-orphans &> /dev/null || {
             log_warning "Failed to stop containers, continuing anyway..."
         }
     fi
 
     # Step 2: Additional cleanup for any remaining containers that might be using our ports
     log_verbose "Checking for containers using ports 80, 443, and 8080..."
-    local containers_using_ports=$(docker ps -q --filter "publish=80" --filter "publish=443" --filter "publish=8080" 2>/dev/null || true)
+    local containers_using_ports=$($docker_cmd ps -q --filter "publish=80" --filter "publish=443" --filter "publish=8080" 2>/dev/null || true)
     if [[ -n "$containers_using_ports" ]]; then
         log_verbose "Found containers using required ports, stopping them..."
         if [[ "$VERBOSE" == "true" ]]; then
-            echo "$containers_using_ports" | xargs -r docker stop
-            echo "$containers_using_ports" | xargs -r docker rm
+            echo "$containers_using_ports" | xargs -r $docker_cmd stop
+            echo "$containers_using_ports" | xargs -r $docker_cmd rm
         else
-            echo "$containers_using_ports" | xargs -r docker stop &> /dev/null
-            echo "$containers_using_ports" | xargs -r docker rm &> /dev/null
+            echo "$containers_using_ports" | xargs -r $docker_cmd stop &> /dev/null
+            echo "$containers_using_ports" | xargs -r $docker_cmd rm &> /dev/null
         fi
     fi
 
     # Step 3: Clean up unused Docker resources (optional but recommended)
     log_verbose "Cleaning up unused Docker resources..."
     if [[ "$VERBOSE" == "true" ]]; then
-        docker system prune -f
+        $docker_cmd system prune -f
     else
-        docker system prune -f &> /dev/null
+        $docker_cmd system prune -f &> /dev/null
     fi
 
     # Step 4: Wait a moment for cleanup to complete
@@ -569,9 +591,9 @@ manage_containers() {
     if [ -d "certbot/live/cloudtolocalllm.online" ]; then
         log_verbose "SSL certificates found, starting services with SSL..."
         if [[ "$VERBOSE" == "true" ]]; then
-            docker compose -f docker-compose.yml up -d
+            $docker_compose_cmd -f docker-compose.yml up -d
         else
-            docker compose -f docker-compose.yml up -d &> /dev/null
+            $docker_compose_cmd -f docker-compose.yml up -d &> /dev/null
         fi
     else
         log_warning "SSL certificates not found at certbot/live/cloudtolocalllm.online"
@@ -579,9 +601,9 @@ manage_containers() {
 
         # Try to start services anyway - they might be configured for HTTP
         if [[ "$VERBOSE" == "true" ]]; then
-            docker compose -f docker-compose.yml up -d
+            $docker_compose_cmd -f docker-compose.yml up -d
         else
-            docker compose -f docker-compose.yml up -d &> /dev/null
+            $docker_compose_cmd -f docker-compose.yml up -d &> /dev/null
         fi
 
         # Check if services started successfully
@@ -608,14 +630,34 @@ perform_health_checks() {
         return 0
     fi
 
+    # Determine Docker commands (same as in manage_containers)
+    local docker_cmd=""
+    local docker_compose_cmd=""
+
+    if command -v docker &> /dev/null; then
+        docker_cmd="docker"
+    elif command -v /snap/bin/docker &> /dev/null; then
+        docker_cmd="/snap/bin/docker"
+    fi
+
+    if [[ -n "$docker_cmd" ]]; then
+        if $docker_cmd compose version &> /dev/null; then
+            docker_compose_cmd="$docker_cmd compose"
+        elif command -v docker-compose &> /dev/null; then
+            docker_compose_cmd="docker-compose"
+        elif command -v /snap/bin/docker-compose &> /dev/null; then
+            docker_compose_cmd="/snap/bin/docker-compose"
+        fi
+    fi
+
     # Wait for containers to start
     log_verbose "Waiting for containers to start..."
     sleep 10
 
     # Check container health
     log_verbose "Checking container status..."
-    if [[ "$VERBOSE" == "true" ]]; then
-        docker compose -f docker-compose.yml ps
+    if [[ "$VERBOSE" == "true" && -n "$docker_compose_cmd" ]]; then
+        $docker_compose_cmd -f docker-compose.yml ps
     fi
 
     # Verify API backend health
@@ -631,7 +673,9 @@ perform_health_checks() {
 
         if [[ $api_attempt -eq $api_max_attempts ]]; then
             log_warning "API backend health check failed after $api_max_attempts attempts"
-            log_warning "Check api-backend logs with: docker compose -f docker-compose.yml logs api-backend"
+            if [[ -n "$docker_compose_cmd" ]]; then
+                log_warning "Check api-backend logs with: $docker_compose_cmd -f docker-compose.yml logs api-backend"
+            fi
             log_warning "Continuing with deployment - API may still be starting up"
             break
         fi
@@ -650,7 +694,9 @@ perform_health_checks() {
             log_warning "HTTPS web app failed to become accessible, trying HTTP..."
             if ! wait_for_service "http://app.cloudtolocalllm.online" 60 5; then
                 log_warning "Web app accessibility check failed"
-                log_warning "Check logs with: docker compose -f docker-compose.yml logs"
+                if [[ -n "$docker_compose_cmd" ]]; then
+                    log_warning "Check logs with: $docker_compose_cmd -f docker-compose.yml logs"
+                fi
                 log_warning "Deployment may still be successful - check manually"
             else
                 log_success "Web app is accessible at http://app.cloudtolocalllm.online (HTTP only)"
@@ -679,7 +725,9 @@ perform_health_checks() {
         done
 
         log_warning "Web app accessibility check failed after $max_attempts attempts"
-        log_warning "Check logs with: docker compose -f docker-compose.yml logs"
+        if [[ -n "$docker_compose_cmd" ]]; then
+            log_warning "Check logs with: $docker_compose_cmd -f docker-compose.yml logs"
+        fi
         log_warning "Deployment may still be successful - check manually"
     fi
 
