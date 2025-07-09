@@ -9,6 +9,15 @@ set -e
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Setup Flutter environment
+if [[ -d "/opt/flutter/bin" ]]; then
+    export PATH="/opt/flutter/bin:$PATH"
+    export FLUTTER_ROOT="/opt/flutter"
+elif [[ -d "$HOME/flutter/bin" ]]; then
+    export PATH="$HOME/flutter/bin:$PATH"
+    export FLUTTER_ROOT="$HOME/flutter"
+fi
+
 # Load deployment utilities if available
 if [[ -f "$SCRIPT_DIR/deployment_utils.sh" ]]; then
     source "$SCRIPT_DIR/deployment_utils.sh"
@@ -187,6 +196,37 @@ pull_latest_changes() {
     log_success "Latest changes pulled"
 }
 
+# Verify Flutter installation and setup
+verify_flutter_installation() {
+    log_verbose "Verifying Flutter installation..."
+
+    # Check if flutter command is available
+    if ! command -v flutter &> /dev/null; then
+        log_error "Flutter command not found in PATH"
+        log_error "Current PATH: $PATH"
+        log_error "Please ensure Flutter is installed and in PATH"
+
+        # Try to find Flutter in common locations
+        for flutter_path in "/opt/flutter/bin/flutter" "$HOME/flutter/bin/flutter" "/usr/local/bin/flutter"; do
+            if [[ -x "$flutter_path" ]]; then
+                log_warning "Found Flutter at: $flutter_path"
+                log_warning "Adding to PATH for this session"
+                export PATH="$(dirname "$flutter_path"):$PATH"
+                break
+            fi
+        done
+
+        # Check again after PATH update
+        if ! command -v flutter &> /dev/null; then
+            log_error "Flutter still not found after PATH update"
+            exit 1
+        fi
+    fi
+
+    log_verbose "Flutter found at: $(which flutter)"
+    log_verbose "Flutter version: $(flutter --version | head -1 2>/dev/null || echo 'Version check failed')"
+}
+
 # Update Flutter SDK and dependencies
 update_flutter_environment() {
     log "Updating Flutter SDK and dependencies..."
@@ -195,6 +235,9 @@ update_flutter_environment() {
         log "DRY RUN: Would execute Flutter SDK and dependency updates"
         return 0
     fi
+
+    # Verify Flutter installation first
+    verify_flutter_installation
 
     # Check current Flutter version
     log_verbose "Checking current Flutter version..."
