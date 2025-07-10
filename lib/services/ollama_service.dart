@@ -31,6 +31,14 @@ class OllamaService extends ChangeNotifier {
       debugPrint('[DEBUG] OllamaService initialized:');
       debugPrint('[DEBUG] - Platform: ${_isWeb ? 'Web' : 'Desktop'}');
       debugPrint('[DEBUG] - Base URL: $_baseUrl');
+      if (_isWeb) {
+        debugPrint(
+          '[DEBUG] - Connection Type: Cloud Proxy Tunnel (prevents CORS errors)',
+        );
+        debugPrint('[DEBUG] - Tunnel Endpoint: $_baseUrl');
+      } else {
+        debugPrint('[DEBUG] - Connection Type: Direct Local Connection');
+      }
       debugPrint('[DEBUG] - Timeout: $_timeout');
       debugPrint(
         '[DEBUG] - Auth Service: ${_authService != null ? 'provided' : 'null'}',

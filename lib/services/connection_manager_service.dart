@@ -40,6 +40,19 @@ class ConnectionManagerService extends ChangeNotifier {
     _localOllama.addListener(_onConnectionChanged);
     _tunnelManager.addListener(_onConnectionChanged);
 
+    if (kIsWeb) {
+      debugPrint(
+        '🔗 [ConnectionManager] Web platform detected - will use cloud proxy only',
+      );
+      debugPrint(
+        '🔗 [ConnectionManager] Local Ollama connections disabled to prevent CORS errors',
+      );
+    } else {
+      debugPrint(
+        '🔗 [ConnectionManager] Desktop platform detected - full connection hierarchy available',
+      );
+    }
+
     debugPrint('🔗 [ConnectionManager] Service initialized');
   }
 
@@ -52,20 +65,45 @@ class ConnectionManagerService extends ChangeNotifier {
 
   /// Get the best available connection type
   /// Fallback hierarchy:
-  /// 1. Local Ollama (if preferred and available)
-  /// 2. Cloud proxy (WebSocket bridge)
-  /// 3. Local Ollama (fallback if not preferred initially)
+  /// 1. Local Ollama (if preferred and available) - DESKTOP ONLY
+  /// 2. Cloud proxy (WebSocket bridge) - WEB AND DESKTOP
+  /// 3. Local Ollama (fallback if not preferred initially) - DESKTOP ONLY
   ///
+  /// Platform-aware: Web platform NEVER uses local connections to prevent CORS errors.
   /// Note: Zrok is now handled as a standalone service and not part of
   /// the Ollama connection fallback hierarchy.
   ConnectionType getBestConnectionType() {
+    if (kIsWeb) {
+      // Web platform: Only use cloud proxy to prevent CORS errors
+      debugPrint(
+        '🔗 [ConnectionManager] Web platform detected - forcing cloud proxy connection',
+      );
+      if (hasCloudConnection) {
+        return ConnectionType.cloud;
+      } else {
+        debugPrint(
+          '🔗 [ConnectionManager] No cloud connection available on web platform',
+        );
+        return ConnectionType.none;
+      }
+    }
+
+    // Desktop platform: Use normal fallback hierarchy
     if (_preferLocalOllama && hasLocalConnection) {
+      debugPrint(
+        '🔗 [ConnectionManager] Using preferred local Ollama connection',
+      );
       return ConnectionType.local;
     } else if (hasCloudConnection) {
+      debugPrint('🔗 [ConnectionManager] Using cloud proxy connection');
       return ConnectionType.cloud;
     } else if (hasLocalConnection) {
+      debugPrint(
+        '🔗 [ConnectionManager] Using fallback local Ollama connection',
+      );
       return ConnectionType.local;
     } else {
+      debugPrint('🔗 [ConnectionManager] No connections available');
       return ConnectionType.none;
     }
   }
