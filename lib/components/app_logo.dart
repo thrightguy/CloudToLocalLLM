@@ -75,10 +75,7 @@ class AppLogo extends StatelessWidget {
         color: effectiveBackgroundColor,
         shape: BoxShape.circle,
         border: showBorder
-            ? Border.all(
-                color: effectiveBorderColor,
-                width: borderWidth,
-              )
+            ? Border.all(color: effectiveBorderColor, width: borderWidth)
             : null,
         boxShadow: [
           BoxShadow(
@@ -141,10 +138,7 @@ class _AnimatedAppLogoState extends State<AnimatedAppLogo>
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 1.05,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -218,10 +212,7 @@ class GradientAppLogo extends StatelessWidget {
         gradient: AppTheme.buttonGradient,
         shape: BoxShape.circle,
         border: showBorder
-            ? Border.all(
-                color: effectiveBorderColor,
-                width: borderWidth,
-              )
+            ? Border.all(color: effectiveBorderColor, width: borderWidth)
             : null,
         boxShadow: [
           BoxShadow(

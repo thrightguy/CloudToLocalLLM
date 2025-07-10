@@ -5,10 +5,7 @@ import '../config/theme.dart';
 class LoadingScreen extends StatelessWidget {
   final String message;
 
-  const LoadingScreen({
-    super.key,
-    this.message = 'Loading...',
-  });
+  const LoadingScreen({super.key, this.message = 'Loading...'});
 
   @override
   Widget build(BuildContext context) {
@@ -60,9 +57,9 @@ class LoadingScreen extends StatelessWidget {
             Text(
               message,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.textColorLight,
-                    fontSize: 16,
-                  ),
+                color: AppTheme.textColorLight,
+                fontSize: 16,
+              ),
               textAlign: TextAlign.center,
             ),
           ],

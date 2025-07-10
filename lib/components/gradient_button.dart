@@ -41,13 +41,9 @@ class _GradientButtonState extends State<GradientButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -85,7 +81,8 @@ class _GradientButtonState extends State<GradientButton>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: widget.width,
-                padding: widget.padding ??
+                padding:
+                    widget.padding ??
                     EdgeInsets.symmetric(
                       horizontal: AppTheme.spacingL,
                       vertical: AppTheme.spacingM,
@@ -104,8 +101,9 @@ class _GradientButtonState extends State<GradientButton>
                   borderRadius: BorderRadius.circular(AppTheme.borderRadiusS),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primaryColor
-                          .withValues(alpha: _isHovered ? 0.4 : 0.2),
+                      color: AppTheme.primaryColor.withValues(
+                        alpha: _isHovered ? 0.4 : 0.2,
+                      ),
                       blurRadius: _isHovered ? 16 : 8,
                       offset: Offset(0, _isHovered ? 6 : 3),
                     ),

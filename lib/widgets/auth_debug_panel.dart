@@ -72,20 +72,18 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
-                      bottomLeft:
-                          _isExpanded ? Radius.zero : Radius.circular(12),
-                      bottomRight:
-                          _isExpanded ? Radius.zero : Radius.circular(12),
+                      bottomLeft: _isExpanded
+                          ? Radius.zero
+                          : Radius.circular(12),
+                      bottomRight: _isExpanded
+                          ? Radius.zero
+                          : Radius.circular(12),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.bug_report,
-                        color: Colors.blue,
-                        size: 16,
-                      ),
+                      Icon(Icons.bug_report, color: Colors.blue, size: 16),
                       const SizedBox(width: 8),
                       Text(
                         'Auth Debug',
@@ -117,7 +115,9 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                       Text(
                         'Logs: ${_logs.length}',
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 11),
+                          color: Colors.white70,
+                          fontSize: 11,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -192,8 +192,10 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                     child: ListView.builder(
                       itemCount: _logs.length > 10 ? 10 : _logs.length,
                       itemBuilder: (context, index) {
-                        final log = _logs[
-                            _logs.length - 1 - index]; // Show newest first
+                        final log =
+                            _logs[_logs.length -
+                                1 -
+                                index]; // Show newest first
                         final level = log['level'] as String;
                         final message = log['message'] as String;
                         final timestamp = log['timestamp'] as String;
@@ -222,7 +224,9 @@ class _AuthDebugPanelState extends State<AuthDebugPanel> {
                                   const SizedBox(width: 4),
                                   Text(
                                     timestamp.substring(
-                                        11, 19), // Show only time
+                                      11,
+                                      19,
+                                    ), // Show only time
                                     style: const TextStyle(
                                       color: Colors.white54,
                                       fontSize: 9,

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Streaming message protocol for real-time communication
-/// 
+///
 /// Represents a chunk of a streaming response from Ollama with metadata
 /// for proper assembly and display in the UI.
 @immutable
@@ -235,8 +235,8 @@ class StreamingConnection {
   }
 
   /// Check if connection is active (connected or streaming)
-  bool get isActive => 
-      state == StreamingConnectionState.connected || 
+  bool get isActive =>
+      state == StreamingConnectionState.connected ||
       state == StreamingConnectionState.streaming;
 
   /// Check if connection has error

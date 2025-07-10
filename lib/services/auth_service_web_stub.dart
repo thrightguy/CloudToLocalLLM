@@ -16,25 +16,29 @@ class AuthServiceWeb extends ChangeNotifier {
 
   AuthServiceWeb() {
     debugPrint(
-        '⚠️ AuthServiceWeb stub created - web service not available on this platform');
+      '⚠️ AuthServiceWeb stub created - web service not available on this platform',
+    );
   }
 
   /// Login using Auth0 redirect flow
   Future<void> login() async {
     throw UnsupportedError(
-        'Web authentication service is only supported on web platform');
+      'Web authentication service is only supported on web platform',
+    );
   }
 
   /// Logout and clear all stored tokens
   Future<void> logout() async {
     throw UnsupportedError(
-        'Web authentication service is only supported on web platform');
+      'Web authentication service is only supported on web platform',
+    );
   }
 
   /// Handle Auth0 callback
   Future<bool> handleCallback() async {
     throw UnsupportedError(
-        'Web authentication service is only supported on web platform');
+      'Web authentication service is only supported on web platform',
+    );
   }
 
   @override

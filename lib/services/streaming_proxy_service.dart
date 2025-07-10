@@ -21,9 +21,9 @@ class StreamingProxyService extends ChangeNotifier {
     String? baseUrl,
     Duration? timeout,
     AuthService? authService,
-  })  : _baseUrl = baseUrl ?? AppConfig.cloudOllamaUrl,
-        _timeout = timeout ?? AppConfig.ollamaTimeout,
-        _authService = authService {
+  }) : _baseUrl = baseUrl ?? AppConfig.cloudOllamaUrl,
+       _timeout = timeout ?? AppConfig.ollamaTimeout,
+       _authService = authService {
     if (kDebugMode) {
       debugPrint('[StreamingProxy] Service initialized');
       debugPrint('[StreamingProxy] Base URL: $_baseUrl');
@@ -39,9 +39,7 @@ class StreamingProxyService extends ChangeNotifier {
 
   /// Get HTTP headers with authentication
   Map<String, String> _getHeaders() {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
 
     if (_authService != null) {
       final accessToken = _authService.getAccessToken();
@@ -64,10 +62,7 @@ class StreamingProxyService extends ChangeNotifier {
       }
 
       final response = await http
-          .post(
-            Uri.parse('$_baseUrl/api/proxy/start'),
-            headers: _getHeaders(),
-          )
+          .post(Uri.parse('$_baseUrl/api/proxy/start'), headers: _getHeaders())
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
@@ -114,10 +109,7 @@ class StreamingProxyService extends ChangeNotifier {
       }
 
       final response = await http
-          .post(
-            Uri.parse('$_baseUrl/api/proxy/stop'),
-            headers: _getHeaders(),
-          )
+          .post(Uri.parse('$_baseUrl/api/proxy/stop'), headers: _getHeaders())
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
@@ -160,17 +152,14 @@ class StreamingProxyService extends ChangeNotifier {
       _clearError();
 
       final response = await http
-          .get(
-            Uri.parse('$_baseUrl/api/proxy/status'),
-            headers: _getHeaders(),
-          )
+          .get(Uri.parse('$_baseUrl/api/proxy/status'), headers: _getHeaders())
           .timeout(_timeout);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         _isProxyRunning = data['status'] == 'running';
-        
+
         if (_isProxyRunning) {
           _proxyId = data['proxyId'];
           if (data['createdAt'] != null) {
@@ -207,12 +196,12 @@ class StreamingProxyService extends ChangeNotifier {
   Future<bool> ensureProxyRunning() async {
     // First check current status
     await checkProxyStatus();
-    
+
     // Start proxy if not running
     if (!_isProxyRunning) {
       return await startProxy();
     }
-    
+
     return true;
   }
 
@@ -226,11 +215,11 @@ class StreamingProxyService extends ChangeNotifier {
   String get formattedUptime {
     final uptime = proxyUptime;
     if (uptime == null) return 'N/A';
-    
+
     final hours = uptime.inHours;
     final minutes = uptime.inMinutes % 60;
     final seconds = uptime.inSeconds % 60;
-    
+
     if (hours > 0) {
       return '${hours}h ${minutes}m ${seconds}s';
     } else if (minutes > 0) {

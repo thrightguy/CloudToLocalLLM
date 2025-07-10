@@ -115,13 +115,11 @@ class _ConversationListState extends State<ConversationList> {
                       color: isSelected
                           ? AppTheme.primaryColor.withValues(alpha: 0.2)
                           : Colors.transparent,
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.borderRadiusS),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusS,
+                      ),
                       border: isSelected
-                          ? Border.all(
-                              color: AppTheme.primaryColor,
-                              width: 2,
-                            )
+                          ? Border.all(color: AppTheme.primaryColor, width: 2)
                           : null,
                     ),
                     child: IconButton(
@@ -161,9 +159,9 @@ class _ConversationListState extends State<ConversationList> {
             child: Text(
               'Conversations',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.textColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: AppTheme.textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           IconButton(
@@ -198,9 +196,9 @@ class _ConversationListState extends State<ConversationList> {
             SizedBox(height: AppTheme.spacingM),
             Text(
               'No conversations yet',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textColorLight,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
             ),
             SizedBox(height: AppTheme.spacingS),
             TextButton.icon(
@@ -275,9 +273,9 @@ class _ConversationListState extends State<ConversationList> {
     return Text(
       conversation.title,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.textColor,
-            fontWeight: FontWeight.w500,
-          ),
+        color: AppTheme.textColor,
+        fontWeight: FontWeight.w500,
+      ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -287,9 +285,9 @@ class _ConversationListState extends State<ConversationList> {
     return TextField(
       controller: _editController,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: AppTheme.textColor,
-            fontWeight: FontWeight.w500,
-          ),
+        color: AppTheme.textColor,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: const InputDecoration(
         border: OutlineInputBorder(),
         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -305,9 +303,9 @@ class _ConversationListState extends State<ConversationList> {
   Widget _buildSubtitle(Conversation conversation) {
     return Text(
       conversation.preview,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textColorLight,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -338,11 +336,7 @@ class _ConversationListState extends State<ConversationList> {
           ),
         ),
       ],
-      child: Icon(
-        Icons.more_vert,
-        color: AppTheme.textColorLight,
-        size: 16,
-      ),
+      child: Icon(Icons.more_vert, color: AppTheme.textColorLight, size: 16),
     );
   }
 
@@ -379,8 +373,9 @@ class _ConversationListState extends State<ConversationList> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Conversation'),
-        content:
-            Text('Are you sure you want to delete "${conversation.title}"?'),
+        content: Text(
+          'Are you sure you want to delete "${conversation.title}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

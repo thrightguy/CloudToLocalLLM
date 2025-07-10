@@ -21,11 +21,7 @@ class Conversation {
   });
 
   /// Create a new conversation
-  factory Conversation.create({
-    String? title,
-    String? model,
-    String? id,
-  }) {
+  factory Conversation.create({String? title, String? model, String? id}) {
     final now = DateTime.now();
     return Conversation(
       id: id ?? _generateId(),
@@ -42,7 +38,8 @@ class Conversation {
     return Conversation(
       id: json['id'] ?? '',
       title: json['title'] ?? 'Untitled Conversation',
-      messages: (json['messages'] as List<dynamic>?)
+      messages:
+          (json['messages'] as List<dynamic>?)
               ?.map((m) => Message.fromJson(m as Map<String, dynamic>))
               .toList() ??
           [],
@@ -99,37 +96,26 @@ class Conversation {
 
   /// Update a message in the conversation
   Conversation updateMessage(String messageId, Message updatedMessage) {
-    final updatedMessages =
-        messages.map((m) => m.id == messageId ? updatedMessage : m).toList();
-    return copyWith(
-      messages: updatedMessages,
-      updatedAt: DateTime.now(),
-    );
+    final updatedMessages = messages
+        .map((m) => m.id == messageId ? updatedMessage : m)
+        .toList();
+    return copyWith(messages: updatedMessages, updatedAt: DateTime.now());
   }
 
   /// Remove a message from the conversation
   Conversation removeMessage(String messageId) {
     final updatedMessages = messages.where((m) => m.id != messageId).toList();
-    return copyWith(
-      messages: updatedMessages,
-      updatedAt: DateTime.now(),
-    );
+    return copyWith(messages: updatedMessages, updatedAt: DateTime.now());
   }
 
   /// Update conversation title
   Conversation updateTitle(String newTitle) {
-    return copyWith(
-      title: newTitle,
-      updatedAt: DateTime.now(),
-    );
+    return copyWith(title: newTitle, updatedAt: DateTime.now());
   }
 
   /// Update default model
   Conversation updateModel(String newModel) {
-    return copyWith(
-      model: newModel,
-      updatedAt: DateTime.now(),
-    );
+    return copyWith(model: newModel, updatedAt: DateTime.now());
   }
 
   /// Get the last message in the conversation

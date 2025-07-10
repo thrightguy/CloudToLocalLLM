@@ -78,7 +78,8 @@ class _MessageInputState extends State<MessageInput> {
             Expanded(
               child: Container(
                 constraints: BoxConstraints(
-                  maxHeight: widget.maxLines * 24.0 +
+                  maxHeight:
+                      widget.maxLines * 24.0 +
                       32, // Approximate line height + padding
                 ),
                 decoration: BoxDecoration(
@@ -98,14 +99,14 @@ class _MessageInputState extends State<MessageInput> {
                   textInputAction: TextInputAction.newline,
                   enabled: !widget.isLoading,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textColor,
-                        height: 1.5,
-                      ),
+                    color: AppTheme.textColor,
+                    height: 1.5,
+                  ),
                   decoration: InputDecoration(
                     hintText: widget.placeholder ?? 'Type your message...',
                     hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textColorLight,
-                        ),
+                      color: AppTheme.textColorLight,
+                    ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.all(AppTheme.spacingM),
                   ),
@@ -251,9 +252,9 @@ class ModelSelector extends StatelessWidget {
             SizedBox(width: AppTheme.spacingS),
             Text(
               'No models available',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.warningColor,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.warningColor),
             ),
           ],
         ),
@@ -275,27 +276,23 @@ class ModelSelector extends StatelessWidget {
           value: selectedModel,
           hint: Text(
             'Select model',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
           ),
           items: models.map((model) {
             return DropdownMenuItem(
               value: model,
               child: Row(
                 children: [
-                  Icon(
-                    Icons.smart_toy,
-                    color: AppTheme.primaryColor,
-                    size: 16,
-                  ),
+                  Icon(Icons.smart_toy, color: AppTheme.primaryColor, size: 16),
                   SizedBox(width: AppTheme.spacingS),
                   Flexible(
                     child: Text(
                       model,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textColor,
-                          ),
+                        color: AppTheme.textColor,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -304,9 +301,9 @@ class ModelSelector extends StatelessWidget {
             );
           }).toList(),
           onChanged: isLoading ? null : onModelChanged,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textColor,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textColor),
           dropdownColor: AppTheme.backgroundCard,
           icon: Icon(
             Icons.arrow_drop_down,

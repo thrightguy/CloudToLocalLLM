@@ -184,14 +184,16 @@ class _OllamaTestScreenState extends State<OllamaTestScreen> {
                         ],
                         const SizedBox(height: 8),
                         ElevatedButton(
-                          onPressed:
-                              _ollamaService.isLoading ? null : _testConnection,
+                          onPressed: _ollamaService.isLoading
+                              ? null
+                              : _testConnection,
                           child: _ollamaService.isLoading
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Text('Test Connection'),
                         ),
@@ -212,7 +214,8 @@ class _OllamaTestScreenState extends State<OllamaTestScreen> {
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Text(
-                          'No models available. Make sure Ollama is running and has models installed.'),
+                        'No models available. Make sure Ollama is running and has models installed.',
+                      ),
                     ),
                   );
                 }
@@ -235,7 +238,8 @@ class _OllamaTestScreenState extends State<OllamaTestScreen> {
                             return DropdownMenuItem(
                               value: model.name,
                               child: Text(
-                                  '${model.displayName} (${model.sizeFormatted})'),
+                                '${model.displayName} (${model.sizeFormatted})',
+                              ),
                             );
                           }).toList(),
                           onChanged: (value) {
@@ -275,14 +279,16 @@ class _OllamaTestScreenState extends State<OllamaTestScreen> {
                       ),
                       const SizedBox(height: 8),
                       ElevatedButton(
-                        onPressed:
-                            _ollamaService.isLoading ? null : _sendMessage,
+                        onPressed: _ollamaService.isLoading
+                            ? null
+                            : _sendMessage,
                         child: _ollamaService.isLoading
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Send Message'),
                       ),

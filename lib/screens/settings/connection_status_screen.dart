@@ -89,24 +89,24 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
             Text(
               'System Connection Status',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: AppTheme.textColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: AppTheme.textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             SizedBox(height: AppTheme.spacingS),
             Text(
               'Monitor the status of all system connections and services',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textColorLight,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColorLight),
             ),
             if (_lastRefresh != null) ...[
               SizedBox(height: AppTheme.spacingS),
               Text(
                 'Last updated: ${_formatDateTime(_lastRefresh!)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textColorLight,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
               ),
             ],
             SizedBox(height: AppTheme.spacingXL),
@@ -156,11 +156,7 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
                 isAuthenticated ? Colors.green : Colors.red,
               ),
               if (isAuthenticated) ...[
-                _buildStatusRow(
-                  'Provider',
-                  'Auth0',
-                  Colors.blue,
-                ),
+                _buildStatusRow('Provider', 'Auth0', Colors.blue),
                 _buildStatusRow(
                   'Domain',
                   'dev-xafu7oedkd5wlrbo.us.auth0.com',
@@ -195,17 +191,9 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader(
-            'Local Ollama',
-            Icons.computer,
-            Colors.orange,
-          ),
+          _buildSectionHeader('Local Ollama', Icons.computer, Colors.orange),
           SizedBox(height: AppTheme.spacingM),
-          _buildStatusRow(
-            'Connection',
-            'Checking...',
-            Colors.orange,
-          ),
+          _buildStatusRow('Connection', 'Checking...', Colors.orange),
           _buildStatusRow(
             'URL',
             'http://localhost:11434',
@@ -269,8 +257,8 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
                 Text(
                   'Cloud proxy allows secure access to local Ollama instances from web browsers and remote clients.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textColorLight,
-                      ),
+                    color: AppTheme.textColorLight,
+                  ),
                 ),
               ],
             ],
@@ -297,11 +285,7 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
             kIsWeb ? Colors.grey : Colors.green,
           ),
           if (!kIsWeb) ...[
-            _buildStatusRow(
-              'Daemon Status',
-              'Running',
-              Colors.green,
-            ),
+            _buildStatusRow('Daemon Status', 'Running', Colors.green),
             _buildStatusRow(
               'Icon Theme',
               'Monochrome',
@@ -331,33 +315,17 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader(
-            'Network',
-            Icons.network_check,
-            Colors.green,
-          ),
+          _buildSectionHeader('Network', Icons.network_check, Colors.green),
           SizedBox(height: AppTheme.spacingM),
-          _buildStatusRow(
-            'Internet',
-            'Connected',
-            Colors.green,
-          ),
-          _buildStatusRow(
-            'DNS Resolution',
-            'Working',
-            Colors.green,
-          ),
-          _buildStatusRow(
-            'Firewall',
-            'Configured',
-            Colors.green,
-          ),
+          _buildStatusRow('Internet', 'Connected', Colors.green),
+          _buildStatusRow('DNS Resolution', 'Working', Colors.green),
+          _buildStatusRow('Firewall', 'Configured', Colors.green),
           SizedBox(height: AppTheme.spacingM),
           Text(
             'Network connectivity is required for authentication and cloud proxy features.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textColorLight,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textColorLight),
           ),
         ],
       ),
@@ -372,9 +340,9 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.textColor,
-                fontWeight: FontWeight.bold,
-              ),
+            color: AppTheme.textColor,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -388,16 +356,16 @@ class _ConnectionStatusScreenState extends State<ConnectionStatusScreen> {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textColor,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
           ),
           Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: valueColor,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: valueColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

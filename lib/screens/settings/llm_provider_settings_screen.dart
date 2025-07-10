@@ -78,8 +78,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('Could not open Ollama Web UI. Ensure Ollama is running.'),
+            content: Text(
+              'Could not open Ollama Web UI. Ensure Ollama is running.',
+            ),
           ),
         );
       }
@@ -135,9 +136,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'Web Platform Connection',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -173,9 +174,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Error: ${proxyService.error}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.red,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.red),
                     ),
                   ],
                   if (proxyService.isProxyRunning &&
@@ -184,14 +185,14 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                     Text(
                       'Proxy ID: ${proxyService.proxyId}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                     Text(
                       'Uptime: ${proxyService.formattedUptime}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                   ],
                 ],
@@ -242,9 +243,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'Desktop Platform Connection',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -260,8 +261,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
             ),
             onChanged: (value) {
               setState(() {
-                _ollamaHost =
-                    value.isNotEmpty ? value : AppConfig.defaultOllamaHost;
+                _ollamaHost = value.isNotEmpty
+                    ? value
+                    : AppConfig.defaultOllamaHost;
               });
             },
           ),
@@ -309,9 +311,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'Connection Test',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -338,11 +340,11 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                       Text(
                         ollamaService.isConnected
                             ? (kIsWeb
-                                ? 'Connected via CloudToLocalLLM streaming proxy'
-                                : 'Connected to Ollama at localhost:$_ollamaPort')
+                                  ? 'Connected via CloudToLocalLLM streaming proxy'
+                                  : 'Connected to Ollama at localhost:$_ollamaPort')
                             : (kIsWeb
-                                ? 'Proxy tunnel connection failed - check authentication'
-                                : 'Direct connection failed - ensure Ollama is running locally'),
+                                  ? 'Proxy tunnel connection failed - check authentication'
+                                  : 'Direct connection failed - ensure Ollama is running locally'),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -352,17 +354,17 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                     Text(
                       'Version: ${ollamaService.version}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                   ],
                   if (ollamaService.error != null) ...[
                     const SizedBox(height: 8),
                     Text(
                       'Error: ${ollamaService.error}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.red,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.red),
                     ),
                   ],
                 ],
@@ -385,7 +387,8 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                       )
                     : const Icon(Icons.refresh),
                 label: Text(
-                    ollamaService.isLoading ? 'Testing...' : 'Test Connection'),
+                  ollamaService.isLoading ? 'Testing...' : 'Test Connection',
+                ),
               );
             },
           ),
@@ -405,9 +408,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'Model Management',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -420,7 +423,8 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                 return Column(
                   children: [
                     const Text(
-                        'No models available. Connect to Ollama to load models.'),
+                      'No models available. Connect to Ollama to load models.',
+                    ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: ollamaService.isLoading
@@ -433,9 +437,11 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.refresh),
-                      label: Text(ollamaService.isLoading
-                          ? 'Loading...'
-                          : 'Refresh Models'),
+                      label: Text(
+                        ollamaService.isLoading
+                            ? 'Loading...'
+                            : 'Refresh Models',
+                      ),
                     ),
                   ],
                 );
@@ -447,8 +453,8 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                   Text(
                     'Available Models (${ollamaService.models.length})',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 8),
 
@@ -469,12 +475,11 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                             if (model.size != null)
                               Text(
                                 'Size: ${model.size}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
+                                style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.outline,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
                                     ),
                               ),
                           ],
@@ -502,9 +507,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.refresh),
-                    label: Text(ollamaService.isLoading
-                        ? 'Loading...'
-                        : 'Refresh Models'),
+                    label: Text(
+                      ollamaService.isLoading ? 'Loading...' : 'Refresh Models',
+                    ),
                   ),
                 ],
               );
@@ -526,9 +531,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
               const SizedBox(width: 8),
               Text(
                 'Test Chat with $_selectedModel',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -554,8 +559,8 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
               return ElevatedButton.icon(
                 onPressed:
                     (ollamaService.isLoading || _messageController.text.isEmpty)
-                        ? null
-                        : _sendTestMessage,
+                    ? null
+                    : _sendTestMessage,
                 icon: ollamaService.isLoading
                     ? const SizedBox(
                         width: 16,
@@ -563,9 +568,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.send),
-                label: Text(ollamaService.isLoading
-                    ? 'Sending...'
-                    : 'Send Test Message'),
+                label: Text(
+                  ollamaService.isLoading ? 'Sending...' : 'Send Test Message',
+                ),
               );
             },
           ),
@@ -577,9 +582,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
             const SizedBox(height: 16),
             Text(
               'Response:',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Container(
@@ -589,10 +594,9 @@ class _LLMProviderSettingsScreenState extends State<LLMProviderSettingsScreen> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
               child: Text(

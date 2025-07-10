@@ -1,0 +1,668 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\chris\\Dev\\CloudToLocalLLM\\playwright.config.js",
+    "rootDir": "C:/Users/chris/Dev/CloudToLocalLLM/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "C:\\Users\\chris\\Dev\\CloudToLocalLLM\\tests\\e2e\\global-setup.js",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "test-results/html-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/test-results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/junit.xml"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/chris/Dev/CloudToLocalLLM/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium-auth-analysis",
+        "name": "chromium-auth-analysis",
+        "testDir": "C:/Users/chris/Dev/CloudToLocalLLM/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/chris/Dev/CloudToLocalLLM/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox-auth-analysis",
+        "name": "firefox-auth-analysis",
+        "testDir": "C:/Users/chris/Dev/CloudToLocalLLM/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/chris/Dev/CloudToLocalLLM/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit-auth-analysis",
+        "name": "webkit-auth-analysis",
+        "testDir": "C:/Users/chris/Dev/CloudToLocalLLM/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/chris/Dev/CloudToLocalLLM/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "mobile-chrome-auth",
+        "name": "mobile-chrome-auth",
+        "testDir": "C:/Users/chris/Dev/CloudToLocalLLM/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/chris/Dev/CloudToLocalLLM/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "mobile-safari-auth",
+        "name": "mobile-safari-auth",
+        "testDir": "C:/Users/chris/Dev/CloudToLocalLLM/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.54.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth-loop-analysis.spec.js",
+      "file": "auth-loop-analysis.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CloudToLocalLLM v3.10.0 Authentication Loop Analysis",
+          "file": "auth-loop-analysis.spec.js",
+          "line": 33,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Analyze authentication flow and detect login loops",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-auth-analysis",
+                  "projectName": "chromium-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "df4c767164f7cb27b358-709d8c5f0c4338b059b2",
+              "file": "auth-loop-analysis.spec.js",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "Analyze authentication flow and detect login loops",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox-auth-analysis",
+                  "projectName": "firefox-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "df4c767164f7cb27b358-11cdce325111a00a2ab3",
+              "file": "auth-loop-analysis.spec.js",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "Analyze authentication flow and detect login loops",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit-auth-analysis",
+                  "projectName": "webkit-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "df4c767164f7cb27b358-a44f946a8511a83100d2",
+              "file": "auth-loop-analysis.spec.js",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "Analyze authentication flow and detect login loops",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome-auth",
+                  "projectName": "mobile-chrome-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "df4c767164f7cb27b358-3f547d0719e5f7acd3b1",
+              "file": "auth-loop-analysis.spec.js",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "Analyze authentication flow and detect login loops",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-safari-auth",
+                  "projectName": "mobile-safari-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "df4c767164f7cb27b358-d1e583d494a305854e60",
+              "file": "auth-loop-analysis.spec.js",
+              "line": 111,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tunnel-verification.spec.js",
+      "file": "tunnel-verification.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Tunnel Infrastructure Verification",
+          "file": "tunnel-verification.spec.js",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should never make direct calls to localhost:11434",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-auth-analysis",
+                  "projectName": "chromium-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-7f15309283178fee72a1",
+              "file": "tunnel-verification.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "should use cloud proxy tunnel for Ollama API calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-auth-analysis",
+                  "projectName": "chromium-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-5b1ac0979cf09d970aa1",
+              "file": "tunnel-verification.spec.js",
+              "line": 131,
+              "column": 3
+            },
+            {
+              "title": "should show proper CORS prevention logging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-auth-analysis",
+                  "projectName": "chromium-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-d8e0ab170380face255f",
+              "file": "tunnel-verification.spec.js",
+              "line": 164,
+              "column": 3
+            },
+            {
+              "title": "should handle connection manager routing correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-auth-analysis",
+                  "projectName": "chromium-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-212ce98010fcca8ca210",
+              "file": "tunnel-verification.spec.js",
+              "line": 187,
+              "column": 3
+            },
+            {
+              "title": "should never make direct calls to localhost:11434",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox-auth-analysis",
+                  "projectName": "firefox-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-a5874506183c44c7e040",
+              "file": "tunnel-verification.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "should use cloud proxy tunnel for Ollama API calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox-auth-analysis",
+                  "projectName": "firefox-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-e447e6b74797f30cee07",
+              "file": "tunnel-verification.spec.js",
+              "line": 131,
+              "column": 3
+            },
+            {
+              "title": "should show proper CORS prevention logging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox-auth-analysis",
+                  "projectName": "firefox-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-5985b1f4073acf006c82",
+              "file": "tunnel-verification.spec.js",
+              "line": 164,
+              "column": 3
+            },
+            {
+              "title": "should handle connection manager routing correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox-auth-analysis",
+                  "projectName": "firefox-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-d7c54c951c405cec5a8d",
+              "file": "tunnel-verification.spec.js",
+              "line": 187,
+              "column": 3
+            },
+            {
+              "title": "should never make direct calls to localhost:11434",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit-auth-analysis",
+                  "projectName": "webkit-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-c4f36f585189eac1c8ae",
+              "file": "tunnel-verification.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "should use cloud proxy tunnel for Ollama API calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit-auth-analysis",
+                  "projectName": "webkit-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-631b815685e8a491af0d",
+              "file": "tunnel-verification.spec.js",
+              "line": 131,
+              "column": 3
+            },
+            {
+              "title": "should show proper CORS prevention logging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit-auth-analysis",
+                  "projectName": "webkit-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-5fa43e039de3b4b05847",
+              "file": "tunnel-verification.spec.js",
+              "line": 164,
+              "column": 3
+            },
+            {
+              "title": "should handle connection manager routing correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit-auth-analysis",
+                  "projectName": "webkit-auth-analysis",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-bc408dd53bf9e296b7d4",
+              "file": "tunnel-verification.spec.js",
+              "line": 187,
+              "column": 3
+            },
+            {
+              "title": "should never make direct calls to localhost:11434",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome-auth",
+                  "projectName": "mobile-chrome-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-d9d9f49e975c4cb5a3ca",
+              "file": "tunnel-verification.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "should use cloud proxy tunnel for Ollama API calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome-auth",
+                  "projectName": "mobile-chrome-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-5fd0a81b73333d20bcf5",
+              "file": "tunnel-verification.spec.js",
+              "line": 131,
+              "column": 3
+            },
+            {
+              "title": "should show proper CORS prevention logging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome-auth",
+                  "projectName": "mobile-chrome-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-f03bffc19e6443ec5f50",
+              "file": "tunnel-verification.spec.js",
+              "line": 164,
+              "column": 3
+            },
+            {
+              "title": "should handle connection manager routing correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-chrome-auth",
+                  "projectName": "mobile-chrome-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-73a451810b0cfae09c4a",
+              "file": "tunnel-verification.spec.js",
+              "line": 187,
+              "column": 3
+            },
+            {
+              "title": "should never make direct calls to localhost:11434",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-safari-auth",
+                  "projectName": "mobile-safari-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-faee7bc33e1d4139334f",
+              "file": "tunnel-verification.spec.js",
+              "line": 77,
+              "column": 3
+            },
+            {
+              "title": "should use cloud proxy tunnel for Ollama API calls",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-safari-auth",
+                  "projectName": "mobile-safari-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-83954bf4e09469ed5d95",
+              "file": "tunnel-verification.spec.js",
+              "line": 131,
+              "column": 3
+            },
+            {
+              "title": "should show proper CORS prevention logging",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-safari-auth",
+                  "projectName": "mobile-safari-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-fb719df0e74ef0fdbf75",
+              "file": "tunnel-verification.spec.js",
+              "line": 164,
+              "column": 3
+            },
+            {
+              "title": "should handle connection manager routing correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile-safari-auth",
+                  "projectName": "mobile-safari-auth",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "922fbf0a27dcdd972813-ff2b086bbad813f6321b",
+              "file": "tunnel-verification.spec.js",
+              "line": 187,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-07-10T20:44:05.804Z",
+    "duration": 87.65700000000004,
+    "expected": 0,
+    "skipped": 25,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

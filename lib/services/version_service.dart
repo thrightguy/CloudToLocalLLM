@@ -106,7 +106,8 @@ class VersionService {
         _buildDate = _parseBuildDate(_buildNumber!);
 
         debugPrint(
-            '[VersionService] Loaded version from package_info: $_fullVersion');
+          '[VersionService] Loaded version from package_info: $_fullVersion',
+        );
         return;
       }
     } catch (e) {
@@ -118,8 +119,9 @@ class VersionService {
   /// Load version from version.json asset (production builds)
   Future<void> _loadFromAsset() async {
     try {
-      final String versionJson =
-          await rootBundle.loadString('assets/version.json');
+      final String versionJson = await rootBundle.loadString(
+        'assets/version.json',
+      );
       final Map<String, dynamic> versionData = json.decode(versionJson);
 
       _version = versionData['version']?.toString();
