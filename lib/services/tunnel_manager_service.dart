@@ -246,39 +246,75 @@ class TunnelManagerService extends ChangeNotifier {
     }
   }
 
-  /// Update web bridge status based on desktop client connections
+  /// Update web bridge status based on cloud proxy endpoint accessibility
+  /// Web platform should check if cloud proxy is accessible, not desktop client connections
   Future<void> _updateWebBridgeStatus() async {
     if (!kIsWeb) return;
 
-    bool hasConnectedClients = false;
+    bool isCloudProxyAccessible = false;
     String? errorMessage;
+    String? version;
 
-    // Check if we have the client detection service and clients are connected
+    try {
+      // Test cloud proxy endpoint accessibility
+      debugPrint(
+        '🚇 [TunnelManager] Testing cloud proxy accessibility: ${_config.cloudProxyUrl}',
+      );
+
+      final response = await http
+          .get(
+            Uri.parse('${_config.cloudProxyUrl}/api/health'),
+            headers: {'Accept': 'application/json'},
+          )
+          .timeout(Duration(seconds: _config.connectionTimeout));
+
+      if (response.statusCode == 200) {
+        isCloudProxyAccessible = true;
+        try {
+          final data = json.decode(response.body);
+          version = data['version'] ?? 'Unknown';
+          debugPrint(
+            '🚇 [TunnelManager] Cloud proxy accessible, version: $version',
+          );
+        } catch (e) {
+          version = 'Cloud Proxy';
+          debugPrint(
+            '🚇 [TunnelManager] Cloud proxy accessible (health check passed)',
+          );
+        }
+      } else {
+        errorMessage = 'Cloud proxy returned HTTP ${response.statusCode}';
+        debugPrint(
+          '🚇 [TunnelManager] Cloud proxy health check failed: $errorMessage',
+        );
+      }
+    } catch (e) {
+      errorMessage = 'Cloud proxy not accessible: $e';
+      debugPrint('🚇 [TunnelManager] Cloud proxy connection failed: $e');
+    }
+
+    // Also check desktop client connections for informational purposes
+    bool hasConnectedClients = false;
     if (_clientDetectionService != null) {
       hasConnectedClients = _clientDetectionService.hasConnectedClients;
-      if (!hasConnectedClients) {
-        errorMessage = 'Waiting for desktop client connection';
-      }
-    } else {
-      errorMessage = 'Desktop client detection service not available';
     }
 
     _connectionStatus['cloud'] = ConnectionStatus(
       type: 'cloud',
-      isConnected: hasConnectedClients,
+      isConnected: isCloudProxyAccessible,
       endpoint: _config.cloudProxyUrl,
-      version: 'Bridge Server',
+      version: version ?? 'Cloud Proxy',
       lastCheck: DateTime.now(),
       latency: 0,
       error: errorMessage,
     );
 
-    final statusMessage = hasConnectedClients
-        ? 'Bridge Server (${_clientDetectionService?.connectedClientCount ?? 0} client${(_clientDetectionService?.connectedClientCount ?? 0) == 1 ? '' : 's'} connected)'
-        : errorMessage ?? 'Waiting for desktop client connection';
+    final statusMessage = isCloudProxyAccessible
+        ? 'Cloud Proxy Available${hasConnectedClients ? ' (${_clientDetectionService?.connectedClientCount ?? 0} desktop client${(_clientDetectionService?.connectedClientCount ?? 0) == 1 ? '' : 's'} connected)' : ''}'
+        : errorMessage ?? 'Cloud proxy not accessible';
 
     debugPrint(
-      '🚇 [TunnelManager] Web bridge status updated: $statusMessage (connected: $hasConnectedClients)',
+      '🚇 [TunnelManager] Web bridge status updated: $statusMessage (cloud accessible: $isCloudProxyAccessible)',
     );
   }
 
