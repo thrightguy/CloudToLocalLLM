@@ -123,19 +123,19 @@
   "suites": [],
   "errors": [
     {
-      "message": "Error: Required environment variable DEPLOYMENT_URL is not set",
-      "stack": "Error: Required environment variable DEPLOYMENT_URL is not set\n    at forEach (C:\\Users\\chris\\Dev\\CloudToLocalLLM\\tests\\e2e\\global-setup.js:38:13)\n    at globalSetup (C:\\Users\\chris\\Dev\\CloudToLocalLLM\\tests\\e2e\\global-setup.js:33:19)",
+      "message": "Error: Cannot access deployment: fetch failed",
+      "stack": "Error: Cannot access deployment: fetch failed\n    at globalSetup (C:\\Users\\chris\\Dev\\CloudToLocalLLM\\tests\\e2e\\global-setup.js:87:11)",
       "location": {
         "file": "C:\\Users\\chris\\Dev\\CloudToLocalLLM\\tests\\e2e\\global-setup.js",
-        "column": 13,
-        "line": 38
+        "column": 11,
+        "line": 87
       },
-      "snippet": "\u001b[90m   at \u001b[39mglobal-setup.js:38\n\n\u001b[0m \u001b[90m 36 |\u001b[39m     } \u001b[36melse\u001b[39m {\n \u001b[90m 37 |\u001b[39m       console\u001b[33m.\u001b[39mlog(\u001b[32m`❌ ${envVar}: NOT SET (required)`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m       \u001b[36mthrow\u001b[39m \u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`Required environment variable ${envVar} is not set`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m     }\n \u001b[90m 40 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 41 |\u001b[39m   \u001b[0m"
+      "snippet": "\u001b[90m   at \u001b[39mglobal-setup.js:87\n\n\u001b[0m \u001b[90m 85 |\u001b[39m   } \u001b[36mcatch\u001b[39m (error) {\n \u001b[90m 86 |\u001b[39m     console\u001b[33m.\u001b[39mlog(\u001b[32m`❌ Deployment validation failed: ${error.message}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 87 |\u001b[39m     \u001b[36mthrow\u001b[39m \u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`Cannot access deployment: ${error.message}`\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 88 |\u001b[39m   }\n \u001b[90m 89 |\u001b[39m   \n \u001b[90m 90 |\u001b[39m   \u001b[90m// Create test configuration summary\u001b[39m\u001b[0m"
     }
   ],
   "stats": {
-    "startTime": "2025-07-11T00:57:56.492Z",
-    "duration": 9.639999999999986,
+    "startTime": "2025-07-11T20:12:43.532Z",
+    "duration": 90.73699999999997,
     "expected": 0,
     "skipped": 0,
     "unexpected": 0,

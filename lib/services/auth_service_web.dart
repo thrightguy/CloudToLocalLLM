@@ -5,8 +5,8 @@ import '../config/app_config.dart';
 import '../models/user_model.dart';
 import 'auth_logger.dart';
 
-// Conditional import for web package - only import on web platform
-import 'dart:html' as html if (dart.library.io) 'dart:io';
+// Modern web imports using package:web
+import 'package:web/web.dart' as web;
 
 /// Web-specific authentication service using direct Auth0 redirect with JWT tokens
 class AuthServiceWeb extends ChangeNotifier {
@@ -61,7 +61,7 @@ class AuthServiceWeb extends ChangeNotifier {
 
       // Check if we're on the callback URL (web only)
       if (kIsWeb) {
-        final currentUrl = html.window.location.href;
+        final currentUrl = web.window.location.href;
         if (currentUrl.contains('/callback')) {
           AuthLogger.info('🔐 Detected callback URL during initialization');
           await handleCallback();
@@ -200,7 +200,7 @@ class AuthServiceWeb extends ChangeNotifier {
       AuthLogger.info('🔐 Attempting window.location.href redirect');
 
       // Method 1: Use window.location.href (primary method)
-      html.window.location.href = authUrl;
+      web.window.location.href = authUrl;
       AuthLogger.info('🔐 Redirect initiated with window.location.href');
 
       // Wait to check if redirect actually happened
@@ -212,7 +212,7 @@ class AuthServiceWeb extends ChangeNotifier {
       );
 
       // Check if we're still on the same page
-      final currentUrl = html.window.location.href;
+      final currentUrl = web.window.location.href;
       if (!currentUrl.contains('auth0.com')) {
         AuthLogger.error('🔐 Redirect failed - still on original page', {
           'currentUrl': currentUrl,
@@ -242,22 +242,22 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       // Method 1: window.open with _self
       AuthLogger.info('🔐 Trying window.open with _self');
-      html.window.open(authUrl, '_self');
+      web.window.open(authUrl, '_self');
 
       // Wait to see if this worked
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Check if redirect happened
-      final currentUrl = html.window.location.href;
+      final currentUrl = web.window.location.href;
       if (!currentUrl.contains('auth0.com')) {
         // Method 2: Try multiple href assignments
         AuthLogger.info('🔐 Trying multiple location.href assignments');
 
         for (int i = 0; i < 3; i++) {
-          html.window.location.href = authUrl;
+          web.window.location.href = authUrl;
           await Future.delayed(const Duration(milliseconds: 200));
 
-          final checkUrl = html.window.location.href;
+          final checkUrl = web.window.location.href;
           if (checkUrl.contains('auth0.com')) {
             AuthLogger.info(
               '🔐 Multiple href assignment succeeded on attempt ${i + 1}',
@@ -267,7 +267,7 @@ class AuthServiceWeb extends ChangeNotifier {
         }
 
         // Final check - if we still haven't redirected, throw an error
-        final finalUrl = html.window.location.href;
+        final finalUrl = web.window.location.href;
         if (!finalUrl.contains('auth0.com')) {
           AuthLogger.error('🔐 All redirect methods failed', {
             'finalUrl': finalUrl,
@@ -330,7 +330,7 @@ class AuthServiceWeb extends ChangeNotifier {
       }
 
       // Get current URL parameters
-      final uri = Uri.parse(html.window.location.href);
+      final uri = Uri.parse(web.window.location.href);
       AuthLogger.info('🔐 Current URL', {
         'url': uri.toString(),
         'path': uri.path,
@@ -382,7 +382,7 @@ class AuthServiceWeb extends ChangeNotifier {
 
               // Clear the URL parameters (web only) after state is set
               if (kIsWeb) {
-                html.window.history.replaceState(null, '', '/');
+                web.window.history.replaceState(null, '', '/');
               }
 
               // Additional delay to ensure all state updates are complete
@@ -563,15 +563,19 @@ class AuthServiceWeb extends ChangeNotifier {
       if (!kIsWeb) return;
 
       if (_accessToken != null) {
-        html.window.localStorage['cloudtolocalllm_access_token'] =
-            _accessToken!;
+        web.window.localStorage.setItem(
+          'cloudtolocalllm_access_token',
+          _accessToken!,
+        );
       }
       if (_idToken != null) {
-        html.window.localStorage['cloudtolocalllm_id_token'] = _idToken!;
+        web.window.localStorage.setItem('cloudtolocalllm_id_token', _idToken!);
       }
       if (_tokenExpiry != null) {
-        html.window.localStorage['cloudtolocalllm_token_expiry'] = _tokenExpiry!
-            .toIso8601String();
+        web.window.localStorage.setItem(
+          'cloudtolocalllm_token_expiry',
+          _tokenExpiry!.toIso8601String(),
+        );
       }
 
       AuthLogger.info('🔐 Tokens stored in localStorage');
@@ -585,11 +589,14 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       if (!kIsWeb) return;
 
-      _accessToken = html.window.localStorage['cloudtolocalllm_access_token'];
-      _idToken = html.window.localStorage['cloudtolocalllm_id_token'];
+      _accessToken = web.window.localStorage.getItem(
+        'cloudtolocalllm_access_token',
+      );
+      _idToken = web.window.localStorage.getItem('cloudtolocalllm_id_token');
 
-      final expiryString =
-          html.window.localStorage['cloudtolocalllm_token_expiry'];
+      final expiryString = web.window.localStorage.getItem(
+        'cloudtolocalllm_token_expiry',
+      );
       if (expiryString != null) {
         _tokenExpiry = DateTime.tryParse(expiryString);
       }
@@ -609,10 +616,10 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       if (!kIsWeb) return;
 
-      html.window.localStorage.remove('cloudtolocalllm_access_token');
-      html.window.localStorage.remove('cloudtolocalllm_id_token');
-      html.window.localStorage.remove('cloudtolocalllm_token_expiry');
-      html.window.localStorage.remove(
+      web.window.localStorage.removeItem('cloudtolocalllm_access_token');
+      web.window.localStorage.removeItem('cloudtolocalllm_id_token');
+      web.window.localStorage.removeItem('cloudtolocalllm_token_expiry');
+      web.window.localStorage.removeItem(
         'cloudtolocalllm_authenticated',
       ); // Legacy cleanup
 

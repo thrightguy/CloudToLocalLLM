@@ -36,6 +36,12 @@ VERBOSE=false
 SKIP_BACKUP=false
 DRY_RUN=false
 
+# Deployment status tracking
+API_HEALTH_OK=false
+HTTPS_OK=false
+SSL_CERTS_OK=false
+DEPLOYMENT_SUCCESS=false
+
 # Logging functions
 log() {
     echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} $1"
@@ -502,6 +508,67 @@ EOF
     log_success "Distribution files updated for Flutter-native homepage"
 }
 
+# Validate SSL certificates
+validate_ssl_certificates() {
+    log "Validating SSL certificates..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "DRY RUN: Would validate SSL certificates"
+        SSL_CERTS_OK=true
+        return 0
+    fi
+
+    local cert_dir="certbot/live/cloudtolocalllm.online"
+    local cert_file="$cert_dir/fullchain.pem"
+    local key_file="$cert_dir/privkey.pem"
+
+    # Check if certificate files exist
+    if [[ ! -f "$cert_file" ]]; then
+        log_error "SSL certificate not found: $cert_file"
+        SSL_CERTS_OK=false
+        return 1
+    fi
+
+    if [[ ! -f "$key_file" ]]; then
+        log_error "SSL private key not found: $key_file"
+        SSL_CERTS_OK=false
+        return 1
+    fi
+
+    # Check certificate validity and expiration
+    log_verbose "Checking certificate validity..."
+    if ! openssl x509 -in "$cert_file" -noout -checkend 86400 2>/dev/null; then
+        log_error "SSL certificate is invalid or expires within 24 hours"
+        SSL_CERTS_OK=false
+        return 1
+    fi
+
+    # Check certificate domains
+    log_verbose "Checking certificate domains..."
+    local cert_domains=$(openssl x509 -in "$cert_file" -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | grep -o "DNS:[^,]*" | sed 's/DNS://' | tr '\n' ' ')
+    log_verbose "Certificate covers domains: $cert_domains"
+
+    if ! echo "$cert_domains" | grep -q "cloudtolocalllm.online"; then
+        log_error "SSL certificate does not cover cloudtolocalllm.online"
+        SSL_CERTS_OK=false
+        return 1
+    fi
+
+    if ! echo "$cert_domains" | grep -q "app.cloudtolocalllm.online"; then
+        log_error "SSL certificate does not cover app.cloudtolocalllm.online"
+        SSL_CERTS_OK=false
+        return 1
+    fi
+
+    # Check certificate expiration date
+    local expiry_date=$(openssl x509 -in "$cert_file" -noout -enddate 2>/dev/null | cut -d= -f2)
+    log_verbose "Certificate expires: $expiry_date"
+
+    SSL_CERTS_OK=true
+    log_success "SSL certificates are valid and properly configured"
+    return 0
+}
+
 # Manage containers with comprehensive cleanup
 manage_containers() {
     log "Managing Docker containers..."
@@ -644,6 +711,8 @@ perform_health_checks() {
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log "DRY RUN: Would perform health checks"
+        API_HEALTH_OK=true
+        HTTPS_OK=true
         return 0
     fi
 
@@ -678,20 +747,39 @@ perform_health_checks() {
     log_verbose "Testing API backend health..."
     local api_max_attempts=12
     local api_attempt=1
+    API_HEALTH_OK=false
 
     while [[ $api_attempt -le $api_max_attempts ]]; do
         if curl -f -s --connect-timeout 10 https://app.cloudtolocalllm.online/api/health &> /dev/null; then
             log_success "API backend is healthy"
+            API_HEALTH_OK=true
             break
         fi
 
         if [[ $api_attempt -eq $api_max_attempts ]]; then
-            log_warning "API backend health check failed after $api_max_attempts attempts"
+            log_error "API backend health check failed after $api_max_attempts attempts"
             if [[ -n "$docker_compose_cmd" ]]; then
-                log_warning "Check api-backend logs with: $docker_compose_cmd -f docker-compose.yml logs api-backend"
+                log_error "Diagnostic information:"
+                log_error "- Check api-backend logs: $docker_compose_cmd -f docker-compose.yml logs api-backend"
+                log_error "- Check container status: $docker_compose_cmd -f docker-compose.yml ps"
+                log_error "- Check container health: $docker_compose_cmd -f docker-compose.yml exec api-backend curl -f http://localhost:8080/health"
+                log_error "- Check nginx proxy: curl -v https://app.cloudtolocalllm.online/api/health"
             fi
-            log_warning "Continuing with deployment - API may still be starting up"
-            break
+
+            # Try to get more diagnostic information
+            log_verbose "Attempting direct container health check..."
+            if [[ -n "$docker_compose_cmd" ]]; then
+                if $docker_compose_cmd -f docker-compose.yml exec -T api-backend curl -f -s http://localhost:8080/health &> /dev/null; then
+                    log_warning "API backend container is healthy, but nginx proxy may be failing"
+                    log_warning "Check nginx configuration and SSL certificates"
+                else
+                    log_warning "API backend container is not responding to health checks"
+                fi
+            fi
+
+            log_error "API backend is not responding - deployment failed"
+            API_HEALTH_OK=false
+            return 1
         fi
 
         log_verbose "API health check attempt $api_attempt/$api_max_attempts failed, retrying in 10 seconds..."
@@ -699,66 +787,114 @@ perform_health_checks() {
         ((api_attempt++))
     done
 
-    # Verify web app accessibility with enhanced retry logic
-    log_verbose "Testing web app accessibility..."
+    # Verify HTTPS web app accessibility (HTTPS is mandatory for production)
+    log_verbose "Testing HTTPS web app accessibility..."
+    HTTPS_OK=false
 
     # Use enhanced wait_for_service if available, otherwise fallback
     if command -v wait_for_service &> /dev/null; then
-        if ! wait_for_service "https://app.cloudtolocalllm.online" 120 10; then
-            log_warning "HTTPS web app failed to become accessible, trying HTTP..."
-            if ! wait_for_service "http://app.cloudtolocalllm.online" 60 5; then
-                log_warning "Web app accessibility check failed"
-                if [[ -n "$docker_compose_cmd" ]]; then
-                    log_warning "Check logs with: $docker_compose_cmd -f docker-compose.yml logs"
-                fi
-                log_warning "Deployment may still be successful - check manually"
-            else
-                log_success "Web app is accessible at http://app.cloudtolocalllm.online (HTTP only)"
-            fi
-        else
+        if wait_for_service "https://app.cloudtolocalllm.online" 120 10; then
             log_success "Web app is accessible at https://app.cloudtolocalllm.online"
+            HTTPS_OK=true
+        else
+            log_error "HTTPS web app failed to become accessible within 120 seconds"
+            if [[ -n "$docker_compose_cmd" ]]; then
+                log_error "Check logs with: $docker_compose_cmd -f docker-compose.yml logs webapp"
+                log_error "Check nginx status with: $docker_compose_cmd -f docker-compose.yml exec webapp nginx -t"
+            fi
+            log_error "HTTPS is mandatory for production - deployment failed"
+            HTTPS_OK=false
+            return 1
         fi
     else
-        # Fallback implementation
+        # Fallback implementation - HTTPS only
         local max_attempts=12
         local attempt=1
 
         while [[ $attempt -le $max_attempts ]]; do
-            # Try HTTPS first, then HTTP
             if curl -f -s --connect-timeout 10 https://app.cloudtolocalllm.online &> /dev/null; then
                 log_success "Web app is accessible at https://app.cloudtolocalllm.online"
-                return 0
-            elif curl -f -s --connect-timeout 10 http://app.cloudtolocalllm.online &> /dev/null; then
-                log_success "Web app is accessible at http://app.cloudtolocalllm.online (HTTP only)"
+                HTTPS_OK=true
                 return 0
             fi
 
-            log_verbose "Attempt $attempt/$max_attempts failed, retrying in 10 seconds..."
+            log_verbose "HTTPS attempt $attempt/$max_attempts failed, retrying in 10 seconds..."
             sleep 10
             ((attempt++))
         done
 
-        log_warning "Web app accessibility check failed after $max_attempts attempts"
+        log_error "HTTPS web app accessibility check failed after $max_attempts attempts"
         if [[ -n "$docker_compose_cmd" ]]; then
-            log_warning "Check logs with: $docker_compose_cmd -f docker-compose.yml logs"
+            log_error "Check logs with: $docker_compose_cmd -f docker-compose.yml logs webapp"
+            log_error "Check SSL certificates with: ls -la certbot/live/cloudtolocalllm.online/"
         fi
-        log_warning "Deployment may still be successful - check manually"
+        log_error "HTTPS is mandatory for production - deployment failed"
+        HTTPS_OK=false
+        return 1
     fi
 
-    log_success "Web app is accessible at https://app.cloudtolocalllm.online"
+    # Return success only if both API health and HTTPS checks passed
+    if [[ "$API_HEALTH_OK" == "true" && "$HTTPS_OK" == "true" ]]; then
+        log_success "All health checks passed"
+        return 0
+    else
+        log_error "One or more health checks failed"
+        return 1
+    fi
 }
 
 # Display deployment summary
 display_summary() {
     echo ""
-    log_success "🎉 VPS deployment completed successfully!"
-    echo ""
-    echo -e "${GREEN}📋 Deployment Summary${NC}"
-    echo -e "${GREEN}=====================${NC}"
-    echo "  - Main site: https://cloudtolocalllm.online"
-    echo "  - Web app: https://app.cloudtolocalllm.online"
-    echo "  - API backend: https://app.cloudtolocalllm.online/api/health"
-    echo "  - Tunnel server: wss://app.cloudtolocalllm.online/ws/bridge"
+
+    # Check if deployment was successful based on health check results
+    if [[ "$SSL_CERTS_OK" == "true" && "$API_HEALTH_OK" == "true" && "$HTTPS_OK" == "true" ]]; then
+        DEPLOYMENT_SUCCESS=true
+        log_success "🎉 VPS deployment completed successfully!"
+        echo ""
+        echo -e "${GREEN}📋 Deployment Summary${NC}"
+        echo -e "${GREEN}=====================${NC}"
+        echo "  ✅ SSL certificates: Valid and properly configured"
+        echo "  ✅ API backend: Healthy and responding"
+        echo "  ✅ HTTPS web app: Accessible and secure"
+        echo ""
+        echo -e "${GREEN}🌐 Service URLs${NC}"
+        echo "  - Main site: https://cloudtolocalllm.online"
+        echo "  - Web app: https://app.cloudtolocalllm.online"
+        echo "  - API backend: https://app.cloudtolocalllm.online/api/health"
+        echo "  - Tunnel server: wss://app.cloudtolocalllm.online/ws/bridge"
+    else
+        DEPLOYMENT_SUCCESS=false
+        log_error "❌ VPS deployment failed - critical health checks did not pass"
+        echo ""
+        echo -e "${RED}📋 Deployment Status${NC}"
+        echo -e "${RED}===================${NC}"
+
+        if [[ "$SSL_CERTS_OK" == "true" ]]; then
+            echo "  ✅ SSL certificates: Valid and properly configured"
+        else
+            echo "  ❌ SSL certificates: Invalid, missing, or misconfigured"
+        fi
+
+        if [[ "$API_HEALTH_OK" == "true" ]]; then
+            echo "  ✅ API backend: Healthy and responding"
+        else
+            echo "  ❌ API backend: Not responding or unhealthy"
+        fi
+
+        if [[ "$HTTPS_OK" == "true" ]]; then
+            echo "  ✅ HTTPS web app: Accessible and secure"
+        else
+            echo "  ❌ HTTPS web app: Not accessible or SSL issues"
+        fi
+
+        echo ""
+        echo -e "${RED}🔧 Troubleshooting${NC}"
+        echo "  - Check container logs: docker compose -f docker-compose.yml logs"
+        echo "  - Check SSL certificates: ls -la certbot/live/cloudtolocalllm.online/"
+        echo "  - Check nginx configuration: docker compose -f docker-compose.yml exec webapp nginx -t"
+        echo "  - Check API backend: docker compose -f docker-compose.yml logs api-backend"
+    fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""
@@ -787,8 +923,28 @@ main() {
     build_flutter_web
     update_distribution_files
     manage_containers
-    perform_health_checks
+
+    # Validate SSL certificates before health checks
+    if ! validate_ssl_certificates; then
+        log_error "SSL certificate validation failed - cannot proceed with deployment"
+        display_summary
+        exit 4
+    fi
+
+    # Perform health checks and fail fast if they don't pass
+    if ! perform_health_checks; then
+        log_error "Health checks failed - deployment unsuccessful"
+        display_summary
+        exit 4
+    fi
+
     display_summary
+
+    # Exit with error code if deployment was not successful
+    if [[ "$DEPLOYMENT_SUCCESS" != "true" ]]; then
+        log_error "Deployment completed with failures"
+        exit 4
+    fi
 }
 
 # Error handling
