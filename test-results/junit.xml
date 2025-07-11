@@ -1,2 +1,122 @@
-<testsuites id="" name="" tests="0" failures="0" skipped="0" errors="0" time="0.09101700000000006">
+<testsuites id="" name="" tests="25" failures="0" skipped="25" errors="0" time="0.03516700000000003">
+<testsuite name="auth-loop-analysis.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="chromium-auth-analysis" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="CloudToLocalLLM v3.10.0 Authentication Loop Analysis › Analyze authentication flow and detect login loops" classname="auth-loop-analysis.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tunnel-verification.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="chromium-auth-analysis" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Tunnel Infrastructure Verification › should never make direct calls to localhost:11434" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should use cloud proxy tunnel for Ollama API calls" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should show proper CORS prevention logging" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should handle connection manager routing correctly" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth-loop-analysis.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="firefox-auth-analysis" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="CloudToLocalLLM v3.10.0 Authentication Loop Analysis › Analyze authentication flow and detect login loops" classname="auth-loop-analysis.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tunnel-verification.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="firefox-auth-analysis" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Tunnel Infrastructure Verification › should never make direct calls to localhost:11434" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should use cloud proxy tunnel for Ollama API calls" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should show proper CORS prevention logging" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should handle connection manager routing correctly" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth-loop-analysis.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="webkit-auth-analysis" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="CloudToLocalLLM v3.10.0 Authentication Loop Analysis › Analyze authentication flow and detect login loops" classname="auth-loop-analysis.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tunnel-verification.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="webkit-auth-analysis" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Tunnel Infrastructure Verification › should never make direct calls to localhost:11434" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should use cloud proxy tunnel for Ollama API calls" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should show proper CORS prevention logging" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should handle connection manager routing correctly" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth-loop-analysis.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="mobile-chrome-auth" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="CloudToLocalLLM v3.10.0 Authentication Loop Analysis › Analyze authentication flow and detect login loops" classname="auth-loop-analysis.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tunnel-verification.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="mobile-chrome-auth" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Tunnel Infrastructure Verification › should never make direct calls to localhost:11434" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should use cloud proxy tunnel for Ollama API calls" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should show proper CORS prevention logging" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should handle connection manager routing correctly" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth-loop-analysis.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="mobile-safari-auth" tests="1" failures="0" skipped="1" time="0" errors="0">
+<testcase name="CloudToLocalLLM v3.10.0 Authentication Loop Analysis › Analyze authentication flow and detect login loops" classname="auth-loop-analysis.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="tunnel-verification.spec.js" timestamp="2025-07-11T21:01:20.184Z" hostname="mobile-safari-auth" tests="4" failures="0" skipped="4" time="0" errors="0">
+<testcase name="Tunnel Infrastructure Verification › should never make direct calls to localhost:11434" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should use cloud proxy tunnel for Ollama API calls" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should show proper CORS prevention logging" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Tunnel Infrastructure Verification › should handle connection manager routing correctly" classname="tunnel-verification.spec.js" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
 </testsuites>
