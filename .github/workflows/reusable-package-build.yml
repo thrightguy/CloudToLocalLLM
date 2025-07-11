@@ -9,10 +9,10 @@ on:
         type: string
         default: '3.32.2'
       package_types:
-        description: 'Package types to build (comma-separated: aur,deb,appimage,snap)'
+        description: 'Package types to build (comma-separated: deb,appimage,snap)'
         required: false
         type: string
-        default: 'aur,deb'
+        default: 'deb'
       version:
         description: 'Version string for package naming'
         required: true
@@ -41,7 +41,7 @@ jobs:
       fail-fast: ${{ inputs.fail_fast }}
       matrix:
         package_type: 
-          - ${{ contains(inputs.package_types, 'aur') && 'aur' || '' }}
+          # AUR removed - decommissioned
           - ${{ contains(inputs.package_types, 'deb') && 'deb' || '' }}
           - ${{ contains(inputs.package_types, 'appimage') && 'appimage' || '' }}
           - ${{ contains(inputs.package_types, 'snap') && 'snap' || '' }}
@@ -60,13 +60,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Setup Docker for AUR builds
-        if: matrix.package_type == 'aur'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo usermod -aG docker $USER
+      # AUR Docker setup removed - AUR is decommissioned
 
       - name: Setup DEB build dependencies
         if: matrix.package_type == 'deb'
@@ -105,13 +99,8 @@ jobs:
           if [ -f "scripts/packaging/build_${{ matrix.package_type }}.sh" ]; then
             chmod +x scripts/packaging/build_${{ matrix.package_type }}.sh
             
-            # Use universal builder for AUR if available
-            if [ "${{ matrix.package_type }}" = "aur" ] && [ -f "scripts/packaging/build_aur_universal.sh" ]; then
-              chmod +x scripts/packaging/build_aur_universal.sh
-              ./scripts/packaging/build_aur_universal.sh --verbose
-            else
-              ./scripts/packaging/build_${{ matrix.package_type }}.sh --verbose
-            fi
+            # AUR universal builder removed - AUR is decommissioned
+            ./scripts/packaging/build_${{ matrix.package_type }}.sh --verbose
           else
             echo "❌ Build script not found: scripts/packaging/build_${{ matrix.package_type }}.sh"
             exit 1
@@ -122,15 +111,7 @@ jobs:
           echo "🔍 Verifying ${{ matrix.package_type }} package creation..."
           
           case "${{ matrix.package_type }}" in
-            "aur")
-              if [ -d "aur-package" ] && ls aur-package/*.tar.gz 1> /dev/null 2>&1; then
-                echo "✅ AUR package created successfully"
-                ls -la aur-package/*.tar.gz
-              else
-                echo "❌ AUR package not found"
-                exit 1
-              fi
-              ;;
+            # AUR package verification removed - AUR is decommissioned
             "deb")
               if ls dist/linux/*.deb 1> /dev/null 2>&1; then
                 echo "✅ DEB package created successfully"
@@ -167,17 +148,7 @@ jobs:
           echo "🔐 Generating checksums for ${{ matrix.package_type }} package..."
           
           case "${{ matrix.package_type }}" in
-            "aur")
-              if [ -d "aur-package" ]; then
-                cd aur-package
-                for file in *.tar.gz; do
-                  if [ -f "$file" ]; then
-                    sha256sum "$file" > "$file.sha256"
-                  fi
-                done
-                cd ..
-              fi
-              ;;
+            # AUR checksum generation removed - AUR is decommissioned
             *)
               if [ -d "dist/linux" ]; then
                 cd dist/linux
@@ -197,8 +168,7 @@ jobs:
           name: ${{ inputs.artifact_name_prefix }}-${{ matrix.package_type }}-${{ inputs.version }}
           path: |
             dist/linux/
-            aur-package/*.tar.gz
-            aur-package/*.sha256
+            # AUR package paths removed - AUR is decommissioned
           retention-days: ${{ inputs.retention_days }}
 
   # Package build summary

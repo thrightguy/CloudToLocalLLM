@@ -56,24 +56,17 @@ else
     exit 1
 fi
 
-# Update AUR PKGBUILD
-if [[ -f "aur-package/PKGBUILD" ]]; then
-    echo -e "${BLUE}ðŸ“ Updating AUR PKGBUILD...${NC}"
+
 
     # Create backup
-    cp "aur-package/PKGBUILD" "aur-package/PKGBUILD.backup"
 
     # Update pkgver
-    sed -i "s/^pkgver=.*/pkgver=$PUBSPEC_VERSION/" aur-package/PKGBUILD
 
     if [[ $? -eq 0 ]]; then
-        echo -e "${GREEN}âœ… Updated AUR PKGBUILD pkgver to $PUBSPEC_VERSION${NC}"
     else
-        echo -e "${RED}âŒ Failed to update AUR PKGBUILD${NC}"
         exit 1
     fi
 else
-    echo -e "${YELLOW}âš ï¸  AUR PKGBUILD not found, skipping...${NC}"
 fi
 
 # Update lib/shared/lib/version.dart
@@ -139,13 +132,7 @@ else
     exit 1
 fi
 
-# Check AUR PKGBUILD if it exists
-if [[ -f "aur-package/PKGBUILD" ]]; then
-    AUR_VERSION=$(grep "^pkgver=" aur-package/PKGBUILD | cut -d'=' -f2)
-    if [[ "$AUR_VERSION" = "$PUBSPEC_VERSION" ]]; then
-        echo -e "${GREEN}âœ… AUR PKGBUILD: $AUR_VERSION${NC}"
     else
-        echo -e "${RED}âŒ AUR PKGBUILD version mismatch: $AUR_VERSION != $PUBSPEC_VERSION${NC}"
         exit 1
     fi
 fi
@@ -176,9 +163,6 @@ echo -e "${GREEN}ðŸŽ‰ All versions synchronized to $FULL_VERSION${NC}"
 echo -e "${BLUE}ðŸ“‹ Summary:${NC}"
 echo -e "  pubspec.yaml: $FULL_VERSION"
 echo -e "  assets/version.json: $PUBSPEC_VERSION"
-if [[ -f "aur-package/PKGBUILD" ]]; then
-    echo -e "  AUR PKGBUILD: $AUR_VERSION"
-fi
 if [[ -f "lib/shared/lib/version.dart" ]]; then
     echo -e "  lib/shared/lib/version.dart: $SHARED_VERSION"
 fi

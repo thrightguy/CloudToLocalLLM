@@ -51,7 +51,7 @@ build:
     windows:
       - portable_zip
     linux:
-      - aur
+      # AUR removed - decommissioned
       - appimage
       - flatpak
       - deb

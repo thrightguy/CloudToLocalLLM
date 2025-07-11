@@ -36,12 +36,11 @@ This directory contains the complete deployment documentation for CloudToLocalLL
 - **Content**: Script-first resolution principles, common mistakes, best practices
 - **When to use**: When encountering deployment issues or setting up automation
 
-### **[AUR_INTEGRATION_CHANGES.md](./AUR_INTEGRATION_CHANGES.md)**
-**AUR package management and lessons learned** - Comprehensive AUR integration guidance.
-- **Purpose**: AUR-specific deployment procedures and troubleshooting
-- **Audience**: AUR package maintainers, Linux distribution specialists
-- **Content**: AUR submission process, real installation testing, lessons learned
-- **When to use**: For AUR-related deployment issues or understanding AUR workflow
+### **AUR Integration (REMOVED)**
+**AUR support has been decommissioned** - AUR package management is no longer supported.
+- **Status**: Removed from deployment workflows
+- **Reason**: AUR is decommissioned and no longer maintained
+- **Alternative**: Use DEB packages or AppImage for Linux distribution
 
 ### **[DEPLOYMENT_WORKFLOW_DIAGRAM.md](./DEPLOYMENT_WORKFLOW_DIAGRAM.md)**
 **Visual workflow diagrams and decision trees** - Mermaid diagrams for deployment visualization.
@@ -71,7 +70,7 @@ This directory contains the complete deployment documentation for CloudToLocalLL
 - **Deployment Process**: `COMPLETE_DEPLOYMENT_WORKFLOW.md`
 - **Versioning Decisions**: `VERSIONING_STRATEGY.md`
 - **Automation Principles**: `SCRIPT_FIRST_RESOLUTION_GUIDE.md`
-- **AUR Procedures**: `AUR_INTEGRATION_CHANGES.md`
+- **AUR Procedures**: Removed - AUR is decommissioned
 - **Visual Workflows**: `DEPLOYMENT_WORKFLOW_DIAGRAM.md`
 - **Build Features**: `SIX_PHASE_BUILD_TIME_INJECTION_INTEGRATION.md`
 

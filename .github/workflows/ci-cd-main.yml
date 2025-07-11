@@ -58,7 +58,7 @@ jobs:
     needs: [version-management, build-cross-platform]
     with:
       flutter_version: '3.32.2'
-      package_types: 'aur,deb'
+      package_types: 'deb'
       version: ${{ needs.version-management.outputs.version }}
     secrets: inherit
 

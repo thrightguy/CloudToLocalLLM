@@ -211,24 +211,9 @@ cloudtolocalllm-*-robust.tar.gz
 cloudtolocalllm-*-fixed.tar.gz
 
 # ============================================================================
-# AUR PACKAGE BUILD ARTIFACTS - EXCLUDED
+# AUR PACKAGE BUILD ARTIFACTS - REMOVED (AUR DECOMMISSIONED)
 # ============================================================================
-
-# AUR package build directories and artifacts
-aur-package/pkg/
-aur-package/src/
-aur-package/test-package/
-aur-package/*.pkg.tar.zst
-# Note: *.tar.gz files now allowed for git-based distribution tracking
-
-# AUR repository directory (prevent submodule issues)
-aur-repo/
-
-# Allow only essential AUR files
-!aur-package/PKGBUILD
-!aur-package/.SRCINFO
-!aur-package/cloudtolocalllm.install
-!aur-package/*.md
+# AUR support has been removed as it is decommissioned
 backups/
 
 # CloudToLocalLLM Binary File Management
