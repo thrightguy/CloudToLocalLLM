@@ -527,22 +527,19 @@ manage_containers() {
     local docker_cmd=""
     local docker_compose_cmd=""
 
+    # Prioritize standard Docker installation over snap
     if command -v docker &> /dev/null; then
         docker_cmd="docker"
-    elif command -v /snap/bin/docker &> /dev/null; then
-        docker_cmd="/snap/bin/docker"
     else
         log_warning "Docker not found, skipping container management"
         return 0
     fi
 
-    # Determine Docker Compose command
+    # Determine Docker Compose command - prioritize modern 'docker compose' over legacy docker-compose
     if $docker_cmd compose version &> /dev/null; then
         docker_compose_cmd="$docker_cmd compose"
     elif command -v docker-compose &> /dev/null; then
         docker_compose_cmd="docker-compose"
-    elif command -v /snap/bin/docker-compose &> /dev/null; then
-        docker_compose_cmd="/snap/bin/docker-compose"
     else
         log_warning "Docker Compose not found, skipping container management"
         return 0
@@ -550,10 +547,22 @@ manage_containers() {
 
     log_verbose "Using Docker command: $docker_cmd"
     log_verbose "Using Docker Compose command: $docker_compose_cmd"
+    log_verbose "Current working directory: $(pwd)"
+    log_verbose "Docker Compose file exists: $(test -f docker-compose.yml && echo 'YES' || echo 'NO')"
 
     # Test if Docker Compose can access the docker-compose.yml file
     if ! $docker_compose_cmd -f docker-compose.yml config &> /dev/null; then
-        log_warning "Docker Compose cannot access docker-compose.yml (likely snap confinement issue)"
+        log_warning "Docker Compose cannot access docker-compose.yml file"
+        log_warning "Checking if file exists and is readable..."
+
+        if [[ ! -f "docker-compose.yml" ]]; then
+            log_warning "docker-compose.yml file not found in current directory"
+        elif [[ ! -r "docker-compose.yml" ]]; then
+            log_warning "docker-compose.yml file is not readable"
+        else
+            log_warning "Docker Compose configuration validation failed"
+        fi
+
         log_warning "Skipping Docker container management"
         log_warning "Web application is built and ready for manual deployment"
         return 0
@@ -642,10 +651,9 @@ perform_health_checks() {
     local docker_cmd=""
     local docker_compose_cmd=""
 
+    # Prioritize standard Docker installation over snap
     if command -v docker &> /dev/null; then
         docker_cmd="docker"
-    elif command -v /snap/bin/docker &> /dev/null; then
-        docker_cmd="/snap/bin/docker"
     fi
 
     if [[ -n "$docker_cmd" ]]; then
@@ -653,8 +661,6 @@ perform_health_checks() {
             docker_compose_cmd="$docker_cmd compose"
         elif command -v docker-compose &> /dev/null; then
             docker_compose_cmd="docker-compose"
-        elif command -v /snap/bin/docker-compose &> /dev/null; then
-            docker_compose_cmd="/snap/bin/docker-compose"
         fi
     fi
 
