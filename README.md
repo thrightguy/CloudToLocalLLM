@@ -101,14 +101,30 @@ For detailed information, see [Versioning Strategy](docs/DEPLOYMENT/VERSIONING_S
 ## 🚀 Deployment
 
 ### Multi-Container Deployment (Recommended for Self-Hosting)
-<!-- The script `scripts/deploy/update_and_deploy.sh` is used for deploying the multi-container setup to a VPS. Higher-level scripts like `scripts/deploy/complete_automated_deployment.sh` may orchestrate this. -->
-Deploy the full CloudToLocalLLM stack to your own Virtual Private Server (VPS) using Docker Compose.
+Deploy the full CloudToLocalLLM stack to your own Virtual Private Server (VPS) using Docker Compose with **strict quality standards**.
+
 ```bash
-# Example: Navigate to project root and run deployment script
+# Automated deployment with zero-tolerance quality verification
 cd /path/to/CloudToLocalLLM
-./scripts/deploy/update_and_deploy.sh --force
-# For a more automated deployment, consider scripts like ./scripts/deploy/complete_automated_deployment.sh
+./scripts/deploy/complete_deployment.sh
 ```
+
+#### 🎯 Strict Deployment Policy
+CloudToLocalLLM enforces a **zero-tolerance deployment policy** for production:
+- ✅ **Success**: Zero warnings AND zero errors required
+- ❌ **Failure**: Any warning condition triggers automatic rollback
+- 🔄 **Rollback**: Immediate restoration of previous version on any issue
+- 🏆 **Quality**: Only perfect deployments reach production
+
+**Success Criteria:**
+- Perfect HTTP 200 responses (no redirects)
+- Valid SSL certificates mandatory
+- Clean container logs (no errors)
+- Optimal system resources (<90% usage)
+- Fully functional application health checks
+
+See [Strict Deployment Policy](docs/DEPLOYMENT/STRICT_DEPLOYMENT_POLICY.md) for complete details.
+
 This setup provides a scalable and secure environment for multiple users. See `docs/OPERATIONS/SELF_HOSTING.md` for detailed instructions.
 
 ### Legacy Single Container (Deprecated)
@@ -231,8 +247,9 @@ This ensures that commits are automatically pushed when documentation markers ar
 
 ## 🔧 Key Scripts Overview
 This project includes a variety of scripts to automate common tasks. Here are some of the key ones:
+*   `scripts/deploy/complete_deployment.sh`: **RECOMMENDED** - Fully automated deployment with strict quality verification and zero-tolerance policy.
 *   `scripts/deploy/update_and_deploy.sh`: Deploys the multi-container architecture to a VPS.
-*   `scripts/deploy/complete_automated_deployment.sh`: A higher-level script for automated deployment to a live VPS environment.
+*   `scripts/deploy/verify_deployment.sh`: Strict verification script that enforces zero warnings/errors policy.
 *   `scripts/packaging/build_aur_universal.sh`: **REMOVED** - AUR support has been decommissioned.
 *   `scripts/docker/build-aur-docker.sh`: **REMOVED** - AUR support has been decommissioned.
 *   `scripts/create_aur_binary_package.sh`: **REMOVED** - AUR support has been decommissioned.
@@ -299,6 +316,7 @@ CloudToLocalLLM features comprehensive, well-organized documentation. The docume
     *   [Streaming Proxy Architecture](docs/ARCHITECTURE/STREAMING_PROXY_ARCHITECTURE.md)
 *   **Deployment & Operations**:
     *   [Complete Deployment Workflow](docs/DEPLOYMENT/COMPLETE_DEPLOYMENT_WORKFLOW.md)
+    *   [Strict Deployment Policy](docs/DEPLOYMENT/STRICT_DEPLOYMENT_POLICY.md)
     *   [Self-Hosting on VPS](docs/OPERATIONS/SELF_HOSTING.md)
     *   [Versioning Strategy](docs/DEPLOYMENT/VERSIONING_STRATEGY.md)
 *   **User Guides**:

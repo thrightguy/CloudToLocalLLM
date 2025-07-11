@@ -3,6 +3,11 @@
 # CloudToLocalLLM Deployment Verification Script
 # Comprehensive verification of VPS deployment status and functionality
 # Validates containers, endpoints, SSL certificates, and application health
+#
+# STRICT SUCCESS CRITERIA: Zero tolerance for warnings or errors
+# - Any warning condition will cause deployment failure and trigger rollback
+# - Only completely clean deployments (no warnings, no errors) are considered successful
+# - This ensures production deployments meet the highest quality standards
 
 set -euo pipefail
 
@@ -34,6 +39,10 @@ log_success() {
 
 log_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_critical() {
+    echo -e "${RED}[CRITICAL]${NC} $1"
 }
 
 log_error() {
@@ -106,7 +115,8 @@ check_http_endpoints() {
         if [[ "$http_code" == "200" ]]; then
             log_success "$endpoint is accessible (HTTP $http_code)"
         elif [[ "$http_code" == "301" || "$http_code" == "302" ]]; then
-            log_warning "$endpoint returned redirect (HTTP $http_code)"
+            log_critical "$endpoint returned redirect (HTTP $http_code) - STRICT MODE: Redirects not allowed"
+            all_accessible=false
         else
             log_error "$endpoint is not accessible (HTTP $http_code)"
             all_accessible=false
@@ -148,10 +158,11 @@ check_https_endpoints() {
             if [[ "$https_code" == "200" ]]; then
                 log_success "$endpoint HTTPS is accessible (HTTP $https_code)"
             else
-                log_warning "$endpoint HTTPS returned HTTP $https_code"
+                log_critical "$endpoint HTTPS returned HTTP $https_code - STRICT MODE: Non-200 HTTPS responses not allowed"
+                ssl_valid=false
             fi
         else
-            log_warning "$endpoint SSL certificate check failed or not configured"
+            log_critical "$endpoint SSL certificate check failed or not configured - STRICT MODE: All SSL certificates must be valid"
             ssl_valid=false
         fi
     done
@@ -160,7 +171,7 @@ check_https_endpoints() {
         log_success "SSL certificates are valid"
         return 0
     else
-        log_warning "Some SSL certificates may not be configured"
+        log_critical "SSL certificate validation failed - STRICT MODE: All certificates must be valid"
         return 1
     fi
 }
@@ -199,7 +210,7 @@ check_container_logs() {
         local recent_errors=$(ssh "$VPS_USER@$VPS_HOST" "cd $VPS_PROJECT_DIR && docker compose logs --tail=50 $container 2>/dev/null | grep -i 'error\|exception\|failed' | tail -5" || echo "")
         
         if [[ -n "$recent_errors" ]]; then
-            log_warning "Recent errors found in $container logs:"
+            log_critical "Recent errors found in $container logs - STRICT MODE: No errors allowed:"
             echo "$recent_errors"
             errors_found=true
         else
@@ -208,7 +219,7 @@ check_container_logs() {
     done
     
     if $errors_found; then
-        log_warning "Some containers have recent errors in logs"
+        log_critical "Container log errors detected - STRICT MODE: No errors allowed in production"
         return 1
     else
         log_success "No recent errors found in container logs"
@@ -226,19 +237,27 @@ check_system_resources() {
     log_info "Disk usage: ${disk_usage}%"
     log_info "Memory usage: ${memory_usage}%"
     
+    local resource_issues=false
+
     if [[ "$disk_usage" != "unknown" ]] && [[ "$disk_usage" -lt 90 ]]; then
         log_success "Disk usage is acceptable (${disk_usage}%)"
     else
-        log_warning "Disk usage is high (${disk_usage}%)"
+        log_critical "Disk usage is high (${disk_usage}%) - STRICT MODE: Must be below 90%"
+        resource_issues=true
     fi
-    
+
     if [[ "$memory_usage" != "unknown" ]] && (( $(echo "$memory_usage < 90" | bc -l) )); then
         log_success "Memory usage is acceptable (${memory_usage}%)"
     else
-        log_warning "Memory usage is high (${memory_usage}%)"
+        log_critical "Memory usage is high (${memory_usage}%) - STRICT MODE: Must be below 90%"
+        resource_issues=true
     fi
-    
-    return 0
+
+    if $resource_issues; then
+        return 1
+    else
+        return 0
+    fi
 }
 
 # Generate verification report
@@ -254,14 +273,17 @@ generate_report() {
     
     if [[ "$overall_status" == "HEALTHY" ]]; then
         echo "✅ Deployment is healthy and fully operational"
-        echo "🌐 Web interfaces are accessible"
-        echo "🔒 SSL certificates are valid"
-        echo "📦 All containers are running properly"
-        echo "💚 Application health checks passed"
+        echo "🌐 Web interfaces are accessible with perfect HTTP 200 responses"
+        echo "🔒 SSL certificates are valid and properly configured"
+        echo "📦 All containers are running without any errors"
+        echo "💚 Application health checks passed completely"
+        echo "🎯 STRICT SUCCESS: Zero warnings, zero errors detected"
     else
-        echo "⚠️  Deployment has issues that need attention"
-        echo "📋 Review the verification steps above for details"
-        echo "🔧 Check container logs and system resources"
+        echo "❌ Deployment FAILED strict quality standards"
+        echo "🚫 STRICT MODE: Any warning or error triggers failure"
+        echo "📋 Review the verification steps above for critical issues"
+        echo "🔄 Automatic rollback will be initiated"
+        echo "🎯 SUCCESS CRITERIA: Zero warnings AND zero errors required"
     fi
     
     echo
@@ -305,11 +327,13 @@ main() {
     # Generate final report
     if $verification_passed; then
         generate_report "HEALTHY"
-        log_success "Deployment verification completed successfully!"
+        log_success "STRICT VERIFICATION PASSED: Deployment meets highest quality standards!"
+        log_success "Zero warnings, zero errors - Production deployment approved"
         exit 0
     else
-        generate_report "ISSUES_FOUND"
-        log_error "Deployment verification found issues that need attention"
+        generate_report "FAILED"
+        log_critical "STRICT VERIFICATION FAILED: Deployment does not meet quality standards"
+        log_critical "Automatic rollback will be triggered due to strict success criteria"
         exit 1
     fi
 }
@@ -324,14 +348,20 @@ case "${1:-}" in
         echo "Options:"
         echo "  --help, -h     Show this help message"
         echo
-        echo "This script performs comprehensive verification of:"
-        echo "  - VPS connectivity and SSH access"
-        echo "  - Docker container status and health"
-        echo "  - HTTP/HTTPS endpoint accessibility"
-        echo "  - SSL certificate validity"
-        echo "  - Application health and version info"
-        echo "  - Container logs for recent errors"
-        echo "  - System resource usage"
+        echo "This script performs STRICT verification with zero tolerance policy:"
+        echo "  - VPS connectivity and SSH access (must be perfect)"
+        echo "  - Docker container status and health (no errors allowed)"
+        echo "  - HTTP/HTTPS endpoint accessibility (HTTP 200 only)"
+        echo "  - SSL certificate validity (all certificates must be valid)"
+        echo "  - Application health and version info (must be accessible)"
+        echo "  - Container logs for recent errors (zero errors required)"
+        echo "  - System resource usage (must be below 90%)"
+        echo
+        echo "STRICT SUCCESS CRITERIA:"
+        echo "  - Zero warnings AND zero errors required for success"
+        echo "  - Any warning condition triggers deployment failure"
+        echo "  - Automatic rollback on any quality standard violation"
+        echo "  - Only completely clean deployments are approved"
         echo
         echo "Requirements:"
         echo "  - SSH access to $VPS_USER@$VPS_HOST"
