@@ -117,57 +117,30 @@ obtain_certificate() {
     # Run certbot to obtain certificate with timeout
     echo_color "$BLUE" "Running certbot..."
     
-    # First try with staging to test configuration
-    echo_color "$YELLOW" "Testing with Let's Encrypt staging environment first..."
+    # Obtain production certificate directly (no staging test)
+    echo_color "$BLUE" "Obtaining production Let's Encrypt certificate..."
     timeout 300 docker compose run --rm certbot certonly \
         --webroot \
         --webroot-path="$WEBROOT_PATH" \
         --email "$EMAIL" \
         --agree-tos \
         --no-eff-email \
-        --staging \
         --force-renewal \
         -d "$DOMAIN" \
         -d "app.$DOMAIN" \
         -d "docs.$DOMAIN" \
         -d "mail.$DOMAIN" 2>&1
-    
-    local staging_result=$?
-    
-    if [ $staging_result -eq 0 ]; then
-        echo_color "$GREEN" "Staging certificate test successful!"
-        echo_color "$BLUE" "Now obtaining production certificate..."
-        
-        # Now try with production
-        timeout 300 docker compose run --rm certbot certonly \
-            --webroot \
-            --webroot-path="$WEBROOT_PATH" \
-            --email "$EMAIL" \
-            --agree-tos \
-            --no-eff-email \
-            --force-renewal \
-            -d "$DOMAIN" \
-            -d "app.$DOMAIN" \
-            -d "docs.$DOMAIN" \
-            -d "mail.$DOMAIN" 2>&1
-        
-        local cert_result=$?
-        
-        if [ $cert_result -eq 0 ]; then
-            echo_color "$GREEN" "Production certificate obtained successfully!"
-            return 0
-        elif [ $cert_result -eq 124 ]; then
-            echo_color "$RED" "Production certificate acquisition timed out after 5 minutes"
-            return 1
-        else
-            echo_color "$RED" "Production certificate acquisition failed with code $cert_result"
-            return 1
-        fi
-    elif [ $staging_result -eq 124 ]; then
-        echo_color "$RED" "Staging certificate test timed out after 5 minutes"
+
+    local cert_result=$?
+
+    if [ $cert_result -eq 0 ]; then
+        echo_color "$GREEN" "Production certificate obtained successfully!"
+        return 0
+    elif [ $cert_result -eq 124 ]; then
+        echo_color "$RED" "Certificate acquisition timed out after 5 minutes"
         return 1
     else
-        echo_color "$RED" "Staging certificate test failed with code $staging_result"
+        echo_color "$RED" "Certificate acquisition failed with code $cert_result"
         echo_color "$YELLOW" "This could be due to DNS not being properly configured yet."
         echo_color "$YELLOW" "Make sure your domain's DNS records point to this server's IP address."
         return 1
