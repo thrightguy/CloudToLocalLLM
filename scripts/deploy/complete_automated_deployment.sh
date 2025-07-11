@@ -162,14 +162,7 @@ phase1_preflight_validation() {
         exit 2
     fi
 
-    # Check optional tools (makepkg for AUR building)
-    local aur_available=true
-    if ! command -v makepkg &> /dev/null; then
-        log_warning "makepkg not available - AUR package building will be skipped"
-        aur_available=false
-    else
-        log_verbose "✓ makepkg available - AUR package building enabled"
-    fi
+    # AUR is decommissioned - no longer checking for makepkg
 
     # Validate build-time injection components
     log_verbose "Validating build-time timestamp injection components..."
@@ -454,40 +447,7 @@ phase3_multiplatform_build() {
         log_success "Web application built (fallback mode)"
     fi
 
-    # Build AUR package using universal builder (Docker on Ubuntu, native on Arch)
-    if command -v makepkg &> /dev/null; then
-        log_verbose "Building AUR package using universal builder..."
-
-        local aur_build_script="$PROJECT_ROOT/scripts/packaging/build_aur_universal.sh"
-        if [[ -f "$aur_build_script" ]]; then
-            local aur_args=""
-            if [[ "$VERBOSE" == "true" ]]; then
-                aur_args="$aur_args --verbose"
-            fi
-
-            if [[ "$VERBOSE" == "true" ]]; then
-                if ! "$aur_build_script" $aur_args; then
-                    log_warning "AUR package build failed - continuing with deployment"
-                    log_warning "AUR package may need manual building"
-                else
-                    log_success "AUR package built successfully"
-                fi
-            else
-                if ! "$aur_build_script" $aur_args &> /dev/null; then
-                    log_warning "AUR package build failed - continuing with deployment"
-                    log_warning "AUR package may need manual building"
-                else
-                    log_success "AUR package built successfully"
-                fi
-            fi
-        else
-            log_warning "Universal AUR build script not found: $aur_build_script"
-            log_warning "AUR package building skipped"
-        fi
-    else
-        log_warning "makepkg not available - AUR package building skipped"
-        log_verbose "Install makepkg (Arch Linux tools) to enable AUR package building"
-    fi
+    # AUR package building removed - AUR is decommissioned
 
     log_success "Multi-platform build completed with build-time timestamps"
 }
@@ -706,13 +666,10 @@ phase4_distribution_execution() {
         done
 
         if [[ "$github_accessible" != "true" ]]; then
-            log_error "GitHub raw URL not accessible after $max_attempts attempts"
-            log_error "URL: $github_url"
-            log_error "AUR submission requires accessible GitHub distribution files"
-            exit 4
+            log_warning "GitHub raw URL not accessible after $max_attempts attempts"
+            log_warning "URL: $github_url"
+            log_warning "Continuing with web-only deployment"
         fi
-
-        local skip_aur_submission=false
 
         # Verify checksum consistency between local and GitHub files
         log_verbose "Verifying checksum consistency between local and GitHub files..."
@@ -765,76 +722,7 @@ phase4_distribution_execution() {
         log_success "VPS deployment recovered successfully"
     fi
 
-    # Test AUR package after VPS deployment (when static files are available)
-    if command -v makepkg &> /dev/null; then
-        local aur_flags="--skip-install"
-        if [[ "$VERBOSE" == "true" ]]; then
-            aur_flags="$aur_flags --verbose"
-        fi
-        if [[ "$DRY_RUN" == "true" ]]; then
-            aur_flags="$aur_flags --dry-run"
-        fi
-
-        log_verbose "Testing AUR package with static distribution..."
-        if ./scripts/deploy/test_aur_package.sh $aur_flags; then
-            log_verbose "✓ AUR package test passed"
-        else
-            log_warning "AUR package test failed - may need manual verification"
-        fi
-    else
-        log_verbose "makepkg not available - AUR package testing skipped"
-    fi
-
-    # Submit AUR package immediately after VPS deployment
-    if command -v makepkg &> /dev/null; then
-        log_verbose "Submitting AUR package using GitHub raw URL distribution..."
-
-        # Final verification before AUR submission
-        log_verbose "Performing final GitHub raw URL verification before AUR submission..."
-        if [[ "$DRY_RUN" != "true" ]]; then
-            local semantic_version=$(echo "$current_version" | cut -d'+' -f1)
-            local github_url="https://raw.githubusercontent.com/imrightguy/CloudToLocalLLM/master/dist/cloudtolocalllm-${semantic_version}-x86_64.tar.gz"
-            if ! curl -s -I "$github_url" | head -1 | grep -q "200"; then
-                log_error "GitHub raw URL not accessible before AUR submission"
-                log_error "URL: $github_url"
-                log_error "AUR installation will fail - aborting AUR submission"
-                exit 4
-            fi
-            log_success "✓ Final GitHub raw URL verification passed"
-        fi
-
-        # Skip local distribution file preparation - use GitHub raw URL approach
-        log_verbose "Using git-based distribution tracking (GitHub raw URLs)..."
-        log_verbose "AUR package configured with verified GitHub raw URL and SHA256"
-        log_verbose "No local binary file preparation needed - avoiding AUR size limits"
-
-        # Prepare AUR submission flags
-        local aur_submit_flags=""
-        if [[ "$FORCE" == "true" ]]; then
-            aur_submit_flags="$aur_submit_flags --force"
-        fi
-        if [[ "$VERBOSE" == "true" ]]; then
-            aur_submit_flags="$aur_submit_flags --verbose"
-        fi
-        if [[ "$DRY_RUN" == "true" ]]; then
-            aur_submit_flags="$aur_submit_flags --dry-run"
-        fi
-
-        # Submit AUR package with proper handling of "no changes" case
-        local aur_exit_code=0
-        ./scripts/deploy/submit_aur_package.sh $aur_submit_flags || aur_exit_code=$?
-
-        if [[ $aur_exit_code -eq 0 ]]; then
-            log_success "AUR package submission completed successfully"
-        else
-            log_warning "AUR package submission returned exit code $aur_exit_code"
-            log_warning "This may indicate the package is already up to date"
-            log_warning "Continuing with deployment - manual verification may be needed"
-        fi
-    else
-        log_verbose "makepkg not available - AUR package submission skipped"
-        log_verbose "AUR package will need to be submitted manually from an Arch Linux system"
-    fi
+    # AUR package testing and submission removed - AUR is decommissioned
 
     log_success "Git-based distribution validation completed"
 }
@@ -973,7 +861,6 @@ phase6_operational_readiness() {
     echo "  ✅ Web Platform: https://app.cloudtolocalllm.online"
     echo "  ✅ API Backend: https://app.cloudtolocalllm.online/api/health"
     echo "  ✅ Tunnel Server: wss://app.cloudtolocalllm.online/ws/bridge"
-    echo "  ✅ AUR Package: Submitted and available"
     echo ""
     echo -e "${BLUE}📋 Build Timestamp Correlation:${NC}"
 
@@ -989,11 +876,9 @@ phase6_operational_readiness() {
 
     echo ""
     echo -e "${BLUE}📋 Next Steps:${NC}"
-    echo "  1. Test AUR installation: yay -S cloudtolocalllm"
-    echo "  2. Verify platform-specific UI features"
-    echo "  3. Monitor deployment health and build timestamp correlation"
-    echo "  4. Check AUR package page: https://aur.archlinux.org/packages/cloudtolocalllm"
-    echo "  5. Validate build timestamps in monitoring systems"
+    echo "  1. Verify platform-specific UI features"
+    echo "  2. Monitor deployment health and build timestamp correlation"
+    echo "  3. Validate build timestamps in monitoring systems"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         echo ""
@@ -1025,7 +910,7 @@ main() {
     echo -e "${BLUE}======================================================${NC}"
     echo "Target: CloudToLocalLLM v${target_version} Production Deployment"
     echo "Strategy: Six-Phase Automated Workflow"
-    echo "Distribution: Static Download + AUR + VPS"
+    echo "Distribution: Static Download + VPS"
     echo ""
     
     # Parse arguments
