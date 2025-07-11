@@ -242,7 +242,7 @@ class AuthServiceWeb extends ChangeNotifier {
     try {
       // Method 1: window.open with _self
       AuthLogger.info('🔐 Trying window.open with _self');
-      web.window.open(authUrl, '_self');
+      html.window.open(authUrl, '_self');
 
       // Wait to see if this worked
       await Future.delayed(const Duration(milliseconds: 500));
@@ -382,7 +382,7 @@ class AuthServiceWeb extends ChangeNotifier {
 
               // Clear the URL parameters (web only) after state is set
               if (kIsWeb) {
-                web.window.history.replaceState(null, '', '/');
+                html.window.history.replaceState(null, '', '/');
               }
 
               // Additional delay to ensure all state updates are complete
